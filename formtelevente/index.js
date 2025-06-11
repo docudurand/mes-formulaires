@@ -18,8 +18,8 @@ router.get('/healthz', (_req, res) => {
 const salesMap = {
   'Casti Jeremy':   'comvl2miribel@durandservices.fr',
   'Trenti Anthony': 'comvlchassieu@durandservices.fr',
-  'Bazoge Ilona':   'angeliquemanin@hotmail.fr',
-  'Pichard Damien': 'd.pichard2007@gmail.com'
+  'Bazoge Ilona':   'comvl2chassieu@durandservices.fr',
+  'Pichard Damien': 'magvl4gleize@durandservices.fr'
 };
 
 const transporter = nodemailer.createTransport({
