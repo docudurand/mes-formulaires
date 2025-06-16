@@ -80,7 +80,6 @@ function generateHtml(data) {
   `;
 }
 
-
 router.post(
   '/submit-form',
   upload.array('fichiers[]'),
@@ -102,6 +101,45 @@ router.post(
 
     try {
       await transporter.sendMail(mailOptions);
+
+      // Envoi accusé de réception à l'expéditeur
+      if (formData.email) {
+        const accuserecepOptions = {
+          from: `"Service Pièces PL" <${process.env.GMAIL_USER}>`,
+          to: formData.email,
+          subject: "Votre demande de création de référence a bien été reçue",
+          html: `
+            <div style="font-family:Arial; max-width:700px; margin:auto;">
+              <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
+              <p>Bonjour,</p>
+              <p>Nous avons bien reçu votre demande de création de référence PL.</p>
+              <p>Nous la traiterons dans les plus brefs délais.<br>
+              <b>Résumé de votre demande :</b></p>
+              <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                ${Object.entries(FORM_FIELDS).map(([key, label]) => {
+                  let value = formData[key] || "";
+                  if (key === "reference" || key === "commentaire") value = br(value);
+                  if (!value) value = "<em>(non renseigné)</em>";
+                  return `
+                    <tr>
+                      <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">${label}</td>
+                      <td style="padding:6px; border:1px solid #eee;">${value}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </table>
+              <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
+              <p>L’équipe Pièces PL</p>
+            </div>
+          `
+        };
+        try {
+          await transporter.sendMail(accuserecepOptions);
+        } catch (err) {
+          console.error('Erreur envoi accusé réception :', err);
+        }
+      }
+
       res.status(200).send('Formulaire envoyé !');
     } catch (err) {
       console.error('Envoi mail échoué :', err);
