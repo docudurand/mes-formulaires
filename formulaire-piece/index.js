@@ -116,9 +116,9 @@ router.post(
                 `).join('')}
               </table>
               <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
-              <p>L’équipe Pièces VL</p>
             </div>
-          `
+          `,
+          attachments
         };
         try {
           await transporter.sendMail(accuserecepOptions);
