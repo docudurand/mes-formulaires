@@ -95,7 +95,6 @@ router.post(
     try {
       await transporter.sendMail(mailOptions);
 
-      // Envoi accusé de réception à l'expéditeur
       if (formData.email) {
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${process.env.GMAIL_USER}>`,
@@ -119,7 +118,8 @@ router.post(
               <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
               <p>L’équipe Pneumatiques VL</p>
             </div>
-          `
+          `,
+          attachments
         };
         try {
           await transporter.sendMail(accuserecepOptions);
