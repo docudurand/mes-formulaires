@@ -18,6 +18,9 @@ const salesMap = {
   'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Vigne Gregory':   'gvigne@plateformepavi.fr,magvl4gleize@durandservices.fr',
+  'Merolle Nicolas':   'nmerolle@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Roberjot Stéphanie':   'sroberjot@plateformepavi.fr,magvl4gleize@durandservices.fr',
   'Pichard Damien': 'magvl4gleize@durandservices.fr'
 };
 
