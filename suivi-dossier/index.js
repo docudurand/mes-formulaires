@@ -219,5 +219,7 @@ router.post("/api/admin/importzip", upload.single("backupzip"), async (req, res)
     res.json({success:false, message:e.message});
   }
 });
-
+router.get("/test", (req, res) => {
+  res.json({ ok: true });
+});
 export default router;
