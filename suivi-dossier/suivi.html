@@ -90,7 +90,7 @@
         return;
       }
       document.getElementById("dossiers-list").innerHTML = "Chargement...";
-      fetch('https://durandservicesgarantie.onrender.com/api/mes-dossiers?email='+encodeURIComponent(email))
+      fetch('https://durandservicesgarantie.onrender.com/suivi-dossier/api/mes-dossiers?email='+encodeURIComponent(email))
         .then(r=>r.json())
         .then(data=>{
           dossiersData = data;
@@ -150,7 +150,7 @@
         dossiers = dossiers.filter(d=>d.statut===filtres.statut);
       }
 
-      let serverUrl = "https://durandservicesgarantie.onrender.com"; // Ton domaine de prod
+      let serverUrl = "https://durandservicesgarantie.onrender.com/suivi-dossier";
 
       let html = '';
       if(!dossiers.length) {
