@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Suivi de mes dossiers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#f9fafb; margin:0; }
+    .container { max-width:1300px; margin:34px auto 0 auto; background:#fff; border-radius:24px; box-shadow:0 3px 20px #0001; padding:44px 28px 38px 28px; box-sizing: border-box;}
+    h2 { color:#006e90; font-size:2.10em; font-weight:bold; text-align:center; margin-bottom:30px; letter-spacing: 0.01em;}
+    .filters-row {
+      display: flex; gap: 18px; align-items: center; justify-content: flex-end;
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .filters-row label { font-size: 1.08em; color: #195e7c; margin-right: 6px;}
+    .filters-row select {
+      padding: 5px 10px; border-radius: 7px; border: 1px solid #b4c8d8; font-size: 1.05em; margin-right: 14px;
+    }
+    .filters-row input[type="text"] {
+      padding: 7px 11px; border-radius: 7px; border: 1px solid #b4c8d8; font-size:1.1em;
+    }
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; table-layout:fixed;}
+    th, td { border:1px solid #e6edf1; padding:12px 7px; text-align:center; font-size:1.06em; word-break:break-word;}
+    th { background:#006e90; color:#fff; font-size:1.09em; font-weight:600;}
+    tr:nth-child(even) td { background:#f4fafd;}
+    .pj-img { max-width:70px; max-height:54px; border-radius:3px; box-shadow:0 1px 3px #0002; }
+    .statut-chip { display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:1em;}
+    .statut-dot { display:inline-block; width:15px; height:15px; border-radius:50%; margin-right:2px; }
+    .statut-dot.enregistre { background:#f8a900; border: 2px solid #f7ce65; }
+    .statut-dot.accepte { background:#16c11c; border: 2px solid #a6ebba; }
+    .statut-dot.refuse { background:#bb1810; border: 2px solid #f49e9e; }
+    .statut-dot.info { background:#1978d2; border: 2px solid #93c7fa; }
+    .msg-erreur { color:#bb1810; text-align:center; margin: 30px 0 20px; font-size:1.12em;}
+    td.files-col, th.files-col { max-width: 230px; word-break: break-word; overflow-wrap: anywhere;}
+    td.files-col a { display:inline-block; max-width: 210px; vertical-align:middle; word-break:break-word; overflow-wrap:anywhere;}
+    @media (max-width:1100px) {
+      .container { padding: 6vw 1vw; }
+      .filters-row { flex-direction:column; align-items:flex-start;}
+      table, th, td { font-size:0.95em;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Suivi de mes dossiers</h2>
+    <div class="filters-row">
+      <label>Email :
+        <input type="text" id="input-mail" placeholder="Votre adresse mail" />
+      </label>
+      <label>Mois :
+        <select id="mois-filter"><option value="">Tous</option></select>
+      </label>
+      <label>Année :
+        <select id="annee-filter"><option value="">Toutes</option></select>
+      </label>
+      <label>Statut :
+        <select id="statut-filter">
+          <option value="">Tous</option>
+          <option value="enregistré">Enregistré</option>
+          <option value="accepté">Accepté</option>
+          <option value="refusé">Refusé</option>
+          <option value="en attente d'info">En attente d'info</option>
+        </select>
+      </label>
+      <button onclick="afficherDossiers()" style="background:#006e90; color:#fff; border-radius:6px; border:none; padding:7px 23px; font-size:1.06em; font-weight:600; cursor:pointer;">Afficher mes dossiers</button>
+    </div>
+    <div id="dossiers-list"></div>
+  </div>
+  <script>
+    let dossiersData = [];
+    let filtres = { mois:"", annee:"", statut:"" };
+
+    // --- Email persistant en local ---
+    const inputMail = document.getElementById("input-mail");
+    if (localStorage.getItem("suiviEmail")) {
+      inputMail.value = localStorage.getItem("suiviEmail");
+    }
+    inputMail.addEventListener("input", function() {
+      localStorage.setItem("suiviEmail", this.value.trim());
+    });
+
+    document.getElementById("mois-filter").onchange = function(){ filtres.mois = this.value; afficherListe(); }
+    document.getElementById("annee-filter").onchange = function(){ filtres.annee = this.value; afficherListe(); }
+    document.getElementById("statut-filter").onchange = function(){ filtres.statut = this.value; afficherListe(); }
+
+    function afficherDossiers() {
+      let email = inputMail.value.trim();
+      if(!email || !email.includes("@")){
+        document.getElementById("dossiers-list").innerHTML = '<div class="msg-erreur">Veuillez entrer une adresse mail valide.</div>';
+        return;
+      }
+      document.getElementById("dossiers-list").innerHTML = "Chargement...";
+      fetch('https://durandservicesgarantie.onrender.com/api/mes-dossiers?email='+encodeURIComponent(email))
+        .then(r=>r.json())
+        .then(data=>{
+          dossiersData = data;
+          genererFiltres();
+          afficherListe();
+        });
+    }
+
+    function genererFiltres() {
+      let moisSet = new Set(), anneeSet = new Set();
+      dossiersData.forEach(d => {
+        let date = new Date(d.date);
+        if (!isNaN(date)) {
+          let mois = ("0" + (date.getMonth() + 1)).slice(-2);
+          let annee = date.getFullYear().toString();
+          moisSet.add(mois);
+          anneeSet.add(annee);
+        }
+      });
+      const moisFr = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+      const moisLib = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
+      let moisSel = document.getElementById("mois-filter");
+      moisSel.innerHTML = `<option value="">Tous</option>`;
+      moisFr.forEach((m,i)=>{ if(moisSet.has(m)) moisSel.innerHTML += `<option value="${m}">${moisLib[i]}</option>`; });
+      let anneeSel = document.getElementById("annee-filter");
+      anneeSel.innerHTML = `<option value="">Toutes</option>`;
+      Array.from(anneeSet).sort().forEach(a=>{ anneeSel.innerHTML += `<option value="${a}">${a}</option>`; });
+      // Garde la sélection actuelle si dispo
+      moisSel.value = filtres.mois;
+      anneeSel.value = filtres.annee;
+    }
+
+    function statutChip(statut) {
+      let s = (statut||"").toLowerCase();
+      if (s==="enregistré") return `<span class="statut-chip"><span class="statut-dot enregistre"></span>Enregistré</span>`;
+      if (s==="accepté") return `<span class="statut-chip"><span class="statut-dot accepte"></span>Accepté</span>`;
+      if (s==="refusé") return `<span class="statut-chip"><span class="statut-dot refuse"></span>Refusé</span>`;
+      if (s==="en attente d'info") return `<span class="statut-chip"><span class="statut-dot info"></span>En attente d'info</span>`;
+      return statut||"";
+    }
+
+    function afficherListe() {
+      let dossiers = dossiersData;
+      if(filtres.mois) {
+        dossiers = dossiers.filter(d=>{
+          let date = new Date(d.date);
+          return !isNaN(date) && ("0"+(date.getMonth()+1)).slice(-2) === filtres.mois;
+        });
+      }
+      if(filtres.annee) {
+        dossiers = dossiers.filter(d=>{
+          let date = new Date(d.date);
+          return !isNaN(date) && date.getFullYear().toString() === filtres.annee;
+        });
+      }
+      if(filtres.statut) {
+        dossiers = dossiers.filter(d=>d.statut===filtres.statut);
+      }
+
+      let serverUrl = "https://durandservicesgarantie.onrender.com"; // Ton domaine de prod
+
+      let html = '';
+      if(!dossiers.length) {
+        html = '<div class="msg-erreur">Aucun dossier trouvé avec ces filtres.</div>';
+      } else {
+        html = `<table>
+          <tr>
+            <th>Date</th>
+            <th>Produit</th>
+            <th>Immatriculation</th>
+            <th>Statut</th>
+            <th>Réponse</th>
+            <th class="files-col">Pièces jointes</th>
+            <th class="files-col">Fichiers réponse</th>
+          </tr>`;
+        dossiers.forEach(d=>{
+          html += `<tr>
+            <td>${new Date(d.date).toLocaleDateString("fr-FR")}</td>
+            <td>${d.produit_concerne||''}</td>
+            <td>${d.immatriculation||''}</td>
+            <td>${statutChip(d.statut)}</td>
+            <td>${d.reponse ? d.reponse.replace(/\n/g,"<br>") : ''}</td>
+            <td class="files-col">
+              ${(d.files||[]).length ? d.files.map(f=>{
+                let ext = f.original.split('.').pop().toLowerCase();
+                let link = serverUrl + "/download/" + encodeURIComponent(f.url);
+                if(["jpg","jpeg","png","gif","webp","bmp"].includes(ext)){
+                  return `<a href="${link}" download target="_blank"><img src="${serverUrl}/uploads/${encodeURIComponent(f.url)}" class="pj-img"></a>`;
+                } else {
+                  return `<a href="${link}" download title="${f.original}">${f.original}</a>`;
+                }
+              }).join("<br>") : ""}
+            </td>
+            <td class="files-col">
+              ${(d.reponseFiles||[]).length ? d.reponseFiles.map(f=>{
+                let ext = f.original.split('.').pop().toLowerCase();
+                let link = serverUrl + "/download/" + encodeURIComponent(f.url);
+                if(["jpg","jpeg","png","gif","webp","bmp"].includes(ext)){
+                  return `<a href="${link}" download target="_blank"><img src="${serverUrl}/uploads/${encodeURIComponent(f.url)}" class="pj-img"></a>`;
+                } else {
+                  return `<a href="${link}" download title="${f.original}">${f.original}</a>`;
+                }
+              }).join("<br>") : ""}
+            </td>
+          </tr>`;
+        });
+        html += `</table>`;
+      }
+      document.getElementById("dossiers-list").innerHTML = html;
+    }
+  </script>
+</body>
+</html>
