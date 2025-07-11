@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "Regroupement des formulaires (PC, pièces, PL, pneus, garantie, suivi...)",
   "main": "server.js",
-  "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
+"scripts": {
+  "start": "node server.js"
+},
+"type": "module",
+  
+  
   "dependencies": {
     "archiver": "^7.0.0",
     "cookie-parser": "^1.4.6",
