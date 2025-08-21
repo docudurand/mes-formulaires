@@ -19,7 +19,6 @@ const salesMap = {
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Pichard Damien': 'magvl4gleize@durandservices.fr'
 };
 
 function getFromName(formOriginRaw) {
