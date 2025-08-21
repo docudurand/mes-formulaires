@@ -140,7 +140,7 @@
 
     function openCloseModal(ctx){
       __ctx = ctx;
-      $mInfo.textContent = `Véhicule : ${ctx.immat||'—'} • Prêt #${ctx.loanId}`;
+      $mInfo.textContent = `Véhicule : ${ctx.immat || '—'}`;
       const now=new Date(), pad=n=>String(n).padStart(2,'0');
       $mDateRet.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
       $mHourRet.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;

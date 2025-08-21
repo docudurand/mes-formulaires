@@ -154,7 +154,13 @@
       const opt = $openLoans.options[$openLoans.selectedIndex];
       if(!$store.value){ setNotice('Choisissez un magasin.','error'); return; }
       if(!$openLoans.value || !opt){ setNotice('Sélectionnez un prêt en cours.','error'); return; }
-      const immat = opt.dataset.immat||''; $mInfo.textContent=`Véhicule : ${immat} • Magasin : ${$store.value}`;
+      const immat =
+  (opt?.dataset?.immat) ||
+  (vehiclesIndex[opt?.dataset?.veh || '']?.immatriculation) ||
+  ((opt?.textContent || '').split('—')[0].trim());
+
+const storeLabel = $store.options[$store.selectedIndex]?.text || $store.value || '';
+$mInfo.textContent = `Véhicule : ${immat || '—'} • Magasin : ${storeLabel}`;
       const now=new Date(), pad=n=>String(n).padStart(2,'0'); $mDateRet.value=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`; $mHourRet.value=`${pad(now.getHours())}:${pad(now.getMinutes())}`; $mRecep.value=''; $mask.style.display='flex';
     });
     el('mCancel').addEventListener('click', ()=> $mask.style.display='none');
