@@ -19,9 +19,16 @@ const salesMap = {
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Merolle Nicolas':   'nmerolle@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Merolle Nicolas':'nmerolle@durandservices.fr,magvl4gleize@durandservices.fr',
   'Pichard Damien': 'magvl4gleize@durandservices.fr'
 };
+
+function getFromName(formOriginRaw) {
+  const s = String(formOriginRaw || '').toLowerCase();
+  if (s.includes('bosch')) return 'Bon de Commande BOSCH';
+  if (s.includes('lub'))   return 'Bon de Commande LUB';
+  return 'Bon de Commande';
+}
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -32,7 +39,7 @@ const transporter = nodemailer.createTransport({
 });
 
 router.post('/send-order', async (req, res) => {
-  const { client, salesperson, pdf } = req.body;
+  const { client, salesperson, pdf, form_origin } = req.body;
   if (!pdf) {
     return res.status(400).json({ success: false, error: 'no_pdf' });
   }
@@ -46,17 +53,19 @@ router.post('/send-order', async (req, res) => {
   const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
 
   const safeClient = (client || 'Client inconnu').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-  const safeSales = (salesperson || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const safeSales  = (salesperson || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const fromName = getFromName(form_origin);
 
   const mailOptions = {
-  from: `"Bon de Commande" <${process.env.GMAIL_USER}>`,
-  to,
-  subject: `BDC - ${salesperson} – ${client || 'Client inconnu'}`,
-  text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
-  attachments: [{
-    filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
-    content: Buffer.from(pdf, 'base64'),
-    contentType: 'application/pdf'
+    from: `"${fromName}" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: `BDC - ${salesperson || ''} – ${client || 'Client inconnu'}`,
+    text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
+    attachments: [{
+      filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
+      content: Buffer.from(pdf, 'base64'),
+      contentType: 'application/pdf'
     }]
   };
 
