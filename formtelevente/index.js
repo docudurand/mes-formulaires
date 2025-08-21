@@ -18,7 +18,7 @@ const salesMap = {
   'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Barret Olivier': 'comvlmiribel@durandservices.fr',
+  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
   'Merolle Nicolas':   'nmerolle@durandservices.fr,magvl4gleize@durandservices.fr',
   'Pichard Damien': 'magvl4gleize@durandservices.fr'
 };
