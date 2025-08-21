@@ -7,13 +7,15 @@
   <style>
     :root{ --primary:#004080; --ink:#073763; --line:#e5e7eb; --scale:1.2; --bw:calc(1px*var(--scale)); }
     *{box-sizing:border-box} html{font-size:calc(100%*var(--scale));}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink)}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:#fff}
     .wrap{max-width:calc(1200px*var(--scale));margin:calc(24px*var(--scale)) auto;padding:calc(16px*var(--scale))}
     h1{font-size:1.6rem;margin:0 0 calc(12px*var(--scale))}
     .tools{display:flex;flex-wrap:wrap;gap:calc(10px*var(--scale));align-items:end;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));padding:calc(12px*var(--scale));background:#fff}
     label{font-weight:600;margin-bottom:calc(4px*var(--scale));display:block}
     input{padding:calc(10px*var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))}
     button{border:0;border-radius:calc(10px*var(--scale));padding:calc(10px*var(--scale)) calc(14px*var(--scale));font-weight:700;cursor:pointer;background:var(--primary);color:#fff}
+    .btn-mini{padding:calc(6px*var(--scale)) calc(10px*var(--scale));font-weight:600}
+    .btn-light{background:#eef5ff;color:#004080;border:var(--bw) solid #d6e6ff}
     table{width:100%;border-collapse:separate;border-spacing:0;margin-top:calc(14px*var(--scale));background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));overflow:hidden}
     thead th{background:#f8fbff;text-align:left;padding:calc(10px*var(--scale));border-bottom:var(--bw) solid var(--line)}
     tbody td{padding:calc(10px*var(--scale));border-bottom:var(--bw) solid #f1f3f5;vertical-align:top}
@@ -21,8 +23,12 @@
     .pill{display:inline-block;padding:calc(4px*var(--scale)) calc(8px*var(--scale));border-radius:999px;border:var(--bw) solid var(--line)}
     .ok{background:#f2faf4;color:#2e7d32;border-color:#b7e3c3}
     .warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
-    .right{text-align:right}
+    .right{text-align:right;white-space:nowrap}
     .notice{margin-top:calc(10px*var(--scale))}
+    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:9999}
+    .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(520px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
+    .row{display:grid;gap:calc(12px*var(--scale))}
+    @media(min-width:680px){ .row.cols-2{grid-template-columns:1fr 1fr} }
   </style>
 </head>
 <body>
@@ -33,15 +39,40 @@
       <div><label for="qImmat">Immatriculation</label><input id="qImmat" type="text" placeholder="Ex: AA-123-BB"></div>
       <div><label for="qDate">Date</label><input id="qDate" type="date"></div>
       <div><button id="btnSearch">Rechercher</button></div>
-      <div style="margin-left:auto"><button id="btnExport" style="background:#eef5ff;color:#004080;border:var(--bw) solid #d6e6ff">Exporter CSV</button></div>
+      <div style="margin-left:auto"><button id="btnExport" class="btn-light">Exporter CSV</button></div>
     </div>
 
     <div class="notice" id="notice"></div>
 
     <table id="tbl">
-      <thead><tr><th>#</th><th>Immat.</th><th>Magasin prêt</th><th>Chauffeur</th><th>Départ</th><th>Retour</th><th>Statut</th><th class="right">Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th><th>Immat.</th><th>Magasin prêt</th><th>Chauffeur</th>
+          <th>Départ</th><th>Retour</th><th>Statut</th><th class="right">Actions</th>
+        </tr>
+      </thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <div class="modalMask" id="mask">
+    <div class="modal">
+      <h3 style="margin:0 0 calc(8px*var(--scale))">Clôturer le prêt</h3>
+      <p id="mInfo" style="opacity:.85"></p>
+      <div class="row cols-2">
+        <div><label for="mDateRet">Date retour</label><input id="mDateRet" type="date"></div>
+        <div><label for="mHourRet">Heure retour</label><input id="mHourRet" type="time"></div>
+      </div>
+      <div style="margin-top:calc(10px*var(--scale))">
+        <label for="mRecep">Réceptionnaire (retour)</label>
+        <input id="mRecep" type="text" placeholder="Nom réceptionnaire">
+      </div>
+      <div class="notice" id="mNotice"></div>
+      <div style="display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(14px*var(--scale))">
+        <button class="btn-light btn-mini" id="mCancel" type="button">Annuler</button>
+        <button class="btn btn-mini" id="mOk" type="button">Valider la clôture</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -53,7 +84,8 @@
     function parseMaybeDate(v){ if(!v&&v!==0)return null; if(v instanceof Date) return isNaN(v)?null:v; if(typeof v==='number'){const ms=Math.round((v-25569)*86400*1000);const d=new Date(ms);return isNaN(d)?null:d;} if(typeof v==='string'){if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){const[h,m]=v.split(':');const d=new Date();d.setHours(+h,+m||0,0,0);return d;} const d=new Date(v); if(!isNaN(d)) return d; const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m){const d2=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(d2)?null:d2;} } return null; }
     const fmtDate=v=>{const d=parseMaybeDate(v); return d?`${p2(d.getDate())}/${p2(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`:'—';};
     const fmtTime=v=>{const d=parseMaybeDate(v); return d?`${p2(d.getHours())}:${p2(d.getMinutes())}`:'—';};
-    const pill=s=> s==='En cours' ? '<span class="pill warn">En cours</span>' : s==='Cloturé' ? '<span class="pill ok">Clôturé</span>' : `<span class="pill">${s||'—'}</span>`;
+    const pill=s=>{ const n=String(s||'').toLowerCase(); if(n==='en cours') return '<span class="pill warn">En cours</span>'; if(n==='cloturé'||n==='clôturé') return '<span class="pill ok">Clôturé</span>'; return `<span class="pill">${s||'—'}</span>`; };
+    const isOpen=s => String(s||'').toLowerCase()==='en cours';
 
     async function doSearch(){
       const immat=(document.getElementById('qImmat').value||'').trim();
@@ -66,26 +98,82 @@
         window.__rows=rows;
       }catch(e){ setNotice('Erreur : '+e.message,'error'); }
     }
+
     function render(rows){
-      $tbody.innerHTML = rows.map((r,i)=>`
-        <tr>
-          <td>${i+1}</td>
-          <td><strong>${r.immatriculation||'—'}</strong></td>
-          <td>${r.magasin_pret||'—'}</td>
-          <td>${r.chauffeur_nom||'—'}</td>
-          <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
-          <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
-          <td>${pill(r.status)}</td>
-          <td class="right"></td>
-        </tr>
-      `).join('');
+      $tbody.innerHTML = rows.map((r,i)=>{
+        const actions = isOpen(r.status)
+          ? `<button class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
+          : '';
+        return `
+          <tr>
+            <td>${i+1}</td>
+            <td><strong>${r.immatriculation||'—'}</strong></td>
+            <td>${r.magasin_pret||'—'}</td>
+            <td>${r.chauffeur_nom||'—'}</td>
+            <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
+            <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
+            <td>${pill(r.status)}</td>
+            <td class="right">${actions}</td>
+          </tr>
+        `;
+      }).join('');
     }
+
     document.getElementById('btnSearch').addEventListener('click', doSearch);
     document.getElementById('btnExport').addEventListener('click', ()=>{
       const rows=window.__rows||[]; const head=['loan_id','vehicle_id','immatriculation','magasin_pret','chauffeur_nom','date_depart','heure_depart','date_retour','heure_retour','status','receptionnaire_depart','receptionnaire_retour','observations','created_at','updated_at'];
       const csv=[head.join(';')].concat(rows.map(r=>head.map(k=>String(r[k]??'').replaceAll(/[\r\n;]+/g,' ')).join(';'))).join('\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='loans_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
+
+    const $mask = document.getElementById('mask');
+    const $mInfo = document.getElementById('mInfo');
+    const $mDateRet = document.getElementById('mDateRet');
+    const $mHourRet = document.getElementById('mHourRet');
+    const $mRecep = document.getElementById('mRecep');
+    const $mNotice = document.getElementById('mNotice');
+    const $mCancel = document.getElementById('mCancel');
+    const $mOk = document.getElementById('mOk');
+    let __ctx = { loanId:'', vehicleId:'', immat:'' };
+
+    const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
+
+    function openCloseModal(ctx){
+      __ctx = ctx;
+      $mInfo.textContent = `Véhicule : ${ctx.immat||'—'} • Prêt #${ctx.loanId}`;
+      const now=new Date(), pad=n=>String(n).padStart(2,'0');
+      $mDateRet.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      $mHourRet.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      $mRecep.value = '';
+      setModalNotice('');
+      $mask.style.display='flex';
+    }
+
+    $tbody.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btnClose');
+      if(!btn) return;
+      openCloseModal({ loanId: btn.dataset.loan, vehicleId: btn.dataset.veh||'', immat: btn.dataset.immat||'' });
+    });
+
+    $mCancel.addEventListener('click', ()=>{ $mask.style.display='none'; });
+
+    $mOk.addEventListener('click', async ()=>{
+      try{
+        setModalNotice('Clôture en cours…');
+        const payload = { vehicle_id: __ctx.vehicleId, date_retour:$mDateRet.value, heure_retour:$mHourRet.value, receptionnaire_retour:$mRecep.value.trim() };
+        const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__ctx.loanId)}/close`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
+        setModalNotice('Prêt clôturé.','success');
+        $mask.style.display='none';
+        setNotice('Prêt clôturé.','success');
+        await doSearch();
+      }catch(e){
+        setModalNotice('Échec : '+e.message,'error');
+      }
+    });
+
     doSearch();
   </script>
 </body>

@@ -174,9 +174,9 @@ router.post('/loans/pdf', async (req, res) => {
 
     doc.font('Helvetica').fontSize(11);
     doc.text('Réceptionnaire\n\nSignature', x + 10, yBox + 15);
-    doc.text('Client\n\nSignature',         x + 180, yBox + 15);
+    doc.text('Chauffeur\n\nSignature',         x + 180, yBox + 15);
     doc.text('Réceptionnaire\n\nSignature', mid + 10, yBox + 15);
-    doc.text('Client\n\nSignature',         mid + 180, yBox + 15);
+    doc.text('Chauffeur\n\nSignature',         mid + 180, yBox + 15);
 
     const yObs = yBox + h + 36;
     doc.font('Helvetica-Bold').fontSize(12).text('OBSERVATIONS :', x, yObs);
