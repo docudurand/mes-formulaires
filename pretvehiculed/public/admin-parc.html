@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin – Parc & prêts véhicules</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --primary:#004080; --accent:#00a7e1; --bg:#f5f9fc; --ink:#073763; --line:#e5e7eb; --ok:#2e7d32; --err:#c62828;
+      --scale: 1.2; --bw: calc(1px * var(--scale));
+    }
+    *{box-sizing:border-box}
+    html{font-size: calc(100% * var(--scale));}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
+    .wrap{max-width: calc(1200px * var(--scale)); margin: calc(24px * var(--scale)) auto; padding: calc(16px * var(--scale))}
+    h1{font-size:1.6rem;margin:0 0 calc(12px * var(--scale))}
+    .tools{display:flex;flex-wrap:wrap;gap:calc(10px * var(--scale));align-items:end;border:var(--bw) solid var(--line);border-radius:calc(14px * var(--scale));padding:calc(12px * var(--scale));background:#fff;box-shadow:0 calc(6px * var(--scale)) calc(18px * var(--scale)) #0001}
+    label{font-weight:600;margin-bottom:calc(4px * var(--scale));display:block}
+    input{padding:calc(10px * var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px * var(--scale))}
+    button{border:0;border-radius:calc(10px * var(--scale));padding:calc(10px * var(--scale)) calc(14px * var(--scale));font-weight:700;cursor:pointer}
+    .btn{background:var(--primary);color:#fff}
+    .btn-sec{background:#eef5ff;color:var(--primary);border:var(--bw) solid #d6e6ff}
+    .btn-ghost{background:#fff;border:var(--bw) solid var(--line)}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:calc(14px * var(--scale));background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px * var(--scale));overflow:hidden}
+    thead th{background:#f8fbff;text-align:left;padding:calc(10px * var(--scale));border-bottom:var(--bw) solid var(--line)}
+    tbody td{padding:calc(10px * var(--scale));border-bottom:var(--bw) solid #f1f3f5;vertical-align:top}
+    tr:last-child td{border-bottom:0}
+    .muted{color:#667}
+    .pill{display:inline-block;padding:calc(4px * var(--scale)) calc(8px * var(--scale));border-radius:999px;border:var(--bw) solid var(--line)}
+    .ok{background:#f2faf4;color:var(--ok);border-color:#b7e3c3}
+    .warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
+    .bad{background:#fff6f6;color:#c62828;border-color:#f3b7b7}
+    .right{text-align:right}
+    .notice{margin-top:calc(10px * var(--scale))}
+    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px * var(--scale))}
+    .modal{background:#fff;border-radius:calc(14px * var(--scale));max-width:calc(520px * var(--scale));width:100%;padding:calc(16px * var(--scale));border:var(--bw) solid var(--line)}
+    .row{display:grid;gap:calc(10px * var(--scale))}
+    @media(min-width:600px){ .row.cols-2{grid-template-columns:1fr 1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Admin – Parc & prêts véhicules</h1>
+
+    <div class="tools">
+      <div>
+        <label for="qImmat">Immatriculation</label>
+        <input id="qImmat" type="text" placeholder="Ex: AA-123-BB">
+      </div>
+      <div>
+        <label for="qDate">Date</label>
+        <input id="qDate" type="date">
+      </div>
+      <div><button class="btn" id="btnSearch">Rechercher</button></div>
+      <div style="margin-left:auto"><button class="btn-sec" id="btnExport">Exporter CSV</button></div>
+    </div>
+
+    <div class="notice" id="notice"></div>
+
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Immat.</th>
+          <th>Magasin prêt</th>
+          <th>Chauffeur</th>
+          <th>Départ</th>
+          <th>Retour</th>
+          <th>Statut</th>
+          <th class="right">Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="modalMask" id="mask">
+    <div class="modal">
+      <h3 style="margin:0 0 calc(8px * var(--scale))">Clôturer le prêt</h3>
+      <div class="row cols-2">
+        <div>
+          <label for="mDateRet">Date retour</label>
+          <input id="mDateRet" type="date">
+        </div>
+        <div>
+          <label for="mHourRet">Heure retour</label>
+          <input id="mHourRet" type="time">
+        </div>
+      </div>
+      <div style="margin-top:calc(10px * var(--scale))">
+        <label for="mRecep">Réceptionnaire (retour)</label>
+        <input id="mRecep" type="text" placeholder="Nom réceptionnaire">
+      </div>
+      <div style="display:flex;gap:calc(10px * var(--scale));justify-content:flex-end;margin-top:calc(14px * var(--scale))">
+        <button class="btn-ghost" id="mCancel">Annuler</button>
+        <button class="btn" id="mOk">Valider la clôture</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = '/api';
+
+    const $tbody = document.querySelector('#tbl tbody');
+    const $notice = document.getElementById('notice');
+
+    const setNotice=(m,t='info')=>{ $notice.textContent=m||''; $notice.style.color=t==='error'?'#c62828':t==='success'?'#2e7d32':'#073763'; };
+
+    async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+
+    const pad2 = n => String(n).padStart(2,'0');
+
+    function parseMaybeDate(v){
+      if(!v && v!==0) return null;
+      if(v instanceof Date) return isNaN(v)?null:v;
+      if(typeof v === 'number'){
+        const ms = Math.round((v - 25569) * 86400 * 1000);
+        const d = new Date(ms);
+        return isNaN(d) ? null : d;
+      }
+      if(typeof v === 'string'){
+        if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){
+          const [h,m] = v.split(':'); const d=new Date(); d.setHours(+h, +m||0, 0, 0); return d;
+        }
+        const d = new Date(v);
+        if(!isNaN(d)) return d;
+        const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if(m){ const d2 = new Date(+m[1], +m[2]-1, +m[3]); return isNaN(d2)?null:d2; }
+      }
+      return null;
+    }
+
+    function fmtFRDate(d){
+      const dt = parseMaybeDate(d);
+      if(!dt) return '—';
+      return `${pad2(dt.getDate())}/${pad2(dt.getMonth()+1)}/${String(dt.getFullYear()).slice(-2)}`;
+    }
+    function fmtFRTime(t){
+      const dt = parseMaybeDate(t);
+      if(!dt) return '—';
+      return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+    }
+
+    function fmtBloc(dateVal, timeVal, who){
+      const d = fmtFRDate(dateVal);
+      const h = fmtFRTime(timeVal);
+      const main = (d!=='—' || h!=='—') ? `${d}${h!=='—' ? ' • '+h : ''}` : '—';
+      const extra = who ? `<div class="muted">${who}</div>` : '';
+      return `${main}${extra}`;
+    }
+
+    async function doSearch(){
+      const immat = (document.getElementById('qImmat').value||'').trim();
+      const date  = document.getElementById('qDate').value || '';
+      setNotice('Recherche en cours...');
+      try{
+        const q = new URLSearchParams({ immat, date }).toString();
+        const rows = await fetchJSON(`${BASE_URL}/loans/search?${q}`);
+        render(rows); setNotice(`${rows.length} résultat(s)`); window.__lastRows = rows;
+      }catch(e){ setNotice('Erreur de recherche : '+e.message, 'error'); }
+    }
+
+    const pill=(s)=> s==='En cours' ? '<span class="pill warn">En cours</span>' : s==='Cloturé' ? '<span class="pill ok">Clôturé</span>' : `<span class="pill">${s||'—'}</span>`;
+
+    function render(rows){
+      $tbody.innerHTML = rows.map((r,i)=>`
+        <tr data-id="${r.loan_id||''}" data-veh="${r.vehicle_id||''}">
+          <td>${i+1}</td>
+          <td><strong>${r.immatriculation||'—'}</strong><div class="muted">${r.magasin_pret||''}</div></td>
+          <td>${r.magasin_pret||'—'}</td>
+          <td>${r.chauffeur_nom||'—'}</td>
+          <td>${fmtBloc(r.date_depart, r.heure_depart, r.receptionnaire_depart)}</td>
+          <td>${fmtBloc(r.date_retour, r.heure_retour, r.receptionnaire_retour)}</td>
+          <td>${pill(r.status)}</td>
+          <td class="right">
+            ${r.status==='En cours' ? `<button class="btn" onclick="openCloseModal(${i})">Clôturer</button>`:''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    let closeIdx=null;
+    function openCloseModal(idx){
+      closeIdx = idx; document.getElementById('mask').style.display='flex';
+      const now = new Date(); const pad=n=>String(n).padStart(2,'0');
+      document.getElementById('mDateRet').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      document.getElementById('mHourRet').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      document.getElementById('mRecep').value = '';
+    }
+    window.openCloseModal = openCloseModal;
+
+    document.getElementById('mCancel').addEventListener('click', ()=>{ document.getElementById('mask').style.display='none'; });
+    document.getElementById('mOk').addEventListener('click', async ()=>{
+      const r = window.__lastRows[closeIdx]; const loanId = r.loan_id;
+      if(!loanId){ setNotice("Impossible de clore : identifiant manquant.", 'error'); return; }
+      const payload = {
+        vehicle_id: r.vehicle_id,
+        date_retour: document.getElementById('mDateRet').value,
+        heure_retour: document.getElementById('mHourRet').value,
+        receptionnaire_retour: document.getElementById('mRecep').value
+      };
+      try{
+        const res = await fetch(`${BASE_URL}/loans/${encodeURIComponent(loanId)}/close`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const j = await res.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
+        document.getElementById('mask').style.display='none'; setNotice('Prêt clôturé avec succès.', 'success'); doSearch();
+      }catch(e){ setNotice('Échec clôture : '+e.message, 'error'); }
+    });
+
+    document.getElementById('btnExport').addEventListener('click', ()=>{
+      const rows = window.__lastRows || [];
+      const head = ['loan_id','vehicle_id','immatriculation','magasin_pret','chauffeur_nom','date_depart','heure_depart','date_retour','heure_retour','status','receptionnaire_depart','receptionnaire_retour','observations','created_at','updated_at'];
+      const csv = [head.join(';')].concat(rows.map(r=>head.map(k=>String(r[k]??'').replaceAll(/[\r\n;]+/g,' ')).join(';'))).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='loans_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('btnSearch').addEventListener('click', doSearch);
+    doSearch();
+  </script>
+</body>
+</html>
