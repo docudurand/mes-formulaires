@@ -71,7 +71,6 @@
 
       <div class="btns">
         <button class="btn" id="btnSave">Enregistrer le prêt</button>
-        <button class="btn-sec" id="btnPdf">Imprimer la fiche (PDF)</button>
         <button class="btn-sec" id="btnOpenClose">Clôturer un prêt</button>
         <button class="btn-ghost" id="btnReset">Réinitialiser</button>
         <span class="tag" id="statusTag">Prêt non enregistré</span>
@@ -103,7 +102,7 @@
       <div class="pdfBar">
         <div style="font-weight:700">Aperçu d’impression</div>
         <div class="actions">
-          <button class="btn-sec" id="pdfPrint" type="button">Imprimer</button>
+          <button class="btn-sec" id="pdfReprint" type="button" title="Relancer l’impression">Réimprimer</button>
           <button class="btn-ghost" id="pdfClose" type="button">Fermer</button>
         </div>
       </div>
@@ -111,7 +110,7 @@
     </div>
   </div>
 
-  <form id="printForm" method="POST" target="pdfFrame">
+  <form id="printForm" method="POST" target="pdfFrame" action="/pret/api/loans/print">
     <input type="hidden" name="vehicle_id">
     <input type="hidden" name="immatriculation">
     <input type="hidden" name="magasin_pret">
@@ -129,21 +128,22 @@
     const $store = el('store'), $vehicle = el('vehicle'), $vehInfo = el('vehInfo');
     const $statusTag = el('statusTag'), $notice = el('notice'), $openLoans = el('openLoans');
     const $mask=el('mask'), $mInfo=el('mInfo'), $mDateRet=el('mDateRet'), $mHourRet=el('mHourRet'), $mRecep=el('mRecep'), $mNotice=el('mNotice');
-    const $btnSave = el('btnSave'), $btnPdf = el('btnPdf'), $btnOpenClose = el('btnOpenClose'), $btnReset = el('btnReset');
+    const $btnSave = el('btnSave'), $btnOpenClose = el('btnOpenClose'), $btnReset = el('btnReset');
 
     const $pdfMask = el('pdfMask');
     const $pdfFrame = el('pdfFrame');
     const $pdfClose = el('pdfClose');
-    const $pdfPrint = el('pdfPrint');
+    const $pdfReprint = el('pdfReprint');
     const $printForm = el('printForm');
 
     let vehiclesAll = []; let vehiclesIndex = {}; let lastSaved=null;
 
     async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok){throw new Error('HTTP '+r.status)} return r.json(); }
-    const setStatus=(t)=>{ el('statusTag').textContent=t; };
+    const setStatus=(t)=>{ $statusTag.textContent=t; $statusTag.style.opacity=1; };
     const setNotice=(t,type='info',asHTML=false)=>{ 
-      const n=el('notice'); if(asHTML) n.innerHTML=t||''; else n.textContent=t||'';
-      n.style.color= type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763';
+      if(asHTML) $notice.innerHTML = t || '';
+      else $notice.textContent = t || '';
+      $notice.style.color = type==='error' ? '#c62828' : type==='success' ? '#2e7d32' : '#073763';
     };
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
 
@@ -226,6 +226,25 @@
       }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
     });
 
+    function openPrintPreview(d){
+      Object.entries(d).forEach(([k,v])=>{
+        const inp=$printForm.querySelector(`[name="${k}"]`); if(inp) inp.value = v==null?'':String(v);
+      });
+      $pdfFrame.src='about:blank';
+      $pdfMask.style.display='flex';
+      $pdfMask.setAttribute('aria-hidden','false');
+      $printForm.submit();
+    }
+
+    $pdfClose.addEventListener('click', ()=>{
+      $pdfMask.style.display='none';
+      $pdfMask.setAttribute('aria-hidden','true');
+      $pdfFrame.src='about:blank';
+    });
+    $pdfReprint.addEventListener('click', ()=>{
+      try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){}
+    });
+
     el('btnSave').addEventListener('click', async ()=>{
       const d=currentPayload();
       if(!d.magasin_pret || !d.vehicle_id || !d.chauffeur_nom || !d.date_depart || !d.heure_depart){
@@ -236,26 +255,19 @@
         setStatus('Enregistrement en cours…'); setNotice('⏳ <span class="muted">Enregistrement en cours…</span>', 'info', true);
         const r=await fetch(`${BASE_URL}/loans`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const j=await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
-        lastSaved={...d,loan_id:j.loan_id||null}; setStatus('Prêt enregistré'); setNotice('Prêt enregistré.','success');
+
+        lastSaved={...d,loan_id:j.loan_id||null};
+        setStatus('Prêt enregistré'); setNotice('Prêt enregistré. Impression en cours…','success');
+
+        openPrintPreview(lastSaved);
+
         await loadVehicles(); renderVehicleOptions($store.value||null); await loadOpenLoansForStore($store.value||null);
-      }catch(e){ setStatus('Erreur'); setNotice('Échec : '+e.message,'error'); }
-      finally{ $btnSave.disabled=false; $btnSave.removeAttribute('aria-busy'); }
+      }catch(e){
+        setStatus('Erreur'); setNotice('Échec : '+e.message,'error');
+      }finally{
+        $btnSave.disabled=false; $btnSave.removeAttribute('aria-busy');
+      }
     });
-
-    $printForm.action = `${BASE_URL}/loans/print`;
-    el('btnPdf').addEventListener('click', ()=>{
-      const d = lastSaved || currentPayload();
-      if(!d.vehicle_id){ setNotice('Choisissez un véhicule avant l’aperçu.','error'); return; }
-      Object.entries(d).forEach(([k,v])=>{
-        const inp=$printForm.querySelector(`[name="${k}"]`); if(inp) inp.value = v==null?'':String(v);
-      });
-      $pdfFrame.src='about:blank'; $pdfMask.style.display='flex'; $pdfMask.setAttribute('aria-hidden','false');
-      $printForm.submit();
-      setNotice('');
-    });
-
-    $pdfClose.addEventListener('click', ()=>{ $pdfMask.style.display='none'; $pdfMask.setAttribute('aria-hidden','true'); $pdfFrame.src='about:blank'; });
-    $pdfPrint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){} });
 
     el('btnReset').addEventListener('click', async ()=>{
       document.querySelectorAll('input, textarea, select').forEach(i=>{ if(i.type!=='select-one') i.value=''; else i.selectedIndex=0; });
