@@ -76,8 +76,15 @@
     <table id="tbl">
       <thead>
         <tr>
-          <th>#</th><th>Immat.</th><th>Magasin prêt</th><th>Chauffeur</th>
-          <th>Départ</th><th>Retour</th><th>Statut</th><th class="right">Actions</th>
+          <th>#</th>
+          <th>Immat.</th>
+          <th>Magasin prêt</th>
+          <th>Chauffeur</th>
+          <th>Réceptionnaire</th>
+          <th>Départ</th>
+          <th>Retour</th>
+          <th>Statut</th>
+          <th class="right">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -255,6 +262,7 @@
             <td><strong>${r.immatriculation||'—'}</strong></td>
             <td>${r.magasin_pret||'—'}</td>
             <td>${r.chauffeur_nom||'—'}</td>
+            <td>${r.receptionnaire_depart||'—'}</td>
             <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
             <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
             <td>${pill(r.status)}</td>
