@@ -1,6 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 
 const router = express.Router();
 
@@ -114,7 +115,7 @@ router.post('/loans/pdf', async (req, res) => {
       if (!v && v !== 0) return null;
       if (v instanceof Date) return isNaN(v) ? null : v;
       if (typeof v === 'number') {
-        const ms = Math.round((v - 25569) * 86400 * 1000); // Excel -> JS
+        const ms = Math.round((v - 25569) * 86400 * 1000);
         const dt = new Date(ms); return isNaN(dt) ? null : dt;
       }
       if (typeof v === 'string') {
@@ -122,7 +123,7 @@ router.post('/loans/pdf', async (req, res) => {
         if (hh) { const dt = new Date(); dt.setHours(+hh[1], +hh[2], 0, 0); return dt; }
         const dt = new Date(v); if (!isNaN(dt)) return dt;
         const m2 = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (m2) { const dt2 = new Date(+m2[1], +m2[2]-1, +m2[3]); return isNaN(dt2)?null:dt2; }
+        if (m2) { const dt2 = new Date(+m2[1], +m2[2]-1, +m2[3]); return isNaN(dt2) ? null : dt2; }
       }
       return null;
     };
@@ -135,10 +136,26 @@ router.post('/loans/pdf', async (req, res) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
     doc.pipe(res);
 
+    const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
+    const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
+    const origin = host ? `${proto}://${host}` : '';
+
+    const closeUrl = origin
+      ? `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`
+      : `/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
+
+    const qrDataUrl = await QRCode.toDataURL(closeUrl, { margin: 1, width: 140 });
+    const qrBuf = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+
     doc.font('Helvetica-Bold').fontSize(16).text('FICHE PRÊT VÉHICULE DURAND', { align: 'center' });
     doc.moveDown(0.5);
     doc.font('Helvetica').fontSize(10).text(`MAGASIN : ${d.magasin_pret || ''}`, { align: 'right' });
     doc.moveDown();
+
+    doc.image(qrBuf, doc.page.margins.left, doc.page.margins.top, { width: 90 });
+
+    doc.font('Helvetica').fontSize(8)
+      .text('Scanner pour clôturer', doc.page.margins.left, doc.page.margins.top + 95, { width: 90, align: 'center' });
 
     const line = (label, value, x, y, gap = 130) => {
       doc.font('Helvetica-Bold').fontSize(12).text(label, x, y);
@@ -174,9 +191,9 @@ router.post('/loans/pdf', async (req, res) => {
 
     doc.font('Helvetica').fontSize(11);
     doc.text('Réceptionnaire\n\nSignature', x + 10, yBox + 15);
-    doc.text('Chauffeur\n\nSignature',         x + 180, yBox + 15);
+    doc.text('Client\n\nSignature',         x + 180, yBox + 15);
     doc.text('Réceptionnaire\n\nSignature', mid + 10, yBox + 15);
-    doc.text('Chauffeur\n\nSignature',         mid + 180, yBox + 15);
+    doc.text('Client\n\nSignature',         mid + 180, yBox + 15);
 
     const yObs = yBox + h + 36;
     doc.font('Helvetica-Bold').fontSize(12).text('OBSERVATIONS :', x, yObs);
