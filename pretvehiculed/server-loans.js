@@ -68,6 +68,29 @@ router.post('/loans', async (req, res) => {
   }
 });
 
+router.post('/loans/:loan_id/update', async (req, res) => {
+  if (!assertConfig(res)) return;
+  try {
+    const payload = {
+      action: 'updateLoan',
+      key: APPSCRIPT_KEY,
+      data: { ...req.body, loan_id: req.params.loan_id }
+    };
+    const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
+    let data = resp.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+    if (resp.status >= 400) {
+      return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
+    }
+    if (!data || data.ok === undefined || data.ok === true) {
+      return res.json({ ok: true });
+    }
+    return res.status(400).json(data);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
+  }
+});
+
 router.post('/loans/:loan_id/close', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
