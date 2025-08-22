@@ -44,6 +44,8 @@
 
     .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:9999}
     .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(520px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
+
+    .invalid{ border-color: var(--err) !important; box-shadow: 0 0 0 2px #c628280f; }
   </style>
 </head>
 <body>
@@ -53,27 +55,50 @@
 
     <div class="card">
       <div class="row cols-2">
-        <div><label for="store">Magasin</label><select id="store"></select></div>
+        <div>
+          <label for="store">Magasin</label>
+          <select id="store" required aria-required="true"></select>
+        </div>
         <div>
           <label for="vehicle">Véhicule (immatriculation)</label>
-          <select id="vehicle"></select>
+          <select id="vehicle" required aria-required="true"></select>
           <div class="notice" id="vehInfo"></div>
         </div>
       </div>
 
       <div class="row cols-2" style="margin-top:calc(10px*var(--scale))">
-        <div><label for="chauffeur">Nom du chauffeur</label><input id="chauffeur" type="text" placeholder="Nom du chauffeur"/></div>
+        <div>
+          <label for="chauffeur">Nom du chauffeur</label>
+          <input id="chauffeur" type="text" placeholder="Nom du chauffeur" required aria-required="true"/>
+        </div>
       </div>
 
       <div class="row cols-3" style="margin-top:calc(10px*var(--scale))">
-        <div><label for="dateDepart">Date départ</label><input id="dateDepart" type="date"/></div>
-        <div><label for="heureDepart">Heure départ</label><input id="heureDepart" type="time"/></div>
-        <div><label for="receptionnaireDepart">Réceptionnaire (départ)</label><input id="receptionnaireDepart" type="text" placeholder="Nom réceptionnaire"/></div>
+        <div>
+          <label for="dateDepart">Date départ</label>
+          <input id="dateDepart" type="date" required aria-required="true"/>
+        </div>
+        <div>
+          <label for="heureDepart">Heure départ</label>
+          <input id="heureDepart" type="time" required aria-required="true"/>
+        </div>
+        <div>
+          <label for="receptionnaireDepart">Réceptionnaire (départ)</label>
+          <input id="receptionnaireDepart" type="text" placeholder="Nom réceptionnaire" required aria-required="true"/>
+        </div>
       </div>
+	  <div style="margin-top:calc(10px*var(--scale))">
+  <label for="transAss">Transfert assurance</label>
+  <select id="transAss" required aria-required="true">
+    <option value="">— Sélectionnez —</option>
+    <option value="Oui">Oui</option>
+    <option value="Non">Non</option>
+  </select>
+</div>
 
       <div style="margin-top:calc(10px*var(--scale))">
         <label for="obs">Information chauffeur</label>
-        <textarea id="obs" placeholder="Adresse, téléphone ..."></textarea>
+        <textarea id="obs" placeholder="Adresse, téléphone ..." required aria-required="true"></textarea>
       </div>
 
       <div style="margin-top:calc(12px*var(--scale))">
@@ -92,9 +117,9 @@
       </div>
 
       <div class="btns">
-        <button class="btn" id="btnSave">Enregistrer le prêt</button>
-        <button class="btn-sec" id="btnOpenClose">Clôturer un prêt</button>
-        <button class="btn-ghost" id="btnReset">Réinitialiser</button>
+        <button class="btn" id="btnSave" type="button">Enregistrer le prêt</button>
+        <button class="btn-sec" id="btnOpenClose" type="button">Clôturer un prêt</button>
+        <button class="btn-ghost" id="btnReset" type="button">Réinitialiser</button>
         <span class="tag" id="statusTag">Prêt non enregistré</span>
       </div>
 
@@ -112,8 +137,8 @@
       </div>
       <div style="margin-top:calc(10px*var(--scale))"><label for="mRecep">Réceptionnaire (retour)</label><input id="mRecep" type="text"></div>
       <div style="display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(14px*var(--scale))">
-        <button class="btn-ghost" id="mCancel">Annuler</button>
-        <button class="btn" id="mOk">Valider la clôture</button>
+        <button class="btn-ghost" id="mCancel" type="button">Annuler</button>
+        <button class="btn" id="mOk" type="button">Valider la clôture</button>
       </div>
       <div class="notice" id="mNotice"></div>
     </div>
@@ -185,11 +210,66 @@
     const setNotice=(t,type='info',asHTML=false)=>{ if(asHTML) $notice.innerHTML=t||''; else $notice.textContent=t||''; $notice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
 
+    const REQUIRED_IDS = ['store','vehicle','chauffeur','dateDepart','heureDepart','receptionnaireDepart','transAss','obs'];
+    const LABELS = {
+      store:'Magasin',
+      vehicle:'Véhicule',
+      chauffeur:'Nom du chauffeur',
+      dateDepart:'Date départ',
+      heureDepart:'Heure départ',
+      receptionnaireDepart:'Réceptionnaire (départ)',
+	  transAss:'Transfert assurance',
+      obs:'Information chauffeur'
+    };
+    function clearInvalid(){
+      REQUIRED_IDS.forEach(id=>{
+        const f=el(id); if(!f) return;
+        f.classList.remove('invalid'); f.removeAttribute('aria-invalid');
+      });
+    }
+    function validateRequired(){
+      clearInvalid();
+      const missing = [];
+      for(const id of REQUIRED_IDS){
+        const f = el(id);
+        const val = (f?.value ?? '').trim();
+        if(!val){
+          missing.push(LABELS[id] || id);
+          f?.classList.add('invalid');
+          f?.setAttribute('aria-invalid','true');
+        }
+      }
+      if(missing.length){
+        setStatus('Champs manquants');
+        setNotice('Complétez : '+missing.join(', ')+'.','error');
+        const firstId = REQUIRED_IDS.find(id => el(id)?.classList.contains('invalid'));
+        if(firstId) el(firstId).focus();
+        return false;
+      }
+      return true;
+    }
+    REQUIRED_IDS.forEach(id=>{
+      const f = el(id);
+      f?.addEventListener('input', ()=>{
+        if((f.value||'').trim()){
+          f.classList.remove('invalid');
+          f.removeAttribute('aria-invalid');
+        }
+      });
+      f?.addEventListener('change', ()=>{
+        if((f.value||'').trim()){
+          f.classList.remove('invalid');
+          f.removeAttribute('aria-invalid');
+        }
+      });
+    });
+
     async function resetAll(){
       document.querySelectorAll('input, textarea, select').forEach(i=>{
         if(i.id==='attInput') return;
         if(i.type!=='select-one') i.value='';
         else i.selectedIndex=0;
+        i.classList?.remove('invalid'); i.removeAttribute?.('aria-invalid');
       });
       setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null;
       atts.forEach(a=>a.url && URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
@@ -285,6 +365,7 @@
         heure_depart:el('heureDepart').value,
         receptionnaire_depart:el('receptionnaireDepart').value.trim(),
         observations:el('obs').value.trim(),
+		transfert_assurance: el('transAss').value || '',
         loan_id: (lastSaved && lastSaved.loan_id) || ''
       };
     }
@@ -346,10 +427,9 @@
     $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){ } });
 
     el('btnSave').addEventListener('click', async ()=>{
+      if(!validateRequired()) return; // tout obligatoire (sauf "Prêts en cours")
+
       const d=currentPayload();
-      if(!d.magasin_pret || !d.vehicle_id || !d.chauffeur_nom || !d.date_depart || !d.heure_depart){
-        setStatus('Champs manquants'); setNotice('Magasin, véhicule, chauffeur, date et heure requis.','error'); return;
-      }
       try{
         $btnSave.disabled = true; $btnSave.setAttribute('aria-busy','true');
         setStatus('Enregistrement en cours…'); setNotice('⏳ <span class="muted">Enregistrement en cours…</span>', 'info', true);

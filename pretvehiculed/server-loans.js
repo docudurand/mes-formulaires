@@ -210,6 +210,7 @@ router.post('/loans/email', async (req, res) => {
       ['Magasin', loan.magasin_pret||''],
       ['Immatriculation', loan.immatriculation||''],
       ['Chauffeur', loan.chauffeur_nom||''],
+	  ['Transfert assurance', loan.transfert_assurance || ''],
       ['Départ', [loan.date_depart||'', loan.heure_depart||''].filter(Boolean).join(' ')],
       ['Réceptionnaire (départ)', loan.receptionnaire_depart||''],
       ['Information chauffeur', (loan.observations||'').replace(/\n/g,'<br>')]
