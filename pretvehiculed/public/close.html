@@ -5,12 +5,31 @@
   <title>Clôturer un prêt</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:16px;color:#073763;background:#fff}
-    .card{max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;box-shadow:0 6px 18px #0001}
+    *{ box-sizing: border-box; }
+    html, body { max-width:100%; overflow-x:hidden; }
+
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      margin:0; padding:16px; color:#073763; background:#fff;
+    }
+    .card{
+      max-width:560px; width:100%;
+      margin:0 auto; background:#fff;
+      border:1px solid #e5e7eb; border-radius:14px;
+      padding:16px; box-shadow:0 6px 18px #0001;
+      overflow:hidden;
+    }
     h1{font-size:1.1rem;margin:0 0 8px}
     label{display:block;font-weight:600;margin-top:10px}
-    input,select,button{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px}
-    button{background:#004080;color:#fff;font-weight:700;margin-top:12px;border:0}
+    input,select,button{
+      width:100%; display:block;
+      padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px;
+      background:#fff; color:#073763; font-size:1rem;
+    }
+    button{
+      background:#004080; color:#fff; font-weight:700; margin-top:12px; border:0;
+    }
+    button[disabled]{opacity:.6}
     .muted{opacity:.85}
     .notice{margin-top:10px;font-size:.95rem}
     .ok{color:#2e7d32}.err{color:#c62828}.info{color:#073763}
@@ -41,10 +60,11 @@
 
   <script>
     const BASE_URL = '/pret/api';
+
     const qp = new URLSearchParams(location.search);
-    let loanId   = qp.get('loan_id')   || '';
-    let immat    = (qp.get('immat')    || '').trim();
-    let vehicleId= qp.get('vehicle_id')|| '';
+    let loanId    = (qp.get('loan_id') || '').trim();
+    let immat     = (qp.get('immat') || '').trim();
+    let vehicleId = (qp.get('vehicle_id') || '').trim();
 
     const $info = document.getElementById('info');
     const $date = document.getElementById('date');
@@ -57,72 +77,96 @@
 
     const p2=n=>String(n).padStart(2,'0');
     function setNotice(msg, cls='info'){ $notice.textContent = msg||''; $notice.className = 'notice '+cls; }
+    async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
     const now=new Date();
     $date.value=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
     $time.value=`${p2(now.getHours())}:${p2(now.getMinutes())}`;
 
-    function fmtDate(d){ const dt=new Date(d); return isNaN(dt)?'':`${p2(dt.getDate())}/${p2(dt.getMonth()+1)}/${String(dt.getFullYear()).slice(-2)}`; }
-    function fmtTime(t){ const dt=new Date(t); if(!isNaN(dt)) return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`; if(typeof t==='string'&&/^\d{1,2}:\d{2}/.test(t)) return t.slice(0,5); return ''; }
-
-    async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    function fmtDate(v){ const d=new Date(v); return isNaN(d)?'':`${p2(d.getDate())}/${p2(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`; }
+    function fmtTime(v){
+      const d=new Date(v); if(!isNaN(d)) return `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+      if(typeof v==='string' && /^\d{1,2}:\d{2}/.test(v)) return v.slice(0,5);
+      return '';
+    }
 
     async function resolveLoan(){
       $info.textContent = immat ? `Véhicule : ${immat}` : 'Véhicule non précisé';
 
-      if (loanId) return;
+      if (loanId && vehicleId) return;
 
-      if (!immat) {
-        setNotice('Identifiant de prêt manquant et immatriculation absente. Scannez un QR récent ou saisissez l’immatriculation dans l’URL (?immat=AA-123-BB).', 'err');
-        $ok.disabled = true;
-        return;
+      if (!loanId && immat) {
+        try{
+          setNotice('Recherche du prêt en cours…');
+          const rows = await fetchJSON(`${BASE_URL}/loans/search?` + new URLSearchParams({immat}));
+          const open = (rows||[]).filter(r => String(r.status||'').toLowerCase()==='en cours');
+
+          if (open.length === 0) {
+            setNotice('Aucun prêt en cours trouvé pour ce véhicule.', 'err');
+            $ok.disabled = true;
+            return;
+          }
+
+          if (open.length === 1) {
+            loanId    = open[0].loan_id;
+            vehicleId = open[0].vehicle_id || vehicleId;
+            immat     = open[0].immatriculation || immat;
+            setNotice('Prêt en cours détecté.', 'ok');
+            return;
+          }
+
+          $selectorWrap.style.display = 'block';
+          $selLoan.innerHTML = open.map(r=>{
+            const d = [fmtDate(r.date_depart), fmtTime(r.heure_depart)].filter(Boolean).join(' • ');
+            const label = `${r.immatriculation||'—'} — ${r.chauffeur_nom||'—'} (${d||'date ?'})`;
+            return `<option value="${r.loan_id}" data-veh="${r.vehicle_id||''}">${label}</option>`;
+          }).join('');
+          loanId    = $selLoan.value;
+          vehicleId = $selLoan.options[$selLoan.selectedIndex]?.dataset?.veh || '';
+          $selLoan.addEventListener('change', ()=>{
+            loanId    = $selLoan.value;
+            vehicleId = $selLoan.options[$selLoan.selectedIndex]?.dataset?.veh || '';
+          });
+          setNotice('Plusieurs prêts en cours — sélectionnez celui à clôturer.', 'info');
+          return;
+        }catch(e){
+          setNotice('Erreur lors de la recherche : '+e.message, 'err');
+          return;
+        }
       }
 
-      try {
-        setNotice('Recherche du prêt en cours…');
-        const rows = await fetchJSON(`${BASE_URL}/loans/search?${new URLSearchParams({ immat })}`);
-        const open = (rows||[]).filter(r => String(r.status||'').toLowerCase()==='en cours');
-
-        if (open.length === 0) {
-          setNotice('Aucun prêt en cours trouvé pour ce véhicule.', 'err');
-          return;
-        }
-
-        if (open.length === 1) {
-          loanId = open[0].loan_id;
-          setNotice('Prêt en cours détecté.', 'ok');
-          return;
-        }
-
-        $selectorWrap.style.display = 'block';
-        $selLoan.innerHTML = open.map(r=>{
-          const d = [fmtDate(r.date_depart), fmtTime(r.heure_depart)].filter(Boolean).join(' • ');
-          const label = `${r.immatriculation||'—'} — ${r.chauffeur_nom||'—'} (${d||'date ?'})`;
-          return `<option value="${r.loan_id}">${label}</option>`;
-        }).join('');
-        $selLoan.addEventListener('change', ()=>{ loanId = $selLoan.value; });
-        loanId = $selLoan.value; // valeur par défaut
-        setNotice('Plusieurs prêts en cours — sélectionnez celui à clôturer.', 'info');
-      } catch(e) {
-        setNotice('Erreur lors de la recherche : '+e.message, 'err');
+      if (!loanId) {
+        setNotice('Identifiant de prêt manquant. Scannez un QR récent (ou ajoutez ?loan_id=... à l’URL).', 'err');
+        $ok.disabled = true;
       }
     }
 
     $ok.addEventListener('click', async ()=>{
       if (!loanId) { setNotice('Identifiant de prêt manquant.', 'err'); return; }
       try{
+        if (!vehicleId && immat) {
+          const rows = await fetchJSON(`${BASE_URL}/loans/search?` + new URLSearchParams({immat}));
+          const match = (rows||[]).find(r => String(r.loan_id)===String(loanId));
+          if (match) vehicleId = match.vehicle_id || '';
+        }
+        if (!vehicleId) { setNotice('Impossible de déterminer le véhicule du prêt (vehicle_id manquant).', 'err'); return; }
+
         $ok.disabled=true;
         setNotice('Clôture en cours…', 'info');
+
         const payload = {
-          date_retour:$date.value,
-          heure_retour:$time.value,
-          receptionnaire_retour:$recept.value.trim()
+          vehicle_id: vehicleId,
+          date_retour: $date.value,
+          heure_retour: $time.value,
+          receptionnaire_retour: $recept.value.trim()
         };
+
         const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(loanId)}/close`, {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
         });
         const j = await r.json();
         if(!j.ok) throw new Error(j.error||'Erreur API');
+
         setNotice('Prêt clôturé.', 'ok');
       }catch(e){
         setNotice('Échec : '+e.message, 'err');
