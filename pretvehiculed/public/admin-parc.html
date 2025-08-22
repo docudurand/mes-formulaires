@@ -65,10 +65,6 @@
         <label for="qDate">Date (départ)</label>
         <input id="qDate" type="text" inputmode="numeric" placeholder="AAAA-MM-JJ ou JJ/MM/AAAA">
       </div>
-
-      <div style="margin-left:auto">
-        <button id="btnExport" class="btn-light" type="button">Exporter CSV</button>
-      </div>
     </div>
 
     <div class="notice" id="notice"></div>
@@ -250,12 +246,15 @@
     }
 
     function render(rows){
+      const p2s = (d,t)=> t!=='—' ? ' • '+t : '';
       $tbody.innerHTML = rows.map((r,i)=>{
         const closeBtn = isOpen(r.status)
           ? `<button type="button" class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
           : '';
         const editBtn = `<button type="button" class="btn-mini btn-light btnEdit" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Modifier</button>`;
         const actions = `<div class="stack">${closeBtn}${editBtn}</div>`;
+        const dDep = fmtDate(r.date_depart), hDep = fmtTime(r.heure_depart);
+        const dRet = fmtDate(r.date_retour), hRet = fmtTime(r.heure_retour);
         return `
           <tr>
             <td>${i+1}</td>
@@ -263,8 +262,8 @@
             <td>${r.magasin_pret||'—'}</td>
             <td>${r.chauffeur_nom||'—'}</td>
             <td>${r.receptionnaire_depart||'—'}</td>
-            <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
-            <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
+            <td>${dDep}${p2s(0,hDep)}</td>
+            <td>${dRet}${p2s(0,hRet)}</td>
             <td>${pill(r.status)}</td>
             <td class="right">${actions}</td>
           </tr>
@@ -285,13 +284,6 @@
         applyFilters();
       }catch(e){ setNotice('Erreur : '+e.message,'error'); }
     }
-
-    document.getElementById('btnExport').addEventListener('click', ()=>{
-      const rows=(__rows||[]);
-      const head=['loan_id','vehicle_id','immatriculation','magasin_pret','chauffeur_nom','date_depart','heure_depart','date_retour','heure_retour','status','receptionnaire_depart','receptionnaire_retour','observations','created_at','updated_at'];
-      const csv=[head.join(';')].concat(rows.map(r=>head.map(k=>String(r[k]??'').replaceAll(/[\r\n;]+/g,' ')).join(';'))).join('\n');
-      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='loans_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
 
     const $mask = document.getElementById('mask');
     const $mInfo = document.getElementById('mInfo');
@@ -363,7 +355,11 @@
       showTop($maskEdit);
     }
 
-    $tbody.addEventListener('click', (e)=>{
+    document.getElementById('qImmat').addEventListener('change', applyFilters);
+    document.getElementById('qStore').addEventListener('change', applyFilters);
+    document.getElementById('qDate').addEventListener('input', applyFilters);
+
+    document.addEventListener('click', (e)=>{
       const btnC = e.target.closest('.btnClose');
       if(btnC){ openCloseModal({ loanId: btnC.dataset.loan, vehicleId: btnC.dataset.veh||'', immat: btnC.dataset.immat||'' }); return; }
       const btnE = e.target.closest('.btnEdit');
@@ -411,10 +407,6 @@
         setENotice('Échec : '+e.message,'error');
       }
     });
-
-    document.getElementById('qImmat').addEventListener('change', applyFilters);
-    document.getElementById('qStore').addEventListener('change', applyFilters);
-    document.getElementById('qDate').addEventListener('input', applyFilters);
 
     (async ()=>{ await loadStores(); await loadAllLoans(); })();
   </script>
