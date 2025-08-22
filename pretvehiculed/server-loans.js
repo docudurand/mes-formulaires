@@ -172,7 +172,7 @@ h1{ margin:0 0 8px; font-size:18px; text-align:center }
   </div>
 
   <div class="obs">
-    <div class="label">OBSERVATIONS :</div>
+    <div class="label">INFORMATION CHAUFFEUR :</div>
     <div class="area">${esc(d.observations)}</div>
   </div>
 
@@ -212,7 +212,7 @@ router.post('/loans/email', async (req, res) => {
       ['Chauffeur', loan.chauffeur_nom||''],
       ['Départ', [loan.date_depart||'', loan.heure_depart||''].filter(Boolean).join(' ')],
       ['Réceptionnaire (départ)', loan.receptionnaire_depart||''],
-      ['Observations', (loan.observations||'').replace(/\n/g,'<br>')]
+      ['Information chauffeur', (loan.observations||'').replace(/\n/g,'<br>')]
     ];
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif">

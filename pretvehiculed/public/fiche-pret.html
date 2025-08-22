@@ -68,8 +68,8 @@
       </div>
 
       <div style="margin-top:calc(10px*var(--scale))">
-        <label for="obs">Observations</label>
-        <textarea id="obs" placeholder="État du véhicule, accessoires remis, etc."></textarea>
+  <label for="obs">Information chauffeur</label>
+        <textarea id="obs" placeholder="Adresse, téléphone ..."></textarea>
       </div>
 
       <div style="margin-top:calc(12px*var(--scale))">
@@ -260,7 +260,16 @@
     }
 
     $store.addEventListener('change', async ()=>{ const code=$store.value||null; renderVehicleOptions(code); await loadOpenLoansForStore(code); });
-    $vehicle.addEventListener('change', ()=>{ const v=vehiclesIndex[$vehicle.value]; $vehInfo.textContent = v ? `Magasin d'attache: ${v.magasin_home||'—'} • Statut: ${v.statut||'—'}` : ''; });
+  $vehicle.addEventListener('change', ()=>{
+    const v = vehiclesIndex[$vehicle.value];
+    if (!v) { $vehInfo.textContent = ''; return; }
+
+    const base = `Magasin d'attache: ${v.magasin_home || '—'} • Statut: ${v.statut || '—'}`;
+    const ct   = (v['CT'] ?? v.ct) || '—';
+    const pol  = (v['Pollution'] ?? v.pollution) || '—';
+
+    $vehInfo.innerHTML = `${base}<br>CT: ${ct} • Pollution: ${pol}`;
+  });
 
     el('btnOpenClose').addEventListener('click', ()=>{
       const opt = $openLoans.options[$openLoans.selectedIndex];
