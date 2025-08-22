@@ -77,7 +77,6 @@
         <div class="attBar">
           <input id="attInput" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.heic" style="display:none">
           <button class="btn-sec" id="attBtn" type="button">Ajouter des fichiers</button>
-          <span class="muted">Images/PDF/Office (max ~10–12 Mo au total)</span>
         </div>
         <div id="attList" class="thumbs"></div>
       </div>
@@ -161,6 +160,18 @@
     const setStatus=(t)=>{ $statusTag.textContent=t; $statusTag.style.opacity=1; };
     const setNotice=(t,type='info',asHTML=false)=>{ if(asHTML) $notice.innerHTML=t||''; else $notice.textContent=t||''; $notice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
+
+    async function resetAll(){
+      document.querySelectorAll('input, textarea, select').forEach(i=>{
+        if(i.id==='attInput') return;
+        if(i.type!=='select-one') i.value='';
+        else i.selectedIndex=0;
+      });
+      setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null;
+      atts.forEach(a=>a.url && URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
+      renderVehicleOptions(null);
+      await loadOpenLoansForStore(null);
+    }
 
     $attBtn.addEventListener('click', ()=> $attInput.click());
     $attInput.addEventListener('change', ()=>{
@@ -308,16 +319,26 @@
 
         openPrintPreview(lastSaved);
 
+        let emailOK = true;
         try{
           const attPayload = await attsToPayload();
-          await fetch(`${BASE_URL}/loans/email`,{
+          const mr = await fetch(`${BASE_URL}/loans/email`,{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({ loan:lastSaved, attachments:attPayload })
           });
-        }catch(_){  }
+          const jm = await mr.json();
+          emailOK = !!jm.ok;
+          if(!emailOK) throw new Error(jm.error||'mail_send_failed');
+        }catch(e){
+          emailOK = false;
+          setNotice('Prêt enregistré, mais e-mail non envoyé. '+(e?.message||''), 'error');
+        }
 
-        await loadVehicles(); renderVehicleOptions($store.value||null); await loadOpenLoansForStore($store.value||null);
+        if(emailOK){
+          await resetAll();
+          setNotice('Fiche ouverte pour impression. Le formulaire a été réinitialisé.', 'success');
+        }
       }catch(e){
         setStatus('Erreur'); setNotice('Échec : '+e.message,'error');
       }finally{
@@ -325,11 +346,7 @@
       }
     });
 
-    el('btnReset').addEventListener('click', async ()=>{
-      document.querySelectorAll('input, textarea, select').forEach(i=>{ if(i.type!=='select-one') i.value=''; else i.selectedIndex=0; });
-      setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null; atts.forEach(a=>a.url&&URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
-      await loadOpenLoansForStore(null); renderVehicleOptions(null);
-    });
+    el('btnReset').addEventListener('click', async ()=>{ await resetAll(); });
 
     (async ()=>{ await Promise.all([loadStores(), loadVehicles()]); })();
   </script>

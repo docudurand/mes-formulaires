@@ -28,8 +28,15 @@
     .stack{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
     .notice{margin-top:calc(10px*var(--scale))}
 
-    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:99999}
-    .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(560px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
+    .modalMask{
+      position:fixed; inset:0; background:#0006; display:none;
+      align-items:flex-start; justify-content:center; padding:16px; z-index:99999
+    }
+    .modal{
+      background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(560px*var(--scale));
+      width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);
+      box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003
+    }
 
     .row{display:grid;gap:calc(12px*var(--scale))}
     @media(min-width:680px){ .row.cols-2{grid-template-columns:1fr 1fr} }
@@ -46,10 +53,19 @@
           <option value="">— Toutes —</option>
         </select>
       </div>
+
       <div>
-        <label for="qDate">Date</label>
-        <input id="qDate" type="date">
+        <label for="qStore">Magasin</label>
+        <select id="qStore">
+          <option value="">— Tous —</option>
+        </select>
       </div>
+
+      <div>
+        <label for="qDate">Date (départ)</label>
+        <input id="qDate" type="text" inputmode="numeric" placeholder="AAAA-MM-JJ ou JJ/MM/AAAA">
+      </div>
+
       <div style="margin-left:auto">
         <button id="btnExport" class="btn-light" type="button">Exporter CSV</button>
       </div>
@@ -164,42 +180,55 @@
     let __rows = [];
     let __stores = [];
 
-    let __scrollY = 0;
-    function lockScroll(){
-      __scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-      document.body.style.position='fixed';
-      document.body.style.top = `-${__scrollY}px`;
-      document.body.style.left='0';
-      document.body.style.right='0';
-      document.body.style.width='100%';
+    function normalizeQueryDate(q){
+      q = (q||'').trim();
+      if(!q) return '';
+      const s1 = q.toLowerCase().replace(/[.\s]/g,'').replace(/\//g,'-');
+      return s1;
     }
-    function unlockScroll(){
-      document.body.style.position='';
-      document.body.style.top='';
-      document.body.style.left='';
-      document.body.style.right='';
-      document.body.style.width='';
-      window.scrollTo(0, __scrollY);
-    }
-
-    async function loadStores(){
-      try{ __stores = await fetchJSON(`${BASE_URL}/stores`); }catch(_){ __stores = []; }
-    }
-
-    async function loadAllLoans(){
-      setNotice('Chargement...');
-      try{
-        const rows=await fetchJSON(`${BASE_URL}/loans/search`);
-        __rows = rows;
-        populateImmatList(rows);
-        applyFilters(); // rend + notice
-      }catch(e){ setNotice('Erreur : '+e.message,'error'); }
+    function dateFormsForFilter(v){
+      const d = parseMaybeDate(v);
+      if(!d){
+        const raw = String(v||'').toLowerCase();
+        return [raw, raw.replace(/\//g,'-'), raw.replace(/\D/g,'')];
+      }
+      const ymd = `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+      const dmy = `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()}`;
+      const dmy2= `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`;
+      return [ymd.toLowerCase(), dmy.toLowerCase(), dmy2.toLowerCase(),
+              ymd.replace(/\D/g,''), dmy.replace(/\D/g,''), dmy2.replace(/\D/g,'')];
     }
 
     function populateImmatList(rows){
       const $qImmat = document.getElementById('qImmat');
       const immats = Array.from(new Set((rows||[]).map(r=>String(r.immatriculation||'').trim()).filter(Boolean))).sort();
       $qImmat.innerHTML = ['<option value="">— Toutes —</option>'].concat(immats.map(v=>`<option value="${v}">${v}</option>`)).join('');
+    }
+    function populateStoreFilter(){
+      const $qStore = document.getElementById('qStore');
+      $qStore.innerHTML = ['<option value="">— Tous —</option>'].concat(
+        (__stores||[]).map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`)
+      ).join('');
+    }
+
+    function applyFilters(){
+      const immat = (document.getElementById('qImmat').value || '').trim();
+      const store = (document.getElementById('qStore').value || '').trim();
+      const qDate = normalizeQueryDate(document.getElementById('qDate').value);
+
+      const filtered = (__rows||[]).filter(r=>{
+        const okImmat = !immat || String(r.immatriculation||'')===immat;
+        const okStore = !store || String(r.magasin_pret||'')===store;
+
+        const forms = dateFormsForFilter(r.date_depart);
+        const qNum  = qDate.replace(/\D/g,'');
+        const okDate = !qDate || forms.some(f=> f.includes(qDate) || f.replace(/\D/g,'').includes(qNum));
+
+        return okImmat && okStore && okDate;
+      });
+
+      render(filtered);
+      setNotice(`${filtered.length} résultat(s)`);
     }
 
     function render(rows){
@@ -224,16 +253,18 @@
       }).join('');
     }
 
-    function applyFilters(){
-      const immat = (document.getElementById('qImmat').value || '').trim();
-      const date = document.getElementById('qDate').value || '';
-      const filtered = (__rows||[]).filter(r=>{
-        const okImmat = !immat || String(r.immatriculation||'')===immat;
-        const okDate  = !date || String(r.date_depart||'').startsWith(date) || String(r.date_retour||'').startsWith(date);
-        return okImmat && okDate;
-      });
-      render(filtered);
-      setNotice(`${filtered.length} résultat(s)`);
+    async function loadStores(){
+      try{ __stores = await fetchJSON(`${BASE_URL}/stores`); }catch(_){ __stores = []; }
+      populateStoreFilter();
+    }
+    async function loadAllLoans(){
+      setNotice('Chargement...');
+      try{
+        const rows=await fetchJSON(`${BASE_URL}/loans/search`);
+        __rows = rows;
+        populateImmatList(rows);
+        applyFilters();
+      }catch(e){ setNotice('Erreur : '+e.message,'error'); }
     }
 
     document.getElementById('btnExport').addEventListener('click', ()=>{
@@ -253,6 +284,16 @@
     const $mOk = document.getElementById('mOk');
     let __ctx = { loanId:'', vehicleId:'', immat:'' };
 
+    function showTop(maskEl){
+      window.scrollTo({top:0, behavior:'smooth'});
+      document.body.style.overflow='hidden';
+      maskEl.style.display='flex';
+    }
+    function hideTop(maskEl){
+      maskEl.style.display='none';
+      document.body.style.overflow='';
+    }
+
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
 
     function openCloseModal(ctx){
@@ -263,12 +304,7 @@
       $mHourRet.value = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
       $mRecep.value = '';
       setModalNotice('');
-      lockScroll();
-      $mask.style.display='flex';
-    }
-    function closeCloseModal(){
-      $mask.style.display='none';
-      unlockScroll();
+      showTop($mask);
     }
 
     const $maskEdit = document.getElementById('maskEdit');
@@ -306,12 +342,7 @@
       $eRecepDep.value = row.receptionnaire_depart || '';
       $eObs.value      = row.observations || '';
       setENotice('');
-      lockScroll();
-      $maskEdit.style.display='flex';
-    }
-    function closeEditModal(){
-      $maskEdit.style.display='none';
-      unlockScroll();
+      showTop($maskEdit);
     }
 
     $tbody.addEventListener('click', (e)=>{
@@ -321,8 +352,8 @@
       if(btnE){ openEditModal(String(btnE.dataset.loan)); return; }
     });
 
-    $mCancel.addEventListener('click', closeCloseModal);
-    $eCancel.addEventListener('click', closeEditModal);
+    document.getElementById('mCancel').addEventListener('click', ()=> hideTop($mask));
+    document.getElementById('eCancel').addEventListener('click', ()=> hideTop($maskEdit));
 
     $mOk.addEventListener('click', async ()=>{
       try{
@@ -331,7 +362,7 @@
         const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__ctx.loanId)}/close`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
         const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
         setModalNotice('Prêt clôturé.','success');
-        closeCloseModal();
+        hideTop($mask);
         setNotice('Prêt clôturé.','success');
         await loadAllLoans();
       }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
@@ -354,7 +385,7 @@
         });
         const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
         setENotice('Modifications enregistrées.','success');
-        closeEditModal();
+        hideTop($maskEdit);
         await loadAllLoans();
       }catch(e){
         setENotice('Échec : '+e.message,'error');
@@ -362,7 +393,8 @@
     });
 
     document.getElementById('qImmat').addEventListener('change', applyFilters);
-    document.getElementById('qDate').addEventListener('change', applyFilters);
+    document.getElementById('qStore').addEventListener('change', applyFilters);
+    document.getElementById('qDate').addEventListener('input', applyFilters);
 
     (async ()=>{ await loadStores(); await loadAllLoans(); })();
   </script>
