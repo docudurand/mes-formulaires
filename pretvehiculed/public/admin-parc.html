@@ -8,8 +8,10 @@
     :root{ --primary:#004080; --ink:#073763; --line:#e5e7eb; --scale:1.2; --bw:calc(1px*var(--scale)); }
     *{box-sizing:border-box} html{font-size:calc(100%*var(--scale));}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:#fff}
+
+    .siteBanner{width:100%;height:auto;display:block}
+
     .wrap{max-width:calc(1200px*var(--scale));margin:calc(24px*var(--scale)) auto;padding:calc(16px*var(--scale))}
-    h1{font-size:1.6rem;margin:0 0 calc(12px*var(--scale))}
     .tools{display:flex;flex-wrap:wrap;gap:calc(10px*var(--scale));align-items:end;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));padding:calc(12px*var(--scale));background:#fff}
     label{font-weight:600;margin-bottom:calc(4px*var(--scale));display:block}
     input,select{padding:calc(10px*var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))}
@@ -43,8 +45,9 @@
   </style>
 </head>
 <body>
+  <img class="siteBanner" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/banniere.png" alt="Bannière Durand Services">
+
   <div class="wrap">
-    <h1>Admin – Parc & prêts véhicules</h1>
 
     <div class="tools">
       <div>
@@ -72,16 +75,9 @@
     <table id="tbl">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Immat.</th>
-          <th>Magasin prêt</th>
-          <th>Chauffeur</th>
-		  <th>Transfert assurance</th>
-          <th>Réceptionnaire</th>
-          <th>Départ</th>
-          <th>Retour</th>
-          <th>Statut</th>
-          <th class="right">Actions</th>
+          <th>#</th><th>Immat.</th><th>Magasin prêt</th><th>Chauffeur</th>
+          <th>Transfert assurance</th><th>Réceptionnaire</th>
+          <th>Départ</th><th>Retour</th><th>Statut</th><th class="right">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -152,7 +148,7 @@
       </div>
 
       <div>
-        <label for="eObs">Information chauffeur</label>
+        <label for="eObs">Observations</label>
         <textarea id="eObs" rows="4" style="width:100%;padding:10px 12px;border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))"></textarea>
       </div>
 
@@ -247,25 +243,22 @@
     }
 
     function render(rows){
-      const p2s = (d,t)=> t!=='—' ? ' • '+t : '';
       $tbody.innerHTML = rows.map((r,i)=>{
         const closeBtn = isOpen(r.status)
           ? `<button type="button" class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
           : '';
         const editBtn = `<button type="button" class="btn-mini btn-light btnEdit" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Modifier</button>`;
         const actions = `<div class="stack">${closeBtn}${editBtn}</div>`;
-        const dDep = fmtDate(r.date_depart), hDep = fmtTime(r.heure_depart);
-        const dRet = fmtDate(r.date_retour), hRet = fmtTime(r.heure_retour);
         return `
           <tr>
             <td>${i+1}</td>
             <td><strong>${r.immatriculation||'—'}</strong></td>
             <td>${r.magasin_pret||'—'}</td>
             <td>${r.chauffeur_nom||'—'}</td>
-			<td>${r.transfert_assurance||'—'}</td>
+            <td>${(r.transfert_assurance||'—')}</td>
             <td>${r.receptionnaire_depart||'—'}</td>
-            <td>${dDep}${p2s(0,hDep)}</td>
-            <td>${dRet}${p2s(0,hRet)}</td>
+            <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
+            <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
             <td>${pill(r.status)}</td>
             <td class="right">${actions}</td>
           </tr>
@@ -357,11 +350,7 @@
       showTop($maskEdit);
     }
 
-    document.getElementById('qImmat').addEventListener('change', applyFilters);
-    document.getElementById('qStore').addEventListener('change', applyFilters);
-    document.getElementById('qDate').addEventListener('input', applyFilters);
-
-    document.addEventListener('click', (e)=>{
+    $tbody.addEventListener('click', (e)=>{
       const btnC = e.target.closest('.btnClose');
       if(btnC){ openCloseModal({ loanId: btnC.dataset.loan, vehicleId: btnC.dataset.veh||'', immat: btnC.dataset.immat||'' }); return; }
       const btnE = e.target.closest('.btnEdit');
@@ -409,6 +398,10 @@
         setENotice('Échec : '+e.message,'error');
       }
     });
+
+    document.getElementById('qImmat').addEventListener('change', applyFilters);
+    document.getElementById('qStore').addEventListener('change', applyFilters);
+    document.getElementById('qDate').addEventListener('input', applyFilters);
 
     (async ()=>{ await loadStores(); await loadAllLoans(); })();
   </script>

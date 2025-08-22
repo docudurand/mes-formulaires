@@ -106,49 +106,66 @@ router.post('/loans/print', async (req, res) => {
     const fmtDate = v => { const dt=parseMaybeDate(v); return dt ? `${pad2(dt.getDate())}/${pad2(dt.getMonth()+1)}/${String(dt.getFullYear()).slice(-2)}` : ''; };
     const fmtTime = v => { const dt=parseMaybeDate(v); return dt ? `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}` : ''; };
 
-    const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
-    const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
+    const proto  = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
+    const host   = (req.headers['x-forwarded-host']  || req.headers['host'] || '').toString().split(',')[0];
     const origin = host ? `${proto}://${host}` : (process.env.PUBLIC_BASE_URL || '');
-    const closeUrl = `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
+    const closeUrl  = `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
     const qrDataUrl = await QRCode.toDataURL(closeUrl, { margin: 1, width: 110 });
 
+    const LOGO_URL = 'https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png';
     const esc = s => String(s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
     const html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>Fiche prêt ${esc(d.immatriculation)}</title>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fiche prêt ${esc(d.immatriculation)}</title>
 <style>
-@page{ size:A4; margin:12mm }
-body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
-.header{ display:flex; justify-content:space-between; align-items:flex-start; }
-.qrcode{ width:110px; height:110px; }
-h1{ margin:0 0 8px; font-size:18px; text-align:center }
-.grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:8px }
-.label{ font-weight:700 }
-.box{ border:1px solid #222; height:120px; margin-top:18px; display:grid; grid-template-columns:1fr 1fr; }
-.box h3{ margin: -10px 0 4px 8px; font-size:14px }
-.cell{ padding:12px; border-right:1px solid #222 }
-.cell:last-child{ border-right:0 }
-.obs{ margin-top:20px }
-.area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
+  @page{ size:A4; margin:12mm }
+  body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
+  .header{
+    display:grid; grid-template-columns:120px 1fr 120px;
+    align-items:center; column-gap:8px; margin-bottom:8px;
+  }
+  .logo{ width:120px; height:auto; object-fit:contain }
+  .title{ text-align:center; margin:0; font-size:20px; font-weight:700; letter-spacing:.3px }
+  .qrcode{ width:110px; height:110px; justify-self:end }
+  .line{ margin:4px 0 6px; font-size:14px }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
+  .label{ font-weight:700 }
+  .box{ border:1px solid #222; height:120px; margin-top:18px; display:grid; grid-template-columns:1fr 1fr; }
+  .box h3{ margin: -10px 0 4px 8px; font-size:14px }
+  .cell{ padding:12px; border-right:1px solid #222 }
+  .cell:last-child{ border-right:0 }
+  .obs{ margin-top:20px }
+  .area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
 </style>
 </head>
 <body>
+
+  <!-- En-tête avec logo à gauche, titre centré, QR à droite -->
   <div class="header">
-    <div>
-      <h1>FICHE PRÊT VÉHICULE DURAND</h1>
-      <div>MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
-    </div>
+    <img class="logo" src="${LOGO_URL}" alt="Logo Durand">
+    <h1 class="title">FICHE PRÊT VÉHICULE DURAND</h1>
     <img class="qrcode" alt="QR clôture" src="${qrDataUrl}">
   </div>
 
-  <div class="grid" style="margin-top:10px">
+  <!-- MAGASIN au-dessus de NOM DU CHAUFFEUR -->
+  <div class="line">MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
+
+  <!-- Grille d’infos (toujours 2 colonnes pour l’alignement) -->
+  <div class="grid">
     <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
     <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
+
     <div><span class="label">DATE DÉPART : </span>${fmtDate(d.date_depart)}</div>
     <div><span class="label">DATE RETOUR : </span>${fmtDate(d.date_retour)}</div>
+
     <div><span class="label">HEURE DÉPART : </span>${fmtTime(d.heure_depart)}</div>
     <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
   </div>
 
+  <!-- Encadrés signatures (alignés en 2 colonnes) -->
   <div class="box">
     <div class="cell">
       <h3>DÉPART</h3>
@@ -171,13 +188,16 @@ h1{ margin:0 0 8px; font-size:18px; text-align:center }
     </div>
   </div>
 
+  <!-- Zone d’informations chauffeur -->
   <div class="obs">
     <div class="label">INFORMATION CHAUFFEUR :</div>
     <div class="area">${esc(d.observations)}</div>
   </div>
 
   <script>window.onload=()=>{ setTimeout(()=>window.print(), 100); };</script>
-</body></html>`;
+</body>
+</html>`;
+
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.send(html);
   } catch (e) {
