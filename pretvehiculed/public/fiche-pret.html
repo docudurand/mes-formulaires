@@ -35,6 +35,7 @@
     .pdfBar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:var(--bw) solid var(--line);background:#f8fbff}
     .pdfBar .actions{display:flex;gap:8px}
     #pdfFrame{flex:1;width:100%;border:0}
+    #pdfForm{display:none}
   </style>
 </head>
 <body>
@@ -106,9 +107,21 @@
           <button class="btn-ghost" id="pdfClose" type="button">Fermer</button>
         </div>
       </div>
-      <iframe id="pdfFrame" title="Aperçu PDF"></iframe>
+      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu PDF"></iframe>
     </div>
   </div>
+
+  <form id="pdfForm" method="POST" target="pdfFrame">
+    <input type="hidden" name="vehicle_id">
+    <input type="hidden" name="immatriculation">
+    <input type="hidden" name="magasin_pret">
+    <input type="hidden" name="chauffeur_nom">
+    <input type="hidden" name="date_depart">
+    <input type="hidden" name="heure_depart">
+    <input type="hidden" name="receptionnaire_depart">
+    <input type="hidden" name="observations">
+    <input type="hidden" name="loan_id">
+  </form>
 
   <script>
     const BASE_URL = '/pret/api';
@@ -122,7 +135,7 @@
     const $pdfFrame = el('pdfFrame');
     const $pdfClose = el('pdfClose');
     const $pdfPrint = el('pdfPrint');
-    let _pdfUrl = null;
+    const $pdfForm = el('pdfForm');
 
     let vehiclesAll = []; let vehiclesIndex = {}; let lastSaved=null;
 
@@ -170,7 +183,17 @@
     }
     function currentPayload(){
       const v = vehiclesIndex[$vehicle.value] || {};
-      return { vehicle_id:$vehicle.value, immatriculation:v.immatriculation||'', magasin_pret:$store.value, chauffeur_nom:el('chauffeur').value.trim(), date_depart:el('dateDepart').value, heure_depart:el('heureDepart').value, receptionnaire_depart:el('receptionnaireDepart').value.trim(), observations:el('obs').value.trim() };
+      return {
+        vehicle_id:$vehicle.value,
+        immatriculation:v.immatriculation||'',
+        magasin_pret:$store.value,
+        chauffeur_nom:el('chauffeur').value.trim(),
+        date_depart:el('dateDepart').value,
+        heure_depart:el('heureDepart').value,
+        receptionnaire_depart:el('receptionnaireDepart').value.trim(),
+        observations:el('obs').value.trim(),
+        loan_id: (lastSaved && lastSaved.loan_id) || ''
+      };
     }
 
     $store.addEventListener('change', async ()=>{ const code=$store.value||null; renderVehicleOptions(code); await loadOpenLoansForStore(code); });
@@ -234,46 +257,34 @@
       }
     });
 
-    el('btnPdf').addEventListener('click', async ()=>{
+    $pdfForm.action = `${BASE_URL}/loans/pdf`;
+    el('btnPdf').addEventListener('click', ()=>{
       const d = lastSaved || currentPayload();
       if(!d.vehicle_id){ setNotice('Choisissez un véhicule avant le PDF.','error'); return; }
-      try{
-        setNotice('⏳ Génération du PDF…','info',true);
-        const r = await fetch(`${BASE_URL}/loans/pdf`, {
-          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
-        });
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        const blob = await r.blob();
 
-        if(_pdfUrl) URL.revokeObjectURL(_pdfUrl);
-        _pdfUrl = URL.createObjectURL(blob);
+      Object.entries(d).forEach(([k,v])=>{
+        const input = $pdfForm.querySelector(`[name="${k}"]`);
+        if(input) input.value = v == null ? '' : String(v);
+      });
 
-        $pdfFrame.src = _pdfUrl;
-        $pdfMask.style.display = 'flex';
-        $pdfMask.setAttribute('aria-hidden','false');
-        setNotice('');
-      }catch(e){
-        setNotice('Impossible de générer le PDF : '+e.message,'error');
-      }
+      $pdfFrame.src = 'about:blank';
+      $pdfMask.style.display = 'flex';
+      $pdfMask.setAttribute('aria-hidden','false');
+      $pdfForm.submit();
+      setNotice('');
     });
 
     $pdfClose.addEventListener('click', ()=>{
       $pdfMask.style.display = 'none';
       $pdfMask.setAttribute('aria-hidden','true');
       $pdfFrame.src = 'about:blank';
-      if(_pdfUrl){ URL.revokeObjectURL(_pdfUrl); _pdfUrl = null; }
     });
 
     $pdfPrint.addEventListener('click', ()=>{
       try{
         $pdfFrame.contentWindow?.focus();
         $pdfFrame.contentWindow?.print();
-      }catch(_){
-        if(_pdfUrl){
-          const a=document.createElement('a');
-          a.href=_pdfUrl; a.download='fiche_pret.pdf'; a.click();
-        }
-      }
+      }catch(_){}
     });
 
     el('btnReset').addEventListener('click', async ()=>{
