@@ -7,7 +7,6 @@
   <style>
     *{ box-sizing: border-box; min-width:0; }
     html, body { width:100%; max-width:100%; overflow-x:hidden; }
-
     body{
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       margin:0; padding:16px; color:#073763; background:#fff;
@@ -27,17 +26,15 @@
       background:#fff; color:#073763; font-size:1rem;
     }
     input[type="date"], input[type="time"]{
-      -webkit-appearance:none; appearance:none;
-      background-clip:padding-box;
+      -webkit-appearance:none; appearance:none; background-clip:padding-box;
     }
     @supports (-webkit-touch-callout: none) {
       input[type="date"], input[type="time"]{ padding-right: 18px; }
     }
-
     button{
-      background:#004080; color:#fff; font-weight:700; margin-top:12px; border:0;
+      background:#004080; color:#fff; font-weight:700; margin-top:12px; border:0; cursor:pointer;
     }
-    button[disabled]{opacity:.6}
+    button[disabled]{opacity:.6; cursor:not-allowed}
     .muted{opacity:.85}
     .notice{margin-top:10px;font-size:.95rem}
     .ok{color:#2e7d32}.err{color:#c62828}.info{color:#073763}
@@ -54,21 +51,20 @@
     </div>
 
     <label for="date">Date retour</label>
-    <input id="date" type="date">
+    <input id="date" type="date" autocomplete="off">
 
     <label for="time">Heure retour</label>
-    <input id="time" type="time">
+    <input id="time" type="time" autocomplete="off">
 
     <label for="receptionnaire">Réceptionnaire</label>
-    <input id="receptionnaire" type="text" placeholder="Nom réceptionnaire">
+    <input id="receptionnaire" type="text" placeholder="Nom réceptionnaire" autocomplete="off">
 
-    <button id="ok">Valider la clôture</button>
+    <button id="ok" type="button">Valider la clôture</button>
     <div class="notice info" id="notice"></div>
   </div>
 
   <script>
     const BASE_URL = '/pret/api';
-
     const qp = new URLSearchParams(location.search);
     let loanId    = (qp.get('loan_id') || '').trim();
     let immat     = (qp.get('immat') || '').trim();
@@ -98,10 +94,28 @@
       return '';
     }
 
+    async function resolveVehicleFromImmatAndLoan(){
+      if (!immat || !loanId) return;
+      try{
+        const rows = await fetchJSON(`${BASE_URL}/loans/search?` + new URLSearchParams({immat}));
+        const match = (rows||[]).find(r => String(r.loan_id)===String(loanId));
+        if (match){
+          vehicleId = match.vehicle_id || vehicleId;
+          immat     = match.immatriculation || immat;
+          setNotice('Prêt en cours détecté.','ok');
+        }
+      }catch(e){
+      }
+    }
+
     async function resolveLoan(){
       $info.textContent = immat ? `Véhicule : ${immat}` : 'Véhicule non précisé';
 
-      if (loanId && vehicleId) return;
+      if (loanId && !vehicleId && immat){
+        setNotice('Préparation…','info');
+        await resolveVehicleFromImmatAndLoan();
+        if (vehicleId) return;
+      }
 
       if (!loanId && immat) {
         try{
@@ -149,18 +163,19 @@
       }
     }
 
-    $ok.addEventListener('click', async ()=>{
-      if (!loanId) { setNotice('Identifiant de prêt manquant.', 'err'); return; }
+    let busy = false;
+    async function submitClose(){
+      if (busy) return;
+      busy = true;
+      document.activeElement && document.activeElement.blur();
+      $ok.disabled = true;
+      $ok.textContent = 'Clôture en cours…';
       try{
-        if (!vehicleId && immat) {
-          const rows = await fetchJSON(`${BASE_URL}/loans/search?` + new URLSearchParams({immat}));
-          const match = (rows||[]).find(r => String(r.loan_id)===String(loanId));
-          if (match) vehicleId = match.vehicle_id || '';
+        if (!vehicleId && immat && loanId){
+          await resolveVehicleFromImmatAndLoan();
         }
-        if (!vehicleId) { setNotice('Impossible de déterminer le véhicule du prêt (vehicle_id manquant).', 'err'); return; }
-
-        $ok.disabled=true;
-        setNotice('Clôture en cours…', 'info');
+        if (!loanId){ setNotice('Identifiant de prêt manquant.', 'err'); return; }
+        if (!vehicleId){ setNotice('Impossible de déterminer le véhicule du prêt (vehicle_id manquant).', 'err'); return; }
 
         const payload = {
           vehicle_id: vehicleId,
@@ -176,12 +191,18 @@
         if(!j.ok) throw new Error(j.error||'Erreur API');
 
         setNotice('Prêt clôturé.', 'ok');
+        $ok.textContent = 'Clôture réussie';
       }catch(e){
         setNotice('Échec : '+e.message, 'err');
+        $ok.textContent = 'Valider la clôture';
       }finally{
-        $ok.disabled=false;
+        busy = false;
+        $ok.disabled = false;
       }
-    });
+    }
+
+    $ok.addEventListener('click', submitClose);
+    $ok.addEventListener('touchend', (e)=>{ e.preventDefault(); submitClose(); }, { passive:false });
 
     resolveLoan();
   </script>
