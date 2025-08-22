@@ -142,9 +142,15 @@
         </div>
       </div>
 
-      <div>
-        <label for="eRecepDep">Réceptionnaire (départ)</label>
-        <input id="eRecepDep" type="text" placeholder="Nom réceptionnaire">
+      <div class="row cols-2">
+        <div>
+          <label for="eRecepDep">Réceptionnaire (départ)</label>
+          <input id="eRecepDep" type="text" placeholder="Nom réceptionnaire">
+        </div>
+        <div>
+          <label for="eRecepRet">Réceptionnaire (retour)</label>
+          <input id="eRecepRet" type="text" placeholder="Nom réceptionnaire">
+        </div>
       </div>
 
       <div>
@@ -319,6 +325,7 @@
     const $eDateRet = document.getElementById('eDateRet');
     const $eHourRet = document.getElementById('eHourRet');
     const $eRecepDep= document.getElementById('eRecepDep');
+    const $eRecepRet= document.getElementById('eRecepRet');
     const $eObs     = document.getElementById('eObs');
     const $eNotice  = document.getElementById('eNotice');
     let __editCtx   = { loanId:'', vehicleId:'', immat:'' };
@@ -339,13 +346,14 @@
 
       $eInfo.textContent = `Véhicule : ${__editCtx.immat || '—'}`;
       fillStoreSelect(row.magasin_pret || '');
-      $eChauff.value   = row.chauffeur_nom || '';
-      $eDateDep.value  = toDateInput(row.date_depart) || '';
-      $eHourDep.value  = toTimeInput(row.heure_depart) || '';
-      $eDateRet.value  = toDateInput(row.date_retour) || '';
-      $eHourRet.value  = toTimeInput(row.heure_retour) || '';
-      $eRecepDep.value = row.receptionnaire_depart || '';
-      $eObs.value      = row.observations || '';
+      $eChauff.value    = row.chauffeur_nom || '';
+      $eDateDep.value   = toDateInput(row.date_depart) || '';
+      $eHourDep.value   = toTimeInput(row.heure_depart) || '';
+      $eDateRet.value   = toDateInput(row.date_retour) || '';
+      $eHourRet.value   = toTimeInput(row.heure_retour) || '';
+      $eRecepDep.value  = row.receptionnaire_depart || '';
+      $eRecepRet.value  = row.receptionnaire_retour || '';
+      $eObs.value       = row.observations || '';
       setENotice('');
       showTop($maskEdit);
     }
@@ -385,6 +393,7 @@
           date_retour: $eDateRet.value,
           heure_retour: $eHourRet.value,
           receptionnaire_depart: $eRecepDep.value.trim(),
+          receptionnaire_retour: $eRecepRet.value.trim(),
           observations: $eObs.value.trim()
         };
         const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__editCtx.loanId)}/update`, {

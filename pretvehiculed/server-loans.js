@@ -125,11 +125,12 @@ router.post('/loans/print', async (req, res) => {
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
   .header{
     display:grid; grid-template-columns:120px 1fr 120px;
-    align-items:center; column-gap:8px; margin-bottom:8px;
+    align-items:center; column-gap:8px; margin-bottom:0; /* plus d'espace géré par .afterHead */
   }
   .logo{ width:120px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:20px; font-weight:700; letter-spacing:.3px }
   .qrcode{ width:110px; height:110px; justify-self:end }
+  .afterHead{ margin-top:10mm; } /* >>> Ajout : gros espace après l'en-tête */
   .line{ margin:4px 0 6px; font-size:14px }
   .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
   .label{ font-weight:700 }
@@ -150,48 +151,51 @@ router.post('/loans/print', async (req, res) => {
     <img class="qrcode" alt="QR clôture" src="${qrDataUrl}">
   </div>
 
-  <!-- MAGASIN au-dessus de NOM DU CHAUFFEUR -->
-  <div class="line">MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
+  <!-- Tout le reste est volontairement "descendu" -->
+  <div class="afterHead">
+    <!-- MAGASIN au-dessus de NOM DU CHAUFFEUR -->
+    <div class="line">MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
 
-  <!-- Grille d’infos (toujours 2 colonnes pour l’alignement) -->
-  <div class="grid">
-    <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
-    <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
+    <!-- Grille d’infos (toujours 2 colonnes pour l’alignement) -->
+    <div class="grid">
+      <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
+      <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
 
-    <div><span class="label">DATE DÉPART : </span>${fmtDate(d.date_depart)}</div>
-    <div><span class="label">DATE RETOUR : </span>${fmtDate(d.date_retour)}</div>
+      <div><span class="label">DATE DÉPART : </span>${fmtDate(d.date_depart)}</div>
+      <div><span class="label">DATE RETOUR : </span>${fmtDate(d.date_retour)}</div>
 
-    <div><span class="label">HEURE DÉPART : </span>${fmtTime(d.heure_depart)}</div>
-    <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
-  </div>
-
-  <!-- Encadrés signatures (alignés en 2 colonnes) -->
-  <div class="box">
-    <div class="cell">
-      <h3>DÉPART</h3>
-      Réceptionnaire<br><br>Signature
+      <div><span class="label">HEURE DÉPART : </span>${fmtTime(d.heure_depart)}</div>
+      <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
     </div>
-    <div class="cell">
-      <h3>RETOUR</h3>
-      Réceptionnaire<br><br>Signature
-    </div>
-  </div>
 
-  <div class="box">
-    <div class="cell">
-      <h3>DÉPART (CONDUCTEUR)</h3>
-      Conducteur<br><br>Signature
+    <!-- Encadrés signatures (alignés en 2 colonnes) -->
+    <div class="box">
+      <div class="cell">
+        <h3>DÉPART</h3>
+        Réceptionnaire<br><br>Signature
+      </div>
+      <div class="cell">
+        <h3>RETOUR</h3>
+        Réceptionnaire<br><br>Signature
+      </div>
     </div>
-    <div class="cell">
-      <h3>RETOUR (CONDUCTEUR)</h3>
-      Conducteur<br><br>Signature
-    </div>
-  </div>
 
-  <!-- Zone d’informations chauffeur -->
-  <div class="obs">
-    <div class="label">INFORMATION CHAUFFEUR :</div>
-    <div class="area">${esc(d.observations)}</div>
+    <div class="box">
+      <div class="cell">
+        <h3>DÉPART (CONDUCTEUR)</h3>
+        Conducteur<br><br>Signature
+      </div>
+      <div class="cell">
+        <h3>RETOUR (CONDUCTEUR)</h3>
+        Conducteur<br><br>Signature
+      </div>
+    </div>
+
+    <!-- Zone d’informations chauffeur -->
+    <div class="obs">
+      <div class="label">INFORMATION CHAUFFEUR :</div>
+      <div class="area">${esc(d.observations)}</div>
+    </div>
   </div>
 
   <script>window.onload=()=>{ setTimeout(()=>window.print(), 100); };</script>
@@ -230,7 +234,7 @@ router.post('/loans/email', async (req, res) => {
       ['Magasin', loan.magasin_pret||''],
       ['Immatriculation', loan.immatriculation||''],
       ['Chauffeur', loan.chauffeur_nom||''],
-	  ['Transfert assurance', loan.transfert_assurance || ''],
+      ['Transfert assurance', loan.transfert_assurance || ''],
       ['Départ', [loan.date_depart||'', loan.heure_depart||''].filter(Boolean).join(' ')],
       ['Réceptionnaire (départ)', loan.receptionnaire_depart||''],
       ['Information chauffeur', (loan.observations||'').replace(/\n/g,'<br>')]
