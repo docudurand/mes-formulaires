@@ -153,22 +153,32 @@ router.post('/loans/pdf', async (req, res) => {
     line('HEURE DÉPART :', fmtFRTime(d.heure_depart), col1, yBlock2);
     line('HEURE RETOUR :', fmtFRTime(d.heure_retour), col2, yBlock2);
 
-    const x = 40, w = 515, h = 140, mid = x + w / 2;
-    const yBox = yBlock2 + GAP_AFTER_TIME_TO_BOX;
+    const x = 40, w = 515, box1H = 120, mid = x + w / 2;
+    const yBox1 = yBlock2 + GAP_AFTER_TIME_TO_BOX;
 
-    doc.rect(x, yBox, w, h).stroke();
-    doc.moveTo(mid, yBox).lineTo(mid, yBox + h).stroke();
-
-    doc.font('Helvetica-Bold').fontSize(12).text('DÉPART', x + 5,   yBox - 14);
-    doc.font('Helvetica-Bold').fontSize(12).text('RETOUR', mid + 5, yBox - 14);
+    doc.rect(x, yBox1, w, box1H).stroke();
+    doc.moveTo(mid, yBox1).lineTo(mid, yBox1 + box1H).stroke();
+    doc.font('Helvetica-Bold').fontSize(12).text('DÉPART', x + 5,   yBox1 - 14);
+    doc.font('Helvetica-Bold').fontSize(12).text('RETOUR', mid + 5, yBox1 - 14);
 
     doc.font('Helvetica').fontSize(11);
-    doc.text('Réceptionnaire\n\nSignature', x + 10, yBox + 15);
-    doc.text('Client\n\nSignature',         x + 180, yBox + 15);
-    doc.text('Réceptionnaire\n\nSignature', mid + 10, yBox + 15);
-    doc.text('Client\n\nSignature',         mid + 180, yBox + 15);
+    doc.text('Réceptionnaire\n\nSignature', x + 10,  yBox1 + 18);
+    doc.text('Réceptionnaire\n\nSignature', mid + 10, yBox1 + 18);
 
-    const yObs = yBox + h + 36;
+    const gapBetweenBoxes = 20;
+    const box2H = 100;
+    const yBox2 = yBox1 + box1H + gapBetweenBoxes;
+
+    doc.rect(x, yBox2, w, box2H).stroke();
+    doc.moveTo(mid, yBox2).lineTo(mid, yBox2 + box2H).stroke();
+    doc.font('Helvetica-Bold').fontSize(12).text('DÉPART (CONDUCTEUR)', x + 5,   yBox2 - 14);
+    doc.font('Helvetica-Bold').fontSize(12).text('RETOUR (CONDUCTEUR)', mid + 5, yBox2 - 14);
+
+    doc.font('Helvetica').fontSize(11);
+    doc.text('Conducteur\n\nSignature', x + 10,  yBox2 + 18);
+    doc.text('Conducteur\n\nSignature', mid + 10, yBox2 + 18);
+
+    const yObs = yBox2 + box2H + 36;
     doc.font('Helvetica-Bold').fontSize(12).text('OBSERVATIONS :', x, yObs);
     doc.rect(x, yObs + 12, w, 120).stroke();
     if (d.observations) {
@@ -190,7 +200,7 @@ router.post('/loans/print', async (req, res) => {
       if (v instanceof Date) return isNaN(v) ? null : v;
       if (typeof v === 'number') { const ms = Math.round((v-25569)*86400*1000); const dt=new Date(ms); return isNaN(dt)?null:dt; }
       if (typeof v === 'string') {
-        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'); const dt=new Date(); dt.setHours(+h,+m||0,0,0); return dt; }
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'); const dt=new Date();dt.setHours(+h,+m||0,0,0);return dt; }
         const dt = new Date(v); if (!isNaN(dt)) return dt;
         const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m){ const dt2=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(dt2)?null:dt2; }
       }
@@ -216,7 +226,7 @@ body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
 h1{ margin:0 0 8px; font-size:18px; text-align:center }
 .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:8px }
 .label{ font-weight:700 }
-.box{ border:1px solid #222; height:120px; margin-top:24px; display:grid; grid-template-columns:1fr 1fr; }
+.box{ border:1px solid #222; height:120px; margin-top:18px; display:grid; grid-template-columns:1fr 1fr; }
 .box h3{ margin: -10px 0 4px 8px; font-size:14px }
 .cell{ padding:12px; border-right:1px solid #222 }
 .cell:last-child{ border-right:0 }
@@ -250,6 +260,17 @@ h1{ margin:0 0 8px; font-size:18px; text-align:center }
     <div class="cell">
       <h3>RETOUR</h3>
       Réceptionnaire<br><br>Signature
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="cell">
+      <h3>DÉPART (CONDUCTEUR)</h3>
+      Conducteur<br><br>Signature
+    </div>
+    <div class="cell">
+      <h3>RETOUR (CONDUCTEUR)</h3>
+      Conducteur<br><br>Signature
     </div>
   </div>
 
