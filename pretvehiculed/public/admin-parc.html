@@ -131,6 +131,17 @@
         </div>
       </div>
 
+      <div class="row cols-2">
+        <div>
+          <label for="eDateRet">Date retour</label>
+          <input id="eDateRet" type="date">
+        </div>
+        <div>
+          <label for="eHourRet">Heure retour</label>
+          <input id="eHourRet" type="time">
+        </div>
+      </div>
+
       <div>
         <label for="eRecepDep">Réceptionnaire (départ)</label>
         <input id="eRecepDep" type="text" placeholder="Nom réceptionnaire">
@@ -280,8 +291,6 @@
     const $mHourRet = document.getElementById('mHourRet');
     const $mRecep = document.getElementById('mRecep');
     const $mNotice = document.getElementById('mNotice');
-    const $mCancel = document.getElementById('mCancel');
-    const $mOk = document.getElementById('mOk');
     let __ctx = { loanId:'', vehicleId:'', immat:'' };
 
     function showTop(maskEl){
@@ -293,7 +302,6 @@
       maskEl.style.display='none';
       document.body.style.overflow='';
     }
-
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
 
     function openCloseModal(ctx){
@@ -313,11 +321,11 @@
     const $eChauff  = document.getElementById('eChauffeur');
     const $eDateDep = document.getElementById('eDateDep');
     const $eHourDep = document.getElementById('eHourDep');
+    const $eDateRet = document.getElementById('eDateRet');
+    const $eHourRet = document.getElementById('eHourRet');
     const $eRecepDep= document.getElementById('eRecepDep');
     const $eObs     = document.getElementById('eObs');
     const $eNotice  = document.getElementById('eNotice');
-    const $eCancel  = document.getElementById('eCancel');
-    const $eSave    = document.getElementById('eSave');
     let __editCtx   = { loanId:'', vehicleId:'', immat:'' };
 
     function setENotice(msg, type='info'){ $eNotice.textContent = msg || ''; $eNotice.style.color = type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; }
@@ -339,6 +347,8 @@
       $eChauff.value   = row.chauffeur_nom || '';
       $eDateDep.value  = toDateInput(row.date_depart) || '';
       $eHourDep.value  = toTimeInput(row.heure_depart) || '';
+      $eDateRet.value  = toDateInput(row.date_retour) || '';
+      $eHourRet.value  = toTimeInput(row.heure_retour) || '';
       $eRecepDep.value = row.receptionnaire_depart || '';
       $eObs.value      = row.observations || '';
       setENotice('');
@@ -355,7 +365,7 @@
     document.getElementById('mCancel').addEventListener('click', ()=> hideTop($mask));
     document.getElementById('eCancel').addEventListener('click', ()=> hideTop($maskEdit));
 
-    $mOk.addEventListener('click', async ()=>{
+    document.getElementById('mOk').addEventListener('click', async ()=>{
       try{
         setModalNotice('Clôture en cours…');
         const payload = { vehicle_id: __ctx.vehicleId, date_retour:$mDateRet.value, heure_retour:$mHourRet.value, receptionnaire_retour:$mRecep.value.trim() };
@@ -368,7 +378,7 @@
       }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
     });
 
-    $eSave.addEventListener('click', async ()=>{
+    document.getElementById('eSave').addEventListener('click', async ()=>{
       try{
         setENotice('Enregistrement en cours…');
         const payload = {
@@ -377,6 +387,8 @@
           chauffeur_nom: $eChauff.value.trim(),
           date_depart: $eDateDep.value,
           heure_depart: $eHourDep.value,
+          date_retour: $eDateRet.value,
+          heure_retour: $eHourRet.value,
           receptionnaire_depart: $eRecepDep.value.trim(),
           observations: $eObs.value.trim()
         };
