@@ -35,7 +35,7 @@
     .pdfBar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:var(--bw) solid var(--line);background:#f8fbff}
     .pdfBar .actions{display:flex;gap:8px}
     #pdfFrame{flex:1;width:100%;border:0}
-    #pdfForm{display:none}
+    #printForm{display:none}
   </style>
 </head>
 <body>
@@ -99,19 +99,19 @@
   </div>
 
   <div class="pdfMask" id="pdfMask" aria-hidden="true">
-    <div class="pdfBox" role="dialog" aria-label="Aperçu du PDF">
+    <div class="pdfBox" role="dialog" aria-label="Aperçu">
       <div class="pdfBar">
-        <div style="font-weight:700">Aperçu du PDF</div>
+        <div style="font-weight:700">Aperçu d’impression</div>
         <div class="actions">
           <button class="btn-sec" id="pdfPrint" type="button">Imprimer</button>
           <button class="btn-ghost" id="pdfClose" type="button">Fermer</button>
         </div>
       </div>
-      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu PDF"></iframe>
+      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
     </div>
   </div>
 
-  <form id="pdfForm" method="POST" target="pdfFrame">
+  <form id="printForm" method="POST" target="pdfFrame">
     <input type="hidden" name="vehicle_id">
     <input type="hidden" name="immatriculation">
     <input type="hidden" name="magasin_pret">
@@ -135,16 +135,15 @@
     const $pdfFrame = el('pdfFrame');
     const $pdfClose = el('pdfClose');
     const $pdfPrint = el('pdfPrint');
-    const $pdfForm = el('pdfForm');
+    const $printForm = el('printForm');
 
     let vehiclesAll = []; let vehiclesIndex = {}; let lastSaved=null;
 
     async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok){throw new Error('HTTP '+r.status)} return r.json(); }
-    const setStatus=(t,ok=null)=>{ $statusTag.textContent=t; $statusTag.style.opacity=1; };
+    const setStatus=(t)=>{ el('statusTag').textContent=t; };
     const setNotice=(t,type='info',asHTML=false)=>{ 
-      if(asHTML) $notice.innerHTML = t || '';
-      else $notice.textContent = t || '';
-      $notice.style.color = type==='error' ? '#c62828' : type==='success' ? '#2e7d32' : '#073763';
+      const n=el('notice'); if(asHTML) n.innerHTML=t||''; else n.textContent=t||'';
+      n.style.color= type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763';
     };
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
 
@@ -230,62 +229,33 @@
     el('btnSave').addEventListener('click', async ()=>{
       const d=currentPayload();
       if(!d.magasin_pret || !d.vehicle_id || !d.chauffeur_nom || !d.date_depart || !d.heure_depart){
-        setStatus('Champs manquants',false);
-        setNotice('Magasin, véhicule, chauffeur, date et heure requis.','error');
-        return;
+        setStatus('Champs manquants'); setNotice('Magasin, véhicule, chauffeur, date et heure requis.','error'); return;
       }
       try{
-        $btnSave.disabled = true;
-        $btnSave.setAttribute('aria-busy','true');
-        setStatus('Enregistrement en cours…');
-        setNotice('⏳ <span class="muted">Enregistrement en cours…</span>', 'info', true);
-
+        $btnSave.disabled = true; $btnSave.setAttribute('aria-busy','true');
+        setStatus('Enregistrement en cours…'); setNotice('⏳ <span class="muted">Enregistrement en cours…</span>', 'info', true);
         const r=await fetch(`${BASE_URL}/loans`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const j=await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
-
-        lastSaved={...d,loan_id:j.loan_id||null};
-        setStatus('Prêt enregistré',true);
-        setNotice('Prêt enregistré.', 'success');
-
+        lastSaved={...d,loan_id:j.loan_id||null}; setStatus('Prêt enregistré'); setNotice('Prêt enregistré.','success');
         await loadVehicles(); renderVehicleOptions($store.value||null); await loadOpenLoansForStore($store.value||null);
-      }catch(e){
-        setStatus('Erreur',false);
-        setNotice('Échec : '+e.message,'error');
-      }finally{
-        $btnSave.disabled = false;
-        $btnSave.removeAttribute('aria-busy');
-      }
+      }catch(e){ setStatus('Erreur'); setNotice('Échec : '+e.message,'error'); }
+      finally{ $btnSave.disabled=false; $btnSave.removeAttribute('aria-busy'); }
     });
 
-    $pdfForm.action = `${BASE_URL}/loans/pdf`;
+    $printForm.action = `${BASE_URL}/loans/print`;
     el('btnPdf').addEventListener('click', ()=>{
       const d = lastSaved || currentPayload();
-      if(!d.vehicle_id){ setNotice('Choisissez un véhicule avant le PDF.','error'); return; }
-
+      if(!d.vehicle_id){ setNotice('Choisissez un véhicule avant l’aperçu.','error'); return; }
       Object.entries(d).forEach(([k,v])=>{
-        const input = $pdfForm.querySelector(`[name="${k}"]`);
-        if(input) input.value = v == null ? '' : String(v);
+        const inp=$printForm.querySelector(`[name="${k}"]`); if(inp) inp.value = v==null?'':String(v);
       });
-
-      $pdfFrame.src = 'about:blank';
-      $pdfMask.style.display = 'flex';
-      $pdfMask.setAttribute('aria-hidden','false');
-      $pdfForm.submit();
+      $pdfFrame.src='about:blank'; $pdfMask.style.display='flex'; $pdfMask.setAttribute('aria-hidden','false');
+      $printForm.submit();
       setNotice('');
     });
 
-    $pdfClose.addEventListener('click', ()=>{
-      $pdfMask.style.display = 'none';
-      $pdfMask.setAttribute('aria-hidden','true');
-      $pdfFrame.src = 'about:blank';
-    });
-
-    $pdfPrint.addEventListener('click', ()=>{
-      try{
-        $pdfFrame.contentWindow?.focus();
-        $pdfFrame.contentWindow?.print();
-      }catch(_){}
-    });
+    $pdfClose.addEventListener('click', ()=>{ $pdfMask.style.display='none'; $pdfMask.setAttribute('aria-hidden','true'); $pdfFrame.src='about:blank'; });
+    $pdfPrint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){} });
 
     el('btnReset').addEventListener('click', async ()=>{
       document.querySelectorAll('input, textarea, select').forEach(i=>{ if(i.type!=='select-one') i.value=''; else i.selectedIndex=0; });

@@ -18,8 +18,11 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 app.use('/formtelevente', formtelevente);
 app.use('/formulaire-piece', formulairePiece);
@@ -33,6 +36,7 @@ app.use('/pret', express.static(pretPublic));
 app.get('/pret/fiche', (_req, res) => {
   res.sendFile(path.join(pretPublic, 'fiche-pret.html'));
 });
+
 app.get('/pret/admin', (_req, res) => {
   res.sendFile(path.join(pretPublic, 'admin-parc.html'));
 });

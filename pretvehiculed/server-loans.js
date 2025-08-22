@@ -10,7 +10,6 @@ const APPSCRIPT_KEY = process.env.APPSCRIPT_KEY;
 
 function assertConfig(res) {
   if (!APPSCRIPT_URL || !APPSCRIPT_KEY) {
-    console.error('[CONFIG] APPSCRIPT_URL or APPSCRIPT_KEY missing');
     res.status(500).json({ ok: false, error: 'config_missing' });
     return false;
   }
@@ -23,7 +22,6 @@ router.get('/vehicles', async (_req, res) => {
     const { data } = await axios.get(`${APPSCRIPT_URL}?action=listVehicles`);
     res.json(data);
   } catch (e) {
-    console.error('[GET /vehicles]', e.message);
     res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
   }
 });
@@ -34,7 +32,6 @@ router.get('/stores', async (_req, res) => {
     const { data } = await axios.get(`${APPSCRIPT_URL}?action=listStores`);
     res.json(data);
   } catch (e) {
-    console.error('[GET /stores]', e.message);
     res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
   }
 });
@@ -47,7 +44,6 @@ router.get('/loans/search', async (req, res) => {
     const { data } = await axios.get(`${APPSCRIPT_URL}?${qs}`);
     res.json(data);
   } catch (e) {
-    console.error('[GET /loans/search]', e.message);
     res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
   }
 });
@@ -57,24 +53,17 @@ router.post('/loans', async (req, res) => {
   try {
     const payload = { action: 'createLoan', key: APPSCRIPT_KEY, data: req.body };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-
     let data = resp.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-
     if (resp.status >= 400) {
-      console.error('[POST /loans] Apps Script status', resp.status, data);
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
     if (!data || data.ok === undefined) {
-      console.warn('[POST /loans] No explicit ok in response, assuming success');
       return res.json({ ok: true, loan_id: (data && data.loan_id) || null });
     }
     if (data.ok === true) return res.json({ ok: true, loan_id: data.loan_id || null });
-
-    console.error('[POST /loans] Script returned error:', data);
     return res.status(400).json(data);
   } catch (e) {
-    console.error('[POST /loans]', e);
     res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
   }
 });
@@ -82,18 +71,11 @@ router.post('/loans', async (req, res) => {
 router.post('/loans/:loan_id/close', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
-    const payload = {
-      action: 'closeLoan',
-      key: APPSCRIPT_KEY,
-      data: { ...req.body, loan_id: req.params.loan_id }
-    };
+    const payload = { action: 'closeLoan', key: APPSCRIPT_KEY, data: { ...req.body, loan_id: req.params.loan_id } };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-
     let data = resp.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
-
     if (resp.status >= 400) {
-      console.error('[POST /loans/:id/close] status', resp.status, data);
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
     if (!data || data.ok === undefined || data.ok === true) {
@@ -101,7 +83,6 @@ router.post('/loans/:loan_id/close', async (req, res) => {
     }
     return res.status(400).json(data);
   } catch (e) {
-    console.error('[POST /loans/:id/close]', e);
     res.status(500).json({ ok: false, error: 'apps_script_error', detail: e.message });
   }
 });
@@ -109,15 +90,11 @@ router.post('/loans/:loan_id/close', async (req, res) => {
 router.post('/loans/pdf', async (req, res) => {
   try {
     const d = req.body || {};
-
     const pad2 = n => String(n).padStart(2, '0');
     const parseMaybeDate = v => {
       if (!v && v !== 0) return null;
       if (v instanceof Date) return isNaN(v) ? null : v;
-      if (typeof v === 'number') {
-        const ms = Math.round((v - 25569) * 86400 * 1000);
-        const dt = new Date(ms); return isNaN(dt) ? null : dt;
-      }
+      if (typeof v === 'number') { const ms = Math.round((v - 25569) * 86400 * 1000); const dt = new Date(ms); return isNaN(dt) ? null : dt; }
       if (typeof v === 'string') {
         const hh = v.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
         if (hh) { const dt = new Date(); dt.setHours(+hh[1], +hh[2], 0, 0); return dt; }
@@ -139,7 +116,6 @@ router.post('/loans/pdf', async (req, res) => {
     const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
     const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
     const origin = host ? `${proto}://${host}` : '';
-
     const closeUrl = origin
       ? `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`
       : `/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
@@ -153,9 +129,7 @@ router.post('/loans/pdf', async (req, res) => {
     doc.moveDown();
 
     doc.image(qrBuf, doc.page.margins.left, doc.page.margins.top, { width: 90 });
-
-    doc.font('Helvetica').fontSize(8)
-      .text('Scanner pour clôturer', doc.page.margins.left, doc.page.margins.top + 95, { width: 90, align: 'center' });
+    doc.font('Helvetica').fontSize(8).text('Scanner pour clôturer', doc.page.margins.left, doc.page.margins.top + 95, { width: 90, align: 'center' });
 
     const line = (label, value, x, y, gap = 130) => {
       doc.font('Helvetica-Bold').fontSize(12).text(label, x, y);
@@ -164,7 +138,6 @@ router.post('/loans/pdf', async (req, res) => {
 
     const col1 = 40, col2 = 300;
     let y = doc.y + 6;
-
     line('NOM DU CHAUFFEUR :', d.chauffeur_nom || '', col1, y, 180); y += 22;
     line('IMMATRICULATION :', d.immatriculation || '', col1, y);      y += 18;
 
@@ -204,8 +177,94 @@ router.post('/loans/pdf', async (req, res) => {
 
     doc.end();
   } catch (e) {
-    console.error('[POST /loans/pdf]', e);
     res.status(500).end();
+  }
+});
+
+router.post('/loans/print', async (req, res) => {
+  try {
+    const d = req.body || {};
+    const pad2 = n => String(n).padStart(2,'0');
+    const parseMaybeDate = v => {
+      if (!v && v !== 0) return null;
+      if (v instanceof Date) return isNaN(v) ? null : v;
+      if (typeof v === 'number') { const ms = Math.round((v-25569)*86400*1000); const dt=new Date(ms); return isNaN(dt)?null:dt; }
+      if (typeof v === 'string') {
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'); const dt=new Date(); dt.setHours(+h,+m||0,0,0); return dt; }
+        const dt = new Date(v); if (!isNaN(dt)) return dt;
+        const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m){ const dt2=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(dt2)?null:dt2; }
+      }
+      return null;
+    };
+    const fmtDate = v => { const dt=parseMaybeDate(v); return dt ? `${pad2(dt.getDate())}/${pad2(dt.getMonth()+1)}/${String(dt.getFullYear()).slice(-2)}` : ''; };
+    const fmtTime = v => { const dt=parseMaybeDate(v); return dt ? `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}` : ''; };
+
+    const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
+    const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
+    const origin = host ? `${proto}://${host}` : (process.env.PUBLIC_BASE_URL || '');
+    const closeUrl = `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
+    const qrDataUrl = await QRCode.toDataURL(closeUrl, { margin: 1, width: 110 });
+
+    const esc = s => String(s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const html = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Fiche prêt ${esc(d.immatriculation)}</title>
+<style>
+@page{ size:A4; margin:12mm }
+body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
+.header{ display:flex; justify-content:space-between; align-items:flex-start; }
+.qrcode{ width:110px; height:110px; }
+h1{ margin:0 0 8px; font-size:18px; text-align:center }
+.grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:8px }
+.label{ font-weight:700 }
+.box{ border:1px solid #222; height:120px; margin-top:24px; display:grid; grid-template-columns:1fr 1fr; }
+.box h3{ margin: -10px 0 4px 8px; font-size:14px }
+.cell{ padding:12px; border-right:1px solid #222 }
+.cell:last-child{ border-right:0 }
+.obs{ margin-top:20px }
+.area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>FICHE PRÊT VÉHICULE DURAND</h1>
+      <div>MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
+    </div>
+    <img class="qrcode" alt="QR clôture" src="${qrDataUrl}">
+  </div>
+
+  <div class="grid" style="margin-top:10px">
+    <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
+    <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
+    <div><span class="label">DATE DÉPART : </span>${fmtDate(d.date_depart)}</div>
+    <div><span class="label">DATE RETOUR : </span>${fmtDate(d.date_retour)}</div>
+    <div><span class="label">HEURE DÉPART : </span>${fmtTime(d.heure_depart)}</div>
+    <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
+  </div>
+
+  <div class="box">
+    <div class="cell">
+      <h3>DÉPART</h3>
+      Réceptionnaire<br><br>Signature
+    </div>
+    <div class="cell">
+      <h3>RETOUR</h3>
+      Réceptionnaire<br><br>Signature
+    </div>
+  </div>
+
+  <div class="obs">
+    <div class="label">OBSERVATIONS :</div>
+    <div class="area">${esc(d.observations)}</div>
+  </div>
+
+  <script>window.onload=()=>{ setTimeout(()=>window.print(), 100); };</script>
+</body></html>`;
+
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  } catch (e) {
+    res.status(500).send('<h1>Erreur</h1>');
   }
 });
 
