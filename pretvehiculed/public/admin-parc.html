@@ -27,8 +27,10 @@
     .right{text-align:right;white-space:nowrap}
     .stack{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
     .notice{margin-top:calc(10px*var(--scale))}
-    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:9999}
+
+    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:99999}
     .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(560px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
+
     .row{display:grid;gap:calc(12px*var(--scale))}
     @media(min-width:680px){ .row.cols-2{grid-template-columns:1fr 1fr} }
   </style>
@@ -38,10 +40,19 @@
     <h1>Admin – Parc & prêts véhicules</h1>
 
     <div class="tools">
-      <div><label for="qImmat">Immatriculation</label><input id="qImmat" type="text" placeholder="Ex: AA-123-BB"></div>
-      <div><label for="qDate">Date</label><input id="qDate" type="date"></div>
-      <div><button id="btnSearch">Rechercher</button></div>
-      <div style="margin-left:auto"><button id="btnExport" class="btn-light">Exporter CSV</button></div>
+      <div>
+        <label for="qImmat">Immatriculation</label>
+        <select id="qImmat">
+          <option value="">— Toutes —</option>
+        </select>
+      </div>
+      <div>
+        <label for="qDate">Date</label>
+        <input id="qDate" type="date">
+      </div>
+      <div style="margin-left:auto">
+        <button id="btnExport" class="btn-light" type="button">Exporter CSV</button>
+      </div>
     </div>
 
     <div class="notice" id="notice"></div>
@@ -58,8 +69,8 @@
   </div>
 
   <div class="modalMask" id="mask">
-    <div class="modal">
-      <h3 style="margin:0 0 calc(8px*var(--scale))">Clôturer le prêt</h3>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <h3 id="mTitle" style="margin:0 0 calc(8px*var(--scale))">Clôturer le prêt</h3>
       <p id="mInfo" style="opacity:.85"></p>
       <div class="row cols-2">
         <div><label for="mDateRet">Date retour</label><input id="mDateRet" type="date"></div>
@@ -78,8 +89,8 @@
   </div>
 
   <div class="modalMask" id="maskEdit">
-    <div class="modal">
-      <h3 style="margin:0 0 calc(8px*var(--scale))">Modifier le prêt</h3>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="eTitle">
+      <h3 id="eTitle" style="margin:0 0 calc(8px*var(--scale))">Modifier le prêt</h3>
       <p id="eInfo" style="opacity:.85"></p>
 
       <div class="row cols-2">
@@ -153,30 +164,50 @@
     let __rows = [];
     let __stores = [];
 
-    async function loadStores(){
-      try{
-        __stores = await fetchJSON(`${BASE_URL}/stores`);
-      }catch(_){ __stores = []; }
+    let __scrollY = 0;
+    function lockScroll(){
+      __scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.style.position='fixed';
+      document.body.style.top = `-${__scrollY}px`;
+      document.body.style.left='0';
+      document.body.style.right='0';
+      document.body.style.width='100%';
+    }
+    function unlockScroll(){
+      document.body.style.position='';
+      document.body.style.top='';
+      document.body.style.left='';
+      document.body.style.right='';
+      document.body.style.width='';
+      window.scrollTo(0, __scrollY);
     }
 
-    async function doSearch(){
-      const immat=(document.getElementById('qImmat').value||'').trim();
-      const date=document.getElementById('qDate').value||'';
-      setNotice('Recherche en cours...');
+    async function loadStores(){
+      try{ __stores = await fetchJSON(`${BASE_URL}/stores`); }catch(_){ __stores = []; }
+    }
+
+    async function loadAllLoans(){
+      setNotice('Chargement...');
       try{
-        const q=new URLSearchParams({immat,date}).toString();
-        const rows=await fetchJSON(`${BASE_URL}/loans/search?${q}`);
+        const rows=await fetchJSON(`${BASE_URL}/loans/search`);
         __rows = rows;
-        render(rows); setNotice(`${rows.length} résultat(s)`);
+        populateImmatList(rows);
+        applyFilters(); // rend + notice
       }catch(e){ setNotice('Erreur : '+e.message,'error'); }
+    }
+
+    function populateImmatList(rows){
+      const $qImmat = document.getElementById('qImmat');
+      const immats = Array.from(new Set((rows||[]).map(r=>String(r.immatriculation||'').trim()).filter(Boolean))).sort();
+      $qImmat.innerHTML = ['<option value="">— Toutes —</option>'].concat(immats.map(v=>`<option value="${v}">${v}</option>`)).join('');
     }
 
     function render(rows){
       $tbody.innerHTML = rows.map((r,i)=>{
         const closeBtn = isOpen(r.status)
-          ? `<button class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
+          ? `<button type="button" class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
           : '';
-        const editBtn = `<button class="btn-mini btn-light btnEdit" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Modifier</button>`;
+        const editBtn = `<button type="button" class="btn-mini btn-light btnEdit" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Modifier</button>`;
         const actions = `<div class="stack">${closeBtn}${editBtn}</div>`;
         return `
           <tr>
@@ -193,9 +224,21 @@
       }).join('');
     }
 
-    document.getElementById('btnSearch').addEventListener('click', doSearch);
+    function applyFilters(){
+      const immat = (document.getElementById('qImmat').value || '').trim();
+      const date = document.getElementById('qDate').value || '';
+      const filtered = (__rows||[]).filter(r=>{
+        const okImmat = !immat || String(r.immatriculation||'')===immat;
+        const okDate  = !date || String(r.date_depart||'').startsWith(date) || String(r.date_retour||'').startsWith(date);
+        return okImmat && okDate;
+      });
+      render(filtered);
+      setNotice(`${filtered.length} résultat(s)`);
+    }
+
     document.getElementById('btnExport').addEventListener('click', ()=>{
-      const rows=__rows||[]; const head=['loan_id','vehicle_id','immatriculation','magasin_pret','chauffeur_nom','date_depart','heure_depart','date_retour','heure_retour','status','receptionnaire_depart','receptionnaire_retour','observations','created_at','updated_at'];
+      const rows=(__rows||[]);
+      const head=['loan_id','vehicle_id','immatriculation','magasin_pret','chauffeur_nom','date_depart','heure_depart','date_retour','heure_retour','status','receptionnaire_depart','receptionnaire_retour','observations','created_at','updated_at'];
       const csv=[head.join(';')].concat(rows.map(r=>head.map(k=>String(r[k]??'').replaceAll(/[\r\n;]+/g,' ')).join(';'))).join('\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='loans_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
@@ -220,27 +263,13 @@
       $mHourRet.value = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
       $mRecep.value = '';
       setModalNotice('');
+      lockScroll();
       $mask.style.display='flex';
     }
-
-    $tbody.addEventListener('click', (e)=>{
-      const btnC = e.target.closest('.btnClose');
-      if(btnC){ openCloseModal({ loanId: btnC.dataset.loan, vehicleId: btnC.dataset.veh||'', immat: btnC.dataset.immat||'' }); return; }
-      const btnE = e.target.closest('.btnEdit');
-      if(btnE){ openEditModal(String(btnE.dataset.loan)); return; }
-    });
-
-    $mCancel.addEventListener('click', ()=>{ $mask.style.display='none'; });
-
-    $mOk.addEventListener('click', async ()=>{
-      try{
-        setModalNotice('Clôture en cours…');
-        const payload = { vehicle_id: __ctx.vehicleId, date_retour:$mDateRet.value, heure_retour:$mHourRet.value, receptionnaire_retour:$mRecep.value.trim() };
-        const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__ctx.loanId)}/close`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-        const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
-        setModalNotice('Prêt clôturé.','success'); $mask.style.display='none'; setNotice('Prêt clôturé.','success'); await doSearch();
-      }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
-    });
+    function closeCloseModal(){
+      $mask.style.display='none';
+      unlockScroll();
+    }
 
     const $maskEdit = document.getElementById('maskEdit');
     const $eInfo    = document.getElementById('eInfo');
@@ -277,10 +306,36 @@
       $eRecepDep.value = row.receptionnaire_depart || '';
       $eObs.value      = row.observations || '';
       setENotice('');
+      lockScroll();
       $maskEdit.style.display='flex';
     }
+    function closeEditModal(){
+      $maskEdit.style.display='none';
+      unlockScroll();
+    }
 
-    $eCancel.addEventListener('click', ()=>{ $maskEdit.style.display='none'; });
+    $tbody.addEventListener('click', (e)=>{
+      const btnC = e.target.closest('.btnClose');
+      if(btnC){ openCloseModal({ loanId: btnC.dataset.loan, vehicleId: btnC.dataset.veh||'', immat: btnC.dataset.immat||'' }); return; }
+      const btnE = e.target.closest('.btnEdit');
+      if(btnE){ openEditModal(String(btnE.dataset.loan)); return; }
+    });
+
+    $mCancel.addEventListener('click', closeCloseModal);
+    $eCancel.addEventListener('click', closeEditModal);
+
+    $mOk.addEventListener('click', async ()=>{
+      try{
+        setModalNotice('Clôture en cours…');
+        const payload = { vehicle_id: __ctx.vehicleId, date_retour:$mDateRet.value, heure_retour:$mHourRet.value, receptionnaire_retour:$mRecep.value.trim() };
+        const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__ctx.loanId)}/close`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
+        setModalNotice('Prêt clôturé.','success');
+        closeCloseModal();
+        setNotice('Prêt clôturé.','success');
+        await loadAllLoans();
+      }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
+    });
 
     $eSave.addEventListener('click', async ()=>{
       try{
@@ -299,16 +354,17 @@
         });
         const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
         setENotice('Modifications enregistrées.','success');
-        $maskEdit.style.display='none';
-        await doSearch();
+        closeEditModal();
+        await loadAllLoans();
       }catch(e){
         setENotice('Échec : '+e.message,'error');
       }
     });
 
-    document.getElementById('btnSearch').addEventListener('click', doSearch);
-    document.getElementById('btnExport').addEventListener('click', ()=>{});
-    (async ()=>{ await loadStores(); await doSearch(); })();
+    document.getElementById('qImmat').addEventListener('change', applyFilters);
+    document.getElementById('qDate').addEventListener('change', applyFilters);
+
+    (async ()=>{ await loadStores(); await loadAllLoans(); })();
   </script>
 </body>
 </html>

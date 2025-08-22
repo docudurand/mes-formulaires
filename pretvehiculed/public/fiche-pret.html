@@ -27,8 +27,13 @@
     .notice{margin-top:calc(8px*var(--scale))}
     .notice .muted{opacity:.85}
 
-    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:9999}
-    .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(520px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
+    .attBar{display:flex;align-items:center;gap:10px}
+    .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+    .thumb{position:relative;width:120px;height:120px;border:var(--bw) solid var(--line);border-radius:12px;background:#fafafa;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .thumb img{max-width:100%;max-height:100%}
+    .thumb .file{font-size:.9rem;font-weight:700;opacity:.7}
+    .thumb .x{position:absolute;top:6px;right:6px;border:0;background:#fff;border:1px solid #e0e0e0;border-radius:999px;width:26px;height:26px;line-height:24px;text-align:center;cursor:pointer}
+    .thumb .cap{position:absolute;left:0;right:0;bottom:0;background:#0006;color:#fff;font-size:.75rem;padding:2px 6px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
 
     .pdfMask{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:10000;padding:calc(20px*var(--scale))}
     .pdfBox{width:min(900px,96vw);height:min(90vh,800px);background:#fff;border-radius:calc(14px*var(--scale));overflow:hidden;display:flex;flex-direction:column;border:var(--bw) solid var(--line)}
@@ -36,6 +41,9 @@
     .pdfBar .actions{display:flex;gap:8px}
     #pdfFrame{flex:1;width:100%;border:0}
     #printForm{display:none}
+
+    .modalMask{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:9999}
+    .modal{background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(520px*var(--scale));width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003}
   </style>
 </head>
 <body>
@@ -62,6 +70,16 @@
       <div style="margin-top:calc(10px*var(--scale))">
         <label for="obs">Observations</label>
         <textarea id="obs" placeholder="État du véhicule, accessoires remis, etc."></textarea>
+      </div>
+
+      <div style="margin-top:calc(12px*var(--scale))">
+        <label>Pièces jointes</label>
+        <div class="attBar">
+          <input id="attInput" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.heic" style="display:none">
+          <button class="btn-sec" id="attBtn" type="button">Ajouter des fichiers</button>
+          <span class="muted">Images/PDF/Office (max ~10–12 Mo au total)</span>
+        </div>
+        <div id="attList" class="thumbs"></div>
       </div>
 
       <div style="margin-top:calc(12px*var(--scale))">
@@ -125,27 +143,61 @@
   <script>
     const BASE_URL = '/pret/api';
     const el = id => document.getElementById(id);
+
     const $store = el('store'), $vehicle = el('vehicle'), $vehInfo = el('vehInfo');
     const $statusTag = el('statusTag'), $notice = el('notice'), $openLoans = el('openLoans');
-    const $mask=el('mask'), $mInfo=el('mInfo'), $mDateRet=el('mDateRet'), $mHourRet=el('mHourRet'), $mRecep=el('mRecep'), $mNotice=el('mNotice');
     const $btnSave = el('btnSave'), $btnOpenClose = el('btnOpenClose'), $btnReset = el('btnReset');
 
-    const $pdfMask = el('pdfMask');
-    const $pdfFrame = el('pdfFrame');
-    const $pdfClose = el('pdfClose');
-    const $pdfReprint = el('pdfReprint');
-    const $printForm = el('printForm');
+    const $mask=el('mask'), $mInfo=el('mInfo'), $mDateRet=el('mDateRet'), $mHourRet=el('mHourRet'), $mRecep=el('mRecep'), $mNotice=el('mNotice');
+
+    const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint'), $printForm = el('printForm');
+
+    const $attInput = el('attInput'), $attBtn = el('attBtn'), $attList = el('attList');
 
     let vehiclesAll = []; let vehiclesIndex = {}; let lastSaved=null;
+    let atts = [];
 
     async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok){throw new Error('HTTP '+r.status)} return r.json(); }
     const setStatus=(t)=>{ $statusTag.textContent=t; $statusTag.style.opacity=1; };
-    const setNotice=(t,type='info',asHTML=false)=>{ 
-      if(asHTML) $notice.innerHTML = t || '';
-      else $notice.textContent = t || '';
-      $notice.style.color = type==='error' ? '#c62828' : type==='success' ? '#2e7d32' : '#073763';
-    };
+    const setNotice=(t,type='info',asHTML=false)=>{ if(asHTML) $notice.innerHTML=t||''; else $notice.textContent=t||''; $notice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
     const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
+
+    $attBtn.addEventListener('click', ()=> $attInput.click());
+    $attInput.addEventListener('change', ()=>{
+      [...$attInput.files].forEach(addAtt);
+      $attInput.value='';
+    });
+    function addAtt(file){
+      if(!file) return;
+      const isImg = /^image\//.test(file.type);
+      const o = { file, isImg, url: isImg ? URL.createObjectURL(file) : '', name:file.name, type:file.type||'application/octet-stream' };
+      atts.push(o); renderAtts();
+    }
+    function removeAtt(idx){
+      const o = atts.splice(idx,1)[0];
+      if(o?.url) URL.revokeObjectURL(o.url);
+      renderAtts();
+    }
+    function renderAtts(){
+      $attList.innerHTML='';
+      atts.forEach((o,idx)=>{
+        const box=document.createElement('div'); box.className='thumb';
+        const x=document.createElement('button'); x.className='x'; x.type='button'; x.textContent='✕'; x.onclick=()=>removeAtt(idx); box.appendChild(x);
+        if(o.isImg){ const img=new Image(); img.src=o.url; img.alt=o.name; box.appendChild(img); }
+        else{ const s=document.createElement('span'); s.className='file'; s.textContent=(o.name.split('.').pop()||'Fichier').toUpperCase(); box.appendChild(s); }
+        const cap=document.createElement('div'); cap.className='cap'; cap.textContent=o.name; box.appendChild(cap);
+        $attList.appendChild(box);
+      });
+    }
+    async function attsToPayload(){
+      const toB64 = (o)=>new Promise((resolve,reject)=>{
+        const fr=new FileReader();
+        fr.onload=()=>{ const m=String(fr.result).match(/^data:(.+?);base64,(.*)$/); resolve({ filename:o.name, contentType:o.type, content:(m?m[2]:'') }); };
+        fr.onerror=reject;
+        fr.readAsDataURL(o.file);
+      });
+      return Promise.all(atts.map(toB64));
+    }
 
     async function loadStores(){
       try{ const data=await fetchJSON(`${BASE_URL}/stores`);
@@ -202,10 +254,7 @@
       const opt = $openLoans.options[$openLoans.selectedIndex];
       if(!$store.value){ setNotice('Choisissez un magasin.','error'); return; }
       if(!$openLoans.value || !opt){ setNotice('Sélectionnez un prêt en cours.','error'); return; }
-      const immat =
-        (opt?.dataset?.immat) ||
-        (vehiclesIndex[opt?.dataset?.veh || '']?.immatriculation) ||
-        ((opt?.textContent || '').split('—')[0].trim());
+      const immat = (opt?.dataset?.immat) || (vehiclesIndex[opt?.dataset?.veh || '']?.immatriculation) || ((opt?.textContent || '').split('—')[0].trim());
       const storeLabel = $store.options[$store.selectedIndex]?.text || $store.value || '';
       $mInfo.textContent = `Véhicule : ${immat || '—'} • Magasin : ${storeLabel}`;
       const now=new Date(), pad=n=>String(n).padStart(2,'0');
@@ -235,15 +284,12 @@
       $pdfMask.setAttribute('aria-hidden','false');
       $printForm.submit();
     }
-
     $pdfClose.addEventListener('click', ()=>{
       $pdfMask.style.display='none';
       $pdfMask.setAttribute('aria-hidden','true');
       $pdfFrame.src='about:blank';
     });
-    $pdfReprint.addEventListener('click', ()=>{
-      try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){}
-    });
+    $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){ } });
 
     el('btnSave').addEventListener('click', async ()=>{
       const d=currentPayload();
@@ -253,6 +299,7 @@
       try{
         $btnSave.disabled = true; $btnSave.setAttribute('aria-busy','true');
         setStatus('Enregistrement en cours…'); setNotice('⏳ <span class="muted">Enregistrement en cours…</span>', 'info', true);
+
         const r=await fetch(`${BASE_URL}/loans`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         const j=await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
 
@@ -260,6 +307,15 @@
         setStatus('Prêt enregistré'); setNotice('Prêt enregistré. Impression en cours…','success');
 
         openPrintPreview(lastSaved);
+
+        try{
+          const attPayload = await attsToPayload();
+          await fetch(`${BASE_URL}/loans/email`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ loan:lastSaved, attachments:attPayload })
+          });
+        }catch(_){  }
 
         await loadVehicles(); renderVehicleOptions($store.value||null); await loadOpenLoansForStore($store.value||null);
       }catch(e){
@@ -271,7 +327,8 @@
 
     el('btnReset').addEventListener('click', async ()=>{
       document.querySelectorAll('input, textarea, select').forEach(i=>{ if(i.type!=='select-one') i.value=''; else i.selectedIndex=0; });
-      setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null; renderVehicleOptions(null); await loadOpenLoansForStore(null);
+      setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null; atts.forEach(a=>a.url&&URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
+      await loadOpenLoansForStore(null); renderVehicleOptions(null);
     });
 
     (async ()=>{ await Promise.all([loadStores(), loadVehicles()]); })();
