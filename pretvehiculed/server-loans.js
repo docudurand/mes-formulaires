@@ -3,7 +3,6 @@ import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
-import { ImapFlow } from 'imapflow';
 
 const router = express.Router();
 
@@ -247,10 +246,7 @@ router.post('/loans/email', async (req, res) => {
           ${rows.map(([k,v])=>`<tr><td style="border:1px solid #ddd;padding:6px 10px;font-weight:600">${k}</td><td style="border:1px solid #ddd;padding:6px 10px">${v||''}</td></tr>`).join('')}
         </table>
         <p style="margin-top:12px">
-          Clôturer le prêt :
-          <a href="${origin}/pret/close.html?loan_id=${encodeURIComponent(loan.loan_id||'')}&immat=${encodeURIComponent(loan.immatriculation||'')}">
-            ${origin}/pret/close.html?loan_id=…
-          </a>
+          Clôturer le prêt : <a href="${origin}/pret/close.html?loan_id=${encodeURIComponent(loan.loan_id||'')}&immat=${encodeURIComponent(loan.immatriculation||'')}">${origin}/pret/close.html?loan_id=…</a>
         </p>
       </div>`;
 
@@ -268,54 +264,6 @@ router.post('/loans/email', async (req, res) => {
       html,
       attachments
     });
-
-    if (String(process.env.DELETE_SENT || '') === '1') {
-      const IMAP_HOST = process.env.IMAP_HOST || 'imap.gmail.com';
-      const IMAP_PORT = Number(process.env.IMAP_PORT || 993);
-      const msgIdHeader = String(info.messageId || '').replace(/^<|>$/g, '');
-
-      try {
-        const client = new ImapFlow({
-          host: IMAP_HOST,
-          port: IMAP_PORT,
-          secure: true,
-          auth: { user, pass }
-        });
-        await client.connect();
-
-        const boxes = await client.list();
-        const sentBox = boxes.find(b => (b.specialUse || '').toLowerCase() === '\\sent')
-                      || boxes.find(b => /\bsent\b|envoy|enviad|inviat|gesend/i.test(b.path))
-                      || { path: '[Gmail]/Sent Mail' };
-
-        await client.mailboxOpen(sentBox.path);
-
-        const wanted = `<${msgIdHeader}>`;
-        let seq = null;
-        for (let i = 0; i < 10 && !seq; i++) {
-          const found = await client.search({ header: ['Message-ID', wanted] });
-          seq = found && found[0] ? found[0] : null;
-          if (!seq) await new Promise(r => setTimeout(r, 800));
-        }
-
-        if (seq) {
-          const trashBox = boxes.find(b => (b.specialUse || '').toLowerCase() === '\\trash')
-                         || boxes.find(b => /trash|corbeille|papier|cestino|papelera/i.test(b.path))
-                         || { path: '[Gmail]/Trash' };
-
-          try {
-            await client.messageMove(seq, trashBox.path);
-          } catch {
-            await client.messageFlagsAdd(seq, ['\\Deleted']);
-            await client.mailboxClose(true);
-          }
-        }
-
-        await client.logout();
-      } catch (err) {
-        console.warn('Suppression auto "Envoyés" échouée:', err?.message || err);
-      }
-    }
 
     res.json({ ok:true, messageId: info.messageId });
   } catch (e) {
