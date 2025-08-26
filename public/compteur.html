@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Compteurs de formulaires</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --primary: #004080;
+      --accent: #00a7e1;
+      --bg: #f5f9fc;
+      --card: #ffffff;
+      --text: #073763;
+      --muted: #47607a;
+      --shadow: 0 8px 26px rgba(0,0,0,0.08);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    header {
+      background: var(--card);
+      box-shadow: var(--shadow);
+      padding: 18px 22px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; color: var(--primary); }
+    p.sub { margin: 0; color: var(--muted); }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      align-items: center; margin: 18px 0;
+    }
+    select {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid #d3dbe6; background: #fff;
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+    }
+    .label { font-size: 0.95rem; color: var(--muted); }
+    .value { font-size: 2.2rem; font-weight: 700; margin-top: 6px; color: var(--primary); }
+
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    thead { background: #eef5ff; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #eef0f4; }
+    th { font-weight: 700; color: var(--primary); }
+    tfoot td { font-weight: 700; }
+    .hint { color: var(--muted); font-size: 0.92rem; margin-top: 10px; }
+    .chip {
+      display: inline-block; padding: 4px 10px; border-radius: 999px; background: #eaf6ff; color: var(--primary);
+      font-size: 0.85rem; margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Compteurs des formulaires <span class="chip">/piece · /piecepl · /pneu</span></h1>
+      <p class="sub">Totaux annuels et cumuls, mis à jour automatiquement à chaque envoi.</p>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding: 18px 22px 40px;">
+    <div class="toolbar">
+      <label for="yearSelect">Filtrer par année :</label>
+      <select id="yearSelect"></select>
+      <span class="hint">Astuce : change l’année pour voir le détail; le « Total cumulé » reste toutes années confondues.</span>
+    </div>
+
+    <section class="grid" id="cards">
+    </section>
+
+    <h2 style="margin: 26px 0 10px;">Récapitulatif par année</h2>
+    <div style="overflow-x:auto;">
+      <table id="table">
+        <thead>
+          <tr>
+            <th>Année</th>
+            <th>Pièce VL</th>
+            <th>Pièce PL</th>
+            <th>Pneumatique</th>
+            <th>Total année</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td>Total cumulé</td>
+            <td id="t_piece">0</td>
+            <td id="t_piecepl">0</td>
+            <td id="t_pneu">0</td>
+            <td id="t_all">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const API = "/stats/counters";
+
+    async function loadData() {
+      const res = await fetch(API, { cache: "no-store" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API");
+      return json.data;
+    }
+
+    function fillYearSelect(years) {
+      const sel = document.getElementById("yearSelect");
+      sel.innerHTML = "";
+      const current = String(new Date().getFullYear());
+      const set = new Set(years);
+      if (!set.has(current)) years = [current, ...years];
+      for (const y of years) {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        sel.appendChild(opt);
+      }
+      sel.value = current;
+    }
+
+    function getYearCount(byYear, year) {
+      return Number(byYear?.[year] || 0);
+    }
+
+    function renderCards(counters, year) {
+      const cards = document.getElementById("cards");
+      cards.innerHTML = "";
+
+      const defs = [
+        { key: "piece",   title: "Demande Pièce VL" },
+        { key: "piecepl", title: "Demande Pièce PL" },
+        { key: "pneu",    title: "Demande Pneumatique" },
+      ];
+
+      defs.forEach(def => {
+        const c = counters[def.key] || { byYear: {}, total: 0 };
+        const yearly = getYearCount(c.byYear, year);
+        const el = document.createElement("div");
+        el.className = "card";
+        el.innerHTML = `
+          <div class="label">${def.title} — <strong>${year}</strong></div>
+          <div class="value">${yearly}</div>
+          <div class="label" style="margin-top:10px;">Total cumulé : <strong>${c.total}</strong></div>
+        `;
+        cards.appendChild(el);
+      });
+    }
+
+    function renderTable(years, counters) {
+      const tbody = document.querySelector("#table tbody");
+      tbody.innerHTML = "";
+
+      let sumPiece = 0, sumPiecepl = 0, sumPneu = 0;
+
+      years.forEach(y => {
+        const p  = getYearCount(counters.piece.byYear, y);
+        const pp = getYearCount(counters.piecepl.byYear, y);
+        const pn = getYearCount(counters.pneu.byYear, y);
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${y}</td>
+          <td>${p}</td>
+          <td>${pp}</td>
+          <td>${pn}</td>
+          <td>${p + pp + pn}</td>
+        `;
+        tbody.appendChild(row);
+        sumPiece += p; sumPiecepl += pp; sumPneu += pn;
+      });
+
+      document.getElementById("t_piece").textContent = counters.piece.total;
+      document.getElementById("t_piecepl").textContent = counters.piecepl.total;
+      document.getElementById("t_pneu").textContent = counters.pneu.total;
+      document.getElementById("t_all").textContent = counters.piece.total + counters.piecepl.total + counters.pneu.total;
+    }
+
+    async function main() {
+      try {
+        const { years, counters } = await loadData();
+        fillYearSelect(years);
+        const current = document.getElementById("yearSelect").value;
+        renderCards(counters, current);
+        renderTable(years, counters);
+
+        document.getElementById("yearSelect").addEventListener("change", (e) => {
+          renderCards(counters, e.target.value);
+        });
+      } catch (e) {
+        alert("Impossible de charger les compteurs : " + e.message);
+        console.error(e);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>

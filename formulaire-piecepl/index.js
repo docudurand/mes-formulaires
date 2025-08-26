@@ -4,7 +4,6 @@ import nodemailer from 'nodemailer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { incrementCompteur } from "../compteur.js";
 
 dotenv.config();
 
@@ -140,7 +139,7 @@ router.post(
           console.error('Erreur envoi accusé réception :', err);
         }
       }
-incrementCompteur("pl");
+
       res.status(200).send('Formulaire envoyé !');
     } catch (err) {
       console.error('Envoi mail échoué :', err);
