@@ -35,14 +35,13 @@ app.use((req, res, next) => {
       if (!success || method !== "POST") return;
 
       if (url.startsWith("/formulaire-piece")) {
-        console.log("[COMPTEUR] POST OK sur", url, "→ piece +1");
+        console.log("[COMPTEUR] POST OK sur", url, "-> piece +1");
         await stats.recordSubmission("piece");
       } else if (url.startsWith("/formulaire-piecepl")) {
-        console.log("[COMPTEUR] POST OK sur", url, "→ piecepl +1");
+        console.log("[COMPTEUR] POST OK sur", url, "-> piecepl +1");
         await stats.recordSubmission("piecepl");
       } else if (url.startsWith("/formulaire-pneu")) {
-        console.log("[COMPTEUR] POST OK sur", url, "→ p
-neu +1");
+        console.log("[COMPTEUR] POST OK sur", url, "-> pneu +1");
         await stats.recordSubmission("pneu");
       }
     } catch (e) {
