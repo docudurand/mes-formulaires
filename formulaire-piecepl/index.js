@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { incrementCompteur } from "./compteur.js";
+import { incrementCompteur } from "../compteur.js";
 
 dotenv.config();
 
