@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import { incrementCompteur, getCompteurs } from "./compteur.js";
 import formtelevente from './formtelevente/index.js';
 import formulairePiece from './formulaire-piece/index.js';
 import formulairePiecePL from './formulaire-piecepl/index.js';
@@ -47,6 +47,9 @@ app.get('/healthz', (_req, res) => res.sendStatus(200));
 
 app.get('/', (_req, res) => {
   res.send('📝 Mes Formulaires – service opérationnel');
+});
+app.get("/admin/compteurs", (req, res) => {
+  res.json(getCompteurs());
 });
 
 app.use((_req, res) => {
