@@ -86,6 +86,8 @@
     const isOpenStatus = s => normalizeStatus(s) === 'en cours';
     const isClosedStatus = s => normalizeStatus(s).startsWith('clot');
 
+    const setInputsEnabled = on => { [$date,$time,$recept,$ok].forEach(el=>el.disabled = !on); };
+
     const now=new Date();
     $date.value=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
     $time.value=`${p2(now.getHours())}:${p2(now.getMinutes())}`;
@@ -102,11 +104,11 @@
 
     function lockForm(msg, cls='info'){
       setNotice(msg, cls);
-      [$date,$time,$recept,$ok].forEach(el=>el.disabled=true);
+      setInputsEnabled(false);
       $ok.textContent = 'Clôture indisponible';
     }
     function lockAfterSuccess(){
-      [$date,$time,$recept,$ok].forEach(el=>el.disabled=true);
+      setInputsEnabled(false);
       $ok.textContent = 'Déjà clôturé';
     }
 
@@ -126,6 +128,7 @@
           }
 
           setNotice('Prêt en cours détecté.','ok');
+          setInputsEnabled(true);
           return 'OPEN';
         }
         return null;
@@ -135,6 +138,9 @@
     async function resolveLoan(){
       $info.textContent = immat ? `Véhicule : ${immat}` : 'Véhicule non précisé';
 
+      setNotice('Chargement en cours…','info');
+      setInputsEnabled(false);
+
       if (loanId && immat){
         const state = await resolveVehicleFromImmatAndLoan();
         if (state === 'CLOSED' || state === 'OPEN') return;
@@ -142,7 +148,7 @@
 
       if (!loanId && immat) {
         try{
-          setNotice('Recherche du prêt en cours…');
+          setNotice('Recherche du prêt en cours…','info');
           const rows = await fetchJSON(`${BASE_URL}/loans/search?` + new URLSearchParams({immat}));
           const open = (rows||[]).filter(r => isOpenStatus(r.status));
 
@@ -156,6 +162,7 @@
             vehicleId = open[0].vehicle_id || vehicleId;
             immat     = open[0].immatriculation || immat;
             setNotice('Prêt en cours détecté.', 'ok');
+            setInputsEnabled(true);
             return;
           }
 
@@ -172,9 +179,10 @@
             vehicleId = $selLoan.options[$selLoan.selectedIndex]?.dataset?.veh || '';
           });
           setNotice('Plusieurs prêts en cours — sélectionnez celui à clôturer.', 'info');
+          setInputsEnabled(true);
           return;
         }catch(e){
-          setNotice('Erreur lors de la recherche : '+e.message, 'err');
+          lockForm('Erreur lors de la recherche : '+e.message, 'err');
           return;
         }
       }
