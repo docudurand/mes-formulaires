@@ -14,7 +14,7 @@
     .wrap{max-width:calc(1200px*var(--scale));margin:calc(24px*var(--scale)) auto;padding:calc(16px*var(--scale))}
     .tools{display:flex;flex-wrap:wrap;gap:calc(10px*var(--scale));align-items:end;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));padding:calc(12px*var(--scale));background:#fff}
     label{font-weight:600;margin-bottom:calc(4px*var(--scale));display:block}
-    input,select{padding:calc(10px*var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))}
+    input,select,textarea{padding:calc(10px*var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))}
     button{border:0;border-radius:calc(10px*var(--scale));padding:calc(10px*var(--scale)) calc(14px*var(--scale));font-weight:700;cursor:pointer;background:var(--primary);color:#fff}
     .btn-mini{padding:calc(6px*var(--scale)) calc(10px*var(--scale));font-weight:600}
     .btn-light{background:#eef5ff;color:#004080;border:var(--bw) solid #d6e6ff}
@@ -151,6 +151,15 @@
           <label for="eRecepRet">Réceptionnaire (retour)</label>
           <input id="eRecepRet" type="text" placeholder="Nom réceptionnaire">
         </div>
+      </div>
+
+      <div>
+        <label for="eTransAss">Transfert assurance</label>
+        <select id="eTransAss">
+          <option value="">— Sélectionnez —</option>
+          <option value="Oui">Oui</option>
+          <option value="Non">Non</option>
+        </select>
       </div>
 
       <div>
@@ -326,6 +335,7 @@
     const $eHourRet = document.getElementById('eHourRet');
     const $eRecepDep= document.getElementById('eRecepDep');
     const $eRecepRet= document.getElementById('eRecepRet');
+    const $eTransAss= document.getElementById('eTransAss');
     const $eObs     = document.getElementById('eObs');
     const $eNotice  = document.getElementById('eNotice');
     let __editCtx   = { loanId:'', vehicleId:'', immat:'' };
@@ -353,6 +363,7 @@
       $eHourRet.value   = toTimeInput(row.heure_retour) || '';
       $eRecepDep.value  = row.receptionnaire_depart || '';
       $eRecepRet.value  = row.receptionnaire_retour || '';
+      $eTransAss.value  = (row.transfert_assurance === 'Oui' || row.transfert_assurance === 'Non') ? row.transfert_assurance : '';
       $eObs.value       = row.observations || '';
       setENotice('');
       showTop($maskEdit);
@@ -394,6 +405,7 @@
           heure_retour: $eHourRet.value,
           receptionnaire_depart: $eRecepDep.value.trim(),
           receptionnaire_retour: $eRecepRet.value.trim(),
+          transfert_assurance: $eTransAss.value || '',
           observations: $eObs.value.trim()
         };
         const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__editCtx.loanId)}/update`, {
