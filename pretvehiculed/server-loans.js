@@ -1,6 +1,5 @@
 import express from 'express';
 import axios from 'axios';
-import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 
@@ -16,6 +15,10 @@ function assertConfig(res) {
   }
   return true;
 }
+const normData = (d)=> {
+  if (typeof d === 'string') { try { return JSON.parse(d); } catch { return d; } }
+  return d;
+};
 
 router.get('/vehicles', async (_req, res) => {
   try {
@@ -54,8 +57,8 @@ router.post('/loans', async (req, res) => {
   try {
     const payload = { action: 'createLoan', key: APPSCRIPT_KEY, data: req.body };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-    let data = resp.data;
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+    let data = normData(resp.data);
+
     if (resp.status >= 400) {
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
@@ -69,13 +72,32 @@ router.post('/loans', async (req, res) => {
   }
 });
 
+router.post('/loans/:loan_id/update', async (req, res) => {
+  if (!assertConfig(res)) return;
+  try {
+    const payload = { action: 'updateLoan', key: APPSCRIPT_KEY, data: { ...req.body, loan_id: req.params.loan_id } };
+    const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
+    let data = normData(resp.data);
+
+    if (resp.status >= 400) {
+      return res.status(502).json({ ok:false, error:'apps_script_status_'+resp.status, detail:data });
+    }
+    if (!data || data.ok === undefined || data.ok === true) {
+      return res.json({ ok:true });
+    }
+    return res.status(400).json(data);
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'apps_script_error', detail:e.message });
+  }
+});
+
 router.post('/loans/:loan_id/close', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
     const payload = { action: 'closeLoan', key: APPSCRIPT_KEY, data: { ...req.body, loan_id: req.params.loan_id } };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-    let data = resp.data;
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+    let data = normData(resp.data);
+
     if (resp.status >= 400) {
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
@@ -125,12 +147,12 @@ router.post('/loans/print', async (req, res) => {
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
   .header{
     display:grid; grid-template-columns:120px 1fr 120px;
-    align-items:center; column-gap:8px; margin-bottom:0; /* plus d'espace géré par .afterHead */
+    align-items:center; column-gap:8px; margin-bottom:0;
   }
   .logo{ width:120px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:20px; font-weight:700; letter-spacing:.3px }
   .qrcode{ width:110px; height:110px; justify-self:end }
-  .afterHead{ margin-top:10mm; } /* >>> Ajout : gros espace après l'en-tête */
+  .afterHead{ margin-top:10mm; } /* espace après l'en-tête */
   .line{ margin:4px 0 6px; font-size:14px }
   .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
   .label{ font-weight:700 }
@@ -144,19 +166,15 @@ router.post('/loans/print', async (req, res) => {
 </head>
 <body>
 
-  <!-- En-tête avec logo à gauche, titre centré, QR à droite -->
   <div class="header">
     <img class="logo" src="${LOGO_URL}" alt="Logo Durand">
     <h1 class="title">FICHE PRÊT VÉHICULE DURAND</h1>
     <img class="qrcode" alt="QR clôture" src="${qrDataUrl}">
   </div>
 
-  <!-- Tout le reste est volontairement "descendu" -->
   <div class="afterHead">
-    <!-- MAGASIN au-dessus de NOM DU CHAUFFEUR -->
     <div class="line">MAGASIN : <strong>${esc(d.magasin_pret)}</strong></div>
 
-    <!-- Grille d’infos (toujours 2 colonnes pour l’alignement) -->
     <div class="grid">
       <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
       <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
@@ -168,7 +186,6 @@ router.post('/loans/print', async (req, res) => {
       <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
     </div>
 
-    <!-- Encadrés signatures (alignés en 2 colonnes) -->
     <div class="box">
       <div class="cell">
         <h3>DÉPART</h3>
@@ -191,7 +208,6 @@ router.post('/loans/print', async (req, res) => {
       </div>
     </div>
 
-    <!-- Zone d’informations chauffeur -->
     <div class="obs">
       <div class="label">INFORMATION CHAUFFEUR :</div>
       <div class="area">${esc(d.observations)}</div>
@@ -246,7 +262,10 @@ router.post('/loans/email', async (req, res) => {
           ${rows.map(([k,v])=>`<tr><td style="border:1px solid #ddd;padding:6px 10px;font-weight:600">${k}</td><td style="border:1px solid #ddd;padding:6px 10px">${v||''}</td></tr>`).join('')}
         </table>
         <p style="margin-top:12px">
-          Clôturer le prêt : <a href="${origin}/pret/close.html?loan_id=${encodeURIComponent(loan.loan_id||'')}&immat=${encodeURIComponent(loan.immatriculation||'')}">${origin}/pret/close.html?loan_id=…</a>
+          Clôturer le prêt :
+          <a href="${origin}/pret/close.html?loan_id=${encodeURIComponent(loan.loan_id||'')}&immat=${encodeURIComponent(loan.immatriculation||'')}">
+            ${origin}/pret/close.html?loan_id=…
+          </a>
         </p>
       </div>`;
 
