@@ -194,21 +194,30 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-
+  let logoHeight = 0;
   try {
     const resp = await fetch(logoUrl);
     const buf = Buffer.from(await resp.arrayBuffer());
-    doc.image(buf, 50, 40, { width: 110 });
+
+    doc.image(buf, 50, 40, { width: 120 });
+    logoHeight = 120 * 0.5;
   } catch (e) {
     console.warn("[CONGES][PDF] Logo non chargé:", e.message);
   }
 
-  doc.fontSize(22).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", 0, 130, { align: "center" });
+  const titleX = 190;
+  const titleY = 60;
+  const titleWidth = 545 - titleX;
+  doc.fontSize(20).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", titleX, titleY, {
+    width: titleWidth,
+    align: "left",
+  });
 
-  let y = 180;
+  let y = 160;
 
+  doc.moveDown(0.5);
   doc.fontSize(14).font("Helvetica-Bold").text("SITE :", 50, y);
-  doc.font("Helvetica").text(magasin || "", 95, y);
+  doc.font("Helvetica").text(magasin || "", 110, y);
   y += 50;
 
   const parts = String(nomPrenom || "").trim().split(/\s+/);
@@ -216,14 +225,16 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   const nom = parts.slice(-1)[0] || "";
 
   doc.font("Helvetica").fontSize(14);
-  doc.text("NOM :", 50, y);     doc.text(nom, 95, y, { underline: true, width: 180 });
-  doc.text("PRENOM :", 330, y); doc.text(prenom, 395, y, { underline: true, width: 160 });
+  doc.text("NOM :", 50, y);
+  doc.text(nom, 110, y, { width: 180 });
+  doc.text("PRENOM :", 330, y);
+  doc.text(prenom, 410, y, { width: 160 });
   y += 60;
 
   const services = ["Magasin V.L", "Magasin P.L", "Industrie",
                     "Atelier V.L", "Atelier P.L", "Rectification",
                     "Administratif", "Commercial", "Matériel"];
-  const cols = 3, colW = (545 - 50) / cols, box = 12, lh = 30;
+  const cols = 3, colW = (545 - 50) / cols, box = 12, lh = 34;
   services.forEach((s, i) => {
     const r = Math.floor(i / cols), c = i % cols;
     const x = 50 + c * colW, yy = y + r * lh;
@@ -233,26 +244,25 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     }
     doc.font("Helvetica").text(s, x + box + 8, yy - 2);
   });
-  y += Math.ceil(services.length / cols) * lh + 40;
+  y += Math.ceil(services.length / cols) * lh + 50;
 
   doc.fontSize(14).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, 50, y);
-  y += 35;
+  y += 40;
 
   doc.text(`du ${du} au ${au} inclus.`, 50, y);
-  y += 70;
+  y += 60;
 
-  doc.text("DATE :", 50, y); doc.moveTo(95, y + 12).lineTo(220, y + 12).stroke();
   doc.text("Signature de l’employé,", 380, y);
-  y += 110;
+  y += 100;
 
   doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", 50, y);
   doc.text("RESPONSABLE DE SITE :", 330, y);
-  y += 25; doc.font("Helvetica");
-  doc.text("NOM :", 50, y);     doc.moveTo(85, y + 12).lineTo(220, y + 12).stroke();
-  doc.text("NOM :", 330, y);    doc.moveTo(365, y + 12).lineTo(545, y + 12).stroke();
-  y += 35;
-  doc.text("SIGNATURE :", 50, y);  doc.moveTo(125, y + 12).lineTo(220, y + 12).stroke();
-  doc.text("SIGNATURE :", 330, y); doc.moveTo(400, y + 12).lineTo(545, y + 12).stroke();
+  y += 28; doc.font("Helvetica");
+  doc.text("NOM :", 50, y);
+  doc.text("NOM :", 330, y);
+  y += 28;
+  doc.text("SIGNATURE :", 50, y);
+  doc.text("SIGNATURE :", 330, y);
 
   doc.end();
   return done;

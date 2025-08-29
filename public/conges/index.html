@@ -5,34 +5,37 @@
   <title>Demande de Jours de Congés</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <style>
-    :root{
-      --bg:#f5f7fb; --card:#fff; --primary:#004080; --text:#073763; --muted:#6b7280; --border:#e5e7eb;
-      --space:16px; --control-h:44px;
-    }
+    :root{ --bg:#f5f7fb; --card:#fff; --primary:#004080; --text:#073763; --muted:#6b7280; --border:#e5e7eb;
+           --space:16px; --control-h:44px; }
     *, *::before, *::after { box-sizing:border-box; }
-    html,body{margin:0;padding:0;background:var(--bg);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--text);}
-    .wrap{max-width:520px;margin:0 auto;padding:16px;}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;
-      box-shadow:0 6px 24px rgba(0,0,0,.06);padding:16px;}
-    .logo{text-align:center;margin-bottom:12px;}
-    .logo img{max-width:160px;height:auto;}
-    h1{font-size:1.35rem;margin:8px 0 20px;color:var(--primary);text-align:center;}
-    .field{margin-bottom:var(--space);} .field:last-child{margin-bottom:0;}
-    label{display:block;font-weight:600;font-size:.95rem;margin-bottom:8px;}
-    select,input,button{width:100%;max-width:100%;min-width:0;padding:12px;border-radius:10px;
-      border:1px solid var(--border);font-size:1rem;background:#fff;}
-    input[type="date"]{width:100%;min-height:var(--control-h);padding:10px;line-height:1.2;
-      -webkit-appearance:none;appearance:none;background-color:#fff;}
-    input:focus,select:focus{outline:2px solid #cde4ff;border-color:#93c5fd;}
-    .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;}
-    .row>div{min-width:0;}
-    @media (max-width:480px){.row{grid-template-columns:1fr;gap:12px;}}
-    .alert{display:none;margin-top:10px;padding:10px;border-radius:10px}
-    .ok{background:#ecfeff;border:1px solid #a5f3fc;color:#0e7490}
-    .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
-    .desktop-gate{display:none;text-align:center;padding:24px;}
-    @media (min-width:821px){.mobile-only{display:none}.desktop-gate{display:block}}
+    html,body{ margin:0; padding:0; background:var(--bg);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--text); }
+    .wrap{ max-width:520px; margin:0 auto; padding:16px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px;
+      box-shadow:0 6px 24px rgba(0,0,0,.06); padding:16px; }
+    .logo{ text-align:center; margin-bottom:12px; }
+    .logo img{ max-width:160px; height:auto; }
+    h1{ font-size:1.35rem; margin:8px 0 20px; color:var(--primary); text-align:center; }
+    .field{ margin-bottom:var(--space); } .field:last-child{ margin-bottom:0; }
+    label{ display:block; font-weight:600; font-size:.95rem; margin-bottom:8px; }
+    select,input,button{ width:100%; max-width:100%; min-width:0; padding:12px; border-radius:10px;
+      border:1px solid var(--border); font-size:1rem; background:#fff; }
+    input[type="date"]{ width:100%; min-height:var(--control-h); padding:10px; line-height:1.2;
+      -webkit-appearance:none; appearance:none; background-color:#fff; }
+    input:focus,select:focus{ outline:2px solid #cde4ff; border-color:#93c5fd; }
+    .row{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
+    .row>div{ min-width:0; }
+    @media (max-width:480px){ .row{ grid-template-columns:1fr; gap:12px; } }
+    .alert{ display:none; margin-top:10px; padding:10px; border-radius:10px }
+    .ok{ background:#ecfeff; border:1px solid #a5f3fc; color:#0e7490 }
+    .err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b }
+    .desktop-gate{ display:none; text-align:center; padding:24px; }
+    @media (min-width:821px){ .mobile-only{ display:none } .desktop-gate{ display:block } }
+
+    .sig-wrap{ border:1px solid var(--border); border-radius:10px; background:#fff; padding:8px; }
+    .sig-canvas{ width:100%; height:180px; display:block; touch-action:none; }
+    .sig-actions{ display:flex; gap:8px; margin-top:8px; }
+    .sig-actions button{ flex:0 0 auto; padding:10px 12px; }
   </style>
 </head>
 <body>
@@ -57,19 +60,19 @@
             <select id="magasin" required>
               <option value="">-- Sélectionnez votre magasin --</option>
               <option>ANNEMASSE</option>
-			  <option>BOURGOIN</option>
-			  <option>CHASSE SUR RHONE</option>
-			  <option>CHASSIEU</option>
-			  <option>GLEIZE</option>
-			  <option>LA MOTTE SERVOLEX</option>
-			  <option>MIRIBEL</option>
-			  <option>PAVI</option>
-			  <option>RENAGE</option>
+              <option>BOURGOIN</option>
+              <option>CHASSE SUR RHONE</option>
+              <option>CHASSIEU</option>
+              <option>GLEIZE</option>
+              <option>LA MOTTE SERVOLEX</option>
+              <option>MIRIBEL</option>
+              <option>PAVI</option>
+              <option>RENAGE</option>
               <option>RIVES</option>
               <option>SAINT-MARTIN-D'HERES</option>
               <option>SEYNOD</option>
               <option>ST EGREVE</option>
-			  <option>ST-JEAN-BONNEFONDS</option>
+              <option>ST-JEAN-BONNEFONDS</option>
             </select>
           </div>
 
@@ -81,7 +84,7 @@
           <div class="field">
             <label for="service">Service *</label>
             <select id="service" required>
-              <option value="">-- Sélectionnez votre service --</option>
+              <option value="">-- Sélectionez votre service --</option>
               <option>Magasin V.L</option>
               <option>Magasin P.L</option>
               <option>Industrie</option>
@@ -117,6 +120,17 @@
             <input id="email" type="email" inputmode="email" placeholder="prenom.nom@entreprise.fr" required autocomplete="email" />
           </div>
 
+          <div class="field">
+            <label>Signature (au doigt)</label>
+            <div class="sig-wrap">
+              <canvas id="signaturePad" class="sig-canvas"></canvas>
+              <div class="sig-actions">
+                <button type="button" id="clearSig">Effacer</button>
+                <button type="button" id="undoSig">Annuler dernier trait</button>
+              </div>
+            </div>
+          </div>
+
           <button id="submitBtn" type="submit" style="margin-top:6px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
 
           <div id="ok" class="alert ok">✅ Demande envoyée. Merci !</div>
@@ -127,11 +141,95 @@
   </div>
 
   <script>
+
     (function gate(){
       const wide = window.matchMedia("(min-width: 821px)").matches;
       document.querySelector(".mobile-only").style.display = wide ? "none" : "block";
       document.querySelector(".desktop-gate").style.display = wide ? "block" : "none";
     })();
+
+    const canvas = document.getElementById('signaturePad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false, strokes = [], currentStroke = [];
+
+    function resizeCanvas(){
+      const data = canvas.toDataURL();
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = data;
+    }
+
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#111';
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    window.addEventListener('resize', resizeCanvas);
+
+    function pos(e){
+      const r = canvas.getBoundingClientRect();
+      if (e.touches && e.touches[0]) {
+        return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+      }
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    function start(e){
+      e.preventDefault();
+      drawing = true;
+      currentStroke = [];
+      const p = pos(e);
+      currentStroke.push(p);
+    }
+    function move(e){
+      if (!drawing) return;
+      const p = pos(e);
+      const lp = currentStroke[currentStroke.length - 1];
+      ctx.beginPath();
+      ctx.moveTo(lp.x, lp.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      currentStroke.push(p);
+    }
+    function end(e){
+      if (!drawing) return;
+      drawing = false;
+      if (currentStroke.length > 0) strokes.push(currentStroke);
+    }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive:false });
+    canvas.addEventListener('touchmove', move, { passive:false });
+    canvas.addEventListener('touchend', end);
+
+    document.getElementById('clearSig').onclick = () => {
+      strokes = [];
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+    document.getElementById('undoSig').onclick = () => {
+      strokes.pop();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+      for (const s of strokes) {
+        for (let i = 1; i < s.length; i++) {
+          ctx.beginPath();
+          ctx.moveTo(s[i-1].x, s[i-1].y);
+          ctx.lineTo(s[i].x, s[i].y);
+          ctx.stroke();
+        }
+      }
+    };
 
     const form = document.getElementById("formConges");
     const btn  = document.getElementById("submitBtn");
@@ -151,35 +249,35 @@
       const email     = document.getElementById("email").value.trim();
 
       if (!magasin || !nomPrenom || !service || !nbJours || !dateDu || !dateAu || !email) {
-        showErr("Merci de remplir tous les champs obligatoires."); return;
+        return showErr("Merci de remplir tous les champs obligatoires.");
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr("Adresse e-mail invalide."); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { return showErr("Adresse e-mail invalide."); }
       const n = Number(nbJours);
-      if (!Number.isFinite(n) || n <= 0) { showErr("Le nombre de jours doit être > 0."); return; }
-      if (new Date(dateAu) < new Date(dateDu)) { showErr("La date 'Au' doit être ≥ 'Du'."); return; }
+      if (!Number.isFinite(n) || n <= 0) { return showErr("Le nombre de jours doit être > 0."); }
+      if (new Date(dateAu) < new Date(dateDu)) { return showErr("La date 'Au' doit être ≥ 'Du'."); }
+
+      const signatureData = canvas.toDataURL("image/png");
 
       btn.disabled = true; btn.textContent = "Envoi…";
       try {
         const res = await fetch("/conges/api", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email })
+          body: JSON.stringify({
+            magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email, signatureData
+          })
         });
         const data = await res.json().catch(() => ({}));
-        if (res.ok && data.ok) { ok.style.display = "block"; err.style.display = "none"; form.reset(); }
+        if (res.ok && data.ok) { ok.style.display = "block"; err.style.display = "none"; form.reset(); document.getElementById('clearSig').click(); }
         else { showErr("Envoi impossible. Vérifiez vos infos et réessayez."); }
-      } catch (e) {
+      } catch (e2) {
         showErr("Erreur réseau. Réessayez.");
       } finally {
         btn.disabled = false; btn.textContent = "Envoyer la demande";
       }
     });
 
-    function showErr(msg){
-      err.textContent = "❌ " + msg;
-      err.style.display = "block";
-      ok.style.display = "none";
-    }
+    function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; ok.style.display = "none"; }
   </script>
 </body>
 </html>
