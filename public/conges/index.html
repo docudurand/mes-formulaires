@@ -1,110 +1,143 @@
-// routes/conges.js
-import express from "express";
-import path from "path";
-import nodemailer from "nodemailer";
-import { fileURLToPath } from "url";
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Demande de Jours de Congés</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--primary:#004080;--text:#073763;--muted:#6b7280;--border:#e5e7eb}
+    html,body{margin:0;padding:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--text)}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.06);padding:16px}
+    h1{font-size:1.35rem;margin:8px 0 16px;color:var(--primary);text-align:center}
+    label{display:block;font-weight:600;font-size:.95rem;margin:12px 0 6px}
+    select,input,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:1rem}
+    input[type="date"]{padding:10px}
+    input:focus,select:focus{outline:2px solid #cde4ff;border-color:#93c5fd}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .muted{color:var(--muted);font-size:.9rem}
+    .alert{display:none;margin-top:10px;padding:10px;border-radius:10px}
+    .ok{background:#ecfeff;border:1px solid #a5f3fc;color:#0e7490}
+    .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    .desktop-gate{display:none;text-align:center;padding:24px}
+    @media (min-width:821px){.mobile-only{display:none}.desktop-gate{display:block}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="desktop-gate">
+      <h2>Accès mobile requis</h2>
+      <p class="muted">Ce formulaire est consultable uniquement sur smartphone (QR code).</p>
+    </div>
 
-const router = express.Router();
+    <div class="mobile-only">
+      <div class="card">
+        <h1>Demande de Jours de Congés</h1>
+        <form id="formConges" novalidate>
+          <label for="magasin">Magasin *</label>
+          <select id="magasin" required>
+            <option value="">-- Sélectionnez votre magasin --</option>
+            <option>Gleizé</option>
+            <option>Miribel</option>
+            <option>Villefranche-sur-Saône</option>
+            <option>Bourg-en-Bresse</option>
+            <option>Mâcon</option>
+          </select>
 
-// S'assure que ce router sait parser JSON/x-www-form-urlencoded
-router.use(express.json());
-router.use(express.urlencoded({ extended: true }));
+          <label for="nomPrenom">Nom & Prénom *</label>
+          <input id="nomPrenom" type="text" placeholder="Ex: Dupont Marie" required autocomplete="name" />
 
-// __dirname en ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+          <label for="service">Service *</label>
+          <select id="service" required>
+            <option value="">-- Sélectionnez votre service --</option>
+            <option>Magasin V.L</option>
+            <option>Magasin P.L</option>
+            <option>Industrie</option>
+            <option>Atelier V.L</option>
+            <option>Atelier P.L</option>
+            <option>Rectification</option>
+            <option>Administratif</option>
+            <option>Commercial</option>
+            <option>Matériel</option>
+          </select>
 
-// --- Variables d'environnement attendues ---
-// MAIL_CG : destinataire RH
-// SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / FROM_EMAIL : config SMTP (tu utilises déjà ça ailleurs)
-const {
-  MAIL_CG,
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  FROM_EMAIL
-} = process.env;
+          <label for="nbJours">Demande de pouvoir bénéficier de … jours de congés *</label>
+          <input id="nbJours" type="number" inputmode="numeric" min="1" step="1" placeholder="Nombre de jours" required />
 
-// Transport Nodemailer (réutilisable)
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: Number(SMTP_PORT || 587),
-  secure: String(SMTP_PORT) === "465",
-  auth: (SMTP_USER && SMTP_PASS) ? { user: SMTP_USER, pass: SMTP_PASS } : undefined
-});
+          <div class="row">
+            <div>
+              <label for="dateDu">Du *</label>
+              <input id="dateDu" type="date" required />
+            </div>
+            <div>
+              <label for="dateAu">Au *</label>
+              <input id="dateAu" type="date" required />
+            </div>
+          </div>
 
-// Page du formulaire (mobile-only)
-router.get("/conges", (_req, res) => {
-  const htmlPath = path.join(__dirname, "..", "public", "conges", "index.html");
-  res.sendFile(htmlPath);
-});
+          <label for="email">Adresse e-mail du demandeur *</label>
+          <input id="email" type="email" inputmode="email" placeholder="prenom.nom@entreprise.fr" required autocomplete="email" />
 
-// Soumission du formulaire (envoi mail)
-router.post("/conges/api", async (req, res) => {
-  try {
-    const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email } = req.body || {};
-    const errors = [];
+          <button id="submitBtn" type="submit" style="margin-top:14px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
+          <p class="muted" style="margin-top:8px;">En cliquant sur “Répondre” dans l’e-mail reçu, le destinataire sera automatiquement l’adresse saisie (Reply-To).</p>
 
-    if (!magasin) errors.push("magasin");
-    if (!nomPrenom) errors.push("nomPrenom");
-    if (!service) errors.push("service");
+          <div id="ok" class="alert ok">✅ Demande envoyée. Merci !</div>
+          <div id="err" class="alert err">❌ Impossible d'envoyer la demande. Réessayez.</div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-    const n = Number(nbJours);
-    if (!Number.isFinite(n) || n <= 0) errors.push("nbJours");
+  <script>
+    (function gate(){
+      const wide = window.matchMedia("(min-width: 821px)").matches;
+      document.querySelector(".mobile-only").style.display = wide ? "none" : "block";
+      document.querySelector(".desktop-gate").style.display = wide ? "block" : "none";
+    })();
 
-    if (!dateDu) errors.push("dateDu");
-    if (!dateAu) errors.push("dateAu");
+    const form = document.getElementById("formConges");
+    const btn  = document.getElementById("submitBtn");
+    const ok   = document.getElementById("ok");
+    const err  = document.getElementById("err");
 
-    const reMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !reMail.test(String(email))) errors.push("email");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      ok.style.display = "none"; err.style.display = "none";
 
-    const d1 = new Date(dateDu);
-    const d2 = new Date(dateAu);
-    if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) errors.push("plageDates");
+      const magasin   = document.getElementById("magasin").value.trim();
+      const nomPrenom = document.getElementById("nomPrenom").value.trim();
+      const service   = document.getElementById("service").value.trim();
+      const nbJours   = document.getElementById("nbJours").value.trim();
+      const dateDu    = document.getElementById("dateDu").value;
+      const dateAu    = document.getElementById("dateAu").value;
+      const email     = document.getElementById("email").value.trim();
 
-    if (!MAIL_CG) errors.push("MAIL_CG_env");
+      if (!magasin || !nomPrenom || !service || !nbJours || !dateDu || !dateAu || !email) {
+        showErr("Merci de remplir tous les champs obligatoires."); return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr("Adresse e-mail invalide."); return; }
+      const n = Number(nbJours);
+      if (!Number.isFinite(n) || n <= 0) { showErr("Le nombre de jours doit être > 0."); return; }
+      if (new Date(dateAu) < new Date(dateDu)) { showErr("La date 'Au' doit être ≥ 'Du'."); return; }
 
-    if (errors.length) {
-      return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
-    }
-
-    const subject = `Demande de congés - ${nomPrenom} - du ${dateDu} au ${dateAu}`;
-    const html = `
-      <h2>Demande de Jours de Congés</h2>
-      <p><b>Magasin :</b> ${esc(magasin)}</p>
-      <p><b>Nom & Prénom :</b> ${esc(nomPrenom)}</p>
-      <p><b>Service :</b> ${esc(service)}</p>
-      <p><b>Demande :</b> ${n} jour(s) de congés</p>
-      <p><b>Période :</b> du ${esc(dateDu)} au ${esc(dateAu)}</p>
-      <p><b>Email du demandeur :</b> ${esc(email)}</p>
-      <hr>
-      <p>Répondez à cet email pour répondre directement au demandeur (Reply-To).</p>
-    `;
-
-    await transporter.sendMail({
-      to: MAIL_CG,
-      from: FROM_EMAIL || SMTP_USER || "no-reply@localhost",
-      replyTo: email,           // <= le "Répondre à" pointe vers le demandeur
-      subject,
-      html
+      btn.disabled = true; btn.textContent = "Envoi…";
+      try {
+        const res = await fetch("/conges/api", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) { ok.style.display = "block"; form.reset(); }
+        else { showErr("Envoi impossible. Vérifiez vos infos et réessayez."); }
+      } catch (e) {
+        showErr("Erreur réseau. Réessayez.");
+      } finally {
+        btn.disabled = false; btn.textContent = "Envoyer la demande";
+      }
     });
 
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("[CONGES][MAIL] Erreur:", e);
-    res.status(500).json({ ok: false, error: "send_failed" });
-  }
-});
-
-// petit utilitaire
-function esc(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-export default router;
+    function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; }
+  </script>
+</body>
+</html>
