@@ -64,6 +64,12 @@ app.post("/conges/api", async (req, res) => {
     if (!dateDu || !dateAu || isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) {
       errors.push("plageDates");
     }
+	if (!signatureData || String(signatureData).length < 2000 || !/^data:image\/png;base64,/.test(signatureData)) {
+  errors.push("signature");
+  
+   if (errors.length > 0) {
+      return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
+    }
 
     const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {

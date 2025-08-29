@@ -31,7 +31,10 @@
     .err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b }
     .desktop-gate{ display:none; text-align:center; padding:24px; }
     @media (min-width:821px){ .mobile-only{ display:none } .desktop-gate{ display:block } }
-
+.sig-wrap.invalid{
+  border-color:#ef4444;
+  box-shadow:0 0 0 3px rgba(239,68,68,.15);
+}
     .sig-wrap{
   border:1px solid var(--border);
   border-radius:10px;
@@ -279,25 +282,36 @@
       if (!Number.isFinite(n) || n <= 0) { return showErr("Le nombre de jours doit être > 0."); }
       if (new Date(dateAu) < new Date(dateDu)) { return showErr("La date 'Au' doit être ≥ 'Du'."); }
 
-      const signatureData = canvas.toDataURL("image/png");
+if (strokes.length === 0) {
+  document.querySelector('.sig-wrap').classList.add('invalid');
+  return showErr("Merci de remplir tous les champs obligatoires.");
+}
+document.querySelector('.sig-wrap').classList.remove('invalid');
 
-      btn.disabled = true; btn.textContent = "Envoi…";
-      try {
-        const res = await fetch("/conges/api", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email, signatureData
-          })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.ok) { ok.style.display = "block"; err.style.display = "none"; form.reset(); document.getElementById('clearSig').click(); }
-        else { showErr("Envoi impossible. Vérifiez vos infos et réessayez."); }
-      } catch (e2) {
-        showErr("Erreur réseau. Réessayez.");
-      } finally {
-        btn.disabled = false; btn.textContent = "Envoyer la demande";
-      }
+const signatureData = canvas.toDataURL("image/png");
+
+btn.disabled = true; btn.textContent = "Envoi…";
+try {
+  const res = await fetch("/conges/api", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email, signatureData })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.ok && data.ok) {
+    ok.style.display = "block";
+    err.style.display = "none";
+    form.reset();
+    document.getElementById('clearSig').click();
+    document.querySelector('.sig-wrap').classList.remove('invalid');
+  } else {
+    showErr("Envoi impossible. Vérifiez vos infos et réessayez.");
+  }
+} catch (e2) {
+  showErr("Erreur réseau. Réessayez.");
+} finally {
+  btn.disabled = false; btn.textContent = "Envoyer la demande";
+}
     });
 
     function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; ok.style.display = "none"; }
