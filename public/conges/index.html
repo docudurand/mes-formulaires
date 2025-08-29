@@ -79,87 +79,87 @@
 
         <h1>Demande de Jours de Congés</h1>
 
-        <form id="formConges" novalidate>
-          <div class="field">
-            <label for="magasin">Magasin *</label>
-            <select id="magasin" required>
-              <option value="">-- Sélectionnez votre magasin --</option>
-              <option>ANNEMASSE</option>
-              <option>BOURGOIN</option>
-              <option>CHASSE SUR RHONE</option>
-              <option>CHASSIEU</option>
-              <option>GLEIZE</option>
-              <option>LA MOTTE SERVOLEX</option>
-              <option>MIRIBEL</option>
-              <option>PAVI</option>
-              <option>RENAGE</option>
-              <option>RIVES</option>
-              <option>SAINT-MARTIN-D'HERES</option>
-              <option>SEYNOD</option>
-              <option>ST EGREVE</option>
-              <option>ST-JEAN-BONNEFONDS</option>
-            </select>
-          </div>
+<form id="formConges" novalidate>
+  <div class="field">
+    <label for="magasin">Magasin *</label>
+    <select id="magasin" required>
+      <option value="">-- Sélectionnez votre magasin --</option>
+      <option>ANNEMASSE</option>
+      <option>BOURGOIN</option>
+      <option>CHASSE SUR RHONE</option>
+      <option>CHASSIEU</option>
+      <option>GLEIZE</option>
+      <option>LA MOTTE SERVOLEX</option>
+      <option>MIRIBEL</option>
+      <option>PAVI</option>
+      <option>RENAGE</option>
+      <option>RIVES</option>
+      <option>SAINT-MARTIN-D'HERES</option>
+      <option>SEYNOD</option>
+      <option>ST EGREVE</option>
+      <option>ST-JEAN-BONNEFONDS</option>
+    </select>
+  </div>
 
-          <div class="field">
-            <label for="nomPrenom">Nom & Prénom *</label>
-            <input id="nomPrenom" type="text" placeholder="Ex: Dupont Marie" required autocomplete="name" />
-          </div>
+  <div class="field">
+    <label for="nomPrenom">Nom & Prénom *</label>
+    <input id="nomPrenom" type="text" placeholder="Ex: Dupont Marie" required autocomplete="name" />
+  </div>
 
-          <div class="field">
-            <label for="service">Service *</label>
-            <select id="service" required>
-              <option value="">-- Sélectionez votre service --</option>
-              <option>Magasin V.L</option>
-              <option>Magasin P.L</option>
-              <option>Industrie</option>
-              <option>Atelier V.L</option>
-              <option>Atelier P.L</option>
-              <option>Rectification</option>
-              <option>Administratif</option>
-              <option>Commercial</option>
-              <option>Matériel</option>
-            </select>
-          </div>
+  <div class="field">
+    <label for="email">Adresse e-mail du demandeur *</label>
+    <input id="email" type="email" inputmode="email" placeholder="prenom.nom@entreprise.fr" required autocomplete="email" />
+  </div>
 
-          <div class="field">
-            <label for="nbJours">Nombre de jours souhaités *</label>
-            <input id="nbJours" type="number" inputmode="numeric" min="1" step="1" placeholder="Nombre de jours" required />
-          </div>
+  <div class="field">
+    <label for="service">Service *</label>
+    <select id="service" required>
+      <option value="">-- Sélectionez votre service --</option>
+      <option>Magasin V.L</option>
+      <option>Magasin P.L</option>
+      <option>Industrie</option>
+      <option>Atelier V.L</option>
+      <option>Atelier P.L</option>
+      <option>Rectification</option>
+      <option>Administratif</option>
+      <option>Commercial</option>
+      <option>Matériel</option>
+    </select>
+  </div>
 
-          <div class="field">
-            <div class="row">
-              <div>
-                <label for="dateDu">Du *</label>
-                <input id="dateDu" type="date" required />
-              </div>
-              <div>
-                <label for="dateAu">Au *</label>
-                <input id="dateAu" type="date" required />
-              </div>
-            </div>
-          </div>
+  <div class="field">
+    <label for="nbJours">Nombre de jours souhaités *</label>
+    <input id="nbJours" type="number" inputmode="numeric" min="1" step="1" placeholder="Nombre de jours" required />
+  </div>
 
-          <div class="field">
-            <label for="email">Adresse e-mail du demandeur *</label>
-            <input id="email" type="email" inputmode="email" placeholder="prenom.nom@entreprise.fr" required autocomplete="email" />
-          </div>
-
-          <div class="field">
-			<label>Signature tactile *</label>
-		  <div class="sig-wrap">
-			<canvas id="signaturePad" class="sig-canvas"></canvas>
-		  <div class="sig-actions">
-			<button type="button" id="clearSig">Effacer</button>
-          </div>
-        </div>
+  <div class="field">
+    <div class="row">
+      <div>
+        <label for="dateDu">Du *</label>
+        <input id="dateDu" type="date" required />
       </div>
+      <div>
+        <label for="dateAu">Au *</label>
+        <input id="dateAu" type="date" required />
+      </div>
+    </div>
+  </div>
 
-          <button id="submitBtn" type="submit" style="margin-top:6px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
+  <div class="field">
+    <label>Signature tactile *</label>
+    <div class="sig-wrap">
+      <canvas id="signaturePad" class="sig-canvas"></canvas>
+      <div class="sig-actions">
+        <button type="button" id="clearSig">Effacer</button>
+      </div>
+    </div>
+  </div>
 
-          <div id="ok" class="alert ok">✅ Demande envoyée. Merci !</div>
-          <div id="err" class="alert err">❌ Impossible d'envoyer la demande. Réessayez.</div>
-        </form>
+  <button id="submitBtn" type="submit" style="margin-top:6px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
+
+  <div id="ok" class="alert ok">✅ Demande envoyée. Merci !</div>
+  <div id="err" class="alert err">❌ Impossible d'envoyer la demande. Réessayez.</div>
+</form>
       </div>
     </div>
   </div>
