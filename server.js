@@ -46,7 +46,7 @@ app.get("/conges", (_req, res) => {
 
 const ROUTING = {
   "GLEIZE": {
-    "Magasin V.L": "fselva@durandservices.fr",
+    "Magasin V.L": "magvl4gleize@durandservices.fr,d.pichard2007@gmail.com",
     "Commercial":  "magvl6gleize@durandservices.fr",
   },
   // Exemples pour étendre:

@@ -49,17 +49,14 @@
   touch-action:none;
 }
 .sig-actions{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-  margin-top:8px;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
 }
 .sig-actions button{
-  width:100%;
-  padding:10px 12px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  width: auto;
+  min-width: 120px;
+  padding: 10px 20px;
 }
 @media (max-width:380px){
   .sig-actions{ grid-template-columns:1fr; }
@@ -149,15 +146,14 @@
           </div>
 
           <div class="field">
-            <label>Signature tactile *</label>
-            <div class="sig-wrap">
-              <canvas id="signaturePad" class="sig-canvas"></canvas>
-              <div class="sig-actions">
-  <button type="button" id="clearSig">Effacer</button>
-  <button type="button" id="undoSig">Annuler</button>
-</div>
-            </div>
+			<label>Signature tactile *</label>
+		  <div class="sig-wrap">
+			<canvas id="signaturePad" class="sig-canvas"></canvas>
+		  <div class="sig-actions">
+			<button type="button" id="clearSig">Effacer</button>
           </div>
+        </div>
+      </div>
 
           <button id="submitBtn" type="submit" style="margin-top:6px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
 
