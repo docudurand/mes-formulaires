@@ -47,7 +47,7 @@ app.get("/conges", (_req, res) => {
 const ROUTING = {
   "GLEIZE": {
     "Magasin V.L": "magvl4gleize@durandservices.fr,d.pichard2007@gmail.com",
-    "Commercial":  "magvl6gleize@durandservices.fr",
+    "Commercial":  "magvl4gleize@durandservices.fr",
   },
   // Exemples pour étendre:
   // "CHASSIEU": {
@@ -276,14 +276,21 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   const cols = 3, colW = (pageRight - pageLeft) / cols, box = 11, lh = 28;
   doc.fontSize(12);
   services.forEach((s, i) => {
-    const r = Math.floor(i / cols), c = i % cols;
-    const x = pageLeft + c * colW, yy = y + r * lh;
-    doc.rect(x, yy, box, box).stroke();
-    if (service && s.toLowerCase() === String(service).toLowerCase()) {
-      doc.font("Helvetica-Bold").text("X", x + 2, yy - 2);
-    }
-    doc.font("Helvetica").text(s, x + box + 6, yy - 2);
-  });
+  const r = Math.floor(i / cols), c = i % cols;
+  const x = pageLeft + c * colW, yy = y + r * lh;
+
+  doc.rect(x, yy, box, box).stroke();
+
+  if (service && s.toLowerCase() === String(service).toLowerCase()) {
+    const Xwidth = doc.widthOfString("X");
+    const Xheight = doc.currentLineHeight();
+    const xCentered = x + (box - Xwidth) / 2;
+    const yCentered = yy + (box - Xheight) / 2;
+    doc.font("Helvetica-Bold").text("X", xCentered, yCentered, { width: box, align: "center" });
+  }
+
+  doc.font("Helvetica").text(s, x + box + 6, yy - 2);
+});
   y += Math.ceil(services.length / cols) * lh + afterServicesGap;
 
   doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
