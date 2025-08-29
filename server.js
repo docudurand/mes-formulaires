@@ -43,7 +43,25 @@ app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
 });
-
+const ROUTING = {
+"GLEIZE": {
+    "Magasin V.L": "magvl4gleize@durandservices.fr",
+    "Commercial":   "magvl6gleize@durandservices.fr",
+  },
+   // Ajoutez ici d'autres magasins si besoin, par ex.:
+  // "CHASSIEU": {
+  //   "Magasin V.L": "xxx@durandservices.fr",
+  //   "Commercial":   "yyy@durandservices.fr",
+  // },
+  function resolveRecipient(magasin, service, globalDefault) {
+  const m = String(magasin || "").trim().toUpperCase();
+  const s = String(service || "").trim();
+  const perMag = ROUTING[m];
+  if (perMag && perMag[s]) return perMag[s];
+  if (ROUTING[`${m}__DEFAULT`]) return ROUTING[`${m}__DEFAULT`];
+  return globalDefault;
+}
+  
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -65,7 +83,11 @@ app.post("/conges/api", async (req, res) => {
       errors.push("plageDates");
     }
 
-    if (!signatureData || String(signatureData).length < 2000 || !/^data:image\/png;base64,/.test(signatureData)) {
+    if (
+      !signatureData ||
+      String(signatureData).length < 2000 ||
+      !/^data:image\/png;base64,/.test(signatureData)
+    ) {
       errors.push("signature");
     }
 
@@ -73,11 +95,13 @@ app.post("/conges/api", async (req, res) => {
       return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
     }
 
-    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-    if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
-      console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
-      return res.status(500).json({ ok: false, error: "smtp_not_configured" });
-    }
+const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
+  console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
+  return res.status(500).json({ ok: false, error: "smtp_not_configured" });
+}
+
+const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
 
     const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
     const transporter = nodemailer.createTransport({
@@ -111,19 +135,19 @@ app.post("/conges/api", async (req, res) => {
     `;
 
     await transporter.sendMail({
-      to: MAIL_CG,
-      from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
-      replyTo: email,
-      subject,
-      html,
-      attachments: [
-        {
-          filename: `Demande-conges-${nomPrenom.replace(/[^\w.-]+/g, "_")}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
-        },
-      ],
-    });
+  to: toRecipients,
+  from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
+  replyTo: email,
+  subject,
+  html,
+  attachments: [
+    {
+      filename: `Demande-conges-${nomPrenom.replace(/[^\w.-]+/g, "_")}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    },
+  ],
+});
 
     console.log("[CONGES] email envoyé à", MAIL_CG, "reply-to", email);
     res.json({ ok: true });

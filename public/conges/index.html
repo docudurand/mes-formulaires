@@ -169,152 +169,217 @@
   </div>
 
   <script>
-    (function gate(){
-      const wide = window.matchMedia("(min-width: 821px)").matches;
-      document.querySelector(".mobile-only").style.display = wide ? "none" : "block";
-      document.querySelector(".desktop-gate").style.display = wide ? "block" : "none";
-    })();
+  (function gate(){
+    const wide = window.matchMedia("(min-width: 821px)").matches;
+    document.querySelector(".mobile-only").style.display = wide ? "none" : "block";
+    document.querySelector(".desktop-gate").style.display = wide ? "block" : "none";
+  })();
 
-    const canvas = document.getElementById('signaturePad');
-    const ctx = canvas.getContext('2d');
-    let drawing = false, strokes = [], currentStroke = [];
+  const canvas = document.getElementById('signaturePad');
+  const ctx = canvas.getContext('2d');
+  let drawing = false, strokes = [], currentStroke = [];
 
-    function resizeCanvas(){
-      const data = canvas.toDataURL();
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      };
-      img.src = data;
+  function resizeCanvas(){
+    const data = canvas.toDataURL();
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = data;
+  }
+
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#111';
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  window.addEventListener('resize', resizeCanvas);
+
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    if (e.touches && e.touches[0]) {
+      return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
     }
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function start(e){
+    e.preventDefault();
+    drawing = true;
+    currentStroke = [];
+    currentStroke.push(pos(e));
+  }
+  function move(e){
+    if (!drawing) return;
+    const p = pos(e);
+    const lp = currentStroke[currentStroke.length - 1];
+    ctx.beginPath();
+    ctx.moveTo(lp.x, lp.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    currentStroke.push(p);
+  }
+  function end(){
+    if (!drawing) return;
+    drawing = false;
+    if (currentStroke.length > 0) strokes.push(currentStroke);
+  }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start, { passive:false });
+  canvas.addEventListener('touchmove', move, { passive:false });
+  canvas.addEventListener('touchend', end);
 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#111';
+  document.getElementById('clearSig').onclick = () => {
+    strokes = [];
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    window.addEventListener('resize', resizeCanvas);
-
-    function pos(e){
-      const r = canvas.getBoundingClientRect();
-      if (e.touches && e.touches[0]) {
-        return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+  };
+  document.getElementById('undoSig').onclick = () => {
+    strokes.pop();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+    for (const s of strokes) {
+      for (let i = 1; i < s.length; i++) {
+        ctx.beginPath();
+        ctx.moveTo(s[i-1].x, s[i-1].y);
+        ctx.lineTo(s[i].x, s[i].y);
+        ctx.stroke();
       }
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
-    function start(e){
-      e.preventDefault();
-      drawing = true;
-      currentStroke = [];
-      currentStroke.push(pos(e));
+  };
+
+  const form = document.getElementById("formConges");
+  const btn  = document.getElementById("submitBtn");
+  const ok   = document.getElementById("ok");
+  const err  = document.getElementById("err");
+
+  const ALL_SERVICES = [
+    "Magasin V.L",
+    "Magasin P.L",
+    "Industrie",
+    "Atelier V.L",
+    "Atelier P.L",
+    "Rectification",
+    "Administratif",
+    "Commercial",
+    "Matériel",
+  ];
+
+  const SERVICES_BY_STORE = {
+    "GLEIZE": ["Magasin V.L", "Commercial"],
+  };
+  // Exemple pour d'autres magasins si vous voulez restreindre :
+  // "CHASSIEU": ["Magasin V.L", "Magasin P.L", "Commercial"],
+  // "ANNEMASSE": ALL_SERVICES, // pas de restriction
+
+  const magasinSelect = document.getElementById("magasin");
+  const serviceSelect = document.getElementById("service");
+
+  function rebuildServiceOptions(store) {
+    const key = String(store || "").trim().toUpperCase();
+    const allowed = SERVICES_BY_STORE[key] || ALL_SERVICES;
+
+    const current = serviceSelect.value;
+
+    serviceSelect.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = "-- Sélectionnez votre service --";
+    serviceSelect.appendChild(opt0);
+
+    for (const s of allowed) {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      serviceSelect.appendChild(opt);
     }
-    function move(e){
-      if (!drawing) return;
-      const p = pos(e);
-      const lp = currentStroke[currentStroke.length - 1];
-      ctx.beginPath();
-      ctx.moveTo(lp.x, lp.y);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-      currentStroke.push(p);
+
+    if (allowed.includes(current)) {
+      serviceSelect.value = current;
+    } else {
+      serviceSelect.value = "";
     }
-    function end(){
-      if (!drawing) return;
-      drawing = false;
-      if (currentStroke.length > 0) strokes.push(currentStroke);
+  }
+
+  rebuildServiceOptions(magasinSelect.value);
+  magasinSelect.addEventListener("change", (e) => {
+    rebuildServiceOptions(e.target.value);
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    ok.style.display = "none"; err.style.display = "none";
+
+    const magasin   = magasinSelect.value.trim();
+    const nomPrenom = document.getElementById("nomPrenom").value.trim();
+    const service   = serviceSelect.value.trim();
+    const nbJours   = document.getElementById("nbJours").value.trim();
+    const dateDu    = document.getElementById("dateDu").value;
+    const dateAu    = document.getElementById("dateAu").value;
+    const email     = document.getElementById("email").value.trim();
+
+    if (!magasin || !nomPrenom || !service || !nbJours || !dateDu || !dateAu || !email) {
+      return showErr("Merci de remplir tous les champs obligatoires.");
     }
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('mouseup', end);
-    canvas.addEventListener('mouseleave', end);
-    canvas.addEventListener('touchstart', start, { passive:false });
-    canvas.addEventListener('touchmove', move, { passive:false });
-    canvas.addEventListener('touchend', end);
-
-    document.getElementById('clearSig').onclick = () => {
-      strokes = [];
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    };
-    document.getElementById('undoSig').onclick = () => {
-      strokes.pop();
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
-      for (const s of strokes) {
-        for (let i = 1; i < s.length; i++) {
-          ctx.beginPath();
-          ctx.moveTo(s[i-1].x, s[i-1].y);
-          ctx.lineTo(s[i].x, s[i].y);
-          ctx.stroke();
-        }
-      }
-    };
-
-    const form = document.getElementById("formConges");
-    const btn  = document.getElementById("submitBtn");
-    const ok   = document.getElementById("ok");
-    const err  = document.getElementById("err");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      ok.style.display = "none"; err.style.display = "none";
-
-      const magasin   = document.getElementById("magasin").value.trim();
-      const nomPrenom = document.getElementById("nomPrenom").value.trim();
-      const service   = document.getElementById("service").value.trim();
-      const nbJours   = document.getElementById("nbJours").value.trim();
-      const dateDu    = document.getElementById("dateDu").value;
-      const dateAu    = document.getElementById("dateAu").value;
-      const email     = document.getElementById("email").value.trim();
-
-      if (!magasin || !nomPrenom || !service || !nbJours || !dateDu || !dateAu || !email) {
-        return showErr("Merci de remplir tous les champs obligatoires.");
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { return showErr("Adresse e-mail invalide."); }
-      const n = Number(nbJours);
-      if (!Number.isFinite(n) || n <= 0) { return showErr("Le nombre de jours doit être > 0."); }
-      if (new Date(dateAu) < new Date(dateDu)) { return showErr("La date 'Au' doit être ≥ 'Du'."); }
-
-if (strokes.length === 0) {
-  document.querySelector('.sig-wrap').classList.add('invalid');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return showErr("Adresse e-mail invalide.");
+    }
+    const n = Number(nbJours);
+    if (!Number.isFinite(n) || n <= 0) {
+      return showErr("Le nombre de jours doit être > 0.");
+    }
+    if (new Date(dateAu) < new Date(dateDu)) {
+      return showErr("La date 'Au' doit être ≥ 'Du'.");
+    }
+    if (strokes.length === 0) {
+  const sig = document.querySelector('.sig-wrap');
+  sig.classList.add('invalid');
+  sig.setAttribute('aria-invalid', 'true');
   return showErr("Merci de remplir tous les champs obligatoires.");
 }
 document.querySelector('.sig-wrap').classList.remove('invalid');
+document.querySelector('.sig-wrap').removeAttribute('aria-invalid');
 
-const signatureData = canvas.toDataURL("image/png");
+    const signatureData = canvas.toDataURL("image/png");
 
-btn.disabled = true; btn.textContent = "Envoi…";
-try {
-  const res = await fetch("/conges/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email, signatureData })
+    btn.disabled = true; btn.textContent = "Envoi…";
+    try {
+      const res = await fetch("/conges/api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email, signatureData
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        ok.style.display = "block"; err.style.display = "none";
+        form.reset();
+        document.getElementById('clearSig').click();
+      } else {
+        showErr("Envoi impossible. Vérifiez vos infos et réessayez.");
+      }
+    } catch (e2) {
+      showErr("Erreur réseau. Réessayez.");
+    } finally {
+      btn.disabled = false; btn.textContent = "Envoyer la demande";
+    }
   });
-  const data = await res.json().catch(() => ({}));
-  if (res.ok && data.ok) {
-    ok.style.display = "block";
-    err.style.display = "none";
-    form.reset();
-    document.getElementById('clearSig').click();
-    document.querySelector('.sig-wrap').classList.remove('invalid');
-  } else {
-    showErr("Envoi impossible. Vérifiez vos infos et réessayez.");
-  }
-} catch (e2) {
-  showErr("Erreur réseau. Réessayez.");
-} finally {
-  btn.disabled = false; btn.textContent = "Envoyer la demande";
-}
-    });
 
-    function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; ok.style.display = "none"; }
-  </script>
+  function showErr(msg){
+    err.textContent = "❌ " + msg;
+    err.style.display = "block";
+    ok.style.display = "none";
+  }
+</script>
 </body>
 </html>
