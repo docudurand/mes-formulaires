@@ -190,6 +190,8 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   const logoX = pageLeft;
   const logoY = 40;
   const logoW = 120;
+
+  let titleY = logoY + 45;
   const titleX = logoX + logoW + 20;
   const titleWidth = pageRight - titleX;
 
@@ -197,37 +199,46 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     const resp = await fetch(logoUrl);
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, logoX, logoY, { width: logoW });
-    const titleStr = "DEMANDE DE JOURS DE CONGÉS";
-    const approxLogoH = 60;
-    doc.fontSize(19);
-    const titleH = doc.heightOfString(titleStr, { width: titleWidth });
-    const titleY = logoY + (approxLogoH - titleH) / 2;
-    doc.font("Helvetica-Bold").text(titleStr, titleX, titleY, { width: titleWidth, align: "left" });
   } catch (e) {
     console.warn("[CONGES][PDF] Logo non chargé:", e.message);
-    doc.fontSize(19).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", titleX, logoY, { width: titleWidth, align: "left" });
   }
 
-  let y = 200;
+  const titleStr = "DEMANDE DE JOURS DE CONGÉS";
+  doc.fontSize(18).font("Helvetica-Bold").text(titleStr, titleX, titleY, {
+    width: titleWidth,
+    align: "left",
+  });
 
-  doc.fontSize(14).font("Helvetica-Bold").text("SITE :", pageLeft, y);
-  doc.font("Helvetica").text(magasin || "", pageLeft + 60, y);
-  y += 55;
+  let y = 165;
+
+  const bodySize = 13;
+  const labelGap = 32;
+  const rowGap = 38;
+  const afterServicesGap = 38;
+  const afterDemandGap = 26;
+  const afterPeriodGap = 36;
+
+  doc.fontSize(bodySize).font("Helvetica-Bold").text("SITE :", pageLeft, y);
+  doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
+  y += labelGap; // ~32
 
   const parts = String(nomPrenom || "").trim().split(/\s+/);
   const prenom = parts.slice(0, -1).join(" ");
   const nom = parts.slice(-1)[0] || "";
-  doc.font("Helvetica").fontSize(14);
+  doc.font("Helvetica").fontSize(bodySize);
   doc.text("NOM :", pageLeft, y);
-  doc.text(nom, pageLeft + 60, y, { width: 180 });
+  doc.text(nom, pageLeft + 55, y, { width: 170 });
   doc.text("PRENOM :", 330, y);
-  doc.text(prenom, 400, y, { width: 160 });
-  y += 65;
+  doc.text(prenom, 400, y, { width: 150 });
+  y += rowGap;
 
-  const services = ["Magasin V.L", "Magasin P.L", "Industrie",
-                    "Atelier V.L", "Atelier P.L", "Rectification",
-                    "Administratif", "Commercial", "Matériel"];
-  const cols = 3, colW = (pageRight - pageLeft) / cols, box = 12, lh = 36;
+  const services = [
+    "Magasin V.L", "Magasin P.L", "Industrie",
+    "Atelier V.L", "Atelier P.L", "Rectification",
+    "Administratif", "Commercial", "Matériel"
+  ];
+  const cols = 3, colW = (pageRight - pageLeft) / cols, box = 11, lh = 28;
+  doc.fontSize(12);
   services.forEach((s, i) => {
     const r = Math.floor(i / cols), c = i % cols;
     const x = pageLeft + c * colW, yy = y + r * lh;
@@ -235,39 +246,45 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
       doc.font("Helvetica-Bold").text("X", x + 2, yy - 2);
     }
-    doc.font("Helvetica").text(s, x + box + 8, yy - 2);
+    doc.font("Helvetica").text(s, x + box + 6, yy - 2);
   });
-  y += Math.ceil(services.length / cols) * lh + 55;
+  y += Math.ceil(services.length / cols) * lh + afterServicesGap;
 
-  doc.fontSize(14).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
-  y += 42;
+  doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
+  y += afterDemandGap;
+
   doc.text(`du ${du} au ${au} inclus.`, pageLeft, y);
-  y += 65;
+  y += afterPeriodGap;
 
-  doc.text("Signature de l’employé,", 380, y);
+
+  doc.text("Signature de l’employé,", 370, y);
+
   if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
     try {
       const b64 = signatureData.split(",")[1];
       const sigBuf = Buffer.from(b64, "base64");
-      const sigY = y + 16;
-      doc.image(sigBuf, 380, sigY, { width: 180 });
-      y = sigY + 120;
+      const sigY = y + 14;
+      doc.image(sigBuf, 370, sigY, { width: 150 });
+      y = Math.max(y + 90, sigY + 90);
     } catch (e) {
       console.warn("[CONGES][PDF] Signature non intégrée:", e.message);
-      y += 100;
+      y += 70;
     }
   } else {
-    y += 100;
+    y += 70;
   }
 
-  doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", pageLeft, y);
-  doc.text("RESPONSABLE DE SITE :", 330, y);
-  y += 28; doc.font("Helvetica");
-  doc.text("NOM :", pageLeft, y);
-  doc.text("NOM :", 330, y);
-  y += 28;
-  doc.text("SIGNATURE :", pageLeft, y);
-  doc.text("SIGNATURE :", 330, y);
+  const colLeft = pageLeft;
+  const colRight = 330;
+
+  doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
+  doc.text("RESPONSABLE DE SITE :", colRight, y);
+  y += 22; doc.font("Helvetica").fontSize(bodySize);
+  doc.text("NOM :", colLeft, y);
+  doc.text("NOM :", colRight, y);
+  y += 22;
+  doc.text("SIGNATURE :", colLeft, y);
+  doc.text("SIGNATURE :", colRight, y);
 
   doc.end();
   return done;
