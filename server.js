@@ -44,10 +44,9 @@ app.get("/conges", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
 });
 
-/* ===== Routage magasin/service -> destinataire(s) ===== */
 const ROUTING = {
   "GLEIZE": {
-    "Magasin V.L": "magvl4gleize@durandservices.fr",
+    "Magasin V.L": "fselva@durandservices.fr",
     "Commercial":  "magvl6gleize@durandservices.fr",
   },
   // Exemples pour étendre:
@@ -58,7 +57,6 @@ const ROUTING = {
   // }
 };
 
-/** Retourne l'email destinataire selon magasin/service, sinon __DEFAULT magasin, sinon globalDefault */
 function resolveRecipient(magasin, service, globalDefault) {
   const m = String(magasin || "").trim().toUpperCase();
   const s = String(service || "").trim();
@@ -68,7 +66,6 @@ function resolveRecipient(magasin, service, globalDefault) {
   return globalDefault;
 }
 
-/* ======================= API ======================= */
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -90,7 +87,6 @@ app.post("/conges/api", async (req, res) => {
       errors.push("plageDates");
     }
 
-    // Signature obligatoire (image base64 PNG non vide)
     if (
       !signatureData ||
       String(signatureData).length < 2000 ||
@@ -165,7 +161,6 @@ app.post("/conges/api", async (req, res) => {
   }
 });
 
-/* ================== Routes diverses ================== */
 app.get("/healthz", (_req, res) => res.sendStatus(200));
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
@@ -181,7 +176,6 @@ app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-
 app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-parc.html")));
 app.use("/pret/api", loansRouter);
 
-/* Compteurs après POST */
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
   const method = req.method;
@@ -207,7 +201,6 @@ const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
 
-/* ===== Utils ===== */
 function esc(str = "") {
   return String(str)
     .replaceAll("&", "&amp;")
