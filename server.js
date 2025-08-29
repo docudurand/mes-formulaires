@@ -221,6 +221,15 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
+  function drawCrossInBox(doc, x, y, size) {
+    const pad = Math.max(2, Math.round(size * 0.2));
+    doc.save();
+    doc.lineWidth(1.5);
+    doc.moveTo(x + pad, y + pad).lineTo(x + size - pad, y + size - pad).stroke();
+    doc.moveTo(x + size - pad, y + pad).lineTo(x + pad, y + size - pad).stroke();
+    doc.restore();
+  }
+
   const pageLeft = 50;
   const pageRight = 545;
   const logoX = pageLeft;
@@ -274,23 +283,22 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     "Administratif", "Commercial", "Matériel"
   ];
   const cols = 3, colW = (pageRight - pageLeft) / cols, box = 11, lh = 28;
+
   doc.fontSize(12);
   services.forEach((s, i) => {
-  const r = Math.floor(i / cols), c = i % cols;
-  const x = pageLeft + c * colW, yy = y + r * lh;
+    const r  = Math.floor(i / cols), c = i % cols;
+    const x  = pageLeft + c * colW;
+    const yy = y + r * lh;
 
-  doc.rect(x, yy, box, box).stroke();
+    doc.rect(x, yy, box, box).stroke();
 
-  if (service && s.toLowerCase() === String(service).toLowerCase()) {
-    const Xwidth = doc.widthOfString("X");
-    const Xheight = doc.currentLineHeight();
-    const xCentered = x + (box - Xwidth) / 2;
-    const yCentered = yy + (box - Xheight) / 2;
-    doc.font("Helvetica-Bold").text("X", xCentered, yCentered, { width: box, align: "center" });
-  }
+    if (service && s.toLowerCase() === String(service).toLowerCase()) {
+      drawCrossInBox(doc, x, yy, box);
+    }
 
-  doc.font("Helvetica").text(s, x + box + 6, yy - 2);
-});
+    doc.font("Helvetica").text(s, x + box + 6, yy - 2);
+  });
+
   y += Math.ceil(services.length / cols) * lh + afterServicesGap;
 
   doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
