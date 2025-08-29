@@ -8,9 +8,10 @@
     :root{
       --bg:#f5f7fb; --card:#fff; --primary:#004080; --text:#073763; --muted:#6b7280; --border:#e5e7eb;
       --space:16px;
+      --control-h:44px;
     }
 
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing:border-box; }
 
     html,body{
       margin:0; padding:0; background:var(--bg);
@@ -18,13 +19,15 @@
     }
 
     .wrap{ max-width:520px; margin:0 auto; padding:16px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px;
-      box-shadow:0 6px 24px rgba(0,0,0,.06); padding:16px; }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      box-shadow:0 6px 24px rgba(0,0,0,.06); padding:16px;
+    }
 
     h1{ font-size:1.35rem; margin:8px 0 20px; color:var(--primary); text-align:center; }
 
-    .field{ margin-bottom: var(--space); }
-    .field:last-child{ margin-bottom: 0; }
+    .field{ margin-bottom:var(--space); }
+    .field:last-child{ margin-bottom:0; }
 
     label{ display:block; font-weight:600; font-size:.95rem; margin-bottom:8px; }
 
@@ -33,27 +36,39 @@
       padding:12px; border-radius:10px; border:1px solid var(--border); font-size:1rem;
       background:#fff;
     }
-    input[type="date"]{ padding:10px; }
+
+    input[type="date"]{
+      width:100%;
+      min-height:var(--control-h);
+      padding:10px;
+      line-height:1.2;
+      -webkit-appearance:none;
+      appearance:none;
+      background-color:#fff;
+    }
+
     input:focus, select:focus { outline:2px solid #cde4ff; border-color:#93c5fd; }
 
     .row{
-  display:grid;
-  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
-  gap:16px;
-  align-items:start;
-}
-.row > div{ min-width:0; }
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:16px;
+      align-items:start;
+    }
+    .row > div{ min-width:0; }
 
-input[type="date"]{
-  width:100%;
-  padding:10px;
-  -webkit-appearance:none;
-  appearance:none;
-}
+    @media (max-width:480px){
+      .row{ grid-template-columns:1fr; gap:12px; }
+    }
 
-@media (max-width:480px){
-  .row{ grid-template-columns:1fr; gap:12px; }
-}
+    .muted{ color:var(--muted); font-size:.9rem; }
+
+    .alert{ display:none; margin-top:10px; padding:10px; border-radius:10px }
+    .ok{ background:#ecfeff; border:1px solid #a5f3fc; color:#0e7490 }
+    .err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b }
+
+    .desktop-gate{ display:none; text-align:center; padding:24px; }
+    @media (min-width:821px){ .mobile-only{ display:none } .desktop-gate{ display:block } }
   </style>
 </head>
 <body>
@@ -125,6 +140,7 @@ input[type="date"]{
           </div>
 
           <button id="submitBtn" type="submit" style="margin-top:6px;background:var(--primary);color:#fff;border:0;">Envoyer la demande</button>
+          <p class="muted" style="margin-top:10px;">En cliquant sur “Répondre” dans l’e-mail reçu, le destinataire sera automatiquement l’adresse saisie (Reply-To).</p>
 
           <div id="ok" class="alert ok">✅ Demande envoyée. Merci !</div>
           <div id="err" class="alert err">❌ Impossible d'envoyer la demande. Réessayez.</div>
@@ -173,7 +189,7 @@ input[type="date"]{
           body: JSON.stringify({ magasin, nomPrenom, service, nbJours: n, dateDu, dateAu, email })
         });
         const data = await res.json().catch(() => ({}));
-        if (res.ok && data.ok) { ok.style.display = "block"; form.reset(); }
+        if (res.ok && data.ok) { ok.style.display = "block"; err.style.display = "none"; form.reset(); }
         else { showErr("Envoi impossible. Vérifiez vos infos et réessayez."); }
       } catch (e) {
         showErr("Erreur réseau. Réessayez.");
@@ -182,7 +198,11 @@ input[type="date"]{
       }
     });
 
-    function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; }
+    function showErr(msg){
+      err.textContent = "❌ " + msg;
+      err.style.display = "block";
+      ok.style.display = "none";
+    }
   </script>
 </body>
 </html>
