@@ -99,7 +99,7 @@ app.post("/conges/api", async (req, res) => {
     const duFR = fmtFR(dateDu);
     const auFR = fmtFR(dateAu);
 
-    const subject = `Demande de congés - ${nomPrenom} - du ${duFR} au ${auFR}`;
+    const subject = `Demande - ${nomPrenom}`;
     const html = `
       <h2>Demande de Jours de Congés</h2>
       <p><b>Magasin :</b> ${esc(magasin)}</p>
@@ -114,7 +114,7 @@ app.post("/conges/api", async (req, res) => {
 
     await transporter.sendMail({
       to: MAIL_CG,
-      from: FROM_EMAIL || GMAIL_USER || "no-reply@localhost",
+       from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
       replyTo: email,
       subject,
       html,
