@@ -70,22 +70,20 @@ app.post("/conges/api", async (req, res) => {
     if (!dateDu || !dateAu || isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) {
       errors.push("plageDates");
     }
+const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
 
-    const { MAIL_CG, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL } = process.env;
-    if (!MAIL_CG) errors.push("MAIL_CG_env");
+if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
+  console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
+  return res.status(500).json({ ok: false, error: "smtp_not_configured" });
+}
 
-    if (errors.length) {
-      console.warn("[CONGES] invalid_fields:", errors);
-      return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
-    }
-
-    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: GMAIL_USER,
-    pass: GMAIL_PASS.replace(/"/g, "").replace(/\s/g, "")
+    pass: cleanedPass
   }
 });
 
@@ -103,12 +101,12 @@ const transporter = nodemailer.createTransport({
     `;
 
     await transporter.sendMail({
-      to: MAIL_CG,
-      from: FROM_EMAIL || SMTP_USER || "no-reply@localhost",
-      replyTo: email,
-      subject,
-      html
-    });
+  to: MAIL_CG,
+  from: FROM_EMAIL || GMAIL_USER || "no-reply@localhost",
+  replyTo: email,
+  subject,
+  html
+});
 
     console.log("[CONGES] email envoyé à", MAIL_CG, "reply-to", email);
     res.json({ ok: true });
