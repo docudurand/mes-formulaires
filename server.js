@@ -35,21 +35,18 @@ app.use(
   })
 );
 
-console.log("[BOOT] public/conges ?",
-  fs.existsSync(path.join(__dirname, "public", "conges")));
-console.log("[BOOT] public/conges/index.html ?",
-  fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
+console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
+console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
 
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 
 app.get("/conges", (_req, res) => {
-  const htmlAbs = path.join(__dirname, "public", "conges", "index.html");
-  res.sendFile(htmlAbs);
+  res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
 });
 
 app.post("/conges/api", async (req, res) => {
   try {
-    const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email } = req.body || {};
+    const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
     const errors = [];
 
     if (!magasin) errors.push("magasin");
@@ -91,6 +88,7 @@ app.post("/conges/api", async (req, res) => {
       nbJours: n,
       du: duFR,
       au: auFR,
+      signatureData,
     });
 
     const subject = `Demande - ${nomPrenom}`;
@@ -145,24 +143,17 @@ app.use("/pret/api", loansRouter);
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
   const method = req.method;
-
   res.on("finish", async () => {
     try {
       const success = res.statusCode >= 200 && res.statusCode < 300;
       if (!success || method !== "POST") return;
-
-      if (url.startsWith("/formulaire-piece")) {
-        await stats.recordSubmission("piece");
-      } else if (url.startsWith("/formulaire-piecepl")) {
-        await stats.recordSubmission("piecepl");
-      } else if (url.startsWith("/formulaire-pneu")) {
-        await stats.recordSubmission("pneu");
-      }
+      if (url.startsWith("/formulaire-piece"))      await stats.recordSubmission("piece");
+      else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
+      else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
     } catch (e) {
       console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
     }
   });
-
   next();
 });
 
@@ -188,80 +179,94 @@ function fmtFR(dateStr = "") {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
 }
 
-async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au }) {
+async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  let logoHeight = 0;
+  const pageLeft = 50;
+  const pageRight = 545;
+  const logoX = pageLeft;
+  const logoY = 40;
+  const logoW = 120;
+  const titleX = logoX + logoW + 20;
+  const titleWidth = pageRight - titleX;
+
   try {
     const resp = await fetch(logoUrl);
     const buf = Buffer.from(await resp.arrayBuffer());
-
-    doc.image(buf, 50, 40, { width: 120 });
-    logoHeight = 120 * 0.5;
+    doc.image(buf, logoX, logoY, { width: logoW });
+    const titleStr = "DEMANDE DE JOURS DE CONGÉS";
+    const approxLogoH = 60;
+    doc.fontSize(19);
+    const titleH = doc.heightOfString(titleStr, { width: titleWidth });
+    const titleY = logoY + (approxLogoH - titleH) / 2;
+    doc.font("Helvetica-Bold").text(titleStr, titleX, titleY, { width: titleWidth, align: "left" });
   } catch (e) {
     console.warn("[CONGES][PDF] Logo non chargé:", e.message);
+    doc.fontSize(19).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", titleX, logoY, { width: titleWidth, align: "left" });
   }
 
-  const titleX = 190;
-  const titleY = 60;
-  const titleWidth = 545 - titleX;
-  doc.fontSize(20).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", titleX, titleY, {
-    width: titleWidth,
-    align: "left",
-  });
+  let y = 200;
 
-  let y = 160;
-
-  doc.moveDown(0.5);
-  doc.fontSize(14).font("Helvetica-Bold").text("SITE :", 50, y);
-  doc.font("Helvetica").text(magasin || "", 110, y);
-  y += 50;
+  doc.fontSize(14).font("Helvetica-Bold").text("SITE :", pageLeft, y);
+  doc.font("Helvetica").text(magasin || "", pageLeft + 60, y);
+  y += 55;
 
   const parts = String(nomPrenom || "").trim().split(/\s+/);
   const prenom = parts.slice(0, -1).join(" ");
   const nom = parts.slice(-1)[0] || "";
-
   doc.font("Helvetica").fontSize(14);
-  doc.text("NOM :", 50, y);
-  doc.text(nom, 110, y, { width: 180 });
+  doc.text("NOM :", pageLeft, y);
+  doc.text(nom, pageLeft + 60, y, { width: 180 });
   doc.text("PRENOM :", 330, y);
-  doc.text(prenom, 410, y, { width: 160 });
-  y += 60;
+  doc.text(prenom, 400, y, { width: 160 });
+  y += 65;
 
   const services = ["Magasin V.L", "Magasin P.L", "Industrie",
                     "Atelier V.L", "Atelier P.L", "Rectification",
                     "Administratif", "Commercial", "Matériel"];
-  const cols = 3, colW = (545 - 50) / cols, box = 12, lh = 34;
+  const cols = 3, colW = (pageRight - pageLeft) / cols, box = 12, lh = 36;
   services.forEach((s, i) => {
     const r = Math.floor(i / cols), c = i % cols;
-    const x = 50 + c * colW, yy = y + r * lh;
+    const x = pageLeft + c * colW, yy = y + r * lh;
     doc.rect(x, yy, box, box).stroke();
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
       doc.font("Helvetica-Bold").text("X", x + 2, yy - 2);
     }
     doc.font("Helvetica").text(s, x + box + 8, yy - 2);
   });
-  y += Math.ceil(services.length / cols) * lh + 50;
+  y += Math.ceil(services.length / cols) * lh + 55;
 
-  doc.fontSize(14).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, 50, y);
-  y += 40;
-
-  doc.text(`du ${du} au ${au} inclus.`, 50, y);
-  y += 60;
+  doc.fontSize(14).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
+  y += 42;
+  doc.text(`du ${du} au ${au} inclus.`, pageLeft, y);
+  y += 65;
 
   doc.text("Signature de l’employé,", 380, y);
-  y += 100;
+  if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
+    try {
+      const b64 = signatureData.split(",")[1];
+      const sigBuf = Buffer.from(b64, "base64");
+      const sigY = y + 16;
+      doc.image(sigBuf, 380, sigY, { width: 180 });
+      y = sigY + 120;
+    } catch (e) {
+      console.warn("[CONGES][PDF] Signature non intégrée:", e.message);
+      y += 100;
+    }
+  } else {
+    y += 100;
+  }
 
-  doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", 50, y);
+  doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", pageLeft, y);
   doc.text("RESPONSABLE DE SITE :", 330, y);
   y += 28; doc.font("Helvetica");
-  doc.text("NOM :", 50, y);
+  doc.text("NOM :", pageLeft, y);
   doc.text("NOM :", 330, y);
   y += 28;
-  doc.text("SIGNATURE :", 50, y);
+  doc.text("SIGNATURE :", pageLeft, y);
   doc.text("SIGNATURE :", 330, y);
 
   doc.end();

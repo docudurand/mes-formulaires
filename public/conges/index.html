@@ -141,7 +141,6 @@
   </div>
 
   <script>
-
     (function gate(){
       const wide = window.matchMedia("(min-width: 821px)").matches;
       document.querySelector(".mobile-only").style.display = wide ? "none" : "block";
@@ -185,8 +184,7 @@
       e.preventDefault();
       drawing = true;
       currentStroke = [];
-      const p = pos(e);
-      currentStroke.push(p);
+      currentStroke.push(pos(e));
     }
     function move(e){
       if (!drawing) return;
@@ -198,7 +196,7 @@
       ctx.stroke();
       currentStroke.push(p);
     }
-    function end(e){
+    function end(){
       if (!drawing) return;
       drawing = false;
       if (currentStroke.length > 0) strokes.push(currentStroke);
