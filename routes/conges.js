@@ -1,3 +1,4 @@
+// routes/conges.js
 import express from "express";
 import path from "path";
 import nodemailer from "nodemailer";
@@ -5,17 +6,17 @@ import { fileURLToPath } from "url";
 
 const router = express.Router();
 
-router.use(express.json());
-router.use(express.urlencoded({ extended: true }));
+// --- LOG DIAG ---
 router.use((req, _res, next) => {
   console.log("[CONGES] hit", req.method, req.originalUrl);
   next();
 });
-router.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 
+// __dirname (ESM)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ENV
 const {
   MAIL_CG,
   SMTP_HOST,
@@ -25,6 +26,7 @@ const {
   FROM_EMAIL
 } = process.env;
 
+// Transport SMTP
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: Number(SMTP_PORT || 587),
@@ -32,11 +34,17 @@ const transporter = nodemailer.createTransport({
   auth: (SMTP_USER && SMTP_PASS) ? { user: SMTP_USER, pass: SMTP_PASS } : undefined
 });
 
+// --- DIAG: /conges/ping ---
+router.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
+
+// --- PAGE: /conges ---
 router.get("/conges", (_req, res) => {
-  const htmlPath = path.join(__dirname, "..", "public", "conges", "index.html");
-  res.sendFile(htmlPath);
+  // Chemin ABSOLU robuste, quelque soit l’emplacement du router
+  const htmlAbs = path.resolve("public", "conges", "index.html");
+  res.sendFile(htmlAbs);
 });
 
+// --- API: /conges/api ---
 router.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email } = req.body || {};
@@ -49,15 +57,14 @@ router.post("/conges/api", async (req, res) => {
     const n = Number(nbJours);
     if (!Number.isFinite(n) || n <= 0) errors.push("nbJours");
 
-    if (!dateDu) errors.push("dateDu");
-    if (!dateAu) errors.push("dateAu");
-
     const reMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !reMail.test(String(email))) errors.push("email");
 
     const d1 = new Date(dateDu);
     const d2 = new Date(dateAu);
-    if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) errors.push("plageDates");
+    if (!dateDu || !dateAu || isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) {
+      errors.push("plageDates");
+    }
 
     if (!MAIL_CG) errors.push("MAIL_CG_env");
 
@@ -93,6 +100,7 @@ router.post("/conges/api", async (req, res) => {
   }
 });
 
+// utils
 function esc(str = "") {
   return String(str)
     .replaceAll("&", "&amp;")
