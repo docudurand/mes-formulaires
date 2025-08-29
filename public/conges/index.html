@@ -59,7 +59,7 @@
   padding: 10px 20px;
 }
 @media (max-width:380px){
-  .sig-actions{ grid-template-columns:1fr; }
+  .sig-actions{ justify-content: center; }
 }
   </style>
 </head>
@@ -238,20 +238,6 @@
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
-  document.getElementById('undoSig').onclick = () => {
-    strokes.pop();
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
-    for (const s of strokes) {
-      for (let i = 1; i < s.length; i++) {
-        ctx.beginPath();
-        ctx.moveTo(s[i-1].x, s[i-1].y);
-        ctx.lineTo(s[i].x, s[i].y);
-        ctx.stroke();
-      }
-    }
-  };
 
   const form = document.getElementById("formConges");
   const btn  = document.getElementById("submitBtn");
@@ -259,23 +245,14 @@
   const err  = document.getElementById("err");
 
   const ALL_SERVICES = [
-    "Magasin V.L",
-    "Magasin P.L",
-    "Industrie",
-    "Atelier V.L",
-    "Atelier P.L",
-    "Rectification",
-    "Administratif",
-    "Commercial",
-    "Matériel",
+    "Magasin V.L","Magasin P.L","Industrie",
+    "Atelier V.L","Atelier P.L","Rectification",
+    "Administratif","Commercial","Matériel",
   ];
 
   const SERVICES_BY_STORE = {
     "GLEIZE": ["Magasin V.L", "Commercial"],
   };
-  // Exemple pour d'autres magasins si vous voulez restreindre :
-  // "CHASSIEU": ["Magasin V.L", "Magasin P.L", "Commercial"],
-  // "ANNEMASSE": ALL_SERVICES, // pas de restriction
 
   const magasinSelect = document.getElementById("magasin");
   const serviceSelect = document.getElementById("service");
@@ -337,13 +314,14 @@
       return showErr("La date 'Au' doit être ≥ 'Du'.");
     }
     if (strokes.length === 0) {
-  const sig = document.querySelector('.sig-wrap');
-  sig.classList.add('invalid');
-  sig.setAttribute('aria-invalid', 'true');
-  return showErr("Merci de remplir tous les champs obligatoires.");
-}
-document.querySelector('.sig-wrap').classList.remove('invalid');
-document.querySelector('.sig-wrap').removeAttribute('aria-invalid');
+      const sig = document.querySelector('.sig-wrap');
+      sig.classList.add('invalid');
+      sig.setAttribute('aria-invalid', 'true');
+      return showErr("Merci de remplir tous les champs obligatoires.");
+    }
+    const sigWrap = document.querySelector('.sig-wrap');
+    sigWrap.classList.remove('invalid');
+    sigWrap.removeAttribute('aria-invalid');
 
     const signatureData = canvas.toDataURL("image/png");
 
