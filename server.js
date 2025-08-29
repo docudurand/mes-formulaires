@@ -43,25 +43,32 @@ app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
 });
+
+/* ===== Routage magasin/service -> destinataire(s) ===== */
 const ROUTING = {
-"GLEIZE": {
+  "GLEIZE": {
     "Magasin V.L": "magvl4gleize@durandservices.fr",
-    "Commercial":   "magvl6gleize@durandservices.fr",
+    "Commercial":  "magvl6gleize@durandservices.fr",
   },
-   // Ajoutez ici d'autres magasins si besoin, par ex.:
+  // Exemples pour étendre:
   // "CHASSIEU": {
   //   "Magasin V.L": "xxx@durandservices.fr",
-  //   "Commercial":   "yyy@durandservices.fr",
-  // },
-  function resolveRecipient(magasin, service, globalDefault) {
+  //   "Commercial":  "yyy@durandservices.fr",
+  //   "__DEFAULT":   "fallback-chassieu@durandservices.fr"
+  // }
+};
+
+/** Retourne l'email destinataire selon magasin/service, sinon __DEFAULT magasin, sinon globalDefault */
+function resolveRecipient(magasin, service, globalDefault) {
   const m = String(magasin || "").trim().toUpperCase();
   const s = String(service || "").trim();
   const perMag = ROUTING[m];
   if (perMag && perMag[s]) return perMag[s];
-  if (ROUTING[`${m}__DEFAULT`]) return ROUTING[`${m}__DEFAULT`];
+  if (perMag && perMag["__DEFAULT"]) return perMag["__DEFAULT"];
   return globalDefault;
 }
-  
+
+/* ======================= API ======================= */
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -83,6 +90,7 @@ app.post("/conges/api", async (req, res) => {
       errors.push("plageDates");
     }
 
+    // Signature obligatoire (image base64 PNG non vide)
     if (
       !signatureData ||
       String(signatureData).length < 2000 ||
@@ -95,13 +103,13 @@ app.post("/conges/api", async (req, res) => {
       return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
     }
 
-const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
-  console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
-  return res.status(500).json({ ok: false, error: "smtp_not_configured" });
-}
+    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
+      console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
+      return res.status(500).json({ ok: false, error: "smtp_not_configured" });
+    }
 
-const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
+    const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
 
     const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
     const transporter = nodemailer.createTransport({
@@ -135,21 +143,21 @@ const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
     `;
 
     await transporter.sendMail({
-  to: toRecipients,
-  from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
-  replyTo: email,
-  subject,
-  html,
-  attachments: [
-    {
-      filename: `Demande-conges-${nomPrenom.replace(/[^\w.-]+/g, "_")}.pdf`,
-      content: pdfBuffer,
-      contentType: "application/pdf",
-    },
-  ],
-});
+      to: toRecipients || MAIL_CG,
+      from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
+      replyTo: email,
+      subject,
+      html,
+      attachments: [
+        {
+          filename: `Demande-conges-${nomPrenom.replace(/[^\w.-]+/g, "_")}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
 
-    console.log("[CONGES] email envoyé à", MAIL_CG, "reply-to", email);
+    console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
     res.json({ ok: true });
   } catch (e) {
     console.error("[CONGES][MAIL] Erreur:", e);
@@ -157,6 +165,7 @@ const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
   }
 });
 
+/* ================== Routes diverses ================== */
 app.get("/healthz", (_req, res) => res.sendStatus(200));
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
@@ -172,6 +181,7 @@ app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-
 app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-parc.html")));
 app.use("/pret/api", loansRouter);
 
+/* Compteurs après POST */
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
   const method = req.method;
@@ -179,7 +189,7 @@ app.use((req, res, next) => {
     try {
       const success = res.statusCode >= 200 && res.statusCode < 300;
       if (!success || method !== "POST") return;
-      if (url.startsWith("/formulaire-piece"))      await stats.recordSubmission("piece");
+      if (url.startsWith("/formulaire-piece"))        await stats.recordSubmission("piece");
       else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
       else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
     } catch (e) {
@@ -197,6 +207,7 @@ const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
 
+/* ===== Utils ===== */
 function esc(str = "") {
   return String(str)
     .replaceAll("&", "&amp;")
