@@ -34,10 +34,14 @@ app.use(
   })
 );
 
-console.log("[BOOT] public/conges existe ?",
-  fs.existsSync(path.join(__dirname, "public", "conges")));
-console.log("[BOOT] public/conges/index.html existe ?",
-  fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
+console.log(
+  "[BOOT] public/conges existe ?",
+  fs.existsSync(path.join(__dirname, "public", "conges"))
+);
+console.log(
+  "[BOOT] public/conges/index.html existe ?",
+  fs.existsSync(path.join(__dirname, "public", "conges", "index.html"))
+);
 
 app.get("/conges/ping", (_req, res) => {
   console.log("[CONGES] GET /conges/ping");
@@ -70,43 +74,51 @@ app.post("/conges/api", async (req, res) => {
     if (!dateDu || !dateAu || isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) {
       errors.push("plageDates");
     }
-const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
 
-if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
-  console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
-  return res.status(500).json({ ok: false, error: "smtp_not_configured" });
-}
+    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
 
-const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
+    if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
+      console.warn("[CONGES] smtp_not_configured:", {
+        MAIL_CG: !!MAIL_CG,
+        GMAIL_USER: !!GMAIL_USER,
+        GMAIL_PASS: !!GMAIL_PASS,
+      });
+      return res.status(500).json({ ok: false, error: "smtp_not_configured" });
+    }
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: GMAIL_USER,
-    pass: cleanedPass
-  }
-});
+    const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
 
-    const subject = `Demande de congés - ${nomPrenom} - du ${dateDu} au ${dateAu}`;
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: GMAIL_USER,
+        pass: cleanedPass,
+      },
+    });
+
+    const duFR = fmtFR(dateDu);
+    const auFR = fmtFR(dateAu);
+
+    const subject = `Demande de congés - ${nomPrenom} - du ${duFR} au ${auFR}`;
     const html = `
       <h2>Demande de Jours de Congés</h2>
       <p><b>Magasin :</b> ${esc(magasin)}</p>
       <p><b>Nom & Prénom :</b> ${esc(nomPrenom)}</p>
       <p><b>Service :</b> ${esc(service)}</p>
       <p><b>Demande :</b> ${n} jour(s) de congés</p>
-      <p><b>Période :</b> du ${esc(dateDu)} au ${esc(dateAu)}</p>
+      <p><b>Période :</b> du ${esc(duFR)} au ${esc(auFR)}</p>
       <p><b>Email du demandeur :</b> ${esc(email)}</p>
       <hr>
       <p>Répondez à cet email pour répondre directement au demandeur (Reply-To).</p>
     `;
 
     await transporter.sendMail({
-  to: MAIL_CG,
-  from: FROM_EMAIL || GMAIL_USER || "no-reply@localhost",
-  replyTo: email,
-  subject,
-  html
-});
+      to: MAIL_CG,
+      from: FROM_EMAIL || GMAIL_USER || "no-reply@localhost",
+      replyTo: email,
+      subject,
+      html,
+    });
 
     console.log("[CONGES] email envoyé à", MAIL_CG, "reply-to", email);
     res.json({ ok: true });
@@ -189,4 +201,9 @@ function esc(str = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function fmtFR(dateStr = "") {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
 }
