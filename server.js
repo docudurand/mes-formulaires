@@ -79,12 +79,15 @@ app.post("/conges/api", async (req, res) => {
       return res.status(400).json({ ok: false, error: "invalid_fields", fields: errors });
     }
 
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT || 587),
-      secure: String(SMTP_PORT) === "465",
-      auth: (SMTP_USER && SMTP_PASS) ? { user: SMTP_USER, pass: SMTP_PASS } : undefined
-    });
+    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_PASS.replace(/"/g, "").replace(/\s/g, "")
+  }
+});
 
     const subject = `Demande de congés - ${nomPrenom} - du ${dateDu} au ${dateAu}`;
     const html = `
