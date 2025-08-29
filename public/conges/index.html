@@ -32,10 +32,35 @@
     .desktop-gate{ display:none; text-align:center; padding:24px; }
     @media (min-width:821px){ .mobile-only{ display:none } .desktop-gate{ display:block } }
 
-    .sig-wrap{ border:1px solid var(--border); border-radius:10px; background:#fff; padding:8px; }
-    .sig-canvas{ width:100%; height:180px; display:block; touch-action:none; }
-    .sig-actions{ display:flex; gap:8px; margin-top:8px; }
-    .sig-actions button{ flex:0 0 auto; padding:10px 12px; }
+    .sig-wrap{
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+  padding:8px;
+  overflow:hidden;
+}
+.sig-canvas{
+  width:100%;
+  height:180px;
+  display:block;
+  touch-action:none;
+}
+.sig-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+.sig-actions button{
+  width:100%;
+  padding:10px 12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media (max-width:380px){
+  .sig-actions{ grid-template-columns:1fr; }
+}
   </style>
 </head>
 <body>
@@ -125,9 +150,9 @@
             <div class="sig-wrap">
               <canvas id="signaturePad" class="sig-canvas"></canvas>
               <div class="sig-actions">
-                <button type="button" id="clearSig">Effacer</button>
-                <button type="button" id="undoSig">Annuler dernier trait</button>
-              </div>
+  <button type="button" id="clearSig">Effacer</button>
+  <button type="button" id="undoSig">Annuler</button>
+</div>
             </div>
           </div>
 

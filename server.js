@@ -209,7 +209,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     align: "left",
   });
 
-  let y = 165;
+  let y = 180;
 
   const bodySize = 13;
   const labelGap = 32;
@@ -220,7 +220,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 
   doc.fontSize(bodySize).font("Helvetica-Bold").text("SITE :", pageLeft, y);
   doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
-  y += labelGap; // ~32
+  y += labelGap;
 
   const parts = String(nomPrenom || "").trim().split(/\s+/);
   const prenom = parts.slice(0, -1).join(" ");
@@ -253,12 +253,12 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
   y += afterDemandGap;
 
-  doc.text(`du ${du} au ${au} inclus.`, pageLeft, y);
+  doc.text(`du ${du}`, pageLeft, y);
+  y += 20;
+  doc.text(`au ${au} inclus.`, pageLeft, y);
   y += afterPeriodGap;
 
-
   doc.text("Signature de l’employé,", 370, y);
-
   if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
     try {
       const b64 = signatureData.split(",")[1];
@@ -276,7 +276,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 
   const colLeft = pageLeft;
   const colRight = 330;
-
   doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
   doc.text("RESPONSABLE DE SITE :", colRight, y);
   y += 22; doc.font("Helvetica").fontSize(bodySize);
