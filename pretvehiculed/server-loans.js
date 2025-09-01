@@ -227,7 +227,6 @@ router.post('/loans/print', async (req, res) => {
       </div>
     </div>
 
-    <!-- images Voiture + Jauge -->
     <div class="pics">
       <div class="imgCard tall">
         <img class="imgFit" src="${CAR_URL}" alt="Schémas véhicule">
@@ -242,7 +241,6 @@ router.post('/loans/print', async (req, res) => {
       <div class="area">${esc(d.observations)}</div>
     </div>
 
-    <!-- mention légale demandée -->
     <div class="legal">
       Attention : prévoir un transfert d'assurance pendant le prêt du véhicule. Sinon en cas d'accident un montant de 2500 euros sera à votre charge. Merci de votre compréhension.
     </div>
