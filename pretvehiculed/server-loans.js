@@ -159,7 +159,7 @@ router.post('/loans/print', async (req, res) => {
   .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
   .label{ font-weight:700 }
 
-  .box{ border:1px solid #222; height:100px; margin-top:14px; display:grid; grid-template-columns:1fr 1fr; }
+  .box{ border:1px solid #222; height:130px; margin-top:14px; display:grid; grid-template-columns:1fr 1fr; }
   .box h3{ margin: -8px 0 4px 8px; font-size:14px }
   .cell{ padding:10px; border-right:1px solid #222 }
   .cell:last-child{ border-right:0 }
