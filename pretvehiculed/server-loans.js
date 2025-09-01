@@ -143,8 +143,10 @@ router.post('/loans/print', async (req, res) => {
 <meta charset="utf-8">
 <title>Fiche prêt ${esc(d.immatriculation)}</title>
 <style>
-  @page{ size:A4; margin:12mm }
-  body{ font-family:Arial,Helvetica,sans-serif; color:#111; }
+  @page{ size:A4; margin:0 }
+
+  body{ font-family:Arial,Helvetica,sans-serif; color:#111; margin:12mm; }
+
   .header{
     display:grid; grid-template-columns:120px 1fr 120px;
     align-items:center; column-gap:8px; margin-bottom:0;
@@ -152,33 +154,34 @@ router.post('/loans/print', async (req, res) => {
   .logo{ width:120px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:20px; font-weight:700; letter-spacing:.3px }
   .qrcode{ width:110px; height:110px; justify-self:end }
-  .afterHead{ margin-top:10mm; }
+
+  .afterHead{ margin-top:6mm; }
+
   .line{ margin:4px 0 6px; font-size:14px }
   .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
   .label{ font-weight:700 }
+
   .box{ border:1px solid #222; height:120px; margin-top:18px; display:grid; grid-template-columns:1fr 1fr; }
-  .box h3{ margin: -10px 0 4px 8px; font-size:14px }
+  .box h3{ margin:-10px 0 4px 8px; font-size:14px }
   .cell{ padding:12px; border-right:1px solid #222 }
   .cell:last-child{ border-right:0 }
 
   .pics{
     display:grid;
-    grid-template-columns: 1.3fr 1fr;
-    gap: 8mm;
-    align-items: start;
-    margin: 16px 0;
+    grid-template-columns:1.3fr 1fr;
+    gap:8mm;
+    align-items:start;
+    margin:16px 0;
   }
-  .imgCard{
-    border:1px solid #222; padding:8px;
-    display:flex; align-items:center; justify-content:center;
-    background:#fff;
-  }
+  .imgCard{ border:1px solid #222; padding:8px; display:flex; align-items:center; justify-content:center; background:#fff; }
   .imgCard.tall{ height:70mm; }
   .imgCard.short{ height:40mm; }
   .imgFit{ max-width:100%; max-height:100%; object-fit:contain; }
 
   .obs{ margin-top:20px }
-  .area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
+  .area{ border:1px solid #222; height:100px; padding:8px; white-space:pre-wrap }
+
+  .legal{ margin-top:8mm; font-size:9pt; color:#000; }
 </style>
 </head>
 <body>
@@ -225,7 +228,6 @@ router.post('/loans/print', async (req, res) => {
       </div>
     </div>
 
-    <!-- >>> NOUVEAU : images Voiture (gauche) + Jauge (droite) -->
     <div class="pics">
       <div class="imgCard tall">
         <img class="imgFit" src="${CAR_URL}" alt="Schémas véhicule">
@@ -238,6 +240,10 @@ router.post('/loans/print', async (req, res) => {
     <div class="obs">
       <div class="label">INFORMATION CHAUFFEUR :</div>
       <div class="area">${esc(d.observations)}</div>
+    </div>
+
+    <div class="legal">
+      Attention : prévoir un transfert d'assurance pendant le prêt du véhicule. Sinon en cas d'accident un montant de 2500 euros sera à votre charge. Merci de votre compréhension.
     </div>
   </div>
 
