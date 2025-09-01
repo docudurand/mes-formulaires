@@ -422,6 +422,7 @@
         const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
         setModalNotice('OK','success'); $mask.style.display='none'; setNotice('Prêt clôturé.','success');
         await loadVehicles(); renderVehicleOptions($store.value||null); await loadOpenLoansForStore($store.value||null);
+        location.reload();
       }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
     });
 
