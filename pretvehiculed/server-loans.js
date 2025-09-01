@@ -1,5 +1,6 @@
 import express from 'express';
 import axios from 'axios';
+import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 
@@ -15,10 +16,6 @@ function assertConfig(res) {
   }
   return true;
 }
-const normData = (d)=> {
-  if (typeof d === 'string') { try { return JSON.parse(d); } catch { return d; } }
-  return d;
-};
 
 router.get('/vehicles', async (_req, res) => {
   try {
@@ -57,8 +54,8 @@ router.post('/loans', async (req, res) => {
   try {
     const payload = { action: 'createLoan', key: APPSCRIPT_KEY, data: req.body };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-    let data = normData(resp.data);
-
+    let data = resp.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
     if (resp.status >= 400) {
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
@@ -77,8 +74,8 @@ router.post('/loans/:loan_id/update', async (req, res) => {
   try {
     const payload = { action: 'updateLoan', key: APPSCRIPT_KEY, data: { ...req.body, loan_id: req.params.loan_id } };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-    let data = normData(resp.data);
-
+    let data = resp.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
     if (resp.status >= 400) {
       return res.status(502).json({ ok:false, error:'apps_script_status_'+resp.status, detail:data });
     }
@@ -96,8 +93,8 @@ router.post('/loans/:loan_id/close', async (req, res) => {
   try {
     const payload = { action: 'closeLoan', key: APPSCRIPT_KEY, data: { ...req.body, loan_id: req.params.loan_id } };
     const resp = await axios.post(APPSCRIPT_URL, payload, { validateStatus: () => true });
-    let data = normData(resp.data);
-
+    let data = resp.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
     if (resp.status >= 400) {
       return res.status(502).json({ ok: false, error: 'apps_script_status_'+resp.status, detail: data });
     }
@@ -119,7 +116,7 @@ router.post('/loans/print', async (req, res) => {
       if (v instanceof Date) return isNaN(v) ? null : v;
       if (typeof v === 'number') { const ms = Math.round((v-25569)*86400*1000); const dt=new Date(ms); return isNaN(dt)?null:dt; }
       if (typeof v === 'string') {
-        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'); const dt=new Date();dt.setHours(+h,+m||0,0,0);return dt; }
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'), dt=new Date(); dt.setHours(+h,+m||0,0,0); return dt; }
         const dt = new Date(v); if (!isNaN(dt)) return dt;
         const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m){ const dt2=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(dt2)?null:dt2; }
       }
@@ -134,7 +131,10 @@ router.post('/loans/print', async (req, res) => {
     const closeUrl  = `${origin}/pret/close.html?loan_id=${encodeURIComponent(d.loan_id || '')}&immat=${encodeURIComponent(d.immatriculation || '')}`;
     const qrDataUrl = await QRCode.toDataURL(closeUrl, { margin: 1, width: 110 });
 
-    const LOGO_URL = 'https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png';
+    const LOGO_URL   = 'https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png';
+    const CAR_URL    = 'https://raw.githubusercontent.com/docudurand/mes-formulaires/main/voiture.png';
+    const GAUGE_URL  = 'https://raw.githubusercontent.com/docudurand/mes-formulaires/main/jauge.png';
+
     const esc = s => String(s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
     const html = `<!doctype html>
@@ -152,7 +152,7 @@ router.post('/loans/print', async (req, res) => {
   .logo{ width:120px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:20px; font-weight:700; letter-spacing:.3px }
   .qrcode{ width:110px; height:110px; justify-self:end }
-  .afterHead{ margin-top:10mm; } /* espace après l'en-tête */
+  .afterHead{ margin-top:10mm; }
   .line{ margin:4px 0 6px; font-size:14px }
   .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:6px; }
   .label{ font-weight:700 }
@@ -160,6 +160,23 @@ router.post('/loans/print', async (req, res) => {
   .box h3{ margin: -10px 0 4px 8px; font-size:14px }
   .cell{ padding:12px; border-right:1px solid #222 }
   .cell:last-child{ border-right:0 }
+
+  .pics{
+    display:grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 8mm;
+    align-items: start;
+    margin: 16px 0;
+  }
+  .imgCard{
+    border:1px solid #222; padding:8px;
+    display:flex; align-items:center; justify-content:center;
+    background:#fff;
+  }
+  .imgCard.tall{ height:70mm; }
+  .imgCard.short{ height:40mm; }
+  .imgFit{ max-width:100%; max-height:100%; object-fit:contain; }
+
   .obs{ margin-top:20px }
   .area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
 </style>
@@ -205,6 +222,16 @@ router.post('/loans/print', async (req, res) => {
       <div class="cell">
         <h3>RETOUR (CONDUCTEUR)</h3>
         Conducteur<br><br>Signature
+      </div>
+    </div>
+
+    <!-- >>> NOUVEAU : images Voiture (gauche) + Jauge (droite) -->
+    <div class="pics">
+      <div class="imgCard tall">
+        <img class="imgFit" src="${CAR_URL}" alt="Schémas véhicule">
+      </div>
+      <div class="imgCard short">
+        <img class="imgFit" src="${GAUGE_URL}" alt="Jauge de carburant">
       </div>
     </div>
 

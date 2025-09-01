@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -28,6 +29,50 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
+app.use((req, res, next) => {
+  const url = req.originalUrl || req.url || "";
+  const method = req.method;
+
+  res.on("finish", async () => {
+    try {
+      const success = res.statusCode >= 200 && res.statusCode < 300;
+      if (!success || method !== "POST") return;
+
+      if (url.startsWith("/formulaire-piece"))        await stats.recordSubmission("piece");
+      else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
+      else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
+    } catch (e) {
+      console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
+    }
+  });
+
+  next();
+});
+
+app.get("/stats/counters", async (_req, res) => {
+  try {
+    const data = await stats.getCounters();
+    res.json({ ok: true, data });
+  } catch (e) {
+    console.error("Erreur /stats/counters:", e);
+    res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" });
+  }
+});
+
+app.get("/admin/compteurs", async (_req, res) => {
+  try {
+    const data = await stats.getCounters();
+    res.json(data);
+  } catch (e) {
+    console.error("Erreur /admin/compteurs:", e);
+    res.status(500).json({ error: "Erreur de lecture des compteurs" });
+  }
+});
+
+app.get("/compteur", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "compteur.html"));
+});
+
 app.use(
   express.static(path.join(__dirname, "public"), {
     extensions: ["html", "htm"],
@@ -49,14 +94,7 @@ const ROUTING = {
     "Magasin V.L": "magvl4gleize@durandservices.fr,fselva@durandservices.fr",
     "Commercial":  "magvl4gleize@durandservices.fr",
   },
-  // Exemples pour étendre:
-  // "CHASSIEU": {
-  //   "Magasin V.L": "xxx@durandservices.fr",
-  //   "Commercial":  "yyy@durandservices.fr",
-  //   "__DEFAULT":   "fallback-chassieu@durandservices.fr"
-  // }
 };
-
 function resolveRecipient(magasin, service, globalDefault) {
   const m = String(magasin || "").trim().toUpperCase();
   const s = String(service || "").trim();
@@ -87,11 +125,7 @@ app.post("/conges/api", async (req, res) => {
       errors.push("plageDates");
     }
 
-    if (
-      !signatureData ||
-      String(signatureData).length < 2000 ||
-      !/^data:image\/png;base64,/.test(signatureData)
-    ) {
+    if (!signatureData || String(signatureData).length < 2000 || !/^data:image\/png;base64,/.test(signatureData)) {
       errors.push("signature");
     }
 
@@ -176,28 +210,15 @@ app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-
 app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-parc.html")));
 app.use("/pret/api", loansRouter);
 
-app.use((req, res, next) => {
-  const url = req.originalUrl || req.url || "";
-  const method = req.method;
-  res.on("finish", async () => {
-    try {
-      const success = res.statusCode >= 200 && res.statusCode < 300;
-      if (!success || method !== "POST") return;
-      if (url.startsWith("/formulaire-piece"))        await stats.recordSubmission("piece");
-      else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
-      else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
-    } catch (e) {
-      console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
-    }
-  });
-  next();
-});
-
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
 (async () => {
-  try { await stats.initCounters(); } catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
+  try {
+    await stats.initCounters();
+  } catch (e) {
+    console.warn("[COMPTEUR] initCounters souci:", e?.message || e);
+  }
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
 
@@ -236,7 +257,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   const logoY = 40;
   const logoW = 120;
 
-  let titleY = logoY + 45;
   const titleX = logoX + logoW + 20;
   const titleWidth = pageRight - titleX;
 
@@ -249,10 +269,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   }
 
   const titleStr = "DEMANDE DE JOURS DE CONGÉS";
-  doc.fontSize(18).font("Helvetica-Bold").text(titleStr, titleX, titleY, {
-    width: titleWidth,
-    align: "left",
-  });
+  doc.fontSize(18).font("Helvetica-Bold").text(titleStr, titleX, logoY + 45, { width: titleWidth, align: "left" });
 
   let y = 180;
 
