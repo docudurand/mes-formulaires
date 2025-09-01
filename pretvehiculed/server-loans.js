@@ -242,7 +242,6 @@ router.post('/loans/print', async (req, res) => {
       <div class="area">${esc(d.observations)}</div>
     </div>
 
-/* mettre la phrase ici */
     <div class="legal">
       .
     </div>
