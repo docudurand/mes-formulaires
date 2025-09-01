@@ -179,6 +179,12 @@ router.post('/loans/print', async (req, res) => {
 
   .obs{ margin-top:20px }
   .area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
+
+  .legal{
+    margin-top: 12mm;
+    font-size: 8pt;
+    color: #000;
+  }
 </style>
 </head>
 <body>
@@ -225,19 +231,22 @@ router.post('/loans/print', async (req, res) => {
       </div>
     </div>
 
-    <!-- >>> NOUVEAU : images Voiture (gauche) + Jauge (droite) -->
     <div class="pics">
       <div class="imgCard tall">
-        <img class="imgFit" src="${CAR_URL}" alt="Schémas véhicule">
+        <img class="imgFit" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/voiture.png" alt="Schémas véhicule">
       </div>
       <div class="imgCard short">
-        <img class="imgFit" src="${GAUGE_URL}" alt="Jauge de carburant">
+        <img class="imgFit" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/jauge.png" alt="Jauge de carburant">
       </div>
     </div>
 
     <div class="obs">
       <div class="label">INFORMATION CHAUFFEUR :</div>
       <div class="area">${esc(d.observations)}</div>
+    </div>
+
+    <div class="legal">
+      Attention : prévoir un transfert d'assurance pendant le prêt du véhicule. Sinon en cas d'accident un montant de 2500 euros sera à votre charge. Merci de votre compréhension.
     </div>
   </div>
 
@@ -267,7 +276,7 @@ router.post('/loans/email', async (req, res) => {
     });
 
     const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
-    const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
+    the host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
     const origin = host ? `${proto}://${host}` : '';
 
     const to = process.env.MAIL_TO || user;
