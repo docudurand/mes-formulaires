@@ -243,7 +243,7 @@ router.post('/loans/print', async (req, res) => {
     </div>
 
     <div class="legal">
-      Attention : prévoir un transfert d'assurance pendant le prêt du véhicule. Sinon en cas d'accident un montant de 2500 euros sera à votre charge. Merci de votre compréhension.
+      .
     </div>
   </div>
 
