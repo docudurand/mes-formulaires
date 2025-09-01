@@ -180,11 +180,7 @@ router.post('/loans/print', async (req, res) => {
   .obs{ margin-top:20px }
   .area{ border:1px solid #222; height:120px; padding:8px; white-space:pre-wrap }
 
-  .legal{
-    margin-top: 12mm;
-    font-size: 8pt;
-    color: #000;
-  }
+  .legal{ margin-top:12mm; font-size:8pt; color:#000; }
 </style>
 </head>
 <body>
@@ -201,34 +197,20 @@ router.post('/loans/print', async (req, res) => {
     <div class="grid">
       <div><span class="label">NOM DU CHAUFFEUR : </span>${esc(d.chauffeur_nom)}</div>
       <div><span class="label">IMMATRICULATION : </span>${esc(d.immatriculation)}</div>
-
       <div><span class="label">DATE DÉPART : </span>${fmtDate(d.date_depart)}</div>
       <div><span class="label">DATE RETOUR : </span>${fmtDate(d.date_retour)}</div>
-
       <div><span class="label">HEURE DÉPART : </span>${fmtTime(d.heure_depart)}</div>
       <div><span class="label">HEURE RETOUR : </span>${fmtTime(d.heure_retour)}</div>
     </div>
 
     <div class="box">
-      <div class="cell">
-        <h3>DÉPART</h3>
-        Réceptionnaire<br><br>Signature
-      </div>
-      <div class="cell">
-        <h3>RETOUR</h3>
-        Réceptionnaire<br><br>Signature
-      </div>
+      <div class="cell"><h3>DÉPART</h3>Réceptionnaire<br><br>Signature</div>
+      <div class="cell"><h3>RETOUR</h3>Réceptionnaire<br><br>Signature</div>
     </div>
 
     <div class="box">
-      <div class="cell">
-        <h3>DÉPART (CONDUCTEUR)</h3>
-        Conducteur<br><br>Signature
-      </div>
-      <div class="cell">
-        <h3>RETOUR (CONDUCTEUR)</h3>
-        Conducteur<br><br>Signature
-      </div>
+      <div class="cell"><h3>DÉPART (CONDUCTEUR)</h3>Conducteur<br><br>Signature</div>
+      <div class="cell"><h3>RETOUR (CONDUCTEUR)</h3>Conducteur<br><br>Signature</div>
     </div>
 
     <div class="pics">
@@ -276,7 +258,7 @@ router.post('/loans/email', async (req, res) => {
     });
 
     const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
-    the host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
+    const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0]; // ← corrigé
     const origin = host ? `${proto}://${host}` : '';
 
     const to = process.env.MAIL_TO || user;
@@ -295,12 +277,12 @@ router.post('/loans/email', async (req, res) => {
       <div style="font-family:Arial,Helvetica,sans-serif">
         <h2 style="margin:0 0 8px">Nouveau prêt véhicule</h2>
         <table style="border-collapse:collapse">
-          ${rows.map(([k,v])=>`<tr><td style="border:1px solid #ddd;padding:6px 10px;font-weight:600">${k}</td><td style="border:1px solid #ddd;padding:6px 10px">${v||''}</td></tr>`).join('')}
+          ${rows.map(([k,v])=>\`<tr><td style="border:1px solid #ddd;padding:6px 10px;font-weight:600">\${k}</td><td style="border:1px solid #ddd;padding:6px 10px">\${v||''}</td></tr>\`).join('')}
         </table>
         <p style="margin-top:12px">
           Clôturer le prêt :
-          <a href="${origin}/pret/close.html?loan_id=${encodeURIComponent(loan.loan_id||'')}&immat=${encodeURIComponent(loan.immatriculation||'')}">
-            ${origin}/pret/close.html?loan_id=…
+          <a href="\${origin}/pret/close.html?loan_id=\${encodeURIComponent(loan.loan_id||'')}&immat=\${encodeURIComponent(loan.immatriculation||'')}">
+            \${origin}/pret/close.html?loan_id=…
           </a>
         </p>
       </div>`;
