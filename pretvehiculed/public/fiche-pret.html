@@ -438,7 +438,9 @@
       $pdfMask.style.display='none';
       $pdfMask.setAttribute('aria-hidden','true');
       $pdfFrame.src='about:blank';
+      location.reload();
     });
+
     $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch(_){ } });
 
     el('btnSave').addEventListener('click', async ()=>{
