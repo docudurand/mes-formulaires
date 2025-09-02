@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -7,6 +6,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
+import axios from "axios";
 
 import * as stats from "./stats.js";
 
@@ -47,6 +47,33 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
+
+app.get("/api/sheets/televente", async (req, res) => {
+  const tryOnce = async () =>
+    axios.get(APPS_SCRIPT_URL, {
+      timeout: 12000,
+      params: req.query,
+      headers: { "User-Agent": "televente-proxy/1.0" },
+    });
+
+  try {
+    let r;
+    try {
+      r = await tryOnce();
+    } catch {
+      await new Promise((t) => setTimeout(t, 400));
+      r = await tryOnce();
+    }
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
+  }
 });
 
 app.get("/stats/counters", async (_req, res) => {
