@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -6,8 +7,6 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
-import axios from "axios";
-import helmet from "helmet";
 
 import * as stats from "./stats.js";
 
@@ -24,19 +23,11 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
-
 app.set("trust proxy", 1);
-
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
-
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
@@ -56,27 +47,6 @@ app.use((req, res, next) => {
   });
 
   next();
-});
-
-
-app.get("/api/sheets/televente", async (req, res) => {
-  const tryOnce = async () =>
-    axios.get(APPS_SCRIPT_URL, { timeout: 12000, params: req.query, headers: { "User-Agent": "televente-proxy/1.0" } });
-
-  try {
-    let r;
-    try { r = await tryOnce(); }
-    catch (e1) {
-      await new Promise(r => setTimeout(r, 400));
-      r = await tryOnce();
-    }
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json(r.data);
-  } catch (e) {
-    console.error("[proxy] Apps Script error:", e?.message || e);
-    return res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
-  }
 });
 
 app.get("/stats/counters", async (_req, res) => {
@@ -125,7 +95,6 @@ const ROUTING = {
     "Commercial":  "magvl4gleize@durandservices.fr",
   },
 };
-
 function resolveRecipient(magasin, service, globalDefault) {
   const m = String(magasin || "").trim().toUpperCase();
   const s = String(service || "").trim();
