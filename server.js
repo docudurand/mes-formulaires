@@ -30,6 +30,22 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 app.use((req, res, next) => {
+  const t0 = Date.now();
+  res.on("finish", () => {
+    const ms = Date.now() - t0;
+    console.log(
+      "[HTTP]",
+      req.method,
+      req.originalUrl,
+      res.statusCode,
+      ms + "ms",
+      req.headers["user-agent"] || ""
+    );
+  });
+  next();
+});
+
+app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
   const method = req.method;
 
