@@ -215,17 +215,17 @@ if (siteLbl){
   doc.text(siteLbl, doc.page.margins.left, 30, { width: usableW, align: "right" });
 }
 
-const HEADER_GAP = 18;
-const headerLeft  = logoX + logoW + HEADER_GAP;
-const headerWidth = doc.page.width - doc.page.margins.right - headerLeft;
+const HEADER_GAP = 12;
+const visualLeft  = logoX + Math.round(logoW * 0.5) + HEADER_GAP;
+const visualWidth = doc.page.width - doc.page.margins.right - visualLeft;
 
 doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
-doc.text(titre, headerLeft, titleTop, { width: headerWidth, align: "center", lineGap: 4 });
+doc.text(titre, visualLeft, titleTop, { width: visualWidth, align: "center", lineGap: 4 });
 
-const titleBottom = titleTop + doc.heightOfString(titre, { width: headerWidth, align: "center" });
+const titleBottom = titleTop + doc.heightOfString(titre, { width: visualWidth, align: "center" });
 
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
-  doc.y = Math.max(logoBottom, titleBottom) + 60;
+  doc.y = Math.max(logoBottom, titleBottom) + 72;
 
   section(doc,"Informations client");
   kv(doc,"Nom du client",header.client);
