@@ -83,17 +83,17 @@ function renderPrintHTML(payload = {}) {
   @page{ size:A4; margin:0 }
   html,body{ margin:0; }
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; margin:12mm; position:relative; }
-  .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:10px; }
-  .header + .section{ margin-top:18px; }
+  .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:18px; }
+.header + .section{ margin-top:22px; }
   .logo{ width:130px; height:auto; object-fit:contain }
   .title{
+  justify-self:center;
   text-align:center;
   margin:0;
   font-size:22px;
   font-weight:800;
   color:#0b4a6f;
   letter-spacing:.2px;
-  padding-left:80px;
 }
   .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
@@ -171,17 +171,17 @@ function renderPrintHTML(payload = {}) {
 
 const BLUE = "#0b4a6f", TEXT = "#000000";
 function section(doc, t){
-  doc.moveDown(1.6);
+  doc.moveDown(1.8);
   doc.font("Helvetica-Bold").fontSize(15).fillColor(BLUE).text(t);
-  doc.moveDown(0.6);
+  doc.moveDown(0.8);
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
 }
 function kv(doc, k, v){
-  doc.font("Helvetica-Bold").text(`${k} : `, { continued: true, lineGap: 5 });
-  doc.font("Helvetica").text(v || "-", { lineGap: 5 });
+  doc.font("Helvetica-Bold").text(`${k} : `, { continued: true, lineGap: 7 });
+  doc.font("Helvetica").text(v || "-", { lineGap: 7 });
 }
-function bullet(doc, t){ doc.font("Helvetica-Bold").text(`• ${t}`, { lineGap: 5 }); }
-function subBullet(doc, t){ doc.font("Helvetica").text(`- ${t}`, { indent: 22, lineGap: 5 }); }
+function bullet(doc, t){ doc.font("Helvetica-Bold").text(`• ${t}`, { lineGap: 6 }); }
+function subBullet(doc, t){ doc.font("Helvetica").text(`- ${t}`, { indent: 22, lineGap: 6 }); }
 
 async function drawPdf(res, data){
   const meta = data.meta || {}, header = data.header || {}, culasse = data.culasse;
@@ -205,16 +205,24 @@ async function drawPdf(res, data){
     } catch {}
   }
 
-  const titre = header.service || meta.titre || "Demande d’intervention";
-  const usableW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const titleTop = 62;
+const titre   = header.service || meta.titre || "Demande d’intervention";
+const usableW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+const titleTop = 62;
 
-  const siteLbl = siteLabelForService(header.service);
-  if (siteLbl){
+const siteLbl = siteLabelForService(header.service);
+if (siteLbl){
   doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
   doc.text(siteLbl, doc.page.margins.left, 30, { width: usableW, align: "right" });
 }
 
+const HEADER_GAP = 18;
+const headerLeft  = logoX + logoW + HEADER_GAP;
+const headerWidth = doc.page.width - doc.page.margins.right - headerLeft;
+
+doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
+doc.text(titre, headerLeft, titleTop, { width: headerWidth, align: "center", lineGap: 4 });
+
+const titleBottom = titleTop + doc.heightOfString(titre, { width: headerWidth, align: "center" });
   doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
 const TITLE_SHIFT = 80;
 doc.text(titre, doc.page.margins.left + TITLE_SHIFT, titleTop, {
@@ -225,7 +233,7 @@ doc.text(titre, doc.page.margins.left + TITLE_SHIFT, titleTop, {
   const titleBottom = titleTop + doc.heightOfString(titre, { width: usableW, align:"center" });
 
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
-  doc.y = Math.max(logoBottom, titleBottom) + 42;
+  doc.y = Math.max(logoBottom, titleBottom) + 60;
 
   section(doc,"Informations client");
   kv(doc,"Nom du client",header.client);
