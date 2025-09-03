@@ -84,17 +84,17 @@ function renderPrintHTML(payload = {}) {
   html,body{ margin:0; }
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; margin:12mm; position:relative; }
   .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:10px; }
+  .header + .section{ margin-top:18px; }
   .logo{ width:130px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:22px; font-weight:800; color:#0b4a6f; letter-spacing:.2px }
   .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
-  .section{ margin-top:10px; }
-  .section h3{ margin:14px 0 6px; color:#0b4a6f; font-size:16px }
-  .two{ display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; }
-  .bullet{ margin:3px 0; font-weight:700 }
-  .subbullet{ margin-left:22px; }
-  .muted{ opacity:.7 }
-  .area{ border:1px solid #222; padding:8px; min-height:60px; white-space:pre-wrap; }
+  .section{ margin-top:16px; }
+.section h3{ margin:18px 0 10px; }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; }
+.bullet{ margin:5px 0; }
+.subbullet{ margin-left:22px; margin-top:2px; }
+.area{ border:1px solid #222; padding:10px; min-height:60px; white-space:pre-wrap; }
 </style>
 </head>
 <body>
@@ -162,10 +162,18 @@ function renderPrintHTML(payload = {}) {
 }
 
 const BLUE = "#0b4a6f", TEXT = "#000000";
-function section(doc, t){ doc.moveDown(1.1); doc.font("Helvetica-Bold").fontSize(15).fillColor(BLUE).text(t); doc.moveDown(0.3); doc.fillColor(TEXT).font("Helvetica").fontSize(12); }
-function kv(doc, k, v){ doc.font("Helvetica-Bold").text(`${k} : `,{continued:true,lineGap:3}); doc.font("Helvetica").text(v||"-",{lineGap:3}); }
-function bullet(doc, t){ doc.font("Helvetica-Bold").text(`• ${t}`,{lineGap:3}); }
-function subBullet(doc, t){ doc.font("Helvetica").text(`- ${t}`,{indent:22,lineGap:3}); }
+function section(doc, t){
+  doc.moveDown(1.6);
+  doc.font("Helvetica-Bold").fontSize(15).fillColor(BLUE).text(t);
+  doc.moveDown(0.6);
+  doc.fillColor(TEXT).font("Helvetica").fontSize(12);
+}
+function kv(doc, k, v){
+  doc.font("Helvetica-Bold").text(`${k} : `, { continued: true, lineGap: 5 });
+  doc.font("Helvetica").text(v || "-", { lineGap: 5 });
+}
+function bullet(doc, t){ doc.font("Helvetica-Bold").text(`• ${t}`, { lineGap: 5 }); }
+function subBullet(doc, t){ doc.font("Helvetica").text(`- ${t}`, { indent: 22, lineGap: 5 }); }
 
 async function drawPdf(res, data){
   const meta = data.meta || {}, header = data.header || {}, culasse = data.culasse;
@@ -204,7 +212,7 @@ async function drawPdf(res, data){
   const titleBottom = titleTop + doc.heightOfString(titre, { width: usableW, align:"center" });
 
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
-  doc.y = Math.max(logoBottom, titleBottom) + 22;
+  doc.y = Math.max(logoBottom, titleBottom) + 34;
 
   section(doc,"Informations client");
   kv(doc,"Nom du client",header.client);
