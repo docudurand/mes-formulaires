@@ -97,7 +97,7 @@ function renderPrintHTML(payload = {}) {
   position:absolute;
   left:50%;
   transform:translateX(-50%);
-  top:0;
+  top:12mm;
   margin:0;
   font-size:22px;
   font-weight:800;
