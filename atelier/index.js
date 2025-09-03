@@ -86,7 +86,15 @@ function renderPrintHTML(payload = {}) {
   .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:10px; }
   .header + .section{ margin-top:18px; }
   .logo{ width:130px; height:auto; object-fit:contain }
-  .title{ text-align:center; margin:0; font-size:22px; font-weight:800; color:#0b4a6f; letter-spacing:.2px }
+  .title{
+  text-align:center;
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+  color:#0b4a6f;
+  letter-spacing:.2px;
+  padding-left:80px;
+}
   .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
   .section{ margin-top:16px; }
@@ -113,7 +121,7 @@ function renderPrintHTML(payload = {}) {
       <div><span class="label">Adresse mail : </span>${esc(header.email)}</div>
       <div><span class="label">Marque/Modèle : </span>${esc(header.vehicule)}</div>
       <div><span class="label">Immatriculation : </span>${esc(header.immat)}</div>
-      <div><span class="label">Magasin : </span>${esc(header.magasin)}</div>
+      <div><span class="label">Magasin d'envoi : </span>${esc(header.magasin)}</div>
       <div><span class="label">Date de la demande : </span>${esc(header.dateDemande)}</div>
     </div>
   </div>
@@ -208,11 +216,16 @@ async function drawPdf(res, data){
 }
 
   doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
-  doc.text(titre, doc.page.margins.left, titleTop, { width: usableW, align: "center", lineGap: 4 });
+const TITLE_SHIFT = 80;
+doc.text(titre, doc.page.margins.left + TITLE_SHIFT, titleTop, {
+  width: usableW - TITLE_SHIFT,
+  align: "center",
+  lineGap: 4
+});
   const titleBottom = titleTop + doc.heightOfString(titre, { width: usableW, align:"center" });
 
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
-  doc.y = Math.max(logoBottom, titleBottom) + 34;
+  doc.y = Math.max(logoBottom, titleBottom) + 42;
 
   section(doc,"Informations client");
   kv(doc,"Nom du client",header.client);
