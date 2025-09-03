@@ -83,12 +83,21 @@ function renderPrintHTML(payload = {}) {
   @page{ size:A4; margin:0 }
   html,body{ margin:0; }
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; margin:12mm; position:relative; }
-  .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:18px; }
-.header + .section{ margin-top:22px; }
+  .header{
+  position: relative;
+  display: grid;
+  grid-template-columns:130px 1fr;
+  align-items: center;
+  column-gap:18px;
+  padding-bottom: 6px;
+}
+.header + .section{ margin-top:28px; }
   .logo{ width:130px; height:auto; object-fit:contain }
   .title{
-  justify-self:center;
-  text-align:center;
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:0;
   margin:0;
   font-size:22px;
   font-weight:800;
@@ -97,11 +106,11 @@ function renderPrintHTML(payload = {}) {
 }
   .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
-  .section{ margin-top:16px; }
-.section h3{ margin:18px 0 10px; }
-.two{ display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; }
-.bullet{ margin:5px 0; }
-.subbullet{ margin-left:22px; margin-top:2px; }
+  .section{ margin-top:18px; }
+.section h3{ margin:20px 0 12px; color:#0b4a6f; font-size:16px; }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:12px 30px; }
+.bullet{ margin:6px 0; }
+.subbullet{ margin-left:22px; margin-top:3px; }
 .area{ border:1px solid #222; padding:10px; min-height:60px; white-space:pre-wrap; }
 </style>
 </head>
