@@ -223,14 +223,6 @@ doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
 doc.text(titre, headerLeft, titleTop, { width: headerWidth, align: "center", lineGap: 4 });
 
 const titleBottom = titleTop + doc.heightOfString(titre, { width: headerWidth, align: "center" });
-  doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
-const TITLE_SHIFT = 80;
-doc.text(titre, doc.page.margins.left + TITLE_SHIFT, titleTop, {
-  width: usableW - TITLE_SHIFT,
-  align: "center",
-  lineGap: 4
-});
-  const titleBottom = titleTop + doc.heightOfString(titre, { width: usableW, align:"center" });
 
   doc.fillColor(TEXT).font("Helvetica").fontSize(12);
   doc.y = Math.max(logoBottom, titleBottom) + 60;
