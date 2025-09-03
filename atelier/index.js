@@ -19,7 +19,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// --- Statique / (sous /atelier)
 const publicDir = path.join(__dirname, "public");
 router.use(express.static(publicDir, {
   maxAge: "1h",
@@ -87,7 +86,7 @@ function renderPrintHTML(payload = {}) {
   .header{ display:grid; grid-template-columns:130px 1fr; align-items:center; column-gap:10px; }
   .logo{ width:130px; height:auto; object-fit:contain }
   .title{ text-align:center; margin:0; font-size:22px; font-weight:800; color:#0b4a6f; letter-spacing:.2px }
-  .site-tag{ position:absolute; top:12mm; right:12mm; font-weight:800; color:#0b4a6f; }
+  .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
   .section{ margin-top:10px; }
   .section h3{ margin:14px 0 6px; color:#0b4a6f; font-size:16px }
@@ -196,9 +195,9 @@ async function drawPdf(res, data){
 
   const siteLbl = siteLabelForService(header.service);
   if (siteLbl){
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
-    doc.text(siteLbl, doc.page.margins.left, 40, { width: usableW, align: "right" });
-  }
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
+  doc.text(siteLbl, doc.page.margins.left, 30, { width: usableW, align: "right" });
+}
 
   doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
   doc.text(titre, doc.page.margins.left, titleTop, { width: usableW, align: "center", lineGap: 4 });
