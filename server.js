@@ -18,8 +18,6 @@ import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
 
-dotenv.config();
-
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
