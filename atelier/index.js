@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import * as ftp from "basic-ftp";
 import { Writable } from "stream";
+import { Readable } from "stream";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,7 +116,8 @@ async function downloadToBuffer(client, remotePath) {
   return Buffer.concat(chunks);
 }
 async function uploadBuffer(client, buffer, remotePath) {
-  await client.uploadFrom(Buffer.from(buffer), remotePath);
+  const stream = Readable.from(buffer); // transforme en stream
+  await client.uploadFrom(stream, remotePath);
 }
 
 /* ───────────────────────── Sync JSON dossiers / compteur ───────────────────────── */
