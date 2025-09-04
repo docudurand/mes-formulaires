@@ -294,77 +294,93 @@
   });
   $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
-  document.getElementById('form-atelier').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const data = Object.fromEntries(fd.entries());
-    const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
+<script>
 
-    const ops = [];
-    const service = el('service').value;
-    if (service === 'Rectification Culasse') {
-      const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
-      LIGNES.forEach(l=>{
-        const cb = el('input_'+l.ligne);
-        if (cb && cb.checked) {
-          const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
-          ops.push({
-            ligne: l.ligne,
-            libelle: l.libelle || l.ligne,
-            references: regles.map(r => ({
-              reference: r.reference,
-              libelleRef: r.libelleref || '',
-              prixHT: (r.prixht || r.prixht===0) ? r.prixht : null
-            }))
-          });
-        }
-      });
-    }
+document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
+  e.preventDefault();
 
-    const commentaires = (el('commentaires').value || '').trim();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
 
-    // bloc injecteur si concerné
-    let injecteur = null;
-if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
-  injecteur = {
-    type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
-    nombre: (el('nbInjecteurs').value || '').trim()
-  };
-}
+  const ops = [];
+  const service = el('service').value;
+  if (service === 'Rectification Culasse') {
+    const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+    LIGNES.forEach(l=>{
+      const cb = el('input_'+l.ligne);
+      if (cb && cb.checked) {
+        const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
+        ops.push({
+          ligne: l.ligne,
+          libelle: l.libelle || l.ligne,
+          references: regles.map(r => ({
+            reference: r.reference,
+            libelleRef: r.libelleref || '',
+            prixHT: (r.prixht || r.prixht===0) ? r.prixht : null
+          }))
+        });
+      }
+    });
+  }
 
-    const payload = {
-      meta: {
-        titre: service,
-        logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
-        dateGeneration: new Date().toISOString()
-      },
-      header: {
-        client: data.client || '',
-        compte: data.compte || '',
-        telephone: data.telephone || '',
-        email: data.email || '',
-        vehicule: data.vehicule || '',
-        immat: data.immat || '',
-        dateDemande: data.dateDemande || '',
-        magasin: data.magasin || '',
-        service: service
-      },
-      commentaires,
-      injecteur, // nouveau
-      culasse: (service === 'Rectification Culasse') ? {
-        cylindre: el('cylindre').value || '',
-        soupapes: el('soupapes').value || '',
-        carburant: el('carburant').value || '',
-        operations: ops,
-        piecesAFournir: pieces
-      } : null
+  const commentaires = (el('commentaires').value || '').trim();
+
+  let injecteur = null;
+  if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
+    injecteur = {
+      type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
+      nombre: (el('nbInjecteurs').value || '').trim()
     };
+  }
 
-    openPrintPreview(payload);
-  });
+  const payload = {
+    meta: {
+      titre: service,
+      logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
+      dateGeneration: new Date().toISOString()
+    },
+    header: {
+      client: data.client || '',
+      compte: data.compte || '',
+      telephone: data.telephone || '',
+      email: data.email || '',
+      vehicule: data.vehicule || '',
+      immat: data.immat || '',
+      dateDemande: data.dateDemande || '',
+      magasin: data.magasin || '',
+      service: service
+    },
+    commentaires,
+    injecteur,
+    culasse: (service === 'Rectification Culasse') ? {
+      cylindre: el('cylindre').value || '',
+      soupapes: el('soupapes').value || '',
+      carburant: el('carburant').value || '',
+      operations: ops,
+      piecesAFournir: pieces
+    } : null
+  };
 
-  toggleCulasseFields();
-  loadConfig();
-  </script>
+  let no = "";
+  try{
+    const r = await fetch("/atelier/api/submit", {
+      method:"POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ payload })
+    });
+    const js = await r.json();
+    if(!r.ok || !js.ok){ alert("Erreur d'enregistrement."); return; }
+    no = js.no;
+  }catch(err){
+    console.error(err);
+    alert("Erreur réseau lors de l'enregistrement.");
+    return;
+  }
+
+  const payloadForPrint = { ...payload, no };
+  openPrintPreview(payloadForPrint);
+});
+</script>
 </body>
 </html>

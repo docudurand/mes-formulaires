@@ -10,7 +10,6 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
-/* ───────────────────────── CSP pour intégration Wix ───────────────────────── */
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 router.use((req, res, next) => {
@@ -19,7 +18,9 @@ router.use((req, res, next) => {
   next();
 });
 
-/* ────────────────────────────── Static /public ────────────────────────────── */
+router.use(express.json({ limit: "2mb" }));
+router.use(express.urlencoded({ extended: true, limit: "2mb" }));
+
 const publicDir = path.join(__dirname, "public");
 router.use(express.static(publicDir, {
   extensions: ["html", "htm"],
@@ -35,7 +36,6 @@ router.get("/", (_req, res) => {
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
-/* ──────────────────────── Persistance locale & FTP ────────────────────────── */
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
@@ -55,7 +55,6 @@ function writeJsonSafe(file, obj) {
 
 let CASES = readJsonSafe(CASES_FILE, []);
 
-/* ──────────────────────────── Helpers génériques ──────────────────────────── */
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
 
 function siteLabelForService(service = ""){
@@ -64,9 +63,7 @@ function siteLabelForService(service = ""){
   return "";
 }
 
-// n° de dossier 5 chiffres croissant
 function nextDossierNumber(){
-  // si un compteur existe, on l’utilise ; sinon on prend le max des dossiers existants
   const cn = readJsonSafe(COUNTER_FILE, null);
   let current = 0;
   if (cn && Number.isFinite(cn.value)) {
@@ -79,7 +76,6 @@ function nextDossierNumber(){
   return String(next).padStart(5, "0");
 }
 
-/* ─────────────────────────────── Emailing ─────────────────────────────────── */
 function gmailTransport() {
   const user = process.env.GMAIL_USER;
   const pass = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
@@ -87,7 +83,6 @@ function gmailTransport() {
   return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
 }
 
-// mapping destinataires par service (surchargeable par env)
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
@@ -195,16 +190,20 @@ async function sendClientStatusMail(no, entry) {
   }
 }
 
-/* ───────────────────────────────── FTP ────────────────────────────────────── */
 async function withFtpClient(fn){
   const client = new ftp.Client(20 * 1000);
+
+  const secure = String(process.env.FTP_SECURE || "false") === "true";
+  const insecure = String(process.env.FTP_TLS_INSECURE || "0") === "1";
+
   try{
     await client.access({
       host: process.env.FTP_HOST,
       user: process.env.FTP_USER,
       password: process.env.FTP_PASSWORD,
       port: Number(process.env.FTP_PORT || 21),
-      secure: String(process.env.FTP_SECURE || "false") === "true"
+      secure,
+      secureOptions: insecure ? { rejectUnauthorized: false } : undefined
     });
     return await fn(client);
   } finally { client.close(); }
@@ -236,7 +235,6 @@ async function pullCasesFromFtp(){
   }
 }
 
-/* ─────────────────────────── Impression navigateur ────────────────────────── */
 function renderPrintHTML(payload = {}, no = ""){
   const meta   = payload.meta   || {};
   const header = payload.header || {};
@@ -270,7 +268,6 @@ function renderPrintHTML(payload = {}, no = ""){
     return list.map(p => `<div class="bullet">• ${esc(p)}</div>`).join("");
   })();
 
-  // bloc numéro dossier sous l’étiquette site (en haut à droite)
   const dossierTag = no ? `<div class="dossier-tag">Dossier n° ${esc(no)}</div>` : "";
 
   return `<!doctype html>
@@ -362,14 +359,10 @@ function renderPrintHTML(payload = {}, no = ""){
 </html>`;
 }
 
-/* ──────────────────────────────── Routes API ──────────────────────────────── */
-
-// 1) Impression navigateur (pas de PDF)
 router.post("/api/print-html", (req, res) => {
   try {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
     const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
-    // Si on fournit déjà un n° (ex après submit), on l’affiche
     const no = (data && data.no) ? String(data.no).padStart(5,"0") : "";
     const html = renderPrintHTML(data, no);
     res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
@@ -381,7 +374,6 @@ router.post("/api/print-html", (req, res) => {
   }
 });
 
-// 2) Soumission depuis le formulaire: crée le dossier, push FTP, mail service (sans PDF)
 router.post("/api/submit", async (req, res) => {
   try {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
@@ -399,7 +391,6 @@ router.post("/api/submit", async (req, res) => {
     writeJsonSafe(CASES_FILE, CASES);
     pushCasesToFtp().catch(()=>{});
 
-    // mail au service (tableau structuré)
     await sendServiceMail(no, data);
 
     res.json({ ok: true, no });
@@ -409,7 +400,6 @@ router.post("/api/submit", async (req, res) => {
   }
 });
 
-// 3) Liste des dossiers pour le suivi
 router.get("/api/cases", async (_req, res) => {
   try {
     await pullCasesFromFtp().catch(()=>{});
@@ -420,7 +410,6 @@ router.get("/api/cases", async (_req, res) => {
   }
 });
 
-// 4) Mise à jour du statut + mail client si "Renvoyé"
 router.post("/api/cases/:no/status", async (req, res) => {
   try {
     const { no } = req.params;
@@ -436,7 +425,6 @@ router.post("/api/cases/:no/status", async (req, res) => {
     writeJsonSafe(CASES_FILE, CASES);
     pushCasesToFtp().catch(()=>{});
 
-    // mail simple au client si renvoyé
     const st = String(status).toLowerCase();
     if (st === "renvoyé" || st === "renvoye") {
       await sendClientStatusMail(no, CASES[idx]);
@@ -449,7 +437,6 @@ router.post("/api/cases/:no/status", async (req, res) => {
   }
 });
 
-/* ───────────────────────────────── Healthz ────────────────────────────────── */
 router.get("/healthz", (_req, res) => res.type("text").send("ok"));
 
 export default router;
