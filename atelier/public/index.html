@@ -139,7 +139,6 @@
         </div>
 
         <p class="help">Coche les opérations à réaliser. Les références s’affichent quand Cylindre, Soupapes et Carburant sont renseignés.</p>
-
         <div id="culasse-lignes"></div>
 
         <div class="section-title">Pièces à Fournir</div>
@@ -173,6 +172,7 @@
     </form>
   </div>
 
+  <!-- Aperçu impression (HTML) -->
   <div class="pdfMask" id="pdfMask" aria-hidden="true">
     <div class="pdfBox" role="dialog" aria-label="Aperçu">
       <div class="pdfBar">
@@ -185,7 +185,9 @@
       <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
     </div>
   </div>
-  <form id="printForm" method="POST" target="pdfFrame"><input type="hidden" name="payload" /></form>
+  <form id="printForm" method="POST" action="/atelier/api/print-html" target="pdfFrame">
+    <input type="hidden" name="payload" />
+  </form>
 
   <script>
   const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
@@ -283,6 +285,8 @@
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
     e.preventDefault();
+
+    // 1) Construire le payload
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
@@ -347,6 +351,7 @@
     };
 
     try{
+      // 2) Créer le dossier côté serveur (pas d’alerte)
       const resp = await fetch("/atelier/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -355,11 +360,15 @@
       const r = await resp.json();
       if (!r.ok) { alert("Erreur d'envoi"); return; }
 
-      document.getElementById('pdfFrame').src = r.viewerUrl;
+      // 3) Ouvrir l’aperçu (HTML imprimable)
+      document.querySelector('#printForm input[name="payload"]').value = JSON.stringify(payload);
+      document.getElementById('printForm').submit();
+
+      // 4) Afficher le masque d’aperçu
       document.getElementById('pdfMask').style.display = 'flex';
       document.getElementById('pdfMask').setAttribute('aria-hidden','false');
 
-      alert(`Dossier créé : n° ${r.no}`);
+      // 5) Reset du formulaire
       e.target.reset();
       toggleCulasseFields();
     }catch(err){

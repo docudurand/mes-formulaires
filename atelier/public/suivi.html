@@ -27,12 +27,6 @@
   .actions{display:flex; gap:8px; align-items:center}
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
   .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
-
-  .mask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
-  .box{width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line)}
-  .bar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
-  .bar .a{display:flex; gap:8px}
-  iframe{flex:1; width:100%; border:0}
 </style>
 </head>
 <body>
@@ -58,27 +52,10 @@
     </table>
   </div>
 
-  <div class="mask" id="mask" aria-hidden="true">
-    <div class="box" role="dialog" aria-label="Aperçu PDF">
-      <div class="bar">
-        <div style="font-weight:700">Aperçu d’impression</div>
-        <div class="a">
-          <button id="btnPrint">Imprimer</button>
-          <button id="btnClose">Fermer</button>
-        </div>
-      </div>
-      <iframe id="frame" title="PDF"></iframe>
-    </div>
-  </div>
-
 <script>
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
 const $q = document.getElementById("q");
-const $mask = document.getElementById("mask");
-const $frame = document.getElementById("frame");
-const $btnClose = document.getElementById("btnClose");
-const $btnPrint = document.getElementById("btnPrint");
 
 let rows = [];
 
@@ -118,7 +95,6 @@ function draw(){
             <option ${r.status==="Renvoyé"?"selected":""}>Renvoyé</option>
           </select>
           <button class="btnSave">Valider</button>
-          <button class="btnPrint">Réimprimer</button>
         </td>
       `;
 
@@ -132,27 +108,10 @@ function draw(){
         r.status = status;
         draw();
       });
-      tr.querySelector(".btnPrint").addEventListener("click", ()=>{
-        openPdf(r.ftpPath); // stream FTP via serveur
-      });
+
       $tbody.appendChild(tr);
     });
 }
-
-function openPdf(ftpPath){
-  const url = `/atelier/viewer-remote?path=${encodeURIComponent(ftpPath)}`;
-  $frame.src = url;
-  $mask.style.display = "flex";
-  $mask.setAttribute("aria-hidden","false");
-}
-$btnClose.addEventListener("click", ()=>{
-  $mask.style.display="none";
-  $mask.setAttribute("aria-hidden","true");
-  $frame.src="about:blank";
-});
-$btnPrint.addEventListener("click", ()=>{
-  try { $frame.contentWindow?.focus(); $frame.contentWindow?.print(); } catch {}
-});
 
 async function load(){
   const r = await fetch("/atelier/api/cases");
