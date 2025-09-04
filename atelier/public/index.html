@@ -282,7 +282,7 @@
   $pdfReprint?.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
-    e.preventDefault();
+  e.preventDefault();
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
@@ -347,25 +347,30 @@
     };
 
     try{
-      const resp = await fetch("/atelier/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload })
-      });
-      const r = await resp.json();
-      if (!r.ok) { alert("Erreur d'envoi"); return; }
-
-      document.getElementById('pdfFrame').src = r.viewerUrl;
-      document.getElementById('pdfMask').style.display = 'flex';
-      document.getElementById('pdfMask').setAttribute('aria-hidden','false');
-
-      e.target.reset();
-      toggleCulasseFields();
-    }catch(err){
-      console.error(err);
-      alert("Erreur réseau / serveur");
+    const resp = await fetch("/atelier/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload })
+    });
+    const r = await resp.json();
+    if (!r.ok || !r.viewerUrl) {
+      alert("Erreur d'envoi"); 
+      return;
     }
-  });
+
+    const mask  = document.getElementById('pdfMask');
+    const frame = document.getElementById('pdfFrame');
+    frame.src = r.viewerUrl;
+    mask.style.display = 'flex';
+    mask.setAttribute('aria-hidden','false');
+
+    e.target.reset();
+
+  }catch(err){
+    console.error(err);
+    alert("Erreur réseau / serveur");
+  }
+});
 
   toggleCulasseFields();
   loadConfig();
