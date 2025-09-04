@@ -194,7 +194,8 @@ function siteLabelForService(service = "") {
   return "";
 }
 
-async function drawPdfToBuffer(data) {
+// IMPORTANT : on passe caseNo pour pouvoir l’imprimer sous le site en haut à droite
+async function drawPdfToBuffer(data, { caseNo } = {}) {
   const meta = data.meta || {}, header = data.header || {}, culasse = data.culasse;
   const commentaires = (data.commentaires || "").trim();
   const injecteur = data.injecteur || null;
@@ -221,9 +222,23 @@ async function drawPdfToBuffer(data) {
       const usableW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const titleTop = 77;
 
+      // Tag site en haut à droite + numéro de dossier en-dessous
       const siteLbl = siteLabelForService(header.service);
-      if (siteLbl){ doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE); doc.text(siteLbl, doc.page.margins.left, 30, { width: usableW, align: "right" }); }
+      const rightX = doc.page.margins.left;
+      if (siteLbl){
+        doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
+        doc.text(siteLbl, rightX, 30, { width: usableW, align: "right" });
+        if (caseNo) {
+          doc.font("Helvetica").fontSize(11).fillColor(TEXT);
+          doc.text(`Dossier : ${caseNo}`, rightX, 46, { width: usableW, align: "right" });
+        }
+      } else if (caseNo) {
+        // S'il n'y a pas de tag site, on montre au moins le n°
+        doc.font("Helvetica").fontSize(11).fillColor(TEXT);
+        doc.text(`Dossier : ${caseNo}`, rightX, 30, { width: usableW, align: "right" });
+      }
 
+      // Titre centré (décalé si collision logo)
       doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
       const titleTextWidth = doc.widthOfString(titre);
       const pageCenterX = doc.page.width / 2;
@@ -287,6 +302,7 @@ async function drawPdfToBuffer(data) {
 }
 
 function renderPrintHTML(payload = {}) {
+  // (conserve le rendu HTML pour compat si besoin – pas utilisé pour email)
   const meta = payload.meta || {};
   const header = payload.header || {};
   const culasse = payload.culasse || null;
@@ -359,6 +375,7 @@ function renderPrintHTML(payload = {}) {
     <img class="logo" src="${LOGO_URL}" alt="Logo Durand">
     <h1 class="title">${titre}</h1>
   </div>
+  <!-- (Le n° de dossier figure sur le PDF ; la page HTML peut rester simple) -->
 
   <div class="section">
     <h3>Informations client</h3>
@@ -424,7 +441,7 @@ function makeTransport() {
 
 /* ───────────────────────── Routes API ───────────────────────── */
 
-// Soumission du formulaire : enregistre le dossier dans le JSON FTP (pas de PDF FTP)
+// Soumission du formulaire
 router.post("/api/submit", express.json(), async (req, res) => {
   try {
     const raw = req.body && "payload" in req.body ? req.body.payload : req.body;
@@ -442,11 +459,20 @@ router.post("/api/submit", express.json(), async (req, res) => {
     const email   = header.email   || "";
     const dateISO = new Date().toISOString();
 
-    // PDF pour email interne uniquement (en mémoire)
-    let pdfBuffer = null;
-    try { pdfBuffer = await drawPdfToBuffer(data); } catch {}
+    // Snapshot (source unique pour impression et email)
+    const snapshot = {
+      meta: data.meta || {},
+      header,
+      commentaires: data.commentaires || "",
+      injecteur: data.injecteur || null,
+      culasse: data.culasse || null
+    };
 
-    // Email interne
+    // Génère le PDF depuis le même snapshot ET avec le numéro
+    let pdfBuffer = null;
+    try { pdfBuffer = await drawPdfToBuffer(snapshot, { caseNo: no }); } catch {}
+
+    // Email interne avec ce PDF
     try {
       const to = resolveRecipients(service);
       const t = makeTransport();
@@ -468,15 +494,7 @@ router.post("/api/submit", express.json(), async (req, res) => {
       console.warn("[ATELIER][MAIL] échec:", e?.message || e);
     }
 
-    // On stocke un "snapshot" minimal pour la réimpression en ligne (pas de FTP PDF)
-    const snapshot = {
-      meta: data.meta || {},
-      header,
-      commentaires: data.commentaires || "",
-      injecteur: data.injecteur || null,
-      culasse: data.culasse || null
-    };
-
+    // Enregistre l’entrée (sans PDF FTP)
     const entry = {
       no,
       date: dateISO,
@@ -486,15 +504,14 @@ router.post("/api/submit", express.json(), async (req, res) => {
       client,
       email,
       status: "Pièce envoyée",
-      snapshot // utilisé par /print-inline/:no
+      snapshot
     };
-
     CASES.unshift(entry);
     writeJsonSafe(CASES_FILE, CASES);
     await pushCasesToFtp();
 
-    // URL d’aperçu impression SANS FTP (HTML inline)
-    const viewerUrl = `/atelier/print-inline/${encodeURIComponent(no)}`;
+    // URL d’aperçu PDF (identique au PDF envoyé)
+    const viewerUrl = `/atelier/view-pdf-inline/${encodeURIComponent(no)}`;
     res.json({ ok: true, no, viewerUrl });
   } catch (e) {
     console.error("[ATELIER] submit error:", e);
@@ -508,7 +525,7 @@ router.get("/api/cases", async (_req, res) => {
   res.json({ ok: true, data: CASES });
 });
 
-// Mise à jour du statut + mail "Renvoyé"
+// Mise à jour du statut + mail "Renvoyé" (lien vers le même PDF)
 router.post("/api/cases/:no/status", express.json(), async (req, res) => {
   try {
     const { no } = req.params;
@@ -529,7 +546,7 @@ router.post("/api/cases/:no/status", express.json(), async (req, res) => {
         const t = makeTransport();
         const base =
           (process.env.PUBLIC_BASE || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/,"");
-        const link = `${base}/atelier/print-inline/${encodeURIComponent(it.no)}`;
+        const link = `${base}/atelier/view-pdf-inline/${encodeURIComponent(it.no)}`;
 
         const subject = `Votre pièce a été renvoyée – Dossier ${it.no}`;
         const html = `
@@ -557,37 +574,42 @@ router.post("/api/cases/:no/status", express.json(), async (req, res) => {
   }
 });
 
-/* ───────────────────────── Rendus impression (sans FTP) ───────────────────────── */
+/* ───────────────────────── Rendus impression PDF (identiques à l’email) ───────────────────────── */
 
-// Impression directe depuis un snapshot stocké
-router.get("/print-inline/:no", async (req, res) => {
+// 1) Flux PDF brut, généré depuis le snapshot + numéro
+router.get("/pdf/:no", async (req, res) => {
   try {
     await pullCasesFromFtp();
     const it = CASES.find((x) => x.no === req.params.no);
     if (!it || !it.snapshot) return res.status(404).type("text").send("Dossier introuvable.");
-    const html = renderPrintHTML(it.snapshot);
-    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(html);
+    const pdf = await drawPdfToBuffer(it.snapshot, { caseNo: it.no });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="ATELIER-${it.no}.pdf"`);
+    return res.end(pdf);
   } catch (e) {
-    console.error("[ATELIER] print-inline error:", e);
+    console.error("[ATELIER] pdf error:", e);
     return res.status(500).type("text").send("Erreur serveur");
   }
 });
 
-// Rendu impression legacy (POST avec payload)
-router.post("/api/print-html", express.json(), (req, res) => {
-  try {
-    const raw = req.body && "payload" in req.body ? req.body.payload : req.body;
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-    const html = renderPrintHTML(data);
-    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(html);
-  } catch (e) {
-    console.error("[ATELIER] print-html error:", e);
-    return res.status(400).type("text").send("Bad payload");
-  }
+// 2) Wrapper HTML qui embarque le PDF et déclenche l’impression auto
+router.get("/view-pdf-inline/:no", (req, res) => {
+  const no = String(req.params.no || "").trim();
+  if (!no) return res.status(400).type("text").send("Numéro manquant");
+  res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+  res.type("html").send(`<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Aperçu PDF</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%} #pdf{border:0;width:100%;height:100%}</style>
+</head><body>
+<iframe id="pdf" src="/atelier/pdf/${encodeURIComponent(no)}"></iframe>
+<script>
+  const f=document.getElementById('pdf');
+  f.addEventListener('load',()=>{
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){}
+  });
+</script>
+</body></html>`);
 });
 
 /* ───────────────────────── Health ───────────────────────── */
