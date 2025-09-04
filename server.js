@@ -17,7 +17,6 @@ import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
-import suiviDossier from "./suivi-dossier/index.js";
 
 dotenv.config();
 
