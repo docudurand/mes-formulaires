@@ -97,7 +97,6 @@
         </div>
       </div>
 
-      <!-- Bloc détails Rectification Culasse -->
       <div id="section-culasse" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Rectification Culasse</div>
 
@@ -143,7 +142,6 @@
         </div>
       </div>
 
-      <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
@@ -167,8 +165,7 @@
     </form>
   </div>
 
-  <script>
-  // URL de config Google Sheets
+<script>
   const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
 
   let LIGNES = [], REGLES = [];
@@ -234,8 +231,6 @@
 
   function toggleCulasseFields(){
     const service = el('service').value;
-
-    // Culasse
     const isC = service === 'Rectification Culasse';
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
@@ -244,7 +239,6 @@
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
-    // Injecteur
     const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
     const blocI = el('section-injecteur');
     blocI.classList.toggle('hidden', !isInj);
@@ -255,23 +249,34 @@
   el('service').addEventListener('change', toggleCulasseFields);
   ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
-  // Soumission : ouverture popup immédiate, puis navigation vers l'aperçu renvoyé par le serveur
+  const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'),
+        $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
+
+  function showOverlayWith(url){
+    $pdfFrame.src = 'about:blank';
+    $pdfMask.style.display = 'flex';
+    $pdfMask.setAttribute('aria-hidden','false');
+    // charge le viewer qui déclenchera window.print() côté serveur
+    $pdfFrame.src = url;
+  }
+  $pdfClose.addEventListener('click', ()=>{
+    $pdfMask.style.display='none';
+    $pdfMask.setAttribute('aria-hidden','true');
+    $pdfFrame.src='about:blank';
+  });
+  $pdfReprint.addEventListener('click', ()=>{
+    try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{}
+  });
+
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
     e.preventDefault();
 
-    // 1) Ouvrir la fenêtre *avant* tout await pour éviter le blocage Chrome
-    const printWin = window.open("", "ATELIER_PRINT");
-    if (!printWin) {
-      alert("Le navigateur a bloqué la fenêtre d'impression. Autorisez les popups pour ce site.");
-      return;
-    }
-
-    // 2) Construire le payload
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
 
     const service = el('service').value;
+
     const ops = [];
     if (service === 'Rectification Culasse') {
       const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
@@ -329,36 +334,47 @@
       } : null
     };
 
-    // 3) Appeler le serveur pour créer dossier + mail + enregistrement FTP
-    try{
-      const resp = await fetch("/atelier/api/submit", {
+    let resp;
+    try {
+      resp = await fetch("/atelier/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payload })
       });
-      const r = await resp.json();
+    } catch(e) {
+      alert("Erreur réseau pendant l’envoi.");
+      return;
+    }
+    if (!resp.ok) {
+      alert("Erreur d’envoi.");
+      return;
+    }
+    const out = await resp.json();
+    if (!out.ok) {
+      alert("Erreur d’envoi.");
+      return;
+    }
 
-      if (!r || !r.ok || !r.viewerUrl) {
-        try { printWin.close(); } catch {}
-        alert("Erreur d'envoi.");
-        return;
+    if (out.viewerUrl) {
+      showOverlayWith(out.viewerUrl);
+    } else {
+      try {
+        const r = await fetch("/atelier/api/print-html", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload })
+        });
+        const html = await r.text();
+        const blob = new Blob([html], { type: "text/html" });
+        showOverlayWith(URL.createObjectURL(blob));
+      } catch {
+        alert("Envoi ok, mais aperçu impression indisponible.");
       }
-
-      // 4) Afficher l’aperçu dans la fenêtre et lancer l’impression (la page côté serveur fait window.print())
-      printWin.location = r.viewerUrl;
-
-      // 5) Reset du formulaire après l’envoi
-      e.target.reset();
-      toggleCulasseFields();
-    }catch(err){
-      console.error(err);
-      try { printWin.close(); } catch {}
-      alert("Erreur réseau / serveur.");
     }
   });
 
   toggleCulasseFields();
   loadConfig();
-  </script>
+</script>
 </body>
 </html>
