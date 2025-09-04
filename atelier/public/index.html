@@ -296,6 +296,9 @@
 
 document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
   e.preventDefault();
+  const $status = document.getElementById("statusMsg");
+  $status.style.color = "#004080";
+  $status.textContent = "Demande en cours…";
 
   const fd = new FormData(e.target);
   const data = Object.fromEntries(fd.entries());
@@ -368,11 +371,18 @@ document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
       body: JSON.stringify({ payload })
     });
     const js = await r.json();
-    if(!r.ok || !js.ok){ alert("Erreur d'enregistrement."); return; }
+    if(!r.ok || !js.ok){ 
+      $status.style.color = "#b91c1c";
+      $status.textContent = "Erreur d'enregistrement ❌";
+      return;
+    }
     no = js.no;
+    $status.style.color = "#16a34a";
+    $status.textContent = "Demande envoyée avec succès ✅";
   }catch(err){
     console.error(err);
-    alert("Erreur réseau lors de l'enregistrement.");
+    $status.style.color = "#b91c1c";
+    $status.textContent = "Erreur réseau lors de l'enregistrement ❌";
     return;
   }
 
