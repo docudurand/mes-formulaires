@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Suivi des dossiers Atelier</title>
+<style>
+  :root{
+    --primary:#004080; --line:#e5e7eb; --ink:#0f172a;
+    --sent:#2563eb10; --recv:#16a34a10; --prog:#f59e0b10; --back:#9333ea10;
+    --sent-b:#2563eb; --recv-b:#16a34a; --prog-b:#d97706; --back-b:#7e22ce;
+  }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
+  .wrap{max-width:1100px;margin:24px auto;padding:16px}
+  h1{margin:0 0 12px; color:var(--primary); font-size:1.4rem}
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px}
+  select,input{padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem}
+  table{width:100%; border-collapse:separate; border-spacing:0 8px}
+  th,td{padding:10px 12px; text-align:left}
+  th{font-size:.95rem; color:#334155}
+  tr{background:#f9fafb; border:1px solid var(--line)}
+  .badge{display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700; font-size:.9rem}
+  .s-sent{background:var(--sent); color:var(--sent-b)}
+  .s-recv{background:var(--recv); color:var(--recv-b)}
+  .s-prog{background:var(--prog); color:var(--prog-b)}
+  .s-back{background:var(--back); color:var(--back-b)}
+  .actions{display:flex; gap:8px; align-items:center}
+  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
+  .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
+
+  .mask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
+  .box{width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line)}
+  .bar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
+  .bar .a{display:flex; gap:8px}
+  iframe{flex:1; width:100%; border:0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Suivi des dossiers Atelier</h1>
+    <div class="toolbar">
+      <label>Filtrer magasin :
+        <select id="filterMag">
+          <option value="">Tous</option>
+          <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
+        </select>
+      </label>
+      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service, date…)" style="min-width:280px" />
+    </div>
+
+    <table id="tab">
+      <thead>
+        <tr>
+          <th>N°</th><th>Magasin</th><th>N° de compte</th><th>Client</th><th>Service</th><th>Date</th><th>Statut</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="mask" id="mask" aria-hidden="true">
+    <div class="box" role="dialog" aria-label="Aperçu PDF">
+      <div class="bar">
+        <div style="font-weight:700">Aperçu d’impression</div>
+        <div class="a">
+          <button id="btnPrint">Imprimer</button>
+          <button id="btnClose">Fermer</button>
+        </div>
+      </div>
+      <iframe id="frame" title="PDF"></iframe>
+    </div>
+  </div>
+
+<script>
+const $tbody = document.querySelector("#tab tbody");
+const $filter = document.getElementById("filterMag");
+const $q = document.getElementById("q");
+const $mask = document.getElementById("mask");
+const $frame = document.getElementById("frame");
+const $btnClose = document.getElementById("btnClose");
+const $btnPrint = document.getElementById("btnPrint");
+
+let rows = [];
+
+function badge(status){
+  const m = {
+    "Pièce envoyée":"s-sent",
+    "Réceptionné":"s-recv",
+    "En cours de traitement":"s-prog",
+    "Renvoyé":"s-back"
+  }[status] || "s-sent";
+  return `<span class="badge ${m}">${status}</span>`;
+}
+
+function draw(){
+  const mag = $filter.value.trim().toLowerCase();
+  const q = $q.value.trim().toLowerCase();
+
+  $tbody.innerHTML = "";
+  rows
+    .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
+    .filter(r => !q || JSON.stringify(r).toLowerCase().includes(q))
+    .forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.no}</td>
+        <td>${r.magasin||""}</td>
+        <td>${r.compte||""}</td>
+        <td>${r.client||""}</td>
+        <td>${r.service||""}</td>
+        <td>${new Date(r.date).toLocaleString()}</td>
+        <td>${badge(r.status)}</td>
+        <td class="actions">
+          <select class="statusSel">
+            <option ${r.status==="Pièce envoyée"?"selected":""}>Pièce envoyée</option>
+            <option ${r.status==="Réceptionné"?"selected":""}>Réceptionné</option>
+            <option ${r.status==="En cours de traitement"?"selected":""}>En cours de traitement</option>
+            <option ${r.status==="Renvoyé"?"selected":""}>Renvoyé</option>
+          </select>
+          <button class="btnSave">Valider</button>
+          <button class="btnPrint">Réimprimer</button>
+        </td>
+      `;
+
+      tr.querySelector(".btnSave").addEventListener("click", async ()=>{
+        const status = tr.querySelector(".statusSel").value;
+        await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ status })
+        });
+        r.status = status;
+        draw();
+      });
+      tr.querySelector(".btnPrint").addEventListener("click", ()=>{
+        openPdf(r.ftpPath); // stream FTP via serveur
+      });
+      $tbody.appendChild(tr);
+    });
+}
+
+function openPdf(ftpPath){
+  const url = `/atelier/viewer-remote?path=${encodeURIComponent(ftpPath)}`;
+  $frame.src = url;
+  $mask.style.display = "flex";
+  $mask.setAttribute("aria-hidden","false");
+}
+$btnClose.addEventListener("click", ()=>{
+  $mask.style.display="none";
+  $mask.setAttribute("aria-hidden","true");
+  $frame.src="about:blank";
+});
+$btnPrint.addEventListener("click", ()=>{
+  try { $frame.contentWindow?.focus(); $frame.contentWindow?.print(); } catch {}
+});
+
+async function load(){
+  const r = await fetch("/atelier/api/cases");
+  const json = await r.json();
+  rows = (json && json.data) || [];
+  draw();
+}
+
+$filter.addEventListener("change", draw);
+$q.addEventListener("input", draw);
+load();
+</script>
+</body>
+</html>
