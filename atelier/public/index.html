@@ -98,8 +98,8 @@
           <select id="service" name="service" required>
             <option value="" selected disabled>-- Choisissez un service --</option>
             <option value="Rectification Culasse">Rectification Culasse</option>
-            <option value="Contrôle injecteur Diesel">Contrôle injecteur Diesel</option>
-            <option value="Contrôle injecteur Essence">Contrôle injecteur Essence</option>
+            <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
+  <option value="Contrôle injection Essence">Contrôle injection Essence</option>
           </select>
         </div>
       </div>
@@ -152,7 +152,7 @@
 
       <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
-        <div class="section-title">Détails Contrôle injecteur</div>
+        <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
           <div>
             <label for="nbInjecteurs">Nombre d’injecteurs</label>
@@ -266,12 +266,12 @@
     else refreshReferences();
 
     // Injecteur
-    const isInj = (service === 'Contrôle injecteur Diesel' || service === 'Contrôle injecteur Essence');
-    const blocI = el('section-injecteur');
-    blocI.classList.toggle('hidden', !isInj);
-    blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-    el('nbInjecteurs').required = isInj;
-  }
+    const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
+  const blocI = el('section-injecteur');
+  blocI.classList.toggle('hidden', !isInj);
+  blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
+  el('nbInjecteurs').required = isInj;
+}
 
   el('service').addEventListener('change', toggleCulasseFields);
   ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
@@ -325,12 +325,12 @@
 
     // bloc injecteur si concerné
     let injecteur = null;
-    if (service === 'Contrôle injecteur Diesel' || service === 'Contrôle injecteur Essence') {
-      injecteur = {
-        type: service === 'Contrôle injecteur Diesel' ? 'Diesel' : 'Essence',
-        nombre: (el('nbInjecteurs').value || '').trim()
-      };
-    }
+if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
+  injecteur = {
+    type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
+    nombre: (el('nbInjecteurs').value || '').trim()
+  };
+}
 
     const payload = {
       meta: {

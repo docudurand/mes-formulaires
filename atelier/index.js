@@ -35,8 +35,8 @@ router.get("/", (_req, res) => {
 
 function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function siteLabelForService(service = ""){
-  if (service === "Contrôle injecteur Essence") return "RENAGE";
-  if (service === "Rectification Culasse" || service === "Contrôle injecteur Diesel") return "ST EGREVE";
+  if (service === "Contrôle injection Essence") return "RENAGE";
+  if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
   return "";
 }
 
@@ -156,15 +156,15 @@ function renderPrintHTML(payload = {}) {
   </div>
   ` : ""}
 
-  ${(header.service === "Contrôle injecteur Diesel" || header.service === "Contrôle injecteur Essence") && injecteur ? `
+  ${(header.service === "Contrôle injection Diesel" || header.service === "Contrôle injection Essence") && injecteur ? `
   <div class="section">
-    <h3>Détails Contrôle injecteur</h3>
+    <h3>Détails Contrôle injection</h3>
     <div class="two">
       <div><span class="label">Type : </span>${esc(injecteur.type||'')}</div>
       <div><span class="label">Nombre d’injecteurs : </span>${esc(injecteur.nombre||'')}</div>
     </div>
   </div>
-  ` : ""}
+` : ""}
 
   ${commentaires ? `
   <div class="section">
@@ -281,11 +281,11 @@ doc.y = Math.max(logoBottom, titleBottom) + 72;
       doc.text("Aucune pièce sélectionnée.");
   }
 
-  if (header.service === "Contrôle injecteur Diesel" || header.service === "Contrôle injecteur Essence"){
-    section(doc,"Détails Contrôle injecteur");
-    kv(doc,"Type", (injecteur && injecteur.type) || "");
-    kv(doc,"Nombre d’injecteurs", (injecteur && injecteur.nombre) || "");
-  }
+  if (header.service === "Contrôle injection Diesel" || header.service === "Contrôle injection Essence"){
+  section(doc,"Détails Contrôle injection");
+  kv(doc,"Type", (injecteur && injecteur.type) || "");
+  kv(doc,"Nombre d’injecteurs", (injecteur && injecteur.nombre) || "");
+}
 
   if (commentaires) {
     section(doc, "Commentaires");
