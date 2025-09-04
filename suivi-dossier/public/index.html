@@ -86,7 +86,7 @@ function draw(){
         <td>${r.compte||""}</td>
         <td>${r.client||""}</td>
         <td>${r.service||""}</td>
-        <td>${new Date(r.date).toLocaleString()}</td>
+        <td>${new Date(r.date).toLocaleDateString('fr-FR')}</td>
         <td>${badge(r.status)}</td>
         <td class="actions">
           <select class="statusSel">

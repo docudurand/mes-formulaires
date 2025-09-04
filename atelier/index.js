@@ -380,11 +380,18 @@ router.post("/api/submit", async (req, res) => {
     const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
 
     const no = nextDossierNumber();
+    const h  = (data && data.header) || {};
+
     const entry = {
       no,
       date: new Date().toISOString(),
       status: "Demande envoyé",
-      snapshot: data
+      snapshot: data,
+
+      magasin: h.magasin || "",
+      compte:  h.compte  || "",
+      client:  h.client  || "",
+      service: h.service || ""
     };
 
     CASES.push(entry);
