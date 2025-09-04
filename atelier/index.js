@@ -70,17 +70,26 @@ const GMAIL_PASS = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
 async function withFtp(fn) {
   const client = new ftp.Client();
   client.ftp.verbose = false;
+   const SECURE_MODE = String(process.env.FTP_SECURE || "explicit").toLowerCase();
+  const secure =
+    SECURE_MODE === "implicit" ? "implicit" :
+    (SECURE_MODE === "false" || SECURE_MODE === "0") ? false : true;
+
+  const secureOptions = {
+    rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
+  };
   try {
     await client.access({
-      host: FTP_HOST,
-      port: FTP_PORT,
-      user: FTP_USER,
-      password: FTP_PASS,
-      secure: false,
+      host: process.env.FTP_HOST,
+      port: Number(process.env.FTP_PORT || (secure === "implicit" ? 990 : 21)),
+      user: process.env.FTP_USER,
+      password: process.env.FTP_PASS,
+      secure,
+      secureOptions,
     });
     return await fn(client);
   } finally {
-    try { await new Promise((r) => setTimeout(r, 10)); } catch {}
+    try { await new Promise(r => setTimeout(r, 10)); } catch {}
     try { client.close(); } catch {}
   }
 }
