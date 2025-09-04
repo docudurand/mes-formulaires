@@ -61,7 +61,7 @@ let CASES = readJsonSafe(CASES_FILE, []);
 const FTP_HOST = process.env.FTP_HOST;
 const FTP_PORT = Number(process.env.FTP_PORT || 21);
 const FTP_USER = process.env.FTP_USER;
-const FTP_PASS = process.env.FTP_PASS;
+const FTP_PASS = process.env.FTP_PASS || process.env.FTP_PASSWORD;
 const FTP_BACKUP_FOLDER = process.env.FTP_BACKUP_FOLDER || "/Disque 1/service";
 
 const GMAIL_USER = process.env.GMAIL_USER;
@@ -70,7 +70,13 @@ const GMAIL_PASS = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
 async function withFtp(fn) {
   const client = new ftp.Client();
   client.ftp.verbose = false;
-   const SECURE_MODE = String(process.env.FTP_SECURE || "explicit").toLowerCase();
+
+  const host = process.env.FTP_HOST;
+  const port = Number(process.env.FTP_PORT || 21);
+  const user = process.env.FTP_USER;
+  const pass = process.env.FTP_PASS || process.env.FTP_PASSWORD || "";
+
+  const SECURE_MODE = String(process.env.FTP_SECURE || "explicit").toLowerCase();
   const secure =
     SECURE_MODE === "implicit" ? "implicit" :
     (SECURE_MODE === "false" || SECURE_MODE === "0") ? false : true;
@@ -78,12 +84,13 @@ async function withFtp(fn) {
   const secureOptions = {
     rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
   };
+
   try {
     await client.access({
-      host: process.env.FTP_HOST,
-      port: Number(process.env.FTP_PORT || (secure === "implicit" ? 990 : 21)),
-      user: process.env.FTP_USER,
-      password: process.env.FTP_PASS,
+      host,
+      port: Number(port || (secure === "implicit" ? 990 : 21)),
+      user,
+      password: pass,
       secure,
       secureOptions,
     });
