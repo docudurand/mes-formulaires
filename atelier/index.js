@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
 import * as ftp from "basic-ftp";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,7 +105,8 @@ async function ensureDirsForYear(client, base, year) {
   await client.ensureDir(`${base}/${year}`);
 }
 async function uploadBuffer(client, buffer, remotePath) {
-  await client.uploadFrom(Buffer.from(buffer), remotePath);
+  const src = Readable.from(buffer);
+  await client.uploadFrom(src, remotePath);
 }
 async function downloadToBuffer(client, remotePath) {
   const chunks = [];
