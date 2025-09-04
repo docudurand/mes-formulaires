@@ -28,18 +28,16 @@
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
   .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
 
-  /* Modal */
-  /* Ouvrir en HAUT de la page (au lieu du centre) */
   .mask{
     position:fixed; inset:0; background:#0008; display:none;
-    align-items:flex-start;              /* top instead of center */
+    align-items:flex-start;
     justify-content:center;
     z-index:10000; padding:20px;
   }
   .box{
     width:min(900px,96vw); max-height:min(90vh,800px);
     background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line);
-    margin-top:12px;                     /* petit décalage du haut */
+    margin-top:12px;
   }
   .bar{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--line); background:#f8fbff}
   .content{padding:14px}
@@ -75,7 +73,6 @@
     </table>
   </div>
 
-  <!-- MODAL VOIR DOSSIER -->
   <div class="mask" id="mask" aria-hidden="true">
     <div class="box" role="dialog" aria-label="Dossier">
       <div class="bar">
@@ -250,7 +247,6 @@ async function load(){
     const json = await r.json();
     const data = (json && json.data) || [];
 
-    // Aplatit les champs utiles pour l’affichage/filtrage
     rows = data.map(x=>{
       const h = (x.snapshot && x.snapshot.header) || {};
       return {

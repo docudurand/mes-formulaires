@@ -104,7 +104,6 @@
         </div>
       </div>
 
-      <!-- Bloc détails Rectification Culasse -->
       <div id="section-culasse" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Rectification Culasse</div>
 
@@ -150,7 +149,6 @@
         </div>
       </div>
 
-      <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
@@ -175,7 +173,6 @@
     </form>
   </div>
 
-  <!-- (conservé pour l’aperçu iframe) -->
   <div class="pdfMask" id="pdfMask" aria-hidden="true">
     <div class="pdfBox" role="dialog" aria-label="Aperçu">
       <div class="pdfBar">
@@ -257,7 +254,6 @@
   function toggleCulasseFields(){
     const service = el('service').value;
 
-    // Culasse
     const isC = service === 'Rectification Culasse';
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
@@ -266,7 +262,6 @@
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
-    // Injecteur
     const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
     const blocI = el('section-injecteur');
     blocI.classList.toggle('hidden', !isInj);
@@ -393,11 +388,9 @@
 
     const payloadForPrint = { ...payload, no };
     openPrintPreview(payloadForPrint);
-    // Autoriser un nouvel envoi après ouverture de l’aperçu si besoin
     setTimeout(()=>{ $btn.disabled = false; }, 1500);
   });
 
-  // Initialisation au chargement : afficher/cacher les blocs et charger la config Sheets
   window.addEventListener('DOMContentLoaded', () => {
     toggleCulasseFields();
     loadConfig();
