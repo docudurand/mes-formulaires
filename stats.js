@@ -2,6 +2,7 @@ import * as ftp from "basic-ftp";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { Writable } from "stream";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,12 +20,11 @@ const FTP_PORT = Number(process.env.FTP_PORT || 21);
 const FTP_USER = dequote(process.env.FTP_USER);
 const FTP_PASS = dequote(process.env.FTP_PASS || process.env.FTP_PASSWORD || "");
 const RAW_BACKUP_FOLDER = dequote(process.env.FTP_BACKUP_FOLDER || "/Disque 1/service");
-const FTP_BACKUP_FOLDER = RAW_BACKUP_FOLDER.replace(/\/+$/,"");
 
+const FTP_BACKUP_FOLDER = RAW_BACKUP_FOLDER.replace(/\/+$/, "");
 
 const STATS_REMOTE_FILE = dequote(process.env.STATS_REMOTE_FILE || "counters.json");
 const REMOTE_PATH = `${FTP_BACKUP_FOLDER}/${STATS_REMOTE_FILE}`;
-
 
 const SECURE_MODE = String(process.env.FTP_SECURE || "explicit").toLowerCase();
 const secure =
@@ -39,11 +39,15 @@ function readLocal() {
   try {
     return JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));
   } catch {
-    return { piece: 0, piecepl: 0, pneu: 0 };
+    return { years: [] };
   }
 }
 function writeLocal(obj) {
-  fs.writeFileSync(LOCAL_FILE, JSON.stringify(obj, null, 2), "utf8");
+  try {
+    fs.writeFileSync(LOCAL_FILE, JSON.stringify(obj, null, 2), "utf8");
+  } catch (e) {
+    console.warn("[COMPTEUR][LOCAL] Écriture échouée:", e?.message || e);
+  }
 }
 
 async function withFtp(fn) {
@@ -68,17 +72,20 @@ async function downloadRemoteToLocal() {
   return withFtp(async (client) => {
     try {
       const chunks = [];
-      await client.downloadTo(
-        {
-          write(chunk, _enc, cb) {
-            chunks.push(Buffer.from(chunk));
-            cb();
-          }
-        },
-        REMOTE_PATH
-      );
-      const json = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-      if (json && typeof json === "object") writeLocal(json);
+      const sink = new Writable({
+        write(chunk, _enc, cb) {
+          chunks.push(Buffer.from(chunk));
+          cb();
+        }
+      });
+      await client.downloadTo(sink, REMOTE_PATH);
+      const text = Buffer.concat(chunks).toString("utf8");
+      const json = JSON.parse(text);
+      if (json && typeof json === "object") {
+        writeLocal(json);
+      } else {
+        console.warn("[COMPTEUR][FTP] JSON distant invalide, on conserve le local.");
+      }
     } catch (e) {
       console.warn("[COMPTEUR][FTP] Download échoué:", e?.message || e);
 
@@ -99,21 +106,21 @@ async function uploadLocalToRemote() {
 }
 
 export async function initCounters() {
-
   await downloadRemoteToLocal();
 }
 
 export async function getCounters() {
-
   await downloadRemoteToLocal();
   return readLocal();
 }
 
 export async function recordSubmission(type) {
   const data = readLocal();
+
   const key = String(type || "").toLowerCase();
   if (!(key in data)) data[key] = 0;
   data[key] = (Number(data[key]) || 0) + 1;
+
   writeLocal(data);
   await uploadLocalToRemote();
 }
