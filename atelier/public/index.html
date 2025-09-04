@@ -28,6 +28,13 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
+
+    .pdfMask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
+    .pdfBox{width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line)}
+    .pdfBar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
+    .pdfBar .actions{display:flex; gap:8px}
+    #pdfFrame{flex:1; width:100%; border:0}
+    #printForm{display:none}
   </style>
 </head>
 <body>
@@ -92,11 +99,12 @@
             <option value="" selected disabled>-- Choisissez un service --</option>
             <option value="Rectification Culasse">Rectification Culasse</option>
             <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
-            <option value="Contrôle injection Essence">Contrôle injection Essence</option>
+  <option value="Contrôle injection Essence">Contrôle injection Essence</option>
           </select>
         </div>
       </div>
 
+      <!-- Bloc détails Rectification Culasse -->
       <div id="section-culasse" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Rectification Culasse</div>
 
@@ -142,6 +150,7 @@
         </div>
       </div>
 
+      <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
@@ -165,211 +174,197 @@
     </form>
   </div>
 
-<script>
-const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
+  <!-- (conservé pour l’aperçu iframe) -->
+  <div class="pdfMask" id="pdfMask" aria-hidden="true">
+    <div class="pdfBox" role="dialog" aria-label="Aperçu">
+      <div class="pdfBar">
+        <div style="font-weight:700">Aperçu d’impression</div>
+        <div class="actions">
+          <button class="ghost" id="pdfReprint" type="button">Imprimer</button>
+          <button class="ghost" id="pdfClose" type="button">Fermer</button>
+        </div>
+      </div>
+      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
+    </div>
+  </div>
+  <form id="printForm" method="POST" target="pdfFrame"><input type="hidden" name="payload" /></form>
 
-let LIGNES = [], REGLES = [];
-const $ = (id)=>document.getElementById(id);
+  <script>
+  const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
 
-// --------- Chargement règles culasse depuis Google Apps Script ----------
-async function loadConfig(){
-  try{
-    const r = await fetch(APPSCRIPT_URL, { cache:"no-store" });
-    const data = await r.json();
-    LIGNES = (data.lignes||[]).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
-    REGLES = data.regles || [];
-    renderLignes(); refreshReferences();
-  }catch(e){
-    console.error(e);
-    $('culasse-lignes').innerHTML = '<div style="color:#b91c1c;font-weight:700">Erreur de chargement Sheets.</div>';
+  let LIGNES = [], REGLES = [];
+  const el = id => document.getElementById(id);
+  const allCulasseChosen = () => el('cylindre').value && el('soupapes').value && el('carburant').value;
+
+  async function loadConfig(){
+    try{
+      const r = await fetch(APPSCRIPT_URL, { cache:"no-store" });
+      const data = await r.json();
+      LIGNES = (data.lignes||[]).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
+      REGLES = data.regles || [];
+      renderLignes(); refreshReferences();
+    }catch(e){
+      console.error(e);
+      el('culasse-lignes').innerHTML = '<div style="color:#b91c1c;font-weight:700">Erreur de chargement Sheets.</div>';
+    }
   }
-}
-function renderLignes(){
-  const host = $('culasse-lignes'); host.innerHTML='';
-  LIGNES.forEach(l=>{
-    const row=document.createElement('div'); row.className='culasse-row'; row.dataset.ligne=l.ligne;
-    const input=document.createElement('input'); input.type='checkbox'; input.name='ligne_'+l.ligne; input.id='input_'+l.ligne;
-    const label=document.createElement('label'); label.htmlFor=input.id; label.textContent=l.libelle||l.ligne;
-    const refs=document.createElement('div'); refs.className='refs'; refs.id='refs_'+l.ligne;
-    input.addEventListener('change', refreshReferences);
-    row.append(input,label,refs); host.appendChild(row);
-  });
-}
-function matchRegles(service, cyl, soup, carb, ligne){
-  const cand = REGLES.filter(r =>
-    String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
-    String(r.service).toLowerCase() === String(service).toLowerCase()
-  );
-  const score = r => {
-    let s=0;
-    s += (String(r.cylindres)===String(cyl))?1:(r.cylindres==='*'?0:-999);
-    s += (String(r.soupapes)===String(soup))?1:(r.soupapes==='*'?0:-999);
-    s += (String(r.carburant).toLowerCase()===String(carb).toLowerCase())?1:(r.carburant==='*'?0:-999);
-    return s;
-  };
-  return cand.map(r=>({r,s:score(r)})).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s).map(x=>x.r);
-}
-function refreshReferences(){
-  if ($('service').value !== 'Rectification Culasse') return;
-  const cyl = $('cylindre').value, soup = $('soupapes').value, carb = $('carburant').value;
-  const ready = (cyl && soup && carb);
-  LIGNES.forEach(l=>{
-    const holder = $('refs_'+l.ligne), cb = $('input_'+l.ligne);
-    if(!holder||!cb) return;
-    if(!cb.checked || !ready){ holder.textContent=''; return; }
-    const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
-    if(!regles.length){ holder.textContent=''; return; }
-    holder.innerHTML = '<ul style="margin:6px 0 0; padding-left:18px;">' +
-      regles.map(r =>
-        `<li><strong>${r.reference||''}</strong>${r.libelleref? ' – '+r.libelleref : ''}${(r.prixht||r.prixht===0)?' ('+String(r.prixht)+' € HT)':''}</li>`
-      ).join('') + '</ul>';
-  });
-}
-function toggleCulasseFields(){
-  const service = $('service').value;
-  // Culasse
-  const isC = service === 'Rectification Culasse';
-  const blocC = $('section-culasse');
-  blocC.classList.toggle('hidden', !isC);
-  blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
-  $('cylindre').required = $('soupapes').required = $('carburant').required = isC;
-  if(!isC){
-    LIGNES.forEach(l=>{ const e=$('refs_'+l.ligne); if(e) e.textContent=''; });
-  } else refreshReferences();
 
-  // Injecteur
-  const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
-  const blocI = $('section-injecteur');
+  function renderLignes(){
+    const host = el('culasse-lignes'); host.innerHTML='';
+    LIGNES.forEach(l=>{
+      const row=document.createElement('div'); row.className='culasse-row'; row.dataset.ligne=l.ligne;
+      const input=document.createElement('input'); input.type='checkbox'; input.name='ligne_'+l.ligne; input.id='input_'+l.ligne;
+      const label=document.createElement('label'); label.htmlFor=input.id; label.textContent=l.libelle||l.ligne;
+      const refs=document.createElement('div'); refs.className='refs'; refs.id='refs_'+l.ligne;
+      input.addEventListener('change', refreshReferences);
+      row.append(input,label,refs); host.appendChild(row);
+    });
+  }
+
+  function matchRegles(service, cyl, soup, carb, ligne){
+    const cand = REGLES.filter(r =>
+      String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
+      String(r.service).toLowerCase() === String(service).toLowerCase()
+    );
+    const score = r => {
+      let s=0;
+      s += (String(r.cylindres)===String(cyl))?1:(r.cylindres==='*'?0:-999);
+      s += (String(r.soupapes)===String(soup))?1:(r.soupapes==='*'?0:-999);
+      s += (String(r.carburant).toLowerCase()===String(carb).toLowerCase())?1:(r.carburant==='*'?0:-999);
+      return s;
+    };
+    return cand.map(r=>({r,s:score(r)})).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s).map(x=>x.r);
+  }
+
+  function refreshReferences(){
+    if (el('service').value !== 'Rectification Culasse') return;
+    const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+    const ready = allCulasseChosen();
+    LIGNES.forEach(l=>{
+      const holder = el('refs_'+l.ligne), cb = el('input_'+l.ligne);
+      if(!holder||!cb) return;
+      if(!cb.checked || !ready){ holder.textContent=''; return; }
+      const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
+      if(!regles.length){ holder.textContent=''; return; }
+      holder.innerHTML = '<ul style="margin:6px 0 0; padding-left:18px;">' +
+        regles.map(r =>
+          `<li><strong>${r.reference||''}</strong>${r.libelleref? ' – '+r.libelleref : ''}${(r.prixht||r.prixht===0)?' ('+String(r.prixht)+' € HT)':''}</li>`
+        ).join('') + '</ul>';
+    });
+  }
+
+  function toggleCulasseFields(){
+    const service = el('service').value;
+
+    // Culasse
+    const isC = service === 'Rectification Culasse';
+    const blocC = el('section-culasse');
+    blocC.classList.toggle('hidden', !isC);
+    blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
+    el('cylindre').required = el('soupapes').required = el('carburant').required = isC;
+    if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
+    else refreshReferences();
+
+    // Injecteur
+    const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
+  const blocI = el('section-injecteur');
   blocI.classList.toggle('hidden', !isInj);
   blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-  $('nbInjecteurs').required = isInj;
+  el('nbInjecteurs').required = isInj;
 }
-$('service').addEventListener('change', toggleCulasseFields);
-['cylindre','soupapes','carburant'].forEach(id => $(id).addEventListener('change', refreshReferences));
 
-// ---------- Overlay impression (même page, pas de nouvelle fenêtre) ----------
-const $pdfMask = $('pdfMask'), $pdfFrame = $('pdfFrame'), $printForm = $('printForm'),
-      $pdfClose = $('pdfClose'), $pdfReprint = $('pdfReprint');
+  el('service').addEventListener('change', toggleCulasseFields);
+  ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
-function showOverlayWith(url){
-  $pdfFrame.src = 'about:blank';
-  $pdfMask.style.display = 'flex';
-  $pdfMask.setAttribute('aria-hidden','false');
-  // charge la page d’aperçu PDF (serveur renvoie une iframe qui print automatiquement)
-  $pdfFrame.src = url;
-}
-$pdfClose?.addEventListener('click', ()=>{
-  $pdfMask.style.display='none';
-  $pdfMask.setAttribute('aria-hidden','true');
-  $pdfFrame.src='about:blank';
-});
-$pdfReprint?.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
+  const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
+        $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
 
-// ---------- Soumission du formulaire ----------
-document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-
-  // construit le snapshot du formulaire
-  const fd = new FormData(e.target);
-  const data = Object.fromEntries(fd.entries());
-  const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
-
-  const ops = [];
-  const service = $('service').value;
-  if (service === 'Rectification Culasse') {
-    const cyl = $('cylindre').value, soup = $('soupapes').value, carb = $('carburant').value;
-    LIGNES.forEach(l=>{
-      const cb = $('input_'+l.ligne);
-      if (cb && cb.checked) {
-        const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
-        ops.push({
-          ligne: l.ligne,
-          libelle: l.libelle || l.ligne,
-          references: regles.map(r => ({
-            reference: r.reference,
-            libelleRef: r.libelleref || '',
-            prixHT: (r.prixht || r.prixht===0) ? r.prixht : null
-          }))
-        });
-      }
-    });
+  function openPrintPreview(payload){
+    $printForm.action = "/atelier/api/print-html";
+    $printForm.querySelector('[name="payload"]').value = JSON.stringify(payload);
+    $pdfFrame.src = 'about:blank';
+    $pdfMask.style.display = 'flex';
+    $pdfMask.setAttribute('aria-hidden','false');
+    $printForm.submit();
   }
+  $pdfClose.addEventListener('click', ()=>{
+    $pdfMask.style.display='none';
+    $pdfMask.setAttribute('aria-hidden','true');
+    $pdfFrame.src='about:blank';
+  });
+  $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
-  const commentaires = ($('commentaires').value || '').trim();
-  let injecteur = null;
-  if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
-    injecteur = {
-      type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
-      nombre: ($('nbInjecteurs').value || '').trim()
-    };
-  }
+  document.getElementById('form-atelier').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
 
-  const payload = {
-    meta: {
-      titre: service,
-      logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
-      dateGeneration: new Date().toISOString()
-    },
-    header: {
-      client: data.client || '',
-      compte: data.compte || '',
-      telephone: data.telephone || '',
-      email: data.email || '',
-      vehicule: data.vehicule || '',
-      immat: data.immat || '',
-      dateDemande: data.dateDemande || '',
-      magasin: data.magasin || '',
-      service: service
-    },
-    commentaires,
-    injecteur,
-    culasse: (service === 'Rectification Culasse') ? {
-      cylindre: $('cylindre').value || '',
-      soupapes: $('soupapes').value || '',
-      carburant: $('carburant').value || '',
-      operations: ops,
-      piecesAFournir: pieces
-    } : null
+    const ops = [];
+    const service = el('service').value;
+    if (service === 'Rectification Culasse') {
+      const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+      LIGNES.forEach(l=>{
+        const cb = el('input_'+l.ligne);
+        if (cb && cb.checked) {
+          const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
+          ops.push({
+            ligne: l.ligne,
+            libelle: l.libelle || l.ligne,
+            references: regles.map(r => ({
+              reference: r.reference,
+              libelleRef: r.libelleref || '',
+              prixHT: (r.prixht || r.prixht===0) ? r.prixht : null
+            }))
+          });
+        }
+      });
+    }
+
+    const commentaires = (el('commentaires').value || '').trim();
+
+    // bloc injecteur si concerné
+    let injecteur = null;
+if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
+  injecteur = {
+    type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
+    nombre: (el('nbInjecteurs').value || '').trim()
   };
+}
 
-  // bouton désactivé le temps du POST
-  const btn = e.submitter; const oldTxt = btn?.textContent; if(btn){ btn.disabled=true; btn.textContent='Envoi…'; }
+    const payload = {
+      meta: {
+        titre: service,
+        logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
+        dateGeneration: new Date().toISOString()
+      },
+      header: {
+        client: data.client || '',
+        compte: data.compte || '',
+        telephone: data.telephone || '',
+        email: data.email || '',
+        vehicule: data.vehicule || '',
+        immat: data.immat || '',
+        dateDemande: data.dateDemande || '',
+        magasin: data.magasin || '',
+        service: service
+      },
+      commentaires,
+      injecteur, // nouveau
+      culasse: (service === 'Rectification Culasse') ? {
+        cylindre: el('cylindre').value || '',
+        soupapes: el('soupapes').value || '',
+        carburant: el('carburant').value || '',
+        operations: ops,
+        piecesAFournir: pieces
+      } : null
+    };
 
-  try{
-    // 1) crée le dossier + email + PJ côté serveur
-    const resp = await fetch("/atelier/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payload })
-    });
-    const json = await resp.json();
-    if(!resp.ok || !json || json.ok !== true){
-      alert("Erreur d’envoi. Merci de réessayer.");
-      return;
-    }
-    // 2) Ouvre l’overlay et charge l’URL d’aperçu pour impression
-    //    (pas de nouvelle fenêtre)
-    if (json.viewerUrl){
-      showOverlayWith(json.viewerUrl);
-    } else {
-      // fallback ultra simple : on demande au serveur une page HTML imprimable
-      $printForm.action = "/atelier/api/print-html";
-      $printForm.querySelector('[name="payload"]').value = JSON.stringify(payload);
-      $pdfFrame.src = 'about:blank';
-      $pdfMask.style.display = 'flex';
-      $pdfMask.setAttribute('aria-hidden','false');
-      $printForm.submit();
-    }
-  }catch(err){
-    console.error(err);
-    alert("Erreur réseau.");
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent=oldTxt; }
-  }
-});
+    openPrintPreview(payload);
+  });
 
-toggleCulasseFields();
-loadConfig();
-</script>
+  toggleCulasseFields();
+  loadConfig();
+  </script>
 </body>
 </html>
