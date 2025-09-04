@@ -17,7 +17,6 @@
     input, select, textarea{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff }
     textarea{ min-height:120px; resize:vertical }
     .section-title{margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); font-weight:700; color:#0f172a}
-    .help{color:#475569; font-size:.95rem; margin:8px 0 0}
     .hidden{display:none}
     .actions{margin-top:16px; display:flex; gap:10px; flex-wrap:wrap}
     button{appearance:none; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer}
@@ -49,30 +48,30 @@
           <input id="client" name="client" type="text" required />
         </div>
         <div>
-          <label for="compte">N° de compte client</label>
-          <input id="compte" name="compte" type="text" required />
+          <label for="compte">N° de compte</label>
+          <input id="compte" name="compte" type="text" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
-          <label for="telephone">Téléphone client</label>
-          <input id="telephone" name="telephone" type="tel" inputmode="tel" required />
+          <label for="telephone">Téléphone</label>
+          <input id="telephone" name="telephone" type="tel" inputmode="tel" />
         </div>
         <div>
-          <label for="email">Adresse mail magasinier/receptionnaire</label>
-          <input id="email" name="email" type="email" required />
+          <label for="email">Adresse mail</label>
+          <input id="email" name="email" type="email" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
           <label for="vehicule">Marque et modèle du véhicule</label>
-          <input id="vehicule" name="vehicule" type="text" required />
+          <input id="vehicule" name="vehicule" type="text" />
         </div>
         <div>
           <label for="immat">Immatriculation</label>
-          <input id="immat" name="immat" type="text" required />
+          <input id="immat" name="immat" type="text" />
         </div>
       </div>
 
@@ -100,11 +99,12 @@
             <option value="" selected disabled>-- Choisissez un service --</option>
             <option value="Rectification Culasse">Rectification Culasse</option>
             <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
-            <option value="Contrôle injection Essence">Contrôle injection Essence</option>
+  <option value="Contrôle injection Essence">Contrôle injection Essence</option>
           </select>
         </div>
       </div>
 
+      <!-- Bloc détails Rectification Culasse -->
       <div id="section-culasse" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Rectification Culasse</div>
 
@@ -139,6 +139,7 @@
         </div>
 
         <p class="help">Coche les opérations à réaliser. Les références s’affichent quand Cylindre, Soupapes et Carburant sont renseignés.</p>
+
         <div id="culasse-lignes"></div>
 
         <div class="section-title">Pièces à Fournir</div>
@@ -149,6 +150,7 @@
         </div>
       </div>
 
+      <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
@@ -172,7 +174,7 @@
     </form>
   </div>
 
-  <!-- Aperçu impression (HTML) -->
+  <!-- (conservé pour l’aperçu iframe) -->
   <div class="pdfMask" id="pdfMask" aria-hidden="true">
     <div class="pdfBox" role="dialog" aria-label="Aperçu">
       <div class="pdfBar">
@@ -185,9 +187,7 @@
       <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
     </div>
   </div>
-  <form id="printForm" method="POST" action="/atelier/api/print-html" target="pdfFrame">
-    <input type="hidden" name="payload" />
-  </form>
+  <form id="printForm" method="POST" target="pdfFrame"><input type="hidden" name="payload" /></form>
 
   <script>
   const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
@@ -256,6 +256,7 @@
   function toggleCulasseFields(){
     const service = el('service').value;
 
+    // Culasse
     const isC = service === 'Rectification Culasse';
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
@@ -264,29 +265,37 @@
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
+    // Injecteur
     const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
-    const blocI = el('section-injecteur');
-    blocI.classList.toggle('hidden', !isInj);
-    blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-    el('nbInjecteurs').required = isInj;
-  }
+  const blocI = el('section-injecteur');
+  blocI.classList.toggle('hidden', !isInj);
+  blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
+  el('nbInjecteurs').required = isInj;
+}
 
   el('service').addEventListener('change', toggleCulasseFields);
   ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
-  const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'),
+  const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
         $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
-  $pdfClose?.addEventListener('click', ()=>{
+
+  function openPrintPreview(payload){
+    $printForm.action = "/atelier/api/print-html";
+    $printForm.querySelector('[name="payload"]').value = JSON.stringify(payload);
+    $pdfFrame.src = 'about:blank';
+    $pdfMask.style.display = 'flex';
+    $pdfMask.setAttribute('aria-hidden','false');
+    $printForm.submit();
+  }
+  $pdfClose.addEventListener('click', ()=>{
     $pdfMask.style.display='none';
     $pdfMask.setAttribute('aria-hidden','true');
     $pdfFrame.src='about:blank';
   });
-  $pdfReprint?.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
+  $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
-  document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
+  document.getElementById('form-atelier').addEventListener('submit', (e)=>{
     e.preventDefault();
-
-    // 1) Construire le payload
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
@@ -314,13 +323,14 @@
 
     const commentaires = (el('commentaires').value || '').trim();
 
+    // bloc injecteur si concerné
     let injecteur = null;
-    if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
-      injecteur = {
-        type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
-        nombre: (el('nbInjecteurs').value || '').trim()
-      };
-    }
+if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
+  injecteur = {
+    type: service === 'Contrôle injection Diesel' ? 'Diesel' : 'Essence',
+    nombre: (el('nbInjecteurs').value || '').trim()
+  };
+}
 
     const payload = {
       meta: {
@@ -340,7 +350,7 @@
         service: service
       },
       commentaires,
-      injecteur,
+      injecteur, // nouveau
       culasse: (service === 'Rectification Culasse') ? {
         cylindre: el('cylindre').value || '',
         soupapes: el('soupapes').value || '',
@@ -350,31 +360,7 @@
       } : null
     };
 
-    try{
-      // 2) Créer le dossier côté serveur (pas d’alerte)
-      const resp = await fetch("/atelier/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload })
-      });
-      const r = await resp.json();
-      if (!r.ok) { alert("Erreur d'envoi"); return; }
-
-      // 3) Ouvrir l’aperçu (HTML imprimable)
-      document.querySelector('#printForm input[name="payload"]').value = JSON.stringify(payload);
-      document.getElementById('printForm').submit();
-
-      // 4) Afficher le masque d’aperçu
-      document.getElementById('pdfMask').style.display = 'flex';
-      document.getElementById('pdfMask').setAttribute('aria-hidden','false');
-
-      // 5) Reset du formulaire
-      e.target.reset();
-      toggleCulasseFields();
-    }catch(err){
-      console.error(err);
-      alert("Erreur réseau / serveur");
-    }
+    openPrintPreview(payload);
   });
 
   toggleCulasseFields();

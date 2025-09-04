@@ -1,319 +1,55 @@
-// atelier/index.js
 import express from "express";
 import axios from "axios";
 import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import nodemailer from "nodemailer";
-import * as ftp from "basic-ftp";
-import { Writable } from "stream";
-import { Readable } from "stream";
+import { randomUUID } from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
-/* ───────────────────────── CSP / Static ───────────────────────── */
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
-
-router.use((_req, res, next) => {
+router.use((req, res, next) => {
   res.removeHeader("X-Frame-Options");
   res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
   next();
 });
 
 const publicDir = path.join(__dirname, "public");
-router.use(
-  express.static(publicDir, {
-    maxAge: "1h",
-    setHeaders: (res, p) => {
-      res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
-      if (p.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
-    }
-  })
-);
+router.use(express.static(publicDir, {
+  maxAge: "1h",
+  setHeaders: (res, p) => {
+    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+    if (p.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
+  }
+}));
 router.get("/", (_req, res) => {
   const f = path.join(publicDir, "index.html");
   if (fs.existsSync(f)) return res.sendFile(f);
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
-/* ───────────────────────── Fichiers locaux ───────────────────────── */
-const DATA_DIR = path.join(__dirname, "data");
-const CASES_FILE = path.join(DATA_DIR, "atelier_cases.json");
-const COUNTER_FILE = path.join(DATA_DIR, "atelier_counter.txt");
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-function readJsonSafe(p, fallback) {
-  try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return fallback; }
-}
-function writeJsonSafe(p, obj) {
-  fs.writeFileSync(p, JSON.stringify(obj, null, 2), "utf8");
-}
-function readTextSafe(p, fallback = "0") {
-  try { return fs.readFileSync(p, "utf8"); } catch { return fallback; }
-}
-function writeTextSafe(p, s) {
-  fs.writeFileSync(p, String(s), "utf8");
-}
-
-/* ───────────────────────── State en mémoire ───────────────────────── */
-let CASES = readJsonSafe(CASES_FILE, []);
-
-/* ───────────────────────── Config FTP (FTPS robuste) ───────────────────────── */
-function dequote(s) {
-  return String(s ?? "").trim().replace(/^['"]|['"]$/g, "");
-}
-
-const FTP_HOST = dequote(process.env.FTP_HOST);
-const FTP_PORT = Number(process.env.FTP_PORT || 21);
-const FTP_USER = dequote(process.env.FTP_USER);
-const FTP_PASS = dequote(process.env.FTP_PASS || process.env.FTP_PASSWORD || "");
-const RAW_BACKUP_FOLDER = dequote(process.env.FTP_BACKUP_FOLDER || "/Disque 1/service");
-const FTP_BACKUP_FOLDER = RAW_BACKUP_FOLDER.replace(/\/+$/, "");
-
-const CASES_REMOTE = `${FTP_BACKUP_FOLDER}/atelier_cases.json`;
-const COUNTER_REMOTE = `${FTP_BACKUP_FOLDER}/atelier_counter.txt`;
-
-// explicit (défaut) | implicit | false
-const SECURE_MODE = String(process.env.FTP_SECURE || "explicit").toLowerCase();
-const secure =
-  SECURE_MODE === "implicit" ? "implicit" :
-  (SECURE_MODE === "false" || SECURE_MODE === "0") ? false : true;
-
-const secureOptions = {
-  // mettre FTP_TLS_REJECT_UNAUTH=0 sur Render si cert auto-signé
-  rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
-};
-
-async function withFtp(fn) {
-  const client = new ftp.Client();
-  client.ftp.verbose = false;
-  try {
-    await client.access({
-      host: FTP_HOST,
-      port: Number(FTP_PORT || (secure === "implicit" ? 990 : 21)),
-      user: FTP_USER,
-      password: FTP_PASS,
-      secure,
-      secureOptions
-    });
-    return await fn(client);
-  } finally {
-    try { client.close(); } catch {}
-  }
-}
-
-async function downloadToBuffer(client, remotePath) {
-  const chunks = [];
-  const sink = new Writable({
-    write(chunk, _enc, cb) { chunks.push(Buffer.from(chunk)); cb(); }
-  });
-  await client.downloadTo(sink, remotePath);
-  return Buffer.concat(chunks);
-}
-async function uploadBuffer(client, buffer, remotePath) {
-  const stream = Readable.from(buffer); // transforme en stream
-  await client.uploadFrom(stream, remotePath);
-}
-
-/* ───────────────────────── Sync JSON dossiers / compteur ───────────────────────── */
-async function pullCasesFromFtp() {
-  return withFtp(async (client) => {
-    try {
-      const buf = await downloadToBuffer(client, CASES_REMOTE);
-      const json = JSON.parse(buf.toString("utf8"));
-      CASES = Array.isArray(json) ? json : [];
-      writeJsonSafe(CASES_FILE, CASES);
-    } catch (e) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[ATELIER][FTP] cases: DL échoué:", e?.message || e);
-      }
-    }
-  });
-}
-async function pushCasesToFtp() {
-  const buf = Buffer.from(JSON.stringify(CASES, null, 2), "utf8");
-  return withFtp(async (client) => {
-    try {
-      await client.ensureDir(FTP_BACKUP_FOLDER);
-      await uploadBuffer(client, buf, CASES_REMOTE);
-    } catch (e) {
-      console.warn("[ATELIER][FTP] cases: UL échoué:", e?.message || e);
-    }
-  });
-}
-
-function readCounterLocal() {
-  return parseInt(readTextSafe(COUNTER_FILE, "0").trim(), 10) || 0;
-}
-function writeCounterLocal(n) {
-  writeTextSafe(COUNTER_FILE, String(n));
-}
-async function pullCounterFromFtp() {
-  return withFtp(async (client) => {
-    try {
-      const buf = await downloadToBuffer(client, COUNTER_REMOTE);
-      const n = parseInt(buf.toString("utf8").trim(), 10);
-      if (Number.isFinite(n)) writeCounterLocal(n);
-    } catch (e) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[ATELIER][FTP] compteur: DL échoué:", e?.message || e);
-      }
-    }
-  });
-}
-async function pushCounterToFtp(n) {
-  const buf = Buffer.from(String(n), "utf8");
-  return withFtp(async (client) => {
-    try {
-      await client.ensureDir(FTP_BACKUP_FOLDER);
-      await uploadBuffer(client, buf, COUNTER_REMOTE);
-    } catch (e) {
-      console.warn("[ATELIER][FTP] compteur: UL échoué:", e?.message || e);
-    }
-  });
-}
-
-function pad5(n) { return String(n).padStart(5, "0"); }
-async function nextCaseNo() {
-  let cur = readCounterLocal();
-  const nxt = (cur + 1) % 100000;
-  writeCounterLocal(nxt);
-  await pushCounterToFtp(nxt);
-  return pad5(nxt);
-}
-
-/* ───────────────────────── Utils / PDF / rendu impression ───────────────────────── */
-function esc(s) { return String(s ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-
-function siteLabelForService(service = "") {
-  if (service === "Contrôle injection Essence") return "ST EGREVE";
+function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function siteLabelForService(service = ""){
+  if (service === "Contrôle injection Essence") return "RENAGE";
   if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
   return "";
 }
 
-// IMPORTANT : on passe caseNo pour pouvoir l’imprimer sous le site en haut à droite
-async function drawPdfToBuffer(data, { caseNo } = {}) {
-  const meta = data.meta || {}, header = data.header || {}, culasse = data.culasse;
-  const commentaires = (data.commentaires || "").trim();
-  const injecteur = data.injecteur || null;
-
-  return await new Promise(async (resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: "A4", margins: { top: 50, left: 52, right: 52, bottom: 54 } });
-      const chunks = [];
-      doc.on("data", (c) => chunks.push(c));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-
-      const BLUE = "#0b4a6f", TEXT = "#000000";
-      function section(t){ doc.moveDown(1.8); doc.font("Helvetica-Bold").fontSize(15).fillColor(BLUE).text(t); doc.moveDown(0.8); doc.fillColor(TEXT).font("Helvetica").fontSize(12); }
-      function kv(k,v){ doc.font("Helvetica-Bold").text(`${k} : `, { continued: true, lineGap: 7 }); doc.font("Helvetica").text(v || "-", { lineGap: 7 }); }
-      function bullet(t){ doc.font("Helvetica-Bold").text(`• ${t}`, { lineGap: 6 }); }
-      function subBullet(t){ doc.font("Helvetica").text(`- ${t}`, { indent: 22, lineGap: 6 }); }
-
-      const logoX = 52, logoTop = 40, logoW = 110; let logoBottom = logoTop;
-      if (meta.logoUrl) {
-        try { const img = await axios.get(meta.logoUrl, { responseType: "arraybuffer" }); doc.image(Buffer.from(img.data), logoX, logoTop, { width: logoW }); logoBottom = logoTop + logoW; } catch {}
-      }
-
-      const titre = header.service || meta.titre || "Demande d’intervention";
-      const usableW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-      const titleTop = 77;
-
-      // Tag site en haut à droite + numéro de dossier en-dessous
-      const siteLbl = siteLabelForService(header.service);
-      const rightX = doc.page.margins.left;
-      if (siteLbl){
-        doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
-        doc.text(siteLbl, rightX, 30, { width: usableW, align: "right" });
-        if (caseNo) {
-          doc.font("Helvetica").fontSize(11).fillColor(TEXT);
-          doc.text(`Dossier : ${caseNo}`, rightX, 46, { width: usableW, align: "right" });
-        }
-      } else if (caseNo) {
-        // S'il n'y a pas de tag site, on montre au moins le n°
-        doc.font("Helvetica").fontSize(11).fillColor(TEXT);
-        doc.text(`Dossier : ${caseNo}`, rightX, 30, { width: usableW, align: "right" });
-      }
-
-      // Titre centré (décalé si collision logo)
-      doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
-      const titleTextWidth = doc.widthOfString(titre);
-      const pageCenterX = doc.page.width / 2;
-      let titleX = pageCenterX - titleTextWidth / 2;
-      const avoidLogoX = logoX + logoW + 18;
-      if (titleX < avoidLogoX) titleX = avoidLogoX;
-      doc.text(titre, titleX, titleTop, { width: titleTextWidth, align: "left", lineGap: 4 });
-      const titleBottom = titleTop + doc.heightOfString(titre, { width: titleTextWidth });
-
-      doc.fillColor(TEXT).font("Helvetica").fontSize(12);
-      doc.y = Math.max(logoBottom, titleBottom) + 72;
-
-      section("Informations client");
-      kv("Nom du client", header.client);
-      kv("N° de compte client", header.compte);
-      kv("Téléphone client", header.telephone);
-      kv("Adresse mail magasinier/receptionnaire", header.email);
-      kv("Marque/Modèle", header.vehicule);
-      kv("Immatriculation", header.immat);
-      kv("Magasin", header.magasin);
-      kv("Date de la demande", header.dateDemande);
-
-      if (header.service === "Rectification Culasse" && culasse) {
-        section("Détails Rectification Culasse");
-        kv("Cylindre", culasse.cylindre);
-        kv("Soupapes", culasse.soupapes);
-        kv("Carburant", culasse.carburant);
-
-        section("Opérations (cochées)");
-        if (Array.isArray(culasse.operations) && culasse.operations.length) {
-          culasse.operations.forEach(op=>{
-            bullet(op.libelle || op.ligne);
-            if (Array.isArray(op.references) && op.references.length) {
-              op.references.forEach(ref=>{
-                const parts=[]; if(ref.reference) parts.push(ref.reference);
-                if(ref.libelleRef) parts.push(ref.libelleRef);
-                if(ref.prixHT || ref.prixHT===0) parts.push(`${ref.prixHT} € HT`);
-                subBullet(parts.join(" – "));
-              });
-            } else { subBullet("Aucune référence correspondante"); }
-            doc.moveDown(0.2);
-          });
-        } else { doc.text("Aucune opération cochée."); }
-
-        section("Pièces à Fournir");
-        if (Array.isArray(culasse.piecesAFournir) && culasse.piecesAFournir.length) culasse.piecesAFournir.forEach(p => doc.text(`• ${p}`));
-        else doc.text("Aucune pièce sélectionnée.");
-      }
-
-      if (header.service === "Contrôle injection Diesel" || header.service === "Contrôle injection Essence"){
-        section("Détails Contrôle injection");
-        kv("Type", (injecteur && injecteur.type) || "");
-        kv("Nombre d’injecteurs", (injecteur && injecteur.nombre) || "");
-      }
-
-      if (commentaires) { section("Commentaires"); doc.text(commentaires); }
-
-      doc.end();
-    } catch (e) { reject(e); }
-  });
-}
-
 function renderPrintHTML(payload = {}) {
-  // (conserve le rendu HTML pour compat si besoin – pas utilisé pour email)
-  const meta = payload.meta || {};
+  const meta   = payload.meta   || {};
   const header = payload.header || {};
   const culasse = payload.culasse || null;
   const commentaires = (payload.commentaires || "").trim();
   const injecteur = payload.injecteur || null;
 
   const LOGO_URL = esc(meta.logoUrl || "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
-  const titre = esc(header.service || meta.titre || "Demande d’intervention");
-  const siteLbl = siteLabelForService(header.service);
+  const titre    = esc(header.service || meta.titre || "Demande d’intervention");
+  const siteLbl  = siteLabelForService(header.service);
 
   const opsHTML = (() => {
     if (!culasse || !Array.isArray(culasse.operations) || !culasse.operations.length) {
@@ -348,44 +84,50 @@ function renderPrintHTML(payload = {}) {
   html,body{ margin:0; }
   body{ font-family:Arial,Helvetica,sans-serif; color:#111; margin:12mm; position:relative; }
   .header{
-    position: relative;
-    display: grid;
-    grid-template-columns:130px 1fr;
-    align-items: center;
-    column-gap:18px;
-    padding-bottom: 6px;
-  }
-  .header + .section{ margin-top:28px; }
+  position: relative;
+  display: grid;
+  grid-template-columns:130px 1fr;
+  align-items: center;
+  column-gap:18px;
+  padding-bottom: 6px;
+}
+.header + .section{ margin-top:28px; }
   .logo{ width:130px; height:auto; object-fit:contain }
   .title{
-    position:absolute; left:50%; transform:translateX(-50%);
-    top:12mm; margin:0; font-size:22px; font-weight:800; color:#0b4a6f; letter-spacing:.2px;
-  }
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:12mm;
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+  color:#0b4a6f;
+  letter-spacing:.2px;
+}
   .site-tag{ position:absolute; top:6mm; right:12mm; font-weight:800; color:#0b4a6f; font-size:14px; }
   .label{ font-weight:700 }
   .section{ margin-top:18px; }
-  .section h3{ margin:20px 0 12px; color:#0b4a6f; font-size:16px; }
-  .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px 30px; }
-  .bullet{ margin:6px 0; }
-  .subbullet{ margin-left:22px; margin-top:3px; }
-  .area{ border:1px solid #222; padding:10px; min-height:60px; white-space:pre-wrap; }
+.section h3{ margin:20px 0 12px; color:#0b4a6f; font-size:16px; }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:12px 30px; }
+.bullet{ margin:6px 0; }
+.subbullet{ margin-left:22px; margin-top:3px; }
+.area{ border:1px solid #222; padding:10px; min-height:60px; white-space:pre-wrap; }
 </style>
 </head>
 <body>
-  ${siteLbl ? `<div class="site-tag">${esc(siteLbl)}</div>` : ""}
+  ${siteLbl ? `<div class="site-tag">${esc(siteLbl)}</div>` : ''}
   <div class="header">
     <img class="logo" src="${LOGO_URL}" alt="Logo Durand">
     <h1 class="title">${titre}</h1>
   </div>
-  <!-- (Le n° de dossier figure sur le PDF ; la page HTML peut rester simple) -->
 
   <div class="section">
     <h3>Informations client</h3>
     <div class="two">
       <div><span class="label">Nom du client : </span>${esc(header.client)}</div>
-      <div><span class="label">N° de compte client : </span>${esc(header.compte)}</div>
-      <div><span class="label">Téléphone client : </span>${esc(header.telephone)}</div>
-      <div><span class="label">Adresse mail magasinier/receptionnaire : </span>${esc(header.email)}</div>
+      <div><span class="label">N° de compte : </span>${esc(header.compte)}</div>
+      <div><span class="label">Téléphone : </span>${esc(header.telephone)}</div>
+      <div><span class="label">Adresse mail : </span>${esc(header.email)}</div>
       <div><span class="label">Marque/Modèle : </span>${esc(header.vehicule)}</div>
       <div><span class="label">Immatriculation : </span>${esc(header.immat)}</div>
       <div><span class="label">Magasin d'envoi : </span>${esc(header.magasin)}</div>
@@ -402,8 +144,16 @@ function renderPrintHTML(payload = {}) {
       <div><span class="label">Carburant : </span>${esc(culasse.carburant)}</div>
     </div>
   </div>
-  <div class="section"><h3>Opérations (cochées)</h3>${opsHTML}</div>
-  <div class="section"><h3>Pièces à Fournir</h3>${piecesHTML}</div>
+
+  <div class="section">
+    <h3>Opérations (cochées)</h3>
+    ${opsHTML}
+  </div>
+
+  <div class="section">
+    <h3>Pièces à Fournir</h3>
+    ${piecesHTML}
+  </div>
   ` : ""}
 
   ${(header.service === "Contrôle injection Diesel" || header.service === "Contrôle injection Essence") && injecteur ? `
@@ -414,7 +164,7 @@ function renderPrintHTML(payload = {}) {
       <div><span class="label">Nombre d’injecteurs : </span>${esc(injecteur.nombre||'')}</div>
     </div>
   </div>
-  ` : ""}
+` : ""}
 
   ${commentaires ? `
   <div class="section">
@@ -428,197 +178,187 @@ function renderPrintHTML(payload = {}) {
 </html>`;
 }
 
-/* ───────────────────────── Email routage interne ───────────────────────── */
-function resolveRecipients(service) {
-  if (service === "Rectification Culasse") return process.env.MAIL_RC || "magvl4gleize@durandservices.fr";
-  if (service === "Contrôle injection Diesel") return process.env.MAIL_INJ_D || "magvl4gleize@durandservices.fr";
-  if (service === "Contrôle injection Essence") return process.env.MAIL_INJ_E || "magvl4gleize@durandservices.fr";
-  return process.env.MAIL_FALLBACK || "atelier@durandservices.fr";
+const BLUE = "#0b4a6f", TEXT = "#000000";
+function section(doc, t){
+  doc.moveDown(1.8);
+  doc.font("Helvetica-Bold").fontSize(15).fillColor(BLUE).text(t);
+  doc.moveDown(0.8);
+  doc.fillColor(TEXT).font("Helvetica").fontSize(12);
 }
-function makeTransport() {
-  const user = process.env.GMAIL_USER;
-  const pass = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
-  return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+function kv(doc, k, v){
+  doc.font("Helvetica-Bold").text(`${k} : `, { continued: true, lineGap: 7 });
+  doc.font("Helvetica").text(v || "-", { lineGap: 7 });
 }
+function bullet(doc, t){ doc.font("Helvetica-Bold").text(`• ${t}`, { lineGap: 6 }); }
+function subBullet(doc, t){ doc.font("Helvetica").text(`- ${t}`, { indent: 22, lineGap: 6 }); }
 
-/* ───────────────────────── Routes API ───────────────────────── */
+async function drawPdf(res, data){
+  const meta = data.meta || {}, header = data.header || {}, culasse = data.culasse;
+  const commentaires = (data.commentaires || "").trim();
+  const injecteur = data.injecteur || null;
 
-// Soumission du formulaire
-router.post("/api/submit", express.json(), async (req, res) => {
-  try {
-    const raw = req.body && "payload" in req.body ? req.body.payload : req.body;
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-
-    await pullCounterFromFtp();
-    await pullCasesFromFtp();
-
-    const no = await nextCaseNo();
-    const header = data.header || {};
-    const service = header.service || "";
-    const client = header.client || "";
-    const compte = header.compte || "";
-    const magasin = header.magasin || "";
-    const email   = header.email   || "";
-    const dateISO = new Date().toISOString();
-
-    // Snapshot (source unique pour impression et email)
-    const snapshot = {
-      meta: data.meta || {},
-      header,
-      commentaires: data.commentaires || "",
-      injecteur: data.injecteur || null,
-      culasse: data.culasse || null
-    };
-
-    // Génère le PDF depuis le même snapshot ET avec le numéro
-    let pdfBuffer = null;
-    try { pdfBuffer = await drawPdfToBuffer(snapshot, { caseNo: no }); } catch {}
-
-    // Email interne avec ce PDF
-    try {
-      const to = resolveRecipients(service);
-      const t = makeTransport();
-      await t.sendMail({
-        to,
-        from: process.env.GMAIL_USER,
-        subject: `[ATELIER] Dossier ${no} – ${service} – ${client}`,
-        html: `
-          <p><b>Dossier :</b> ${no}</p>
-          <p><b>Service :</b> ${esc(service)}</p>
-          <p><b>Magasin :</b> ${esc(magasin)}</p>
-          <p><b>Client :</b> ${esc(client)}</p>
-          <p><b>N° de compte :</b> ${esc(compte || "-")}</p>
-          <p><b>Date :</b> ${esc(dateISO)}</p>
-        `,
-        attachments: pdfBuffer ? [{ filename: `ATELIER-${no}.pdf`, content: pdfBuffer, contentType: "application/pdf" }] : []
-      });
-    } catch (e) {
-      console.warn("[ATELIER][MAIL] échec:", e?.message || e);
-    }
-
-    // Enregistre l’entrée (sans PDF FTP)
-    const entry = {
-      no,
-      date: dateISO,
-      service,
-      magasin,
-      compte,
-      client,
-      email,
-      status: "Pièce envoyée",
-      snapshot
-    };
-    CASES.unshift(entry);
-    writeJsonSafe(CASES_FILE, CASES);
-    await pushCasesToFtp();
-
-    // URL d’aperçu PDF (identique au PDF envoyé)
-    const viewerUrl = `/atelier/view-pdf-inline/${encodeURIComponent(no)}`;
-    res.json({ ok: true, no, viewerUrl });
-  } catch (e) {
-    console.error("[ATELIER] submit error:", e);
-    res.status(400).json({ ok: false, error: "bad_payload" });
-  }
-});
-
-// Liste des dossiers (rechargée depuis FTP)
-router.get("/api/cases", async (_req, res) => {
-  await pullCasesFromFtp();
-  res.json({ ok: true, data: CASES });
-});
-
-// Mise à jour du statut + mail "Renvoyé" (lien vers le même PDF)
-router.post("/api/cases/:no/status", express.json(), async (req, res) => {
-  try {
-    const { no } = req.params;
-    const { status } = req.body || {};
-    const allowed = ["Pièce envoyée", "Réceptionné", "En cours de traitement", "Renvoyé"];
-    if (!allowed.includes(status)) return res.status(400).json({ ok: false, error: "bad_status" });
-
-    await pullCasesFromFtp();
-    const it = CASES.find((x) => x.no === no);
-    if (!it) return res.status(404).json({ ok: false, error: "not_found" });
-
-    it.status = status;
-    writeJsonSafe(CASES_FILE, CASES);
-    await pushCasesToFtp();
-
-    if (status === "Renvoyé" && it.email) {
-      try {
-        const t = makeTransport();
-        const base =
-          (process.env.PUBLIC_BASE || process.env.RENDER_EXTERNAL_URL || "").replace(/\/+$/,"");
-        const link = `${base}/atelier/view-pdf-inline/${encodeURIComponent(it.no)}`;
-
-        const subject = `Votre pièce a été renvoyée – Dossier ${it.no}`;
-        const html = `
-          <p>Bonjour,</p>
-          <p>Nous vous informons que la pièce relative au <b>dossier ${esc(it.no)}</b> a été <b>renvoyée</b> au magasin <b>${esc(it.magasin || "-")}</b>.</p>
-          <p>
-            <b>Client :</b> ${esc(it.client || "-")}<br/>
-            <b>N° de compte :</b> ${esc(it.compte || "-")}<br/>
-            <b>Service :</b> ${esc(it.service || "-")}
-          </p>
-          <p>Fiche d’intervention : <a href="${esc(link)}">ouvrir l’aperçu</a></p>
-          <p>Cordialement,</p>
-          <p>Durand Services</p>
-        `;
-        await t.sendMail({ to: it.email, from: process.env.GMAIL_USER, subject, html });
-      } catch (e) {
-        console.warn("[ATELIER][MAIL][RENVOYE] échec:", e?.message || e);
-      }
-    }
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("[ATELIER][STATUS] error:", e);
-    res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
-/* ───────────────────────── Rendus impression PDF (identiques à l’email) ───────────────────────── */
-
-// 1) Flux PDF brut, généré depuis le snapshot + numéro
-router.get("/pdf/:no", async (req, res) => {
-  try {
-    await pullCasesFromFtp();
-    const it = CASES.find((x) => x.no === req.params.no);
-    if (!it || !it.snapshot) return res.status(404).type("text").send("Dossier introuvable.");
-    const pdf = await drawPdfToBuffer(it.snapshot, { caseNo: it.no });
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="ATELIER-${it.no}.pdf"`);
-    return res.end(pdf);
-  } catch (e) {
-    console.error("[ATELIER] pdf error:", e);
-    return res.status(500).type("text").send("Erreur serveur");
-  }
-});
-
-// 2) Wrapper HTML qui embarque le PDF et déclenche l’impression auto
-router.get("/view-pdf-inline/:no", (req, res) => {
-  const no = String(req.params.no || "").trim();
-  if (!no) return res.status(400).type("text").send("Numéro manquant");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${(header.client || "Demande").replace(/[^\w\-]/g,"_")}.pdf"`);
+  res.removeHeader("X-Frame-Options");
   res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+
+  const doc = new PDFDocument({ size:"A4", margins:{ top:50,left:52,right:52,bottom:54 } });
+  doc.pipe(res);
+
+  const logoX=52, logoTop=40, logoW=110; let logoBottom=logoTop;
+  if (meta.logoUrl) {
+    try {
+      const img = await axios.get(meta.logoUrl, { responseType:"arraybuffer" });
+      doc.image(Buffer.from(img.data), logoX, logoTop, { width: logoW });
+      logoBottom = logoTop + logoW;
+    } catch {}
+  }
+
+const titre   = header.service || meta.titre || "Demande d’intervention";
+const usableW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+const titleTop = 62;
+
+const siteLbl = siteLabelForService(header.service);
+if (siteLbl){
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE);
+  doc.text(siteLbl, doc.page.margins.left, 30, { width: usableW, align: "right" });
+}
+
+doc.font("Helvetica-Bold").fontSize(22).fillColor(BLUE);
+
+const titleTextWidth = doc.widthOfString(titre);
+const pageCenterX    = doc.page.width / 2;
+let   titleX         = pageCenterX - (titleTextWidth / 2);
+
+const avoidLogoX = logoX + logoW + 18;
+if (titleX < avoidLogoX) titleX = avoidLogoX;
+
+doc.text(titre, titleX, titleTop, { width: titleTextWidth, align: "left", lineGap: 4 });
+
+const titleBottom = titleTop + doc.heightOfString(titre, { width: titleTextWidth });
+
+doc.fillColor(TEXT).font("Helvetica").fontSize(12);
+doc.y = Math.max(logoBottom, titleBottom) + 72;
+
+  section(doc,"Informations client");
+  kv(doc,"Nom du client",header.client);
+  kv(doc,"N° de compte",header.compte);
+  kv(doc,"Téléphone",header.telephone);
+  kv(doc,"Adresse mail",header.email);
+  kv(doc,"Marque/Modèle",header.vehicule);
+  kv(doc,"Immatriculation",header.immat);
+  kv(doc,"Magasin",header.magasin);
+  kv(doc,"Date de la demande",header.dateDemande);
+
+  if (header.service === "Rectification Culasse" && culasse) {
+    section(doc,"Détails Rectification Culasse");
+    kv(doc,"Cylindre",culasse.cylindre);
+    kv(doc,"Soupapes",culasse.soupapes);
+    kv(doc,"Carburant",culasse.carburant);
+
+    section(doc,"Opérations (cochées)");
+    if (Array.isArray(culasse.operations) && culasse.operations.length) {
+      culasse.operations.forEach(op=>{
+        bullet(doc, op.libelle || op.ligne);
+        if (Array.isArray(op.references) && op.references.length) {
+          op.references.forEach(ref=>{
+            const parts=[]; if(ref.reference) parts.push(ref.reference);
+            if(ref.libelleRef) parts.push(ref.libelleRef);
+            if(ref.prixHT || ref.prixHT===0) parts.push(`${ref.prixHT} € HT`);
+            subBullet(doc, parts.join(" – "));
+          });
+        } else { subBullet(doc, "Aucune référence correspondante"); }
+        doc.moveDown(0.2);
+      });
+    } else {
+      doc.text("Aucune opération cochée.");
+    }
+
+    section(doc,"Pièces à Fournir");
+    if (Array.isArray(culasse.piecesAFournir) && culasse.piecesAFournir.length)
+      culasse.piecesAFournir.forEach(p => doc.text(`• ${p}`));
+    else
+      doc.text("Aucune pièce sélectionnée.");
+  }
+
+  if (header.service === "Contrôle injection Diesel" || header.service === "Contrôle injection Essence"){
+  section(doc,"Détails Contrôle injection");
+  kv(doc,"Type", (injecteur && injecteur.type) || "");
+  kv(doc,"Nombre d’injecteurs", (injecteur && injecteur.nombre) || "");
+}
+
+  if (commentaires) {
+    section(doc, "Commentaires");
+    doc.text(commentaires);
+  }
+
+  doc.end();
+}
+
+router.post("/api/print-html", (req, res) => {
+  try {
+    const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
+    const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
+    const html = renderPrintHTML(data);
+    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(html);
+  } catch (e) {
+    console.error("[ATELIER] print-html error:", e);
+    return res.status(400).type("text").send("Bad payload");
+  }
+});
+
+router.post("/api/print", async (req, res) => {
+  try {
+    const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
+    const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
+    await drawPdf(res, data);
+  } catch (e) {
+    console.error("[ATELIER] PDF error:", e);
+    res.status(500).send("PDF generation failed");
+  }
+});
+
+const store = new Map();
+const TTL_MS = 15 * 60 * 1000;
+setInterval(()=>{ const now=Date.now(); for(const [id,it] of store){ if(now-it.created>TTL_MS) store.delete(id); } }, 60000);
+
+router.post("/api/queue", (req, res) => {
+  try {
+    const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
+    const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
+    const id = randomUUID();
+    store.set(id, { data, created: Date.now() });
+    res.json({ id });
+  } catch (e) {
+    console.error("[ATELIER] queue error:", e);
+    res.status(400).json({ error: "Bad payload" });
+  }
+});
+
+router.get("/viewer/:id", (req, res) => {
+  res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+  const { id } = req.params;
+  if (!store.has(id)) return res.status(404).type("text").send("Lien d’aperçu expiré.");
   res.type("html").send(`<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>Aperçu PDF</title>
+<html lang="fr"><head><meta charset="utf-8"><title>Aperçu</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>html,body{margin:0;height:100%} #pdf{border:0;width:100%;height:100%}</style>
 </head><body>
-<iframe id="pdf" src="/atelier/pdf/${encodeURIComponent(no)}"></iframe>
-<script>
-  const f=document.getElementById('pdf');
-  f.addEventListener('load',()=>{
-    try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){}
-  });
-</script>
+<iframe id="pdf" src="/atelier/pdf/${id}"></iframe>
+<script>const f=document.getElementById('pdf');f.addEventListener('load',()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){}});</script>
 </body></html>`);
 });
 
-/* ───────────────────────── Health ───────────────────────── */
-router.get("/healthz", (_req, res) => res.type("text").send("ok"));
+router.get("/pdf/:id", async (req, res) => {
+  const { id } = req.params;
+  const it = store.get(id);
+  if (!it) return res.status(404).type("text").send("PDF expiré.");
+  try { await drawPdf(res, it.data || {}); }
+  finally { store.delete(id); }
+});
 
-/* ───────────────────────── Boot sync ───────────────────────── */
-await pullCounterFromFtp();
-await pullCasesFromFtp();
+router.get("/healthz", (_req,res)=>res.type("text").send("ok"));
 
 export default router;
