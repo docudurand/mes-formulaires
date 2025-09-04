@@ -17,7 +17,6 @@
     input, select, textarea{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff }
     textarea{ min-height:120px; resize:vertical }
     .section-title{margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); font-weight:700; color:#0f172a}
-    .help{color:#475569; font-size:.95rem; margin:8px 0 0}
     .hidden{display:none}
     .actions{margin-top:16px; display:flex; gap:10px; flex-wrap:wrap}
     button{appearance:none; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer}
@@ -29,13 +28,6 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
-
-    .pdfMask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
-    .pdfBox{width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line)}
-    .pdfBar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
-    .pdfBar .actions{display:flex; gap:8px}
-    #pdfFrame{flex:1; width:100%; border:0}
-    #printForm{display:none}
   </style>
 </head>
 <body>
@@ -49,30 +41,30 @@
           <input id="client" name="client" type="text" required />
         </div>
         <div>
-          <label for="compte">N° de compte client</label>
-          <input id="compte" name="compte" type="text" required />
+          <label for="compte">N° de compte</label>
+          <input id="compte" name="compte" type="text" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
-          <label for="telephone">Téléphone client</label>
-          <input id="telephone" name="telephone" type="tel" inputmode="tel" required />
+          <label for="telephone">Téléphone</label>
+          <input id="telephone" name="telephone" type="tel" inputmode="tel" />
         </div>
         <div>
-          <label for="email">Adresse mail magasinier/receptionnaire</label>
-          <input id="email" name="email" type="email" required />
+          <label for="email">Adresse mail</label>
+          <input id="email" name="email" type="email" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
           <label for="vehicule">Marque et modèle du véhicule</label>
-          <input id="vehicule" name="vehicule" type="text" required />
+          <input id="vehicule" name="vehicule" type="text" />
         </div>
         <div>
           <label for="immat">Immatriculation</label>
-          <input id="immat" name="immat" type="text" required />
+          <input id="immat" name="immat" type="text" />
         </div>
       </div>
 
@@ -105,6 +97,7 @@
         </div>
       </div>
 
+      <!-- Bloc détails Rectification Culasse -->
       <div id="section-culasse" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Rectification Culasse</div>
 
@@ -150,6 +143,7 @@
         </div>
       </div>
 
+      <!-- Bloc détails Injecteur (visible pour Diesel/Essence) -->
       <div id="section-injecteur" class="hidden" aria-hidden="true">
         <div class="section-title">Détails Contrôle injection</div>
         <div class="grid grid-2">
@@ -173,21 +167,8 @@
     </form>
   </div>
 
-  <div class="pdfMask" id="pdfMask" aria-hidden="true">
-    <div class="pdfBox" role="dialog" aria-label="Aperçu">
-      <div class="pdfBar">
-        <div style="font-weight:700">Aperçu d’impression</div>
-        <div class="actions">
-          <button class="ghost" id="pdfReprint" type="button">Imprimer</button>
-          <button class="ghost" id="pdfClose" type="button">Fermer</button>
-        </div>
-      </div>
-      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
-    </div>
-  </div>
-  <form id="printForm" method="POST" target="pdfFrame"><input type="hidden" name="payload" /></form>
-
   <script>
+  // URL de config Google Sheets
   const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
 
   let LIGNES = [], REGLES = [];
@@ -254,6 +235,7 @@
   function toggleCulasseFields(){
     const service = el('service').value;
 
+    // Culasse
     const isC = service === 'Rectification Culasse';
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
@@ -262,6 +244,7 @@
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
+    // Injecteur
     const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
     const blocI = el('section-injecteur');
     blocI.classList.toggle('hidden', !isInj);
@@ -272,23 +255,24 @@
   el('service').addEventListener('change', toggleCulasseFields);
   ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
-  const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'),
-        $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
-  $pdfClose?.addEventListener('click', ()=>{
-    $pdfMask.style.display='none';
-    $pdfMask.setAttribute('aria-hidden','true');
-    $pdfFrame.src='about:blank';
-  });
-  $pdfReprint?.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
-
+  // Soumission : ouverture popup immédiate, puis navigation vers l'aperçu renvoyé par le serveur
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
-  e.preventDefault();
+    e.preventDefault();
+
+    // 1) Ouvrir la fenêtre *avant* tout await pour éviter le blocage Chrome
+    const printWin = window.open("", "ATELIER_PRINT");
+    if (!printWin) {
+      alert("Le navigateur a bloqué la fenêtre d'impression. Autorisez les popups pour ce site.");
+      return;
+    }
+
+    // 2) Construire le payload
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const pieces = Array.from(document.querySelectorAll('#pieces-a-fournir input[type="checkbox"]:checked')).map(x => x.value);
 
-    const ops = [];
     const service = el('service').value;
+    const ops = [];
     if (service === 'Rectification Culasse') {
       const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
       LIGNES.forEach(l=>{
@@ -309,7 +293,6 @@
     }
 
     const commentaires = (el('commentaires').value || '').trim();
-
     let injecteur = null;
     if (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence') {
       injecteur = {
@@ -346,31 +329,33 @@
       } : null
     };
 
+    // 3) Appeler le serveur pour créer dossier + mail + enregistrement FTP
     try{
-    const resp = await fetch("/atelier/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payload })
-    });
-    const r = await resp.json();
-    if (!r.ok || !r.viewerUrl) {
-      alert("Erreur d'envoi"); 
-      return;
+      const resp = await fetch("/atelier/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload })
+      });
+      const r = await resp.json();
+
+      if (!r || !r.ok || !r.viewerUrl) {
+        try { printWin.close(); } catch {}
+        alert("Erreur d'envoi.");
+        return;
+      }
+
+      // 4) Afficher l’aperçu dans la fenêtre et lancer l’impression (la page côté serveur fait window.print())
+      printWin.location = r.viewerUrl;
+
+      // 5) Reset du formulaire après l’envoi
+      e.target.reset();
+      toggleCulasseFields();
+    }catch(err){
+      console.error(err);
+      try { printWin.close(); } catch {}
+      alert("Erreur réseau / serveur.");
     }
-
-    const mask  = document.getElementById('pdfMask');
-    const frame = document.getElementById('pdfFrame');
-    frame.src = r.viewerUrl;
-    mask.style.display = 'flex';
-    mask.setAttribute('aria-hidden','false');
-
-    e.target.reset();
-
-  }catch(err){
-    console.error(err);
-    alert("Erreur réseau / serveur");
-  }
-});
+  });
 
   toggleCulasseFields();
   loadConfig();
