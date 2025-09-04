@@ -2,7 +2,7 @@ import * as ftp from "basic-ftp";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Writable } from "stream";
+import { Readable } from "stream";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,7 +94,8 @@ async function downloadRemoteToLocal() {
 }
 
 async function uploadLocalToRemote() {
-  const buf = Buffer.from(JSON.stringify(readLocal(), null, 2), "utf8");
+const buf = Buffer.from(JSON.stringify(readLocal(), null, 2), "utf8");
+await client.uploadFrom(Readable.from(buf), REMOTE_PATH);
   return withFtp(async (client) => {
     try {
       await client.ensureDir(FTP_BACKUP_FOLDER);
