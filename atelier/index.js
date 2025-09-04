@@ -107,16 +107,16 @@ async function sendServiceMail(no, snapshot){
 
   const subject = `[Nouvelle demande] Dossier ${no} – ${h.service || "-"} – ${h.client || "-"}`;
   const rowsMain = [
-    ["N° dossier", no],
-    ["Service", h.service || "-"],
-    ["Magasin", h.magasin || "-"],
-    ["Date demande", h.dateDemande || "-"],
-    ["Client", h.client || "-"],
-    ["N° de compte", h.compte || "-"],
-    ["Téléphone", h.telephone || "-"],
-    ["Email client", h.email || "-"],
-    ["Véhicule", h.vehicule || "-"],
-    ["Immatriculation", h.immat || "-"],
+  ["N° dossier", no],
+  ["Service", h.service || "-"],
+  ["Magasin", h.magasin || "-"],
+  ["Date demande", h.dateDemande || "-"],
+  ["Client", h.client || "-"],
+  ["N° de compte client", h.compte || "-"],
+  ["Téléphone client", h.telephone || "-"],
+  ["Adresse mail magasinier/réceptionnaire", h.email || "-"],
+  ["Véhicule", h.vehicule || "-"],
+  ["Immatriculation", h.immat || "-"],
   ];
 
   let extra = "";
@@ -306,9 +306,9 @@ function renderPrintHTML(payload = {}, no = ""){
     <h3>Informations client</h3>
     <div class="two">
       <div><span class="label">Nom du client : </span>${esc(header.client)}</div>
-      <div><span class="label">N° de compte : </span>${esc(header.compte)}</div>
-      <div><span class="label">Téléphone : </span>${esc(header.telephone)}</div>
-      <div><span class="label">Adresse mail : </span>${esc(header.email)}</div>
+      <div><span class="label">N° de compte client : </span>${esc(header.compte)}</div>
+      <div><span class="label">Téléphone client : </span>${esc(header.telephone)}</div>
+      <div><span class="label">Adresse mail magasinier/réceptionnaire : </span>${esc(header.email)}</div>
       <div><span class="label">Marque/Modèle : </span>${esc(header.vehicule)}</div>
       <div><span class="label">Immatriculation : </span>${esc(header.immat)}</div>
       <div><span class="label">Magasin d'envoi : </span>${esc(header.magasin)}</div>

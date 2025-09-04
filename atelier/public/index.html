@@ -18,7 +18,7 @@
     textarea{ min-height:120px; resize:vertical }
     .section-title{margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); font-weight:700; color:#0f172a}
     .hidden{display:none}
-    .actions{margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .actions{margin-top:16px; display:flex; gap:10px; flex-wrap:wrap}
     button{appearance:none; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer}
     .primary{background:var(--primary); color:#fff}
     .ghost{background:transparent; color:var(--primary); border:1px solid var(--primary)}
@@ -28,13 +28,6 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
-
-    .pdfMask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
-    .pdfBox{width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line)}
-    .pdfBar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
-    .pdfBar .actions{display:flex; gap:8px}
-    #pdfFrame{flex:1; width:100%; border:0}
-    #printForm{display:none}
   </style>
 </head>
 <body>
@@ -48,18 +41,18 @@
           <input id="client" name="client" type="text" required />
         </div>
         <div>
-          <label for="compte">N° de compte</label>
+          <label for="compte">N° de compte client</label>
           <input id="compte" name="compte" type="text" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
-          <label for="telephone">Téléphone</label>
+          <label for="telephone">Téléphone client</label>
           <input id="telephone" name="telephone" type="tel" inputmode="tel" />
         </div>
         <div>
-          <label for="email">Adresse mail</label>
+          <label for="email">Adresse mail magasinier/réceptionnaire</label>
           <input id="email" name="email" type="email" />
         </div>
       </div>
