@@ -29,8 +29,18 @@
   .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
 
   /* Modal */
-  .mask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
-  .box{width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line)}
+  /* Ouvrir en HAUT de la page (au lieu du centre) */
+  .mask{
+    position:fixed; inset:0; background:#0008; display:none;
+    align-items:flex-start;              /* top instead of center */
+    justify-content:center;
+    z-index:10000; padding:20px;
+  }
+  .box{
+    width:min(900px,96vw); max-height:min(90vh,800px);
+    background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line);
+    margin-top:12px;                     /* petit décalage du haut */
+  }
   .bar{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--line); background:#f8fbff}
   .content{padding:14px}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px 16px}
