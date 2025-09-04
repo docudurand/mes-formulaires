@@ -27,6 +27,19 @@
   .actions{display:flex; gap:8px; align-items:center}
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
   .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
+
+  /* Modal */
+  .mask{position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px}
+  .box{width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line)}
+  .bar{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--line); background:#f8fbff}
+  .content{padding:14px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px 16px}
+  .label{font-weight:700}
+  .section{margin-top:14px}
+  .section h3{margin:10px 0; color:#0b4a6f; font-size:1rem}
+  .bul{margin:6px 0}
+  .sub{margin:2px 0 0 18px}
+  .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -52,10 +65,25 @@
     </table>
   </div>
 
+  <!-- MODAL VOIR DOSSIER -->
+  <div class="mask" id="mask" aria-hidden="true">
+    <div class="box" role="dialog" aria-label="Dossier">
+      <div class="bar">
+        <div id="modalTitle" style="font-weight:800;color:#004080">Dossier</div>
+        <button id="btnClose">Fermer</button>
+      </div>
+      <div class="content" id="modalContent"></div>
+    </div>
+  </div>
+
 <script>
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
 const $q = document.getElementById("q");
+const $mask = document.getElementById("mask");
+const $btnClose = document.getElementById("btnClose");
+const $modalTitle = document.getElementById("modalTitle");
+const $modalContent = document.getElementById("modalContent");
 
 let rows = [];
 
@@ -89,12 +117,15 @@ function draw(){
         <td>${new Date(r.date).toLocaleDateString('fr-FR')}</td>
         <td>${badge(r.status)}</td>
         <td class="actions">
+          <button class="btnView">Voir dossier</button>
           <select class="statusSel">
             ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
           </select>
           <button class="btnSave">Valider</button>
         </td>
       `;
+
+      tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
 
       tr.querySelector(".btnSave").addEventListener("click", async ()=>{
         const status = tr.querySelector(".statusSel").value;
@@ -112,11 +143,115 @@ function draw(){
     });
 }
 
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function openDetails(row){
+  const h = (row.snapshot && row.snapshot.header) || {};
+  const cul = (row.snapshot && row.snapshot.culasse) || null;
+  const inj = (row.snapshot && row.snapshot.injecteur) || null;
+  const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
+
+  $modalTitle.textContent = `Dossier ${row.no} — ${h.service || ""}`;
+
+  let opsHTML = "";
+  if (cul && Array.isArray(cul.operations) && cul.operations.length){
+    opsHTML = cul.operations.map(op=>{
+      const refs = Array.isArray(op.references) ? op.references.map(r=>{
+        const bits = [];
+        if (r.reference) bits.push(esc(r.reference));
+        if (r.libelleRef) bits.push(esc(r.libelleRef));
+        if (r.prixHT || r.prixHT===0) bits.push(`${esc(String(r.prixHT))} € HT`);
+        return `<div class="sub">- ${bits.join(" – ")}</div>`;
+      }).join("") : "";
+      return `<div class="bul">• ${esc(op.libelle || op.ligne)}</div>${refs}`;
+    }).join("");
+  }
+
+  const piecesHTML = (cul && Array.isArray(cul.piecesAFournir) && cul.piecesAFournir.length)
+    ? cul.piecesAFournir.map(p=>`<div class="bul">• ${esc(p)}</div>`).join("")
+    : "<div class='bul' style='opacity:.7'>Aucune pièce sélectionnée.</div>";
+
+  $modalContent.innerHTML = `
+    <div class="grid2">
+      <div><span class="label">N° dossier :</span> ${esc(row.no)}</div>
+      <div><span class="label">Date :</span> ${new Date(row.date).toLocaleDateString('fr-FR')}</div>
+      <div><span class="label">Magasin :</span> ${esc(h.magasin||"")}</div>
+      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
+      <div><span class="label">Client :</span> ${esc(h.client||"")}</div>
+      <div><span class="label">N° de compte :</span> ${esc(h.compte||"")}</div>
+      <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
+      <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
+      <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
+      <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
+      <div><span class="label">Service :</span> ${esc(h.service||"")}</div>
+      <div><span class="label">Date demande :</span> ${esc(h.dateDemande||"")}</div>
+    </div>
+
+    ${h.service === "Rectification Culasse" && cul ? `
+      <div class="section">
+        <h3>Détails Rectification Culasse</h3>
+        <div class="grid2">
+          <div><span class="label">Cylindre :</span> ${esc(cul.cylindre||"")}</div>
+          <div><span class="label">Soupapes :</span> ${esc(cul.soupapes||"")}</div>
+          <div><span class="label">Carburant :</span> ${esc(cul.carburant||"")}</div>
+        </div>
+        <div class="section">
+          <h3>Opérations</h3>
+          ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
+        </div>
+        <div class="section">
+          <h3>Pièces à fournir</h3>
+          ${piecesHTML}
+        </div>
+      </div>
+    ` : ""}
+
+    ${(h.service === "Contrôle injection Diesel" || h.service === "Contrôle injection Essence") && inj ? `
+      <div class="section">
+        <h3>Détails Contrôle injection</h3>
+        <div class="grid2">
+          <div><span class="label">Type :</span> ${esc(inj.type||"")}</div>
+          <div><span class="label">Nb injecteurs :</span> ${esc(inj.nombre||"")}</div>
+        </div>
+      </div>
+    ` : ""}
+
+    ${com ? `
+      <div class="section">
+        <h3>Commentaires</h3>
+        <div class="area">${esc(com)}</div>
+      </div>
+    ` : ""}
+  `;
+
+  $mask.style.display = "flex";
+  $mask.setAttribute("aria-hidden","false");
+}
+
+$btnClose.addEventListener("click", ()=>{
+  $mask.style.display = "none";
+  $mask.setAttribute("aria-hidden","true");
+  $modalContent.innerHTML = "";
+});
+
 async function load(){
   try{
     const r = await fetch("/atelier/api/cases");
     const json = await r.json();
-    rows = (json && json.data) || [];
+    const data = (json && json.data) || [];
+
+    // Aplatit les champs utiles pour l’affichage/filtrage
+    rows = data.map(x=>{
+      const h = (x.snapshot && x.snapshot.header) || {};
+      return {
+        ...x,
+        magasin: h.magasin || "",
+        compte:  h.compte  || "",
+        client:  h.client  || "",
+        service: h.service || ""
+      };
+    });
+
     draw();
   }catch(e){
     alert("Erreur de chargement.");
