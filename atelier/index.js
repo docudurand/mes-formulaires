@@ -135,7 +135,7 @@ async function sendServiceMail(no, snapshot){
   }
   const commentaires = (snapshot.commentaires || "").trim();
 
-  const html = `
+const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;color:#111">
     <h2 style="margin:0 0 10px">Nouvelle demande – Dossier ${esc(no)}</h2>
     <table style="border-collapse:collapse;border:1px solid #e5e7eb;width:100%">
@@ -151,7 +151,12 @@ async function sendServiceMail(no, snapshot){
         <div style="font-weight:700;margin-bottom:6px">Commentaires</div>
         <div style="border:1px solid #e5e7eb;padding:10px;white-space:pre-wrap">${esc(commentaires)}</div>
       </div>` : ""}
-  </div>`.trim();
+
+    <!-- 2 sauts visuels en bas du mail -->
+    <div style="line-height:16px">&nbsp;</div>
+    <div style="line-height:16px">&nbsp;</div>
+  </div>
+`.trim();
 
   await t.sendMail({
     to,
@@ -172,18 +177,22 @@ async function sendClientStatusMail(no, entry) {
 
     const subject = `Votre dossier ${no} – ${h.service || "Atelier"} – ${h.client || ""}`;
     const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;color:#111">
-        <p>Bonjour,</p>
-        <p>Nous vous informons que les travaux sont terminés et que la pièce a été <b>renvoyée</b>.</p>
-        <table style="border-collapse:collapse;border:1px solid #e5e7eb;width:100%;margin-top:10px">
-          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">N° de dossier</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(no)}</td></tr>
-          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Service</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.service || "-")}</td></tr>
-          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Client</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.client || "-")}</td></tr>
-          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Magasin</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.magasin || "-")}</td></tr>
-        </table>
-        <p style="margin-top:14px">Cordialement,<br>Durand Services – Atelier</p>
-      </div>
-    `;
+  <div style="font-family:Arial,Helvetica,sans-serif;color:#111">
+    <p>Bonjour,</p>
+    <p>Nous vous informons que les travaux sont terminés et que la pièce a été <b>renvoyée</b>.</p>
+    <table style="border-collapse:collapse;border:1px solid #e5e7eb;width:100%;margin-top:10px">
+      <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">N° de dossier</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(no)}</td></tr>
+      <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Service</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.service || "-")}</td></tr>
+      <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Client</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.client || "-")}</td></tr>
+      <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Magasin</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.magasin || "-")}</td></tr>
+    </table>
+    <p style="margin-top:14px">Cordialement,<br>Durand Services – Atelier</p>
+
+    <!-- 2 sauts visuels en bas du mail -->
+    <div style="line-height:16px">&nbsp;</div>
+    <div style="line-height:16px">&nbsp;</div>
+  </div>
+`;
     await t.sendMail({ to, from: process.env.GMAIL_USER, subject, html });
   } catch (e) {
     console.warn("[ATELIER][MAIL Client] échec:", e?.message || e);
