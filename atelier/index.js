@@ -58,7 +58,7 @@ let CASES = readJsonSafe(CASES_FILE, []);
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
 
 function siteLabelForService(service = ""){
-  if (service === "Contrôle injection Essence") return "RENAGE";
+  if (service === "Contrôle injection Essence") return "ST EGREVE";
   if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
   return "";
 }
