@@ -82,6 +82,11 @@
           <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
         </select>
       </label>
+
+      <label>Année :
+        <select id="filterYear"></select>
+      </label>
+
       <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service, date…)" style="min-width:280px" />
     </div>
 
@@ -111,6 +116,7 @@
 <script>
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
+const $year = document.getElementById("filterYear"); // AJOUT
 const $q = document.getElementById("q");
 const $mask = document.getElementById("mask");
 const $btnClose = document.getElementById("btnClose");
@@ -131,13 +137,36 @@ function badge(status){
   return `<span class="badge ${m}">${status}</span>`;
 }
 
+function buildYearOptions(list){
+  const years = new Set();
+  const nowY = new Date().getFullYear();
+
+  (list||[]).forEach(r=>{
+    const d = r.date ? new Date(r.date) : null;
+    if (d && !isNaN(d)) years.add(d.getFullYear());
+  });
+
+  if (years.size === 0) years.add(nowY);
+
+  const sorted = Array.from(years).sort((a,b)=>b-a);
+  $year.innerHTML = sorted.map(y=>`<option value="${y}">${y}</option>`).join("");
+
+  $year.value = String(sorted.includes(nowY) ? nowY : (sorted[0] || nowY));
+}
+
 function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
+  const yearVal = ($year.value || "").trim(); // AJOUT
 
   $tbody.innerHTML = "";
   rows
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
+    .filter(r => {
+      if (!yearVal) return true;
+      const d = r.date ? new Date(r.date) : null;
+      return d && !isNaN(d) && String(d.getFullYear()) === yearVal;
+    })
     .filter(r => !q || JSON.stringify(r).toLowerCase().includes(q))
     .forEach(r => {
       const tr = document.createElement("tr");
@@ -313,6 +342,7 @@ async function load(){
       };
     });
 
+    buildYearOptions(rows);
     draw();
   }catch(e){
     alert("Erreur de chargement.");
@@ -320,6 +350,7 @@ async function load(){
 }
 
 $filter.addEventListener("change", draw);
+$year.addEventListener("change", draw);
 $q.addEventListener("input", draw);
 load();
 </script>
