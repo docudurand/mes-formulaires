@@ -199,7 +199,9 @@
       <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
     </div>
   </div>
-  <form id="printForm" method="POST" target="pdfFrame"><input type="hidden" name="payload" /></form>
+  <form id="printForm" method="POST" target="pdfFrame" style="display:none">
+  <input type="hidden" name="payload" />
+</form>
 
   <script>
   const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4nDGGUaIxrFxukfv-OjJyQ3GoXAtP4IUcttsfg5vevY0fYsPsp5GR2RytyKns1YKHeQ/exec";
