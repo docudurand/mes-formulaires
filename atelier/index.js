@@ -57,6 +57,14 @@ let CASES = readJsonSafe(CASES_FILE, []);
 
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
 
+function fmtJJMMYYYYdash(v){
+  if (!v) return "";
+  const d = new Date(v);
+  if (isNaN(d)) return "";
+  const p2 = n => String(n).padStart(2,"0");
+  return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
+}
+
 function siteLabelForService(service = ""){
   if (service === "Contrôle injection Essence") return "ST EGREVE";
   if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
@@ -107,16 +115,16 @@ async function sendServiceMail(no, snapshot){
 
   const subject = `[Nouvelle demande] Dossier ${no} – ${h.service || "-"} – ${h.client || "-"}`;
   const rowsMain = [
-  ["N° dossier", no],
-  ["Service", h.service || "-"],
-  ["Magasin", h.magasin || "-"],
-  ["Date demande", h.dateDemande || "-"],
-  ["Client", h.client || "-"],
-  ["N° de compte client", h.compte || "-"],
-  ["Téléphone client", h.telephone || "-"],
-  ["Adresse mail magasinier/réceptionnaire", h.email || "-"],
-  ["Véhicule", h.vehicule || "-"],
-  ["Immatriculation", h.immat || "-"],
+    ["N° dossier", no],
+    ["Service", h.service || "-"],
+    ["Magasin", h.magasin || "-"],
+    ["Date demande", fmtJJMMYYYYdash(h.dateDemande) || "-"],
+    ["Client", h.client || "-"],
+    ["N° de compte client", h.compte || "-"],
+    ["Téléphone client", h.telephone || "-"],
+    ["Adresse mail magasinier/réceptionnaire", h.email || "-"],
+    ["Véhicule", h.vehicule || "-"],
+    ["Immatriculation", h.immat || "-"],
   ];
 
   let extra = "";
@@ -135,7 +143,7 @@ async function sendServiceMail(no, snapshot){
   }
   const commentaires = (snapshot.commentaires || "").trim();
 
-const html = `
+  const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;color:#111">
     <h2 style="margin:0 0 10px">Nouvelle demande – Dossier ${esc(no)}</h2>
     <table style="border-collapse:collapse;border:1px solid #e5e7eb;width:100%">
@@ -152,11 +160,10 @@ const html = `
         <div style="border:1px solid #e5e7eb;padding:10px;white-space:pre-wrap">${esc(commentaires)}</div>
       </div>` : ""}
 
-    <!-- 2 sauts visuels en bas du mail -->
     <div style="line-height:16px">&nbsp;</div>
     <div style="line-height:16px">&nbsp;</div>
   </div>
-`.trim();
+  `.trim();
 
   await t.sendMail({
     to,
@@ -188,7 +195,6 @@ async function sendClientStatusMail(no, entry) {
     </table>
     <p style="margin-top:14px">Cordialement,<br>Durand Services – Atelier</p>
 
-    <!-- 2 sauts visuels en bas du mail -->
     <div style="line-height:16px">&nbsp;</div>
     <div style="line-height:16px">&nbsp;</div>
   </div>
@@ -331,7 +337,7 @@ function renderPrintHTML(payload = {}, no = ""){
       <div><span class="label">Marque/Modèle : </span>${esc(header.vehicule)}</div>
       <div><span class="label">Immatriculation : </span>${esc(header.immat)}</div>
       <div><span class="label">Magasin d'envoi : </span>${esc(header.magasin)}</div>
-      <div><span class="label">Date de la demande : </span>${esc(header.dateDemande)}</div>
+      <div><span class="label">Date de la demande : </span>${esc(fmtJJMMYYYYdash(header.dateDemande))}</div>
     </div>
   </div>
 

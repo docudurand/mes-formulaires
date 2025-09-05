@@ -63,7 +63,7 @@
   .bar button{
     border:1px solid var(--primary);
     background:#fff;
-    color:var(--primary);
+    color:#var(--primary);
     padding:6px 12px;
     border-radius:8px;
     font-weight:700;
@@ -137,12 +137,20 @@ function badge(status){
   return `<span class="badge ${m}">${status}</span>`;
 }
 
+function fmtJJMMYYYYdash(v){
+  if (!v) return "—";
+  const d = new Date(v);
+  if (isNaN(d)) return "—";
+  const p2 = n => String(n).padStart(2,"0");
+  return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
+}
+
 function buildYearOptions(list){
   const years = new Set();
   const nowY = new Date().getFullYear();
 
   (list||[]).forEach(r=>{
-    const d = r.demandeDate ? new Date(r.demandeDate) : null; // <-- date de la demande
+    const d = r.demandeDate ? new Date(r.demandeDate) : null;
     if (d && !isNaN(d)) years.add(d.getFullYear());
   });
 
@@ -164,7 +172,7 @@ function draw(){
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
     .filter(r => {
       if (!yearVal) return true;
-      const d = r.demandeDate ? new Date(r.demandeDate) : null; // <-- date de la demande
+      const d = r.demandeDate ? new Date(r.demandeDate) : null;
       return d && !isNaN(d) && String(d.getFullYear()) === yearVal;
     })
     .filter(r => !q || JSON.stringify(r).toLowerCase().includes(q))
@@ -176,7 +184,7 @@ function draw(){
         <td>${r.compte||""}</td>
         <td>${r.client||""}</td>
         <td>${r.service||""}</td>
-        <td>${r.demandeDate ? new Date(r.demandeDate).toLocaleDateString('fr-FR') : "—"}</td> <!-- date de la demande -->
+        <td>${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td>${badge(r.status)}</td>
         <td class="actions">
           <button class="btnView">Voir dossier</button>
@@ -236,7 +244,7 @@ function openDetails(row){
   $modalContent.innerHTML = `
     <div class="grid2">
       <div><span class="label">N° dossier :</span> ${esc(row.no)}</div>
-      <div><span class="label">Date :</span> ${row.demandeDate ? new Date(row.demandeDate).toLocaleDateString('fr-FR') : "—"}</div> <!-- date de la demande -->
+      <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
       <div><span class="label">Magasin :</span> ${esc(h.magasin||"")}</div>
       <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
       <div><span class="label">Client :</span> ${esc(h.client||"")}</div>
@@ -246,7 +254,7 @@ function openDetails(row){
       <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
       <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
       <div><span class="label">Service :</span> ${esc(h.service||"")}</div>
-      <div><span class="label">Date demande :</span> ${esc(h.dateDemande||"")}</div>
+      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande))}</div>
     </div>
 
     ${h.service === "Rectification Culasse" && cul ? `
@@ -339,7 +347,7 @@ async function load(){
         compte:  h.compte  || "",
         client:  h.client  || "",
         service: h.service || "",
-        demandeDate: h.dateDemande || "" // 
+        demandeDate: h.dateDemande || ""
       };
     });
 
