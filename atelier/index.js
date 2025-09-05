@@ -218,12 +218,22 @@ async function withFtpClient(fn){
   } finally { client.close(); }
 }
 
-async function pushCasesToFtp(){
+async function pushCasesToFtp(context = ""){
   try {
     const tmp = path.join(dataDir, "cases.tmp.json");
-    fs.writeFileSync(tmp, JSON.stringify(CASES, null, 2), "utf8");
+    const jsonStr = JSON.stringify(CASES, null, 2);
+    fs.writeFileSync(tmp, jsonStr, "utf8");
+
     await withFtpClient(async (c) => { await c.uploadFrom(tmp, FTP_REMOTE_FILE); });
-    fs.unlinkSync(tmp);
+
+    let size = 0;
+    try { size = fs.statSync(tmp).size; } catch {}
+    try { fs.unlinkSync(tmp); } catch {}
+
+    console.info(
+      `[ATELIER][FTP] push OK${context ? " " + context : ""} -> ${FTP_REMOTE_FILE} ` +
+      `(${CASES.length} dossiers, ${size} bytes)`
+    );
   } catch (e) {
     console.warn("[ATELIER][FTP] push: échec:", e?.message || e);
   }
@@ -405,7 +415,7 @@ router.post("/api/submit", async (req, res) => {
 
     CASES.push(entry);
     writeJsonSafe(CASES_FILE, CASES);
-    pushCasesToFtp().catch(()=>{});
+    await pushCasesToFtp(`(création dossier ${no})`);
 
     await sendServiceMail(no, data);
 
@@ -439,7 +449,7 @@ router.post("/api/cases/:no/status", async (req, res) => {
     CASES[idx].dateStatus = new Date().toISOString();
 
     writeJsonSafe(CASES_FILE, CASES);
-    pushCasesToFtp().catch(()=>{});
+    await pushCasesToFtp(`(maj statut dossier ${no} -> ${status})`);
 
     const st = String(status).toLowerCase();
     if (st === "renvoyé" || st === "renvoye") {
