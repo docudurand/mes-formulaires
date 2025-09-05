@@ -12,24 +12,25 @@
   }
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
   .wrap{max-width:1100px;margin:24px auto;padding:16px}
-  h1{margin:0 0 12px; color:var(--primary); font-size:1.4rem}
+  h1{margin:0 0 12px; color:#primary; font-size:1.4rem}
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px}
   select,input{padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem}
   table{width:100%; border-collapse:separate; border-spacing:0 8px}
   th,td{padding:10px 12px; text-align:left}
   th{font-size:.95rem; color:#334155}
   tr{background:#f9fafb; border:1px solid var(--line)}
+
   .badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:6px 12px;
-  border-radius:999px;
-  font-weight:700;
-  font-size:.9rem;
-  min-width: 100px;
-  text-align:center;
-}
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 12px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:.9rem;
+    min-width:100px;
+    text-align:center;
+  }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
@@ -58,6 +59,17 @@
   .bul{margin:6px 0}
   .sub{margin:2px 0 0 18px}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
+
+  .bar button{
+    border:1px solid var(--primary);
+    background:#fff;
+    color:var(--primary);
+    padding:6px 12px;
+    border-radius:8px;
+    font-weight:700;
+    cursor:pointer;
+    margin-left:6px;
+  }
 </style>
 </head>
 <body>
@@ -87,7 +99,10 @@
     <div class="box" role="dialog" aria-label="Dossier">
       <div class="bar">
         <div id="modalTitle" style="font-weight:800;color:#004080">Dossier</div>
-        <button id="btnClose">Fermer</button>
+        <div>
+          <button id="btnPrint">Imprimer</button>
+          <button id="btnClose">Fermer</button>
+        </div>
       </div>
       <div class="content" id="modalContent"></div>
     </div>
@@ -99,6 +114,7 @@ const $filter = document.getElementById("filterMag");
 const $q = document.getElementById("q");
 const $mask = document.getElementById("mask");
 const $btnClose = document.getElementById("btnClose");
+const $btnPrint = document.getElementById("btnPrint");
 const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
 
@@ -249,6 +265,35 @@ $btnClose.addEventListener("click", ()=>{
   $mask.style.display = "none";
   $mask.setAttribute("aria-hidden","true");
   $modalContent.innerHTML = "";
+});
+
+$btnPrint.addEventListener("click", ()=>{
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <html>
+      <head>
+        <title>${$modalTitle.textContent}</title>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
+          h3{color:#004080;margin-top:16px}
+          .label{font-weight:700}
+          .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
+          .section{margin-top:14px}
+          .bul{margin:6px 0}
+          .sub{margin:2px 0 0 18px}
+          .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
+        </style>
+      </head>
+      <body>
+        ${$modalContent.innerHTML}
+      </body>
+    </html>
+  `);
+  w.document.close();
+  w.focus();
+  w.print();
+  w.close();
 });
 
 async function load(){
