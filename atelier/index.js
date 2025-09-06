@@ -95,10 +95,8 @@ function destForService(service = ""){
   return DEST_ATELIER[service] || DEST_ATELIER.__DEFAULT__;
 }
 
-// -------------------- GOOGLE SHEETS (Apps Script) --------------------
-// Web App URL dédiée (peut être la même que vos autres formulaires si elle gère ces actions)
-const GS_URL   = process.env.GS_ATELIER_URL;   // ex: https://script.google.com/macros/s/…/exec
-const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier"; // nom de l'onglet à créer/ utiliser
+const GS_URL   = process.env.GS_ATELIER_URL;
+const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
 async function gsListCases() {
   if (!GS_URL) return { ok: true, data: [] };
