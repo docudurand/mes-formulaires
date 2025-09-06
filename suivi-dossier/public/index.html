@@ -63,7 +63,7 @@
   .bar button{
     border:1px solid var(--primary);
     background:#fff;
-    color:#var(--primary);
+    color:var(--primary);
     padding:6px 12px;
     border-radius:8px;
     font-weight:700;
@@ -343,11 +343,11 @@ async function load(){
       const h = (x.snapshot && x.snapshot.header) || {};
       return {
         ...x,
-        magasin: h.magasin || "",
-        compte:  h.compte  || "",
-        client:  h.client  || "",
-        service: h.service || "",
-        demandeDate: h.dateDemande || ""
+        magasin: x.magasin || (h && h.magasin) || "",
+        compte:  x.compte  || (h && h.compte)  || "",
+        client:  x.client  || (h && h.client)  || "",
+        service: x.service || (h && h.service) || "",
+        demandeDate: x.demandeDate || (h && h.dateDemande) || ""
       };
     });
 

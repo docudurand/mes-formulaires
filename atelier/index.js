@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
-import * as ftp from "basic-ftp";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -36,12 +36,25 @@ router.get("/", (_req, res) => {
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
+function fmtJJMMYYYYdash(v){
+  if (!v) return "";
+  const d = new Date(v);
+  if (isNaN(d)) return "";
+  const p2 = (n) => String(n).padStart(2,"0");
+  return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
+}
+
+function siteLabelForService(service = ""){
+  if (service === "Contrôle injection Essence") return "ST EGREVE";
+  if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
+  return "";
+}
+
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const CASES_FILE      = path.join(dataDir, "cases.json");
-const COUNTER_FILE    = path.join(dataDir, "counter.json");
-const FTP_REMOTE_FILE = `${(process.env.FTP_BACKUP_FOLDER || "/")}/atelier_cases.json`;
+const COUNTER_FILE = path.join(dataDir, "counter.json");
 
 function readJsonSafe(file, fallback) {
   try {
@@ -53,31 +66,11 @@ function writeJsonSafe(file, obj) {
   try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
 }
 
-let CASES = readJsonSafe(CASES_FILE, []);
-
-function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
-
-function fmtJJMMYYYYdash(v){
-  if (!v) return "";
-  const d = new Date(v);
-  if (isNaN(d)) return "";
-  const p2 = n => String(n).padStart(2,"0");
-  return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
-}
-
-function siteLabelForService(service = ""){
-  if (service === "Contrôle injection Essence") return "ST EGREVE";
-  if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
-  return "";
-}
-
 function nextDossierNumber(){
   const cn = readJsonSafe(COUNTER_FILE, null);
   let current = 0;
   if (cn && Number.isFinite(cn.value)) {
     current = cn.value;
-  } else {
-    current = CASES.reduce((m, x) => Math.max(m, Number(x.no) || 0), 0);
   }
   const next = current + 1;
   writeJsonSafe(COUNTER_FILE, { value: next });
@@ -100,6 +93,43 @@ const DEST_ATELIER = {
 
 function destForService(service = ""){
   return DEST_ATELIER[service] || DEST_ATELIER.__DEFAULT__;
+}
+
+// -------------------- GOOGLE SHEETS (Apps Script) --------------------
+// Web App URL dédiée (peut être la même que vos autres formulaires si elle gère ces actions)
+const GS_URL   = process.env.GS_ATELIER_URL;   // ex: https://script.google.com/macros/s/…/exec
+const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier"; // nom de l'onglet à créer/ utiliser
+
+async function gsListCases() {
+  if (!GS_URL) return { ok: true, data: [] };
+  const r = await axios.get(GS_URL, {
+    params: { action: "listCases", sheet: GS_SHEET },
+    timeout: 15000,
+    headers: { "User-Agent": "atelier-api/1.0" }
+  });
+  return r.data;
+}
+
+async function gsAppendCase(entry) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const r = await axios.post(GS_URL, {
+    action: "appendCase",
+    sheet: GS_SHEET,
+    entry
+  }, { timeout: 15000 });
+  return r.data;
+}
+
+async function gsUpdateStatus(no, status, dateStatusISO) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const r = await axios.post(GS_URL, {
+    action: "updateStatus",
+    sheet: GS_SHEET,
+    no,
+    status,
+    dateStatus: dateStatusISO
+  }, { timeout: 15000 });
+  return r.data;
 }
 
 async function sendServiceMail(no, snapshot){
@@ -163,7 +193,7 @@ async function sendServiceMail(no, snapshot){
     <div style="line-height:16px">&nbsp;</div>
     <div style="line-height:16px">&nbsp;</div>
   </div>
-  `.trim();
+`.trim();
 
   await t.sendMail({
     to,
@@ -194,7 +224,6 @@ async function sendClientStatusMail(no, entry) {
       <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600">Magasin</td><td style="padding:8px 10px;border:1px solid #e5e7eb">${esc(h.magasin || "-")}</td></tr>
     </table>
     <p style="margin-top:14px">Cordialement,<br>Durand Services – Atelier</p>
-
     <div style="line-height:16px">&nbsp;</div>
     <div style="line-height:16px">&nbsp;</div>
   </div>
@@ -202,61 +231,6 @@ async function sendClientStatusMail(no, entry) {
     await t.sendMail({ to, from: process.env.GMAIL_USER, subject, html });
   } catch (e) {
     console.warn("[ATELIER][MAIL Client] échec:", e?.message || e);
-  }
-}
-
-async function withFtpClient(fn){
-  const client = new ftp.Client(20 * 1000);
-
-  const secure = String(process.env.FTP_SECURE || "false") === "true";
-  const insecure = String(process.env.FTP_TLS_INSECURE || "0") === "1";
-
-  try{
-    await client.access({
-      host: process.env.FTP_HOST,
-      user: process.env.FTP_USER,
-      password: process.env.FTP_PASSWORD,
-      port: Number(process.env.FTP_PORT || 21),
-      secure,
-      secureOptions: insecure ? { rejectUnauthorized: false } : undefined
-    });
-    return await fn(client);
-  } finally { client.close(); }
-}
-
-async function pushCasesToFtp(context = ""){
-  try {
-    const tmp = path.join(dataDir, "cases.tmp.json");
-    const jsonStr = JSON.stringify(CASES, null, 2);
-    fs.writeFileSync(tmp, jsonStr, "utf8");
-
-    await withFtpClient(async (c) => { await c.uploadFrom(tmp, FTP_REMOTE_FILE); });
-
-    let size = 0;
-    try { size = fs.statSync(tmp).size; } catch {}
-    try { fs.unlinkSync(tmp); } catch {}
-
-    console.info(
-      `[ATELIER][FTP] push OK${context ? " " + context : ""} -> ${FTP_REMOTE_FILE} ` +
-      `(${CASES.length} dossiers, ${size} bytes)`
-    );
-  } catch (e) {
-    console.warn("[ATELIER][FTP] push: échec:", e?.message || e);
-  }
-}
-
-async function pullCasesFromFtp(){
-  try {
-    const tmp = path.join(dataDir, "cases.remote.json");
-    await withFtpClient(async (c) => { await c.downloadTo(tmp, FTP_REMOTE_FILE); });
-    const remote = readJsonSafe(tmp, null);
-    if (Array.isArray(remote)) {
-      CASES = remote;
-      writeJsonSafe(CASES_FILE, CASES);
-    }
-    try { fs.unlinkSync(tmp); } catch {}
-  } catch (e) {
-    console.warn("[ATELIER][FTP] pull: échec:", e?.message || e);
   }
 }
 
@@ -416,12 +390,11 @@ router.post("/api/submit", async (req, res) => {
       magasin: h.magasin || "",
       compte:  h.compte  || "",
       client:  h.client  || "",
-      service: h.service || ""
+      service: h.service || "",
+      demandeDate: h.dateDemande || ""
     };
 
-    CASES.push(entry);
-    writeJsonSafe(CASES_FILE, CASES);
-    await pushCasesToFtp(`(création dossier ${no})`);
+    await gsAppendCase(entry);
 
     await sendServiceMail(no, data);
 
@@ -434,8 +407,10 @@ router.post("/api/submit", async (req, res) => {
 
 router.get("/api/cases", async (_req, res) => {
   try {
-    await pullCasesFromFtp().catch(()=>{});
-    res.json({ ok: true, data: CASES });
+    const r = await gsListCases();
+    // On renvoie tel quel: { ok:true, data:[...] }
+    if (r && r.ok && Array.isArray(r.data)) return res.json({ ok:true, data: r.data });
+    return res.json({ ok:true, data: [] });
   } catch (e) {
     console.error("[ATELIER][CASES][GET] erreur:", e);
     res.status(500).json({ ok: false, error: "cases_read_failed" });
@@ -448,18 +423,16 @@ router.post("/api/cases/:no/status", async (req, res) => {
     const { status } = req.body || {};
     if (!no || !status) return res.status(400).json({ ok:false, error:"bad_request" });
 
-    const idx = CASES.findIndex(x => String(x.no) === String(no));
-    if (idx < 0) return res.status(404).json({ ok:false, error:"not_found" });
-
-    CASES[idx].status = String(status);
-    CASES[idx].dateStatus = new Date().toISOString();
-
-    writeJsonSafe(CASES_FILE, CASES);
-    await pushCasesToFtp(`(maj statut dossier ${no} -> ${status})`);
+    const dateStatus = new Date().toISOString();
+    await gsUpdateStatus(no, String(status), dateStatus);
 
     const st = String(status).toLowerCase();
     if (st === "renvoyé" || st === "renvoye") {
-      await sendClientStatusMail(no, CASES[idx]);
+      try {
+        const r = await gsListCases();
+        const hit = (r && r.data || []).find(x => String(x.no) === String(no));
+        if (hit) await sendClientStatusMail(no, hit);
+      } catch {  }
     }
 
     res.json({ ok:true });
