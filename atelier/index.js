@@ -56,24 +56,33 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const COUNTER_FILE = path.join(dataDir, "counter.json");
 
-function readJsonSafe(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch { return fallback; }
-}
-function writeJsonSafe(file, obj) {
-  try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
-}
-
-function nextDossierNumber(){
+async function nextDossierNumber(){
   const cn = readJsonSafe(COUNTER_FILE, null);
-  let current = 0;
-  if (cn && Number.isFinite(cn.value)) {
-    current = cn.value;
+  let current = (cn && Number.isFinite(cn.value)) ? Number(cn.value) : null;
+
+  if (current === null && GS_URL) {
+    try {
+      const r = await axios.get(GS_URL, {
+        params: { action: "listCases", sheet: GS_SHEET },
+        timeout: 15000,
+        headers: { "User-Agent": "atelier-api/1.0" }
+      });
+      const list = (r.data && r.data.data) || [];
+      const maxNo = list.reduce((m, x) => {
+        const n = parseInt(String(x.no||'').replace(/\D/g,''), 10);
+        return Number.isFinite(n) ? Math.max(m, n) : m;
+      }, 0);
+      current = maxNo;
+    } catch {
+      current = 0;
+    }
   }
+
+  if (current === null) current = 0;
+
   const next = current + 1;
   writeJsonSafe(COUNTER_FILE, { value: next });
+
   return String(next).padStart(5, "0");
 }
 
@@ -376,7 +385,7 @@ router.post("/api/submit", async (req, res) => {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
     const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
 
-    const no = nextDossierNumber();
+    const no = await nextDossierNumber();
     const h  = (data && data.header) || {};
 
     const entry = {

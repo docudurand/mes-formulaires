@@ -179,7 +179,7 @@ function draw(){
     .forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${r.no}</td>
+        <td>${String(r.no).padStart(5,'0')}</td>
         <td>${r.magasin||""}</td>
         <td>${r.compte||""}</td>
         <td>${r.client||""}</td>
@@ -221,7 +221,7 @@ function openDetails(row){
   const inj = (row.snapshot && row.snapshot.injecteur) || null;
   const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
 
-  $modalTitle.textContent = `Dossier ${row.no} — ${h.service || ""}`;
+$modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
 
   let opsHTML = "";
   if (cul && Array.isArray(cul.operations) && cul.operations.length){
