@@ -53,8 +53,51 @@ function siteLabelForService(service = ""){
 
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
 const COUNTER_FILE = path.join(dataDir, "counter.json");
+
+function readJsonSafe(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) return fallback;
+    const s = fs.readFileSync(file, "utf8");
+    return s ? JSON.parse(s) : fallback;
+  } catch { return fallback; }
+}
+function writeJsonSafe(file, obj) {
+  try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
+}
+
+const GS_URL   = process.env.GS_ATELIER_URL;
+const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
+
+async function gsListCases() {
+  if (!GS_URL) return { ok: true, data: [] };
+  const r = await axios.get(GS_URL, {
+    params: { action: "list_cases", sheet: GS_SHEET },
+    timeout: 15000,
+    headers: { "User-Agent": "atelier-api/1.0" }
+  });
+  return r.data;
+}
+async function gsAppendCase(entry) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const r = await axios.post(GS_URL, {
+    action: "save_case",
+    sheet: GS_SHEET,
+    entry
+  }, { timeout: 15000 });
+  return r.data;
+}
+async function gsUpdateStatus(no, status, dateStatusISO) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const r = await axios.post(GS_URL, {
+    action: "update_status",
+    sheet: GS_SHEET,
+    no,
+    status,
+    dateStatus: dateStatusISO
+  }, { timeout: 15000 });
+  return r.data;
+}
 
 async function nextDossierNumber(){
   const cn = readJsonSafe(COUNTER_FILE, null);
@@ -63,7 +106,7 @@ async function nextDossierNumber(){
   if (current === null && GS_URL) {
     try {
       const r = await axios.get(GS_URL, {
-        params: { action: "listCases", sheet: GS_SHEET },
+        params: { action: "list_cases", sheet: GS_SHEET },
         timeout: 15000,
         headers: { "User-Agent": "atelier-api/1.0" }
       });
@@ -79,11 +122,9 @@ async function nextDossierNumber(){
   }
 
   if (current === null) current = 0;
-
   const next = current + 1;
   writeJsonSafe(COUNTER_FILE, { value: next });
-
-  return String(next).padStart(5, "0");
+  return String(next).padStart(5, "0"); // 00001, 00002, ...
 }
 
 function gmailTransport() {
@@ -92,51 +133,14 @@ function gmailTransport() {
   if (!user || !pass) return null;
   return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
 }
-
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "__DEFAULT__": process.env.MAIL_TO || process.env.MAIL_CG || process.env.GMAIL_USER || ""
 };
-
 function destForService(service = ""){
   return DEST_ATELIER[service] || DEST_ATELIER.__DEFAULT__;
-}
-
-const GS_URL   = process.env.GS_ATELIER_URL;
-const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
-
-async function gsListCases() {
-  if (!GS_URL) return { ok: true, data: [] };
-  const r = await axios.get(GS_URL, {
-    params: { action: "listCases", sheet: GS_SHEET },
-    timeout: 15000,
-    headers: { "User-Agent": "atelier-api/1.0" }
-  });
-  return r.data;
-}
-
-async function gsAppendCase(entry) {
-  if (!GS_URL) return { ok: false, error: "no_gs_url" };
-  const r = await axios.post(GS_URL, {
-    action: "appendCase",
-    sheet: GS_SHEET,
-    entry
-  }, { timeout: 15000 });
-  return r.data;
-}
-
-async function gsUpdateStatus(no, status, dateStatusISO) {
-  if (!GS_URL) return { ok: false, error: "no_gs_url" };
-  const r = await axios.post(GS_URL, {
-    action: "updateStatus",
-    sheet: GS_SHEET,
-    no,
-    status,
-    dateStatus: dateStatusISO
-  }, { timeout: 15000 });
-  return r.data;
 }
 
 async function sendServiceMail(no, snapshot){
@@ -402,7 +406,6 @@ router.post("/api/submit", async (req, res) => {
     };
 
     await gsAppendCase(entry);
-
     await sendServiceMail(no, data);
 
     res.json({ ok: true, no });
@@ -415,7 +418,6 @@ router.post("/api/submit", async (req, res) => {
 router.get("/api/cases", async (_req, res) => {
   try {
     const r = await gsListCases();
-    // On renvoie tel quel: { ok:true, data:[...] }
     if (r && r.ok && Array.isArray(r.data)) return res.json({ ok:true, data: r.data });
     return res.json({ ok:true, data: [] });
   } catch (e) {
@@ -439,7 +441,7 @@ router.post("/api/cases/:no/status", async (req, res) => {
         const r = await gsListCases();
         const hit = (r && r.data || []).find(x => String(x.no) === String(no));
         if (hit) await sendClientStatusMail(no, hit);
-      } catch {  }
+      } catch {}
     }
 
     res.json({ ok:true });
