@@ -12,7 +12,7 @@
   }
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
   .wrap{max-width:1100px;margin:24px auto;padding:16px}
-  h1{margin:0 0 12px; color:#primary; font-size:1.4rem}
+  h1{ margin:0 0 12px; color:var(--primary); font-size:1.4rem; }
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px}
   select,input{padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem}
   table{width:100%; border-collapse:separate; border-spacing:0 8px}
@@ -82,6 +82,13 @@
           <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
         </select>
       </label>
+	  <label>Mois :
+  <select id="filterMonth"></select>
+</label>
+
+<label>Jour :
+  <select id="filterDay"></select>
+</label>
 
       <label>Année :
         <select id="filterYear"></select>
@@ -123,6 +130,8 @@ const $btnClose = document.getElementById("btnClose");
 const $btnPrint = document.getElementById("btnPrint");
 const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
+const $month = document.getElementById("filterMonth");
+const $day   = document.getElementById("filterDay");
 
 let rows = [];
 
@@ -161,21 +170,66 @@ function buildYearOptions(list){
 
   $year.value = String(sorted.includes(nowY) ? nowY : (sorted[0] || nowY));
 }
+function buildMonthOptions() {
+  const months = [
+    "Janvier","Février","Mars","Avril","Mai","Juin",
+    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+  ];
+  $month.innerHTML =
+    `<option value="">Tous</option>` +
+    months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
+  $month.value = "";
+}
+
+function updateDayOptions() {
+  const y = Number($year.value) || new Date().getFullYear();
+  const m = Number($month.value) || 0;
+  const maxDay = m ? new Date(y, m, 0).getDate() : 31;
+
+  const prev = $day.value;
+  let html = `<option value="">Tous</option>`;
+  for (let d = 1; d <= maxDay; d++) html += `<option value="${d}">${String(d).padStart(2,"0")}</option>`;
+  $day.innerHTML = html;
+  if (prev && Number(prev) <= maxDay) $day.value = prev; else $day.value = "";
+}
 
 function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
-  const yearVal = ($year.value || "").trim();
+  const yearVal  = ($year.value  || "").trim();
+  const monthVal = ($month.value || "").trim();
+  const dayVal   = ($day.value   || "").trim();
 
   $tbody.innerHTML = "";
   rows
+
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
+
+    .filter(r => {
+      if (!monthVal) return true;
+      const d = r.demandeDate ? new Date(r.demandeDate) : null;
+      return d && !isNaN(d) && (d.getMonth()+1) === Number(monthVal);
+    })
+
+    .filter(r => {
+      if (!dayVal) return true;
+      const d = r.demandeDate ? new Date(r.demandeDate) : null;
+      return d && !isNaN(d) && d.getDate() === Number(dayVal);
+    })
+
     .filter(r => {
       if (!yearVal) return true;
       const d = r.demandeDate ? new Date(r.demandeDate) : null;
       return d && !isNaN(d) && String(d.getFullYear()) === yearVal;
     })
-    .filter(r => !q || JSON.stringify(r).toLowerCase().includes(q))
+
+    .filter(r => {
+      if (!q) return true;
+      const searchable =
+        (JSON.stringify(r) + ' ' + String(r.no).padStart(5,'0')).toLowerCase();
+      return searchable.includes(q);
+    })
+
     .forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -243,7 +297,7 @@ $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.ser
 
   $modalContent.innerHTML = `
     <div class="grid2">
-      <div><span class="label">N° dossier :</span> ${esc(row.no)}</div>
+      <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
       <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
       <div><span class="label">Magasin :</span> ${esc(h.magasin||"")}</div>
       <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
@@ -352,14 +406,18 @@ async function load(){
     });
 
     buildYearOptions(rows);
-    draw();
+buildMonthOptions();
+updateDayOptions();
+draw();
   }catch(e){
     alert("Erreur de chargement.");
   }
 }
 
 $filter.addEventListener("change", draw);
-$year.addEventListener("change", draw);
+$month.addEventListener("change", () => { updateDayOptions(); draw(); });
+$day.addEventListener("change", draw);
+$year.addEventListener("change", () => { updateDayOptions(); draw(); });
 $q.addEventListener("input", draw);
 load();
 </script>
