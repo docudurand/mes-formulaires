@@ -1,62 +1,30 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QR · Demande de Congés</title>
-  <style>
-    :root{
-      --bg:#f6f7fb; --ink:#073763; --muted:#6b7280; --border:#e5e7eb;
-      --card:#fff; --radius:16px;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{max-width:560px;margin:0 auto;padding:24px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-      box-shadow:0 6px 24px rgba(0,0,0,.06);padding:24px;text-align:center}
-    h1{margin:0 0 16px}
-    .qr img{max-width:100%;height:auto;display:block;margin:0 auto}
-    .link{margin-top:14px;font-size:14px;word-break:break-all}
-    .hint{margin-top:8px;color:var(--muted);font-size:14px}
-    .actions{margin-top:14px}
-    .actions a{display:inline-block;margin:4px 6px;padding:10px 14px;border:1px solid var(--border);
-      border-radius:10px;text-decoration:none;color:var(--ink);background:#fff}
-    @media print{
-      body{background:#fff}
-      .wrap{max-width:none;padding:0}
-      .card{box-shadow:none;border:none;border-radius:0}
-      .actions{display:none}
-    }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Scanner pour ouvrir le formulaire</h1>
-
-      <div class="qr">
-
-        <picture>
-          <source srcset="./qr.svg" type="image/svg+xml">
-          <img src="./qr.png" alt="QR vers https://mes-formulaires.onrender.com/conges" width="320" height="320">
-        </picture>
-      </div>
-
-      <div class="link">
-        <a href="https://mes-formulaires.onrender.com/conges">
-          https://mes-formulaires.onrender.com/conges
-        </a>
-      </div>
-
-      <p class="hint">Ouvre cette page sur ton ordinateur, puis scanne avec ton téléphone.</p>
-
-      <div class="actions">
-        <a href="./qr.svg" download>Télécharger le QR (SVG)</a>
-        <a href="./qr.png" download>Télécharger le QR (PNG)</a>
-        <a href="javascript:window.print()">Imprimer</a>
-      </div>
-    </div>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR · Demande de Congés</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:#f6f7fb;color:#073763}
+  .wrap{max-width:560px;margin:0 auto;padding:24px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.06);padding:24px;text-align:center}
+  img{max-width:100%;height:auto}
+  .link{margin-top:14px;font-size:14px;word-break:break-all}
+  .hint{margin-top:8px;color:#6b7280;font-size:14px}
+</style>
+<div class="wrap">
+  <div class="card">
+    <h1 style="margin:0 0 16px">Scanner pour ouvrir le formulaire</h1>
+    <img id="qr" alt="QR /conges">
+    <div class="link"><a id="link" href="#">...</a></div>
+    <div class="hint">Ouvre cette page sur ton ordinateur, puis scanne avec ton téléphone.</div>
   </div>
-</body>
+</div>
+<script>
+  // URL absolue vers /conges
+  const url = (location.origin + "/conges");
+  // Génération du QR via un service public (simple et suffisant)
+  const src = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=" + encodeURIComponent(url);
+  document.getElementById("qr").src = src;
+  const a = document.getElementById("link"); a.href = url; a.textContent = url;
+</script>
 </html>
