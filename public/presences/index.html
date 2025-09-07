@@ -57,7 +57,6 @@
     .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
     .navBtn:active{transform:translateY(1px)}
 
-    /* --- Toast de chargement --- */
     .loadingToast{
       position:fixed; top:12px; right:12px; z-index:1000;
       display:none; align-items:center; gap:8px;
@@ -70,9 +69,16 @@
       border-radius:50%; animation:spin 1s linear infinite;
     }
     @keyframes spin{ to{ transform:rotate(360deg) } }
-
-    /* Placeholder section (pendant chargement) */
     .sectionLoading{padding:16px; display:flex; align-items:center; gap:10px; color:var(--muted)}
+
+    .adminBox{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
+    .card h3{margin:0 0 6px 0;font-size:16px}
+    .rowmeta{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .actions{display:flex;gap:8px}
+    .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+    .no{background:#c62828;color:#fff;border-color:#c62828}
 
     @media (max-width:900px){
       :root{--cell:32px}
@@ -97,7 +103,6 @@
     </div>
   </header>
 
-  <!-- Toast de chargement -->
   <div id="loadingToast" class="loadingToast" aria-live="polite">
     <span class="spinner" aria-hidden="true"></span>
     <span id="loadingMsg">Chargement…</span>
@@ -106,9 +111,11 @@
   <nav class="tabs">
     <div class="tab active" data-tab="saisie">Saisie</div>
     <div class="tab" data-tab="resume">Résumé</div>
+    <div class="tab" data-tab="conges">Congés</div> <!-- NOUVEAU -->
   </nav>
 
   <main>
+
     <section id="saisie" class="page">
       <div class="toolbar">
         <button id="fillP">Remplir sélection avec P</button>
@@ -130,6 +137,21 @@
         <div id="summaryTotals"></div>
       </div>
     </section>
+
+    <section id="conges" class="page" style="display:none">
+      <div class="adminBox">
+        <label for="adminCode"><b>Code d’accès :</b></label>
+        <input id="adminCode" type="password" placeholder="••••" style="height:32px;padding:0 8px;width:140px">
+        <button id="saveAdminCode">OK</button>
+        <span class="hint">Saisis le code une fois pour déverrouiller.</span>
+      </div>
+      <div class="toolbar">
+        <select id="filterStore"></select>
+        <input type="month" id="filterMonth" />
+        <button id="refreshLeaves" class="ghost">Rafraîchir</button>
+      </div>
+      <div id="leavesList" class="cards"></div>
+    </section>
   </main>
 
 <script>
@@ -139,13 +161,10 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 
 const state = {
   store:null, ptype:'EMPLOYE', day:null, month:null,
-  // saisie jour
   people:[], shifts:[], codes:[], matrixDay:{},
-  // résumé mois
   monthPeople:[], monthDays:[], monthShifts:[], monthCodes:[], monthRecords:[]
 };
 
-/* ------------ Helpers UI ------------ */
 function setActiveTab(id){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
@@ -174,8 +193,6 @@ function setMonthFromDay(){
   $('#month').value = ym;
   state.month = ym;
 }
-
-/* --- Indicateur de chargement global --- */
 function showLoading(msg='Chargement…'){
   const toast = $('#loadingToast');
   const btn = $('#load');
@@ -196,31 +213,28 @@ function hideLoading(){
     btn.textContent = btn.dataset.oldLabel || 'Charger';
   }
 }
-/* Placeholder rapide dans une zone */
 function setSectionLoading(targetSel, msg='Chargement…'){
   const el = $(targetSel);
   if(!el) return;
   el.innerHTML = `<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`;
 }
 
-/* ------------ API ------------ */
-async function apiGet(params){
+async function apiGet(params, headers={}){
   const url = API + '?' + new URLSearchParams(params);
-  const r = await fetch(url);
+  const r = await fetch(url, { headers });
   const txt = await r.text();
-  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON de l’API: '+txt.slice(0,120)); }
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
-async function apiPost(body){
-  const r = await fetch(API, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+async function apiPost(body, headers={}){
+  const r = await fetch(API, {method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
   const txt = await r.text();
-  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON de l’API: '+txt.slice(0,120)); }
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
 
-/* ------------ Saisie (jour) ------------ */
 function renderLegend(){
   const el = $('#legend'); el.innerHTML='';
   (state.codes||[]).forEach(c=>{
@@ -244,7 +258,6 @@ function renderGridDay(){
   const grid = $('#gridDay'); grid.innerHTML='';
   const table = document.createElement('table');
 
-  // thead — ligne 0 : NAVIGATION JOUR
   const thead = document.createElement('thead');
   const tr0 = document.createElement('tr');
   const th0 = document.createElement('th');
@@ -258,14 +271,12 @@ function renderGridDay(){
   tr0.appendChild(th0);
   thead.appendChild(tr0);
 
-  // thead — ligne 1 : Nom + créneaux
   const trh = document.createElement('tr');
   trh.appendChild(th('Nom'));
   (state.shifts||[]).forEach(s=> trh.appendChild(th(sShort(s))));
   thead.appendChild(trh);
   table.appendChild(thead);
 
-  // body
   const tbody = document.createElement('tbody');
   (state.people||[]).forEach(p=>{
     const tr = document.createElement('tr');
@@ -293,13 +304,11 @@ function renderGridDay(){
   table.appendChild(tbody);
   grid.appendChild(table);
 
-  // flèches
   const prev = table.querySelector('#prevDay');
   const next = table.querySelector('#nextDay');
   if(prev) prev.onclick = ()=> changeDay(-1);
   if(next) next.onclick = ()=> changeDay(1);
 }
-
 async function changeDay(delta){
   if(!state.day){ return; }
   const d = new Date(state.day);
@@ -308,7 +317,6 @@ async function changeDay(delta){
   state.day = iso;
   $('#day').value = iso;
   setMonthFromDay();
-  // feedback local
   setSectionLoading('#gridDay', 'Chargement du jour…');
   showLoading('Chargement du jour…');
   try{
@@ -318,10 +326,7 @@ async function changeDay(delta){
     hideLoading();
   }
 }
-
-// Alerte veille désactivée (no-op)
-async function checkPrevDayWarning(){ /* intentionally disabled */ }
-
+async function checkPrevDayWarning(){ /* disabled */ }
 async function loadDay(){
   const {people, shifts, codes, records} = await apiGet({action:'initDay', store:state.store, type:state.ptype, day:state.day});
   state.people = people||[]; state.shifts = shifts||[]; state.codes = codes||[];
@@ -340,7 +345,6 @@ async function loadDay(){
   await checkPrevDayWarning();
 }
 
-/* ------------ Résumé (mois) ------------ */
 function renderMonthlyGrid(){
   const container = $('#summaryGrid'); container.innerHTML='';
   if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
@@ -415,8 +419,72 @@ async function loadMonthly(){
   renderTotalsChips(totals.rows||[]);
 }
 
-/* ------------ Events ------------ */
+function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
+function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
+
+async function loadLeaves(){
+  const code = getAdminCode();
+  if(!code){ $('#leavesList').innerHTML = `<div class="sectionLoading">Saisis le code pour afficher les demandes.</div>`; return; }
+
+  $('#leavesList').innerHTML = `<div class="sectionLoading"><span class="spinner"></span> Chargement des demandes…</div>`;
+  const store = $('#filterStore').value || '';
+  const month = $('#filterMonth').value || '';
+  try{
+    const data = await apiGet({action:'leaves', status:'EN_ATTENTE', store:store||'ALL', month:month||''}, {'X-Admin-Code': code});
+    const rows = data.rows||[];
+    if(rows.length===0){
+      $('#leavesList').innerHTML = `<div class="sectionLoading">Aucune demande en attente.</div>`;
+      return;
+    }
+    const wrap = document.createElement('div'); wrap.className='cards';
+    rows.forEach(r=>{
+      const div = document.createElement('div'); div.className='card';
+      div.innerHTML = `
+        <h3>${(r.nom||'').toUpperCase()} ${r.prenom||''}</h3>
+        <div class="rowmeta">${r.magasin||''} · ${r.service||''} · ${r.email||''}</div>
+        <div>Du <b>${r.date_du}</b> au <b>${r.date_au}</b> – ${r.nb_jours||0} jour(s)</div>
+        <div class="actions" style="margin-top:10px">
+          <button class="ok" data-id="${r.id}">Accepter</button>
+          <button class="no" data-id="${r.id}">Refuser</button>
+        </div>`;
+      wrap.appendChild(div);
+    });
+    const box = $('#leavesList'); box.innerHTML=''; box.appendChild(wrap);
+
+    // Actions
+    $$('#leavesList .ok').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'ACCEPTE'));
+    $$('#leavesList .no').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'REFUSE'));
+  }catch(e){
+    $('#leavesList').innerHTML = `<div class="sectionLoading">Erreur: ${e.message}</div>`;
+  }
+}
+
+async function decideLeave(id, decision){
+  const code = getAdminCode(); if(!code) return alert('Code manquant.');
+  try{
+    showLoading('Traitement…');
+    const res = await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
+    if(res?.accepted){
+
+      await loadLeaves();
+
+      await loadDay();
+      alert('Congé accepté et ajouté aux présences (CP).');
+    }else if(res?.refused){
+      await loadLeaves();
+      alert('Demande refusée.');
+    }else{
+      alert('Action non appliquée: ' + (res?.error||''));
+    }
+  }catch(e){
+    alert('Échec: ' + e.message);
+  }finally{
+    hideLoading();
+  }
+}
+
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
+
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
   if(state.store && state.ptype && state.month){
@@ -430,6 +498,26 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
     $('#summaryTotals').innerHTML = '';
   }
 };
+
+$('.tab[data-tab="conges"]').onclick = async ()=>{
+  setActiveTab('conges');
+
+  if(!$('#filterStore').innerHTML.trim()){
+    const stores = (await apiGet({action:'stores'})).stores || [];
+    $('#filterStore').innerHTML = ['ALL', ...stores].map(s=>`<option>${s}</option>`).join('');
+    const now = new Date();
+    $('#filterMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
+  await loadLeaves();
+};
+
+$('#saveAdminCode').onclick = ()=>{
+  const v = $('#adminCode').value.trim();
+  setAdminCode(v);
+  loadLeaves();
+};
+
+$('#refreshLeaves').onclick = ()=> loadLeaves();
 
 $('#fillP').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]='P'; } } renderGridDay(); };
 $('#fillEmpty').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]=''; } } renderGridDay(); };
@@ -455,7 +543,6 @@ $('#load').onclick = async ()=>{
   if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
   if(!state.month){ setMonthFromDay(); }
 
-  // feedback
   setSectionLoading('#gridDay','Chargement des présences…');
   if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
   showLoading('Chargement…');
@@ -465,7 +552,7 @@ $('#load').onclick = async ()=>{
     if(currentTab()==='resume'){ await loadMonthly(); }
   }catch(e){
     console.error('InitDay error', e);
-    alert("Échec du chargement (réseau/API). Vérifie l’URL API côté proxy Render.");
+    alert("Échec du chargement (réseau/API). Vérifie l’URL API.");
   } finally {
     hideLoading();
   }
@@ -485,10 +572,8 @@ $('#exportCsv').onclick = async ()=>{
     a.click(); URL.revokeObjectURL(a.href);
   }catch(e){ alert('Export CSV impossible : '+e.message); }
 };
-
 $('#exportPdf').onclick = ()=> window.print();
 
-/* ------------ Bootstrap ------------ */
 (async function(){
   const now = new Date();
   $('#day').value = now.toISOString().slice(0,10);
