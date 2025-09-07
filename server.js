@@ -153,6 +153,17 @@ app.use(
   })
 );
 
+console.log("[BOOT] public/presences ?", fs.existsSync(path.join(__dirname, "public", "presences")));
+console.log("[BOOT] public/presences/index.html ?",
+  fs.existsSync(path.join(__dirname, "public", "presences", "index.html"))
+);
+
+app.get("/presences/ping", (_req, res) => res.status(200).send("pong"));
+
+app.get("/presences", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "presences", "index.html"));
+});
+
 console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
 console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
 
