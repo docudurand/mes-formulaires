@@ -23,7 +23,7 @@
     .tab{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-weight:600}
     .tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
     main{padding:16px 20px}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
     button{height:38px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-weight:600}
     button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
     button.ghost{background:#fff}
@@ -53,6 +53,7 @@
     .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:auto}
     .summary table td,.summary table th{padding:10px}
     .hint{color:var(--muted);font-size:12px}
+
     .chips{display:flex;flex-wrap:wrap;gap:6px}
     .chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
 
@@ -105,7 +106,6 @@
   </nav>
 
   <main>
-
     <section id="saisie" class="page">
       <div class="toolbar">
         <button id="fillP">Remplir toutes les cases avec P</button>
@@ -120,7 +120,7 @@
     <section id="resume" class="page" style="display:none">
       <div class="toolbar">
         <button id="exportCsv" class="ghost">Exporter CSV</button>
-
+        <span id="exportMsg" class="hint" role="status" aria-live="polite"></span>
       </div>
       <div class="summary">
         <div id="summaryGrid" style="margin-bottom:12px;"></div>
@@ -206,7 +206,7 @@ function formatDateLongFR(iso){
   const d = new Date(iso);
   const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
   const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
-  return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${d.getFullYear()} ${M[d.getMonth()]}`;
+  return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${M[d.getMonth()]} ${d.getFullYear()}`;
 }
 function formatDateHeader(iso){
   const d = new Date(iso);
@@ -605,6 +605,7 @@ $('#saveAdminCode').onclick = ()=>{
 };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
+/* Saisie rapide */
 $('#fillP').onclick = ()=> applyAllDay('P');
 $('#fillEmpty').onclick = ()=>{
   if(selectedCells.size){ setCodesOnTargets(''); }
@@ -646,14 +647,21 @@ async function triggerLoad(){
     hideLoading();
   }
 }
-
 $('#load').onclick = triggerLoad;
 $('#store').addEventListener('change', triggerLoad);
 $('#ptype').addEventListener('change', triggerLoad);
 
 $('#exportCsv').onclick = async ()=>{
+  const btn = $('#exportCsv');
+  const msg = $('#exportMsg');
+  const setMsg = (t)=> msg.textContent = t || '';
+  const finishOk = ()=>{ btn.disabled = false; setMsg('Export terminé ✔'); setTimeout(()=> setMsg(''), 2000); };
+  const finishKo = ()=>{ btn.disabled = false; setMsg('Échec export'); setTimeout(()=> setMsg(''), 3000); };
+
   try{
-    showLoading();
+    btn.disabled = true;
+    setMsg('Export en cours…');
+
     const month = $('#month').value;
     const ptype = $('#ptype').value || 'EMPLOYE';
     const storesResp = await apiGet({action:'stores'});
@@ -686,45 +694,53 @@ $('#exportCsv').onclick = async ()=>{
         const counts = {P:0, CP:0, SS:0, F:0};
         for(const d of (days||[])){
           const codes = (shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`) || '').filter(Boolean);
-          const cell = codes.join('/');
-          row.push(cell);
-
-          // Totaux
-          codes.forEach(c=>{
-            if(counts[c]!==undefined) counts[c] += 1;
-          });
+          row.push(codes.join('/'));
+          codes.forEach(c=>{ if(counts[c]!==undefined) counts[c] += 1; });
         }
-        row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0); // Total P = P
-
+        row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0);
         data.push(row);
       }
 
       const ws = XLSX.utils.aoa_to_sheet(data);
-
-      const colWidths = header.map(h=>{
+      ws['!cols'] = header.map(h=>{
         if(['Magasin','Type'].includes(h)) return {wch:12};
         if(['Nom','Prénom'].includes(h))   return {wch:16};
         if(['P','CP','SS','F','Total P'].includes(h)) return {wch:8};
         return {wch:10};
       });
-      ws['!cols'] = colWidths;
-
       XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
     }
 
     const fname = `presences_${ptype}_${month}.xlsx`;
-    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-    const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
-    a.click();
-    URL.revokeObjectURL(a.href);
+
+    try{
+      const wbArray = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+      const blob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    }catch(_){ /* ignore */ }
+
+    try{
+      const base64 = XLSX.write(wb, {bookType:'xlsx', type:'base64'});
+      window.parent?.postMessage({
+        type: 'DOWNLOAD_FILE',
+        filename: fname,
+        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        base64
+      }, '*');
+    }catch(_){ /* ignore */ }
+
+    finishOk();
   }catch(e){
     console.error(e);
-    alert('Export Excel impossible : '+e.message);
-  }finally{
-    hideLoading();
+    alert('Export Excel impossible : ' + e.message);
+    finishKo();
   }
 };
 
