@@ -145,7 +145,6 @@
   </main>
 
 <script>
-
 const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -445,7 +444,7 @@ function renderMonthlyGrid(){
   tr2.appendChild(th(''));
   (state.monthDays||[]).forEach((d, idx)=>{
     (state.monthShifts||[]).forEach(s=>{
-      const th2 = th(sShort(s)));
+      const th2 = th(sShort(s)); /* <-- corrigé */
       if(weekendFlags[idx]) th2.classList.add('weekend');
       tr2.appendChild(th2);
     });
