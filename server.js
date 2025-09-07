@@ -79,6 +79,73 @@ app.get("/api/sheets/televente", async (req, res) => {
   }
 });
 
+const APPS_SCRIPT_URL_PRESENCES = process.env.APPS_SCRIPT_URL_PRESENCES;
+
+app.get("/api/presences", async (req, res) => {
+  try {
+    if (!APPS_SCRIPT_URL_PRESENCES) {
+      return res.status(500).json({ error: "not_configured", message: "APPS_SCRIPT_URL_PRESENCES manquant" });
+    }
+    const tryOnce = async () =>
+      axios.get(APPS_SCRIPT_URL_PRESENCES, {
+        timeout: 12000,
+        params: req.query,
+        headers: { "User-Agent": "presences-proxy/1.0" },
+      });
+
+    let r;
+    try {
+      r = await tryOnce();
+    } catch {
+      await new Promise((t) => setTimeout(t, 400));
+      r = await tryOnce();
+    }
+
+    if (typeof r.data === "string" && r.data.trim().startsWith("<")) {
+      console.error("[PRESENCES][GET] Réponse non-JSON depuis Apps Script:", r.data.slice(0, 200));
+      return res.status(502).json({ error: "apps_script_html", message: "Apps Script a renvoyé du HTML (non JSON)" });
+    }
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json(r.data);
+  } catch (e) {
+    console.error("[PRESENCES][GET] proxy_failed:", e?.message || e);
+    return res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
+  }
+});
+
+app.post("/api/presences", async (req, res) => {
+  try {
+    if (!APPS_SCRIPT_URL_PRESENCES) {
+      return res.status(500).json({ error: "not_configured", message: "APPS_SCRIPT_URL_PRESENCES manquant" });
+    }
+    const tryOnce = async () =>
+      axios.post(APPS_SCRIPT_URL_PRESENCES, req.body, {
+        timeout: 12000,
+        headers: { "Content-Type": "application/json", "User-Agent": "presences-proxy/1.0" },
+      });
+
+    let r;
+    try {
+      r = await tryOnce();
+    } catch {
+      await new Promise((t) => setTimeout(t, 400));
+      r = await tryOnce();
+    }
+
+    if (typeof r.data === "string" && r.data.trim().startsWith("<")) {
+      console.error("[PRESENCES][POST] Réponse non-JSON depuis Apps Script:", r.data.slice(0, 200));
+      return res.status(502).json({ error: "apps_script_html", message: "Apps Script a renvoyé du HTML (non JSON)" });
+    }
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json(r.data);
+  } catch (e) {
+    console.error("[PRESENCES][POST] proxy_failed:", e?.message || e);
+    return res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
+  }
+});
+
 app.get("/stats/counters", async (_req, res) => {
   try {
     const data = await stats.getCounters();
@@ -117,6 +184,13 @@ app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 
 app.get("/conges", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
+});
+
+console.log("[BOOT] public/presences ?", fs.existsSync(path.join(__dirname, "public", "presences")));
+console.log("[BOOT] public/presences/index.html ?", fs.existsSync(path.join(__dirname, "public", "presences", "index.html")));
+
+app.get("/presences", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "presences", "index.html"));
 });
 
 const ROUTING = {
