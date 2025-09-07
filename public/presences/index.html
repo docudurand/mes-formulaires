@@ -28,7 +28,7 @@
     button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
     button.ghost{background:#fff}
     .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
-    .legend .k{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff}
+    .legend .k{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
     .swatch{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
     .gridWrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
     table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
@@ -38,6 +38,7 @@
     td,th{height:var(--cell);min-width:42px;padding:0}
     td.cell{cursor:text}
     td.cell[contenteditable="true"]:focus{outline:2px solid #2684ff;outline-offset:-2px}
+    td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px} /* <- sélection custom */
     td.cell[data-code=""]{background:#fff}
     td.cell[data-code]{color:#fff;font-weight:700}
     td.cell[data-code="P"]{background:#2e7d32}
@@ -57,13 +58,9 @@
     .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
     .navBtn:active{transform:translateY(1px)}
 
-    /* Spinner (utilisé dans les placeholders INLINE seulement) */
-    .spinner{
-      width:16px; height:16px; border:2px solid #ddd; border-top-color:var(--brand);
-      border-radius:50%; animation:spin 1s linear infinite;
-    }
+    .spinner{width:16px;height:16px;border:2px solid #ddd;border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{ to{ transform:rotate(360deg) } }
-    .sectionLoading{padding:16px; display:flex; align-items:center; gap:10px; color:var(--muted)}
+    .sectionLoading{padding:16px;display:flex;align-items:center;gap:10px;color:var(--muted)}
 
     .adminBox{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;display:flex;gap:8px;align-items:center;margin-bottom:10px}
     .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
@@ -97,8 +94,6 @@
     </div>
   </header>
 
-  <!-- (Toast global supprimé) -->
-
   <nav class="tabs">
     <div class="tab active" data-tab="saisie">Saisie</div>
     <div class="tab" data-tab="resume">Résumé</div>
@@ -112,7 +107,7 @@
         <button id="fillP">Remplir sélection avec P</button>
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
-        <span class="hint">Astuce: double-clic pour éditer, flèches pour naviguer.</span>
+        <span class="hint">Astuce: clique une cellule (Ctrl/Cmd = multi), puis une puce P/CP. Alt+clic sur la puce = remplir tout.</span>
       </div>
       <div class="legend" id="legend"></div>
       <div class="gridWrap"><div id="gridDay"></div></div>
@@ -156,6 +151,37 @@ const state = {
   monthPeople:[], monthDays:[], monthShifts:[], monthCodes:[], monthRecords:[]
 };
 
+const selectedCells = new Set();
+let lastCell = null;
+
+function clearSelection(){
+  selectedCells.forEach(td=> td.classList.remove('selected'));
+  selectedCells.clear();
+  lastCell = null;
+}
+function selectCell(td, additive=false){
+  if(!additive){ clearSelection(); }
+  selectedCells.add(td);
+  td.classList.add('selected');
+  lastCell = td;
+}
+function getTargetCells(){
+
+  if(selectedCells.size) return Array.from(selectedCells);
+  return lastCell ? [lastCell] : [];
+}
+function setCodesOnTargets(code){
+  const targets = getTargetCells();
+  if(!targets.length){ alert('Clique d’abord une cellule (Ctrl/Cmd pour multi-sélection), puis sur la puce.'); return; }
+  targets.forEach(td=>{
+    const pid = td.dataset.pid;
+    const s   = td.dataset.shift;
+    state.matrixDay[pid][s] = code || '';
+    td.textContent = code || '';
+    setCellCodeColor(td, code || '');
+  });
+}
+
 function setActiveTab(id){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
@@ -185,8 +211,7 @@ function setMonthFromDay(){
   state.month = ym;
 }
 
-/* --- PLUS DE TOAST GLOBAL: on ne fait que désactiver le bouton Charger --- */
-function showLoading(_msg=''){
+function showLoading(msg=''){
   const btn = $('#load');
   if(btn){
     btn.disabled = true;
@@ -201,15 +226,12 @@ function hideLoading(){
     btn.textContent = btn.dataset.oldLabel || 'Charger';
   }
 }
-
-/* Placeholder dans une zone (gardé) */
 function setSectionLoading(targetSel, msg='Chargement…'){
   const el = $(targetSel);
   if(!el) return;
   el.innerHTML = `<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`;
 }
 
-/* ------------ API ------------ */
 async function apiGet(params, headers={}){
   const url = API + '?' + new URLSearchParams(params);
   const r = await fetch(url, { headers });
@@ -226,27 +248,56 @@ async function apiPost(body, headers={}){
   return j;
 }
 
-/* ------------ Saisie (jour) ------------ */
 function renderLegend(){
   const el = $('#legend'); el.innerHTML='';
   (state.codes||[]).forEach(c=>{
     const div = document.createElement('div');
     div.className='k';
     div.innerHTML = `<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
-    div.onclick=()=> applyAllDay(c.code);
+    div.addEventListener('click', (e)=>{
+      if(e.altKey){ applyAllDay(c.code); } else { setCodesOnTargets(c.code); }
+    });
     el.appendChild(div);
   });
 }
 function applyAllDay(code){
-  for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]=code||''; } }
-  renderGridDay();
+
+  for(const pid in state.matrixDay){
+    for(const s of state.shifts){
+      state.matrixDay[pid][s]=code||'';
+    }
+  }
+
+  $$('#gridDay td.cell').forEach(td=>{
+    const pid=td.dataset.pid, sh=td.dataset.shift;
+    const v=state.matrixDay[pid][sh]||'';
+    td.textContent=v;
+    setCellCodeColor(td, v);
+  });
 }
 function setCellCodeColor(td, code){
   const color = (state.codes||[]).find(c=>c.code===code)?.couleur_hex || '';
   td.style.backgroundColor = color || '';
   td.style.color = color ? '#fff' : '';
 }
+function attachCellHandlers(td){
+
+  td.addEventListener('mousedown', (e)=> selectCell(td, e.ctrlKey || e.metaKey || e.shiftKey));
+
+  td.addEventListener('input', e=>{
+    const v = e.target.textContent.trim().toUpperCase();
+    const allowed = new Set((state.codes||[]).map(c=>c.code));
+    const code = allowed.has(v) ? v : '';
+    const pid = td.dataset.pid, s = td.dataset.shift;
+    state.matrixDay[pid][s] = code;
+    td.textContent = code;
+    setCellCodeColor(td, code);
+    selectCell(td, true);
+  });
+}
 function renderGridDay(){
+  clearSelection();
+
   const grid = $('#gridDay'); grid.innerHTML='';
   const table = document.createElement('table');
 
@@ -281,14 +332,7 @@ function renderGridDay(){
       const val = state.matrixDay?.[p.id]?.[s] || '';
       td.textContent = val;
       setCellCodeColor(td, val);
-      td.addEventListener('input', e=>{
-        const v = e.target.textContent.trim().toUpperCase();
-        const allowed = new Set((state.codes||[]).map(c=>c.code));
-        const code = allowed.has(v) ? v : '';
-        state.matrixDay[p.id][s] = code;
-        td.textContent = code;
-        setCellCodeColor(td, code);
-      });
+      attachCellHandlers(td);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -301,6 +345,7 @@ function renderGridDay(){
   if(prev) prev.onclick = ()=> changeDay(-1);
   if(next) next.onclick = ()=> changeDay(1);
 }
+
 async function changeDay(delta){
   if(!state.day){ return; }
   const d = new Date(state.day);
@@ -337,7 +382,6 @@ async function loadDay(){
   await checkPrevDayWarning();
 }
 
-/* ------------ Résumé (mois) ------------ */
 function renderMonthlyGrid(){
   const container = $('#summaryGrid'); container.innerHTML='';
   if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
@@ -412,7 +456,6 @@ async function loadMonthly(){
   renderTotalsChips(totals.rows||[]);
 }
 
-/* ------------ Congés (onglet admin) ------------ */
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
 function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
 
@@ -474,7 +517,6 @@ async function decideLeave(id, decision){
   }
 }
 
-/* ------------ Events ------------ */
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
 
 $('.tab[data-tab="resume"]').onclick = async ()=>{
@@ -510,8 +552,14 @@ $('#saveAdminCode').onclick = ()=>{
 };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
-$('#fillP').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]='P'; } } renderGridDay(); };
-$('#fillEmpty').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]=''; } } renderGridDay(); };
+$('#fillP').onclick = ()=>{
+  if(selectedCells.size){ setCodesOnTargets('P'); }
+  else{ applyAllDay('P'); }
+};
+$('#fillEmpty').onclick = ()=>{
+  if(selectedCells.size){ setCodesOnTargets(''); }
+  else{ applyAllDay(''); }
+};
 
 $('#save').onclick = async ()=>{
   try{
