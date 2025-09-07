@@ -80,6 +80,7 @@
       .tabs{top:unset;position:static}
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <header>
@@ -119,7 +120,7 @@
     <section id="resume" class="page" style="display:none">
       <div class="toolbar">
         <button id="exportCsv" class="ghost">Exporter CSV</button>
-        <button id="exportPdf" class="ghost">Exporter PDF</button>
+
       </div>
       <div class="summary">
         <div id="summaryGrid" style="margin-bottom:12px;"></div>
@@ -207,6 +208,13 @@ function formatDateLongFR(iso){
   const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
   return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${d.getFullYear()} ${M[d.getMonth()]}`;
 }
+function formatDateHeader(iso){
+  const d = new Date(iso);
+  const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][d.getDay()];
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${J} ${dd}/${mm}`;
+}
 function setMonthFromDay(){
   if(!state.day) return;
   const d = new Date(state.day);
@@ -214,7 +222,7 @@ function setMonthFromDay(){
   $('#month').value = ym;
   state.month = ym;
 }
-const isWeekendISO = (iso) => {
+const isWeekendISO = iso => {
   const g = new Date(iso).getDay();
   return g === 0 || g === 6;
 };
@@ -270,7 +278,6 @@ function renderLegend(){
 }
 
 function applyAllDay(code){
-
   if(isWeekendISO(state.day)){
     renderGridDay();
     return;
@@ -347,7 +354,6 @@ function renderGridDay(){
       td.className='cell';
       td.dataset.pid=p.id; 
       td.dataset.shift=s;
-
       const val = state.matrixDay?.[p.id]?.[s] || '';
       td.textContent = val;
 
@@ -642,25 +648,85 @@ async function triggerLoad(){
 }
 
 $('#load').onclick = triggerLoad;
-
 $('#store').addEventListener('change', triggerLoad);
 $('#ptype').addEventListener('change', triggerLoad);
 
 $('#exportCsv').onclick = async ()=>{
   try{
-    const totals = await apiGet({action:'summary', store:$('#store').value, type:$('#ptype').value, month:$('#month').value});
-    const header = ['magasin','nom','prenom','type','P','CP','SS','F','totalP'];
-    const lines = [header.join(';')].concat((totals.rows||[]).map(r=>[
-      r.magasin,r.nom,r.prenom,r.type,r.P||0,r.CP||0,r.SS||0,r.F||0,r.totalP||0
-    ].join(';')));
-    const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+    showLoading();
+    const month = $('#month').value;
+    const ptype = $('#ptype').value || 'EMPLOYE';
+    const storesResp = await apiGet({action:'stores'});
+    const stores = (storesResp.stores && storesResp.stores.length) ? storesResp.stores : [$('#store').value];
+
+    const wb = XLSX.utils.book_new();
+
+    for(const store of stores){
+      const {people, days, shifts, records} = await apiGet({action:'init', store, type:ptype, month});
+
+      const recMap = new Map();
+      (records||[]).forEach(r=>{
+        recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || '');
+      });
+
+      const header = ['Magasin','Type','Nom','Prénom'];
+      (days||[]).forEach(d=> header.push(formatDateHeader(d)));
+      header.push('P','CP','SS','F','Total P');
+
+      const rowsPeople = (people||[]).slice().sort((a,b)=>{
+        const na=(a.nom||'').localeCompare(b.nom||'', 'fr', {sensitivity:'base'});
+        return na!==0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr', {sensitivity:'base'});
+      });
+
+      const data = [header];
+
+      for(const p of rowsPeople){
+        const row = [store, (p.type||ptype)||'', (p.nom||'').toUpperCase(), p.prenom||''];
+
+        const counts = {P:0, CP:0, SS:0, F:0};
+        for(const d of (days||[])){
+          const codes = (shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`) || '').filter(Boolean);
+          const cell = codes.join('/');
+          row.push(cell);
+
+          // Totaux
+          codes.forEach(c=>{
+            if(counts[c]!==undefined) counts[c] += 1;
+          });
+        }
+        row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0); // Total P = P
+
+        data.push(row);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      const colWidths = header.map(h=>{
+        if(['Magasin','Type'].includes(h)) return {wch:12};
+        if(['Nom','Prénom'].includes(h))   return {wch:16};
+        if(['P','CP','SS','F','Total P'].includes(h)) return {wch:8};
+        return {wch:10};
+      });
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
+    }
+
+    const fname = `presences_${ptype}_${month}.xlsx`;
+    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `presence_${$('#store').value}_${$('#month').value}.csv`;
-    a.click(); URL.revokeObjectURL(a.href);
-  }catch(e){ alert('Export CSV impossible : '+e.message); }
+    a.download = fname;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }catch(e){
+    console.error(e);
+    alert('Export Excel impossible : '+e.message);
+  }finally{
+    hideLoading();
+  }
 };
-$('#exportPdf').onclick = ()=> window.print();
 
 (async function(){
   const now = new Date();
