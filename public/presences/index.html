@@ -145,9 +145,11 @@
   </main>
 
 <script>
+
 const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+const inIframe = (()=>{ try{ return window.top !== window.self; }catch(e){ return true; } })();
 
 const state = {
   store:null, ptype:'EMPLOYE', day:null, month:null,
@@ -157,6 +159,7 @@ const state = {
 
 const selectedCells = new Set();
 let lastCell = null;
+
 function clearSelection(){
   selectedCells.forEach(td=> td.classList.remove('selected'));
   selectedCells.clear();
@@ -276,7 +279,6 @@ function renderLegend(){
     el.appendChild(div);
   });
 }
-
 function applyAllDay(code){
   if(isWeekendISO(state.day)){
     renderGridDay();
@@ -301,6 +303,7 @@ function setCellCodeColor(td, code){
   td.style.backgroundColor = color || '';
   td.style.color = color ? '#fff' : '';
 }
+
 function attachCellHandlers(td){
   td.addEventListener('mousedown', (e)=> selectCell(td, e.ctrlKey || e.metaKey || e.shiftKey));
   td.addEventListener('input', e=>{
@@ -314,7 +317,6 @@ function attachCellHandlers(td){
     selectCell(td, true);
   });
 }
-
 function renderGridDay(){
   clearSelection();
 
@@ -443,7 +445,7 @@ function renderMonthlyGrid(){
   tr2.appendChild(th(''));
   (state.monthDays||[]).forEach((d, idx)=>{
     (state.monthShifts||[]).forEach(s=>{
-      const th2 = th(sShort(s));
+      const th2 = th(sShort(s)));
       if(weekendFlags[idx]) th2.classList.add('weekend');
       tr2.appendChild(th2);
     });
@@ -605,7 +607,6 @@ $('#saveAdminCode').onclick = ()=>{
 };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
-/* Saisie rapide */
 $('#fillP').onclick = ()=> applyAllDay('P');
 $('#fillEmpty').onclick = ()=>{
   if(selectedCells.size){ setCodesOnTargets(''); }
@@ -655,7 +656,7 @@ $('#exportCsv').onclick = async ()=>{
   const btn = $('#exportCsv');
   const msg = $('#exportMsg');
   const setMsg = (t)=> msg.textContent = t || '';
-  const finishOk = ()=>{ btn.disabled = false; setMsg('Export terminé ✔'); setTimeout(()=> setMsg(''), 2000); };
+  const finishOk = (t)=>{ btn.disabled = false; setMsg(t || 'Export terminé ✔'); setTimeout(()=> setMsg(''), 2500); };
   const finishKo = ()=>{ btn.disabled = false; setMsg('Échec export'); setTimeout(()=> setMsg(''), 3000); };
 
   try{
@@ -713,7 +714,7 @@ $('#exportCsv').onclick = async ()=>{
 
     const fname = `presences_${ptype}_${month}.xlsx`;
 
-    try{
+    if(!inIframe){
       const wbArray = XLSX.write(wb, {bookType:'xlsx', type:'array'});
       const blob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       const url = URL.createObjectURL(blob);
@@ -724,19 +725,18 @@ $('#exportCsv').onclick = async ()=>{
       document.body.appendChild(a);
       a.click();
       setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
-    }catch(_){ /* ignore */ }
-
-    try{
+      finishOk();
+    }else{
       const base64 = XLSX.write(wb, {bookType:'xlsx', type:'base64'});
-      window.parent?.postMessage({
+      window.parent && window.parent.postMessage({
         type: 'DOWNLOAD_FILE',
         filename: fname,
         mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         base64
       }, '*');
-    }catch(_){ /* ignore */ }
+      finishOk('Fichier envoyé à Wix ✔');
+    }
 
-    finishOk();
   }catch(e){
     console.error(e);
     alert('Export Excel impossible : ' + e.message);
