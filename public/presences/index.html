@@ -57,13 +57,7 @@
     .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
     .navBtn:active{transform:translateY(1px)}
 
-    .loadingToast{
-      position:fixed; top:12px; right:12px; z-index:1000;
-      display:none; align-items:center; gap:8px;
-      border:1px solid var(--line); background:#fff; border-radius:999px;
-      padding:6px 10px; box-shadow:0 6px 18px rgba(0,0,0,.08);
-      font-weight:600;
-    }
+    /* Spinner (utilisé dans les placeholders INLINE seulement) */
     .spinner{
       width:16px; height:16px; border:2px solid #ddd; border-top-color:var(--brand);
       border-radius:50%; animation:spin 1s linear infinite;
@@ -103,15 +97,12 @@
     </div>
   </header>
 
-  <div id="loadingToast" class="loadingToast" aria-live="polite">
-    <span class="spinner" aria-hidden="true"></span>
-    <span id="loadingMsg">Chargement…</span>
-  </div>
+  <!-- (Toast global supprimé) -->
 
   <nav class="tabs">
     <div class="tab active" data-tab="saisie">Saisie</div>
     <div class="tab" data-tab="resume">Résumé</div>
-    <div class="tab" data-tab="conges">Congés</div> <!-- NOUVEAU -->
+    <div class="tab" data-tab="conges">Congés</div>
   </nav>
 
   <main>
@@ -193,11 +184,10 @@ function setMonthFromDay(){
   $('#month').value = ym;
   state.month = ym;
 }
-function showLoading(msg='Chargement…'){
-  const toast = $('#loadingToast');
+
+/* --- PLUS DE TOAST GLOBAL: on ne fait que désactiver le bouton Charger --- */
+function showLoading(_msg=''){
   const btn = $('#load');
-  $('#loadingMsg').textContent = msg;
-  toast.style.display = 'flex';
   if(btn){
     btn.disabled = true;
     if(!btn.dataset.oldLabel) btn.dataset.oldLabel = btn.textContent;
@@ -205,20 +195,21 @@ function showLoading(msg='Chargement…'){
   }
 }
 function hideLoading(){
-  const toast = $('#loadingToast');
   const btn = $('#load');
-  toast.style.display = 'none';
   if(btn){
     btn.disabled = false;
     btn.textContent = btn.dataset.oldLabel || 'Charger';
   }
 }
+
+/* Placeholder dans une zone (gardé) */
 function setSectionLoading(targetSel, msg='Chargement…'){
   const el = $(targetSel);
   if(!el) return;
   el.innerHTML = `<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`;
 }
 
+/* ------------ API ------------ */
 async function apiGet(params, headers={}){
   const url = API + '?' + new URLSearchParams(params);
   const r = await fetch(url, { headers });
@@ -235,6 +226,7 @@ async function apiPost(body, headers={}){
   return j;
 }
 
+/* ------------ Saisie (jour) ------------ */
 function renderLegend(){
   const el = $('#legend'); el.innerHTML='';
   (state.codes||[]).forEach(c=>{
@@ -345,6 +337,7 @@ async function loadDay(){
   await checkPrevDayWarning();
 }
 
+/* ------------ Résumé (mois) ------------ */
 function renderMonthlyGrid(){
   const container = $('#summaryGrid'); container.innerHTML='';
   if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
@@ -419,6 +412,7 @@ async function loadMonthly(){
   renderTotalsChips(totals.rows||[]);
 }
 
+/* ------------ Congés (onglet admin) ------------ */
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
 function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
 
@@ -451,7 +445,6 @@ async function loadLeaves(){
     });
     const box = $('#leavesList'); box.innerHTML=''; box.appendChild(wrap);
 
-    // Actions
     $$('#leavesList .ok').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'ACCEPTE'));
     $$('#leavesList .no').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'REFUSE'));
   }catch(e){
@@ -465,9 +458,7 @@ async function decideLeave(id, decision){
     showLoading('Traitement…');
     const res = await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
     if(res?.accepted){
-
       await loadLeaves();
-
       await loadDay();
       alert('Congé accepté et ajouté aux présences (CP).');
     }else if(res?.refused){
@@ -483,6 +474,7 @@ async function decideLeave(id, decision){
   }
 }
 
+/* ------------ Events ------------ */
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
 
 $('.tab[data-tab="resume"]').onclick = async ()=>{
@@ -516,7 +508,6 @@ $('#saveAdminCode').onclick = ()=>{
   setAdminCode(v);
   loadLeaves();
 };
-
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
 $('#fillP').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s of state.shifts){ state.matrixDay[pid][s]='P'; } } renderGridDay(); };
