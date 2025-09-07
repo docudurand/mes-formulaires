@@ -38,7 +38,7 @@
     td,th{height:var(--cell);min-width:42px;padding:0}
     td.cell{cursor:text}
     td.cell[contenteditable="true"]:focus{outline:2px solid #2684ff;outline-offset:-2px}
-    td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px} /* <- sélection custom */
+    td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px}
     td.cell[data-code=""]{background:#fff}
     td.cell[data-code]{color:#fff;font-weight:700}
     td.cell[data-code="P"]{background:#2e7d32}
@@ -46,6 +46,9 @@
     td.cell[data-code="SS"]{background:#c62828}
     td.cell[data-code="F"]{background:#455a64}
     .sub{font-size:11px;color:var(--muted)}
+
+    td.cell.weekend{background:#000 !important;color:#fff !important;cursor:not-allowed}
+    th.weekend{background:#111 !important;color:#fff !important}
 
     .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:auto}
     .summary table td,.summary table th{padding:10px}
@@ -84,7 +87,7 @@
     <div class="filters">
       <select id="store"></select>
       <select id="ptype">
-        <option value="EMPLOYE">Employés</option>
+        <option value="EMPLOYE" selected>Employés</option>
         <option value="INTERIM">Intérim</option>
         <option value="LIVREUR">Livreurs</option>
       </select>
@@ -107,7 +110,7 @@
         <button id="fillP">Remplir toutes les cases avec P</button>
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
-        <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi) puis une puce P/CP. Le bouton « Remplir toutes les cases avec P » met un P partout (Alt+clic sur une puce = idem).</span>
+        <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi) puis une puce P/CP. Le bouton met un P partout. Alt+clic sur une puce = remplir tout.</span>
       </div>
       <div class="legend" id="legend"></div>
       <div class="gridWrap"><div id="gridDay"></div></div>
@@ -153,20 +156,19 @@ const state = {
 
 const selectedCells = new Set();
 let lastCell = null;
-
 function clearSelection(){
   selectedCells.forEach(td=> td.classList.remove('selected'));
   selectedCells.clear();
   lastCell = null;
 }
 function selectCell(td, additive=false){
+  if(td.classList.contains('weekend')) return;
   if(!additive){ clearSelection(); }
   selectedCells.add(td);
   td.classList.add('selected');
   lastCell = td;
 }
 function getTargetCells(){
-
   if(selectedCells.size) return Array.from(selectedCells);
   return lastCell ? [lastCell] : [];
 }
@@ -174,6 +176,7 @@ function setCodesOnTargets(code){
   const targets = getTargetCells();
   if(!targets.length){ alert('Clique d’abord une cellule (Ctrl/Cmd pour multi-sélection), puis sur la puce.'); return; }
   targets.forEach(td=>{
+    if(td.classList.contains('weekend')) return;
     const pid = td.dataset.pid;
     const s   = td.dataset.shift;
     state.matrixDay[pid][s] = code || '';
@@ -187,6 +190,7 @@ function setActiveTab(id){
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
 }
 function currentTab(){ return document.querySelector('.tab.active')?.dataset.tab || 'saisie'; }
+
 function dayLabel(d){
   const dt = new Date(d);
   const JOURS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -201,7 +205,7 @@ function formatDateLongFR(iso){
   const d = new Date(iso);
   const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
   const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
-  return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${M[d.getMonth()]} ${d.getFullYear()}`;
+  return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${d.getFullYear()} ${M[d.getMonth()]}`;
 }
 function setMonthFromDay(){
   if(!state.day) return;
@@ -210,8 +214,12 @@ function setMonthFromDay(){
   $('#month').value = ym;
   state.month = ym;
 }
+const isWeekendISO = (iso) => {
+  const g = new Date(iso).getDay();
+  return g === 0 || g === 6;
+};
 
-function showLoading(msg=''){
+function showLoading(){
   const btn = $('#load');
   if(btn){
     btn.disabled = true;
@@ -260,15 +268,20 @@ function renderLegend(){
     el.appendChild(div);
   });
 }
+
 function applyAllDay(code){
 
+  if(isWeekendISO(state.day)){
+    renderGridDay();
+    return;
+  }
   for(const pid in state.matrixDay){
     for(const s of state.shifts){
       state.matrixDay[pid][s]=code||'';
     }
   }
-
   $$('#gridDay td.cell').forEach(td=>{
+    if(td.classList.contains('weekend')) return;
     const pid=td.dataset.pid, sh=td.dataset.shift;
     const v=state.matrixDay[pid][sh]||'';
     td.textContent=v;
@@ -276,14 +289,13 @@ function applyAllDay(code){
   });
 }
 function setCellCodeColor(td, code){
+  if(td.classList.contains('weekend')) return;
   const color = (state.codes||[]).find(c=>c.code===code)?.couleur_hex || '';
   td.style.backgroundColor = color || '';
   td.style.color = color ? '#fff' : '';
 }
 function attachCellHandlers(td){
-
   td.addEventListener('mousedown', (e)=> selectCell(td, e.ctrlKey || e.metaKey || e.shiftKey));
-
   td.addEventListener('input', e=>{
     const v = e.target.textContent.trim().toUpperCase();
     const allowed = new Set((state.codes||[]).map(c=>c.code));
@@ -295,6 +307,7 @@ function attachCellHandlers(td){
     selectCell(td, true);
   });
 }
+
 function renderGridDay(){
   clearSelection();
 
@@ -320,23 +333,37 @@ function renderGridDay(){
   thead.appendChild(trh);
   table.appendChild(thead);
 
+  const weekendDay = isWeekendISO(state.day);
+
   const tbody = document.createElement('tbody');
   (state.people||[]).forEach(p=>{
     const tr = document.createElement('tr');
-    const thn = th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky';
+    const thn = th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); 
+    thn.className='sticky';
     tr.appendChild(thn);
+
     (state.shifts||[]).forEach(s=>{
       const td = document.createElement('td');
-      td.className='cell'; td.setAttribute('contenteditable','true');
-      td.dataset.pid=p.id; td.dataset.shift=s;
+      td.className='cell';
+      td.dataset.pid=p.id; 
+      td.dataset.shift=s;
+
       const val = state.matrixDay?.[p.id]?.[s] || '';
       td.textContent = val;
-      setCellCodeColor(td, val);
-      attachCellHandlers(td);
+
+      if(weekendDay){
+        td.classList.add('weekend');
+      }else{
+        td.setAttribute('contenteditable','true');
+        setCellCodeColor(td, val);
+        attachCellHandlers(td);
+      }
       tr.appendChild(td);
     });
+
     tbody.appendChild(tr);
   });
+
   table.appendChild(tbody);
   grid.appendChild(table);
 
@@ -355,7 +382,7 @@ async function changeDay(delta){
   $('#day').value = iso;
   setMonthFromDay();
   setSectionLoading('#gridDay', 'Chargement du jour…');
-  showLoading('Chargement du jour…');
+  showLoading();
   try{
     await loadDay();
     if(currentTab()==='resume'){ await loadMonthly(); }
@@ -363,7 +390,8 @@ async function changeDay(delta){
     hideLoading();
   }
 }
-async function checkPrevDayWarning(){ /* disabled */ }
+async function checkPrevDayWarning(){ /* placeholder */ }
+
 async function loadDay(){
   const {people, shifts, codes, records} = await apiGet({action:'initDay', store:state.store, type:state.ptype, day:state.day});
   state.people = people||[]; state.shifts = shifts||[]; state.codes = codes||[];
@@ -385,22 +413,34 @@ async function loadDay(){
 function renderMonthlyGrid(){
   const container = $('#summaryGrid'); container.innerHTML='';
   if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
+
   const table = document.createElement('table');
   const thead = document.createElement('thead');
+
   const tr1 = document.createElement('tr');
   tr1.appendChild(document.createElement('th'));
+
+  const weekendFlags = [];
   (state.monthDays||[]).forEach(d=>{
     const th1 = document.createElement('th');
     th1.innerHTML = dayLabel(d);
     th1.colSpan = (state.monthShifts||[]).length;
     th1.style.minWidth = (state.monthShifts.length>2? 64 : 44)+'px';
+    const isW = isWeekendISO(d);
+    weekendFlags.push(isW);
+    if(isW) th1.classList.add('weekend');
     tr1.appendChild(th1);
   });
   thead.appendChild(tr1);
+
   const tr2 = document.createElement('tr');
   tr2.appendChild(th(''));
-  (state.monthDays||[]).forEach(_=>{
-    (state.monthShifts||[]).forEach(s=> tr2.appendChild(th(sShort(s))));
+  (state.monthDays||[]).forEach((d, idx)=>{
+    (state.monthShifts||[]).forEach(s=>{
+      const th2 = th(sShort(s));
+      if(weekendFlags[idx]) th2.classList.add('weekend');
+      tr2.appendChild(th2);
+    });
   });
   thead.appendChild(tr2);
   table.appendChild(thead);
@@ -413,19 +453,30 @@ function renderMonthlyGrid(){
     const tr = document.createElement('tr');
     const name = `${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`;
     const thn = th(name); thn.className='sticky'; tr.appendChild(thn);
-    (state.monthDays||[]).forEach(d=>{
+
+    (state.monthDays||[]).forEach((d, idx)=>{
+      const isW = weekendFlags[idx];
       (state.monthShifts||[]).forEach(s=>{
-        const td = document.createElement('td'); td.className='cell';
-        const code = map.get(`${p.id}|${d}|${s}`) || '';
-        td.dataset.code = code;
-        td.textContent = code;
-        const color = (state.monthCodes||[]).find(c=>c.code===code)?.couleur_hex || '';
-        td.style.backgroundColor = color || ''; td.style.color = color ? '#fff' : '';
+        const td = document.createElement('td'); 
+        td.className='cell';
+        if(isW){
+          td.classList.add('weekend');
+          td.textContent = '';
+        }else{
+          const code = map.get(`${p.id}|${d}|${s}`) || '';
+          td.dataset.code = code;
+          td.textContent = code;
+          const color = (state.monthCodes||[]).find(c=>c.code===code)?.couleur_hex || '';
+          td.style.backgroundColor = color || ''; 
+          td.style.color = color ? '#fff' : '';
+        }
         tr.appendChild(td);
       });
     });
+
     tbody.appendChild(tr);
   });
+
   table.appendChild(tbody);
   container.appendChild(table);
 }
@@ -494,11 +545,10 @@ async function loadLeaves(){
     $('#leavesList').innerHTML = `<div class="sectionLoading">Erreur: ${e.message}</div>`;
   }
 }
-
 async function decideLeave(id, decision){
   const code = getAdminCode(); if(!code) return alert('Code manquant.');
   try{
-    showLoading('Traitement…');
+    showLoading();
     const res = await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
     if(res?.accepted){
       await loadLeaves();
@@ -518,12 +568,11 @@ async function decideLeave(id, decision){
 }
 
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
-
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
   if(state.store && state.ptype && state.month){
     setSectionLoading('#summaryGrid','Chargement du résumé…');
-    showLoading('Chargement du résumé…');
+    showLoading();
     try{ await loadMonthly(); }
     catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); }
     finally{ hideLoading(); }
@@ -532,10 +581,8 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
     $('#summaryTotals').innerHTML = '';
   }
 };
-
 $('.tab[data-tab="conges"]').onclick = async ()=>{
   setActiveTab('conges');
-
   if(!$('#filterStore').innerHTML.trim()){
     const stores = (await apiGet({action:'stores'})).stores || [];
     $('#filterStore').innerHTML = ['ALL', ...stores].map(s=>`<option>${s}</option>`).join('');
@@ -561,7 +608,7 @@ $('#fillEmpty').onclick = ()=>{
 $('#save').onclick = async ()=>{
   try{
     if(!state.store || !state.ptype || !state.day){ alert('Sélectionne magasin / type / jour.'); return; }
-    showLoading('Enregistrement…');
+    showLoading();
     const res = await apiPost({action:'saveDay', store:state.store, type:state.ptype, day:state.day, matrix:state.matrixDay});
     if(res?.ok){ alert('Présences enregistrées ✔'); }
     else{ throw new Error(res?.error||'Erreur inconnue'); }
@@ -569,9 +616,9 @@ $('#save').onclick = async ()=>{
   finally{ hideLoading(); }
 };
 
-$('#load').onclick = async ()=>{
+async function triggerLoad(){
   state.store = $('#store').value;
-  state.ptype = $('#ptype').value;
+  state.ptype = $('#ptype').value || 'EMPLOYE';
   state.day   = $('#day').value;
   state.month = $('#month').value;
 
@@ -581,7 +628,7 @@ $('#load').onclick = async ()=>{
 
   setSectionLoading('#gridDay','Chargement des présences…');
   if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
-  showLoading('Chargement…');
+  showLoading();
 
   try{
     await loadDay();
@@ -592,7 +639,12 @@ $('#load').onclick = async ()=>{
   } finally {
     hideLoading();
   }
-};
+}
+
+$('#load').onclick = triggerLoad;
+
+$('#store').addEventListener('change', triggerLoad);
+$('#ptype').addEventListener('change', triggerLoad);
 
 $('#exportCsv').onclick = async ()=>{
   try{
@@ -612,8 +664,11 @@ $('#exportPdf').onclick = ()=> window.print();
 
 (async function(){
   const now = new Date();
-  $('#day').value = now.toISOString().slice(0,10);
+  const todayISO = now.toISOString().slice(0,10);
+  $('#day').value = todayISO;
   $('#month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  $('#ptype').value = 'EMPLOYE';
+
   try{
     const stores = (await apiGet({action:'stores'})).stores || ['GLEIZE','VILLEFRANCHE','LYON'];
     $('#store').innerHTML = stores.map(s=>`<option>${s}</option>`).join('');
@@ -621,6 +676,12 @@ $('#exportPdf').onclick = ()=> window.print();
     console.error('Stores: échec', e);
     $('#store').innerHTML = ['GLEIZE','VILLEFRANCHE','LYON'].map(s=>`<option>${s}</option>`).join('');
   }
+
+  if(!$('#store').value){
+    const first = $('#store').querySelector('option')?.value || '';
+    if(first) $('#store').value = first;
+  }
+  await triggerLoad();
 })();
 </script>
 </body>
