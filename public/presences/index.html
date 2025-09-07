@@ -56,6 +56,24 @@
     .dayTitle{font-weight:700}
     .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
     .navBtn:active{transform:translateY(1px)}
+
+    /* --- Toast de chargement --- */
+    .loadingToast{
+      position:fixed; top:12px; right:12px; z-index:1000;
+      display:none; align-items:center; gap:8px;
+      border:1px solid var(--line); background:#fff; border-radius:999px;
+      padding:6px 10px; box-shadow:0 6px 18px rgba(0,0,0,.08);
+      font-weight:600;
+    }
+    .spinner{
+      width:16px; height:16px; border:2px solid #ddd; border-top-color:var(--brand);
+      border-radius:50%; animation:spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+
+    /* Placeholder section (pendant chargement) */
+    .sectionLoading{padding:16px; display:flex; align-items:center; gap:10px; color:var(--muted)}
+
     @media (max-width:900px){
       :root{--cell:32px}
       header{flex-direction:column;align-items:flex-start;gap:8px}
@@ -78,6 +96,12 @@
       <button id="load" class="primary">Charger</button>
     </div>
   </header>
+
+  <!-- Toast de chargement -->
+  <div id="loadingToast" class="loadingToast" aria-live="polite">
+    <span class="spinner" aria-hidden="true"></span>
+    <span id="loadingMsg">Chargement…</span>
+  </div>
 
   <nav class="tabs">
     <div class="tab active" data-tab="saisie">Saisie</div>
@@ -115,12 +139,13 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 
 const state = {
   store:null, ptype:'EMPLOYE', day:null, month:null,
-
+  // saisie jour
   people:[], shifts:[], codes:[], matrixDay:{},
-
+  // résumé mois
   monthPeople:[], monthDays:[], monthShifts:[], monthCodes:[], monthRecords:[]
 };
 
+/* ------------ Helpers UI ------------ */
 function setActiveTab(id){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
@@ -150,6 +175,35 @@ function setMonthFromDay(){
   state.month = ym;
 }
 
+/* --- Indicateur de chargement global --- */
+function showLoading(msg='Chargement…'){
+  const toast = $('#loadingToast');
+  const btn = $('#load');
+  $('#loadingMsg').textContent = msg;
+  toast.style.display = 'flex';
+  if(btn){
+    btn.disabled = true;
+    if(!btn.dataset.oldLabel) btn.dataset.oldLabel = btn.textContent;
+    btn.textContent = 'Chargement…';
+  }
+}
+function hideLoading(){
+  const toast = $('#loadingToast');
+  const btn = $('#load');
+  toast.style.display = 'none';
+  if(btn){
+    btn.disabled = false;
+    btn.textContent = btn.dataset.oldLabel || 'Charger';
+  }
+}
+/* Placeholder rapide dans une zone */
+function setSectionLoading(targetSel, msg='Chargement…'){
+  const el = $(targetSel);
+  if(!el) return;
+  el.innerHTML = `<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`;
+}
+
+/* ------------ API ------------ */
 async function apiGet(params){
   const url = API + '?' + new URLSearchParams(params);
   const r = await fetch(url);
@@ -166,6 +220,7 @@ async function apiPost(body){
   return j;
 }
 
+/* ------------ Saisie (jour) ------------ */
 function renderLegend(){
   const el = $('#legend'); el.innerHTML='';
   (state.codes||[]).forEach(c=>{
@@ -185,11 +240,11 @@ function setCellCodeColor(td, code){
   td.style.backgroundColor = color || '';
   td.style.color = color ? '#fff' : '';
 }
-
 function renderGridDay(){
   const grid = $('#gridDay'); grid.innerHTML='';
   const table = document.createElement('table');
 
+  // thead — ligne 0 : NAVIGATION JOUR
   const thead = document.createElement('thead');
   const tr0 = document.createElement('tr');
   const th0 = document.createElement('th');
@@ -203,12 +258,14 @@ function renderGridDay(){
   tr0.appendChild(th0);
   thead.appendChild(tr0);
 
+  // thead — ligne 1 : Nom + créneaux
   const trh = document.createElement('tr');
   trh.appendChild(th('Nom'));
   (state.shifts||[]).forEach(s=> trh.appendChild(th(sShort(s))));
   thead.appendChild(trh);
   table.appendChild(thead);
 
+  // body
   const tbody = document.createElement('tbody');
   (state.people||[]).forEach(p=>{
     const tr = document.createElement('tr');
@@ -236,6 +293,7 @@ function renderGridDay(){
   table.appendChild(tbody);
   grid.appendChild(table);
 
+  // flèches
   const prev = table.querySelector('#prevDay');
   const next = table.querySelector('#nextDay');
   if(prev) prev.onclick = ()=> changeDay(-1);
@@ -250,12 +308,18 @@ async function changeDay(delta){
   state.day = iso;
   $('#day').value = iso;
   setMonthFromDay();
-  await loadDay();
-  if(currentTab()==='resume'){
-    await loadMonthly();
+  // feedback local
+  setSectionLoading('#gridDay', 'Chargement du jour…');
+  showLoading('Chargement du jour…');
+  try{
+    await loadDay();
+    if(currentTab()==='resume'){ await loadMonthly(); }
+  } finally {
+    hideLoading();
   }
 }
 
+// Alerte veille désactivée (no-op)
 async function checkPrevDayWarning(){ /* intentionally disabled */ }
 
 async function loadDay(){
@@ -276,6 +340,7 @@ async function loadDay(){
   await checkPrevDayWarning();
 }
 
+/* ------------ Résumé (mois) ------------ */
 function renderMonthlyGrid(){
   const container = $('#summaryGrid'); container.innerHTML='';
   if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
@@ -323,7 +388,6 @@ function renderMonthlyGrid(){
   table.appendChild(tbody);
   container.appendChild(table);
 }
-
 function renderTotalsChips(rows){
   const wrap = $('#summaryTotals'); wrap.innerHTML='';
   if(!rows || !rows.length){ wrap.innerHTML = `<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
@@ -343,7 +407,6 @@ function renderTotalsChips(rows){
   });
   wrap.appendChild(container);
 }
-
 async function loadMonthly(){
   const {people, days, shifts, codes, records} = await apiGet({action:'init', store:state.store, type:state.ptype, month:state.month});
   state.monthPeople=people||[]; state.monthDays=days||[]; state.monthShifts=shifts||[]; state.monthCodes=codes||[]; state.monthRecords=records||[];
@@ -352,11 +415,16 @@ async function loadMonthly(){
   renderTotalsChips(totals.rows||[]);
 }
 
+/* ------------ Events ------------ */
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
   if(state.store && state.ptype && state.month){
-    try{ await loadMonthly(); }catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); }
+    setSectionLoading('#summaryGrid','Chargement du résumé…');
+    showLoading('Chargement du résumé…');
+    try{ await loadMonthly(); }
+    catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); }
+    finally{ hideLoading(); }
   } else {
     $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis magasin / type / mois puis clique <b>Charger</b>.</div>`;
     $('#summaryTotals').innerHTML = '';
@@ -369,10 +437,12 @@ $('#fillEmpty').onclick = ()=>{ for(const pid in state.matrixDay){ for(const s o
 $('#save').onclick = async ()=>{
   try{
     if(!state.store || !state.ptype || !state.day){ alert('Sélectionne magasin / type / jour.'); return; }
+    showLoading('Enregistrement…');
     const res = await apiPost({action:'saveDay', store:state.store, type:state.ptype, day:state.day, matrix:state.matrixDay});
     if(res?.ok){ alert('Présences enregistrées ✔'); }
     else{ throw new Error(res?.error||'Erreur inconnue'); }
   }catch(e){ console.error(e); alert("Échec de l'enregistrement : "+e.message); }
+  finally{ hideLoading(); }
 };
 
 $('#load').onclick = async ()=>{
@@ -385,12 +455,19 @@ $('#load').onclick = async ()=>{
   if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
   if(!state.month){ setMonthFromDay(); }
 
+  // feedback
+  setSectionLoading('#gridDay','Chargement des présences…');
+  if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
+  showLoading('Chargement…');
+
   try{
     await loadDay();
     if(currentTab()==='resume'){ await loadMonthly(); }
   }catch(e){
     console.error('InitDay error', e);
     alert("Échec du chargement (réseau/API). Vérifie l’URL API côté proxy Render.");
+  } finally {
+    hideLoading();
   }
 };
 
@@ -411,6 +488,7 @@ $('#exportCsv').onclick = async ()=>{
 
 $('#exportPdf').onclick = ()=> window.print();
 
+/* ------------ Bootstrap ------------ */
 (async function(){
   const now = new Date();
   $('#day').value = now.toISOString().slice(0,10);
