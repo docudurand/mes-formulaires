@@ -55,9 +55,6 @@ app.use((req, res, next) => {
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
 
-const APPS_SCRIPT_PRESENCES_URL = process.env.APPS_SCRIPT_PRESENCES_URL;
-const CONGES_ADMIN_CODE = process.env.CONGES_ADMIN_CODE || "1234";
-
 app.get("/api/sheets/televente", async (req, res) => {
   const tryOnce = async () =>
     axios.get(APPS_SCRIPT_URL, {
@@ -82,22 +79,61 @@ app.get("/api/sheets/televente", async (req, res) => {
   }
 });
 
+const CONGES_ADMIN_CODE = process.env.CONGES_ADMIN_CODE || "1234";
+
+function normalizeUrl(v) {
+  if (!v) return "";
+  let s = String(v).trim();
+  s = s.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+  return s;
+}
+
+function getAppsScriptPresencesUrl() {
+  const raw =
+    process.env.APPS_SCRIPT_PRESENCES ||
+    process.env.APPS_SCRIPT_PRESENCES_URL ||
+    "";
+  return normalizeUrl(raw);
+}
+
+app.get("/api/presences/_debug", (req, res) => {
+  const url = getAppsScriptPresencesUrl();
+  res.json({
+    ok: true,
+    has_APPS_SCRIPT_PRESENCES: Boolean(process.env.APPS_SCRIPT_PRESENCES),
+    has_APPS_SCRIPT_PRESENCES_URL: Boolean(process.env.APPS_SCRIPT_PRESENCES_URL),
+    url_preview: url ? url.slice(0, 60) + (url.length > 60 ? "…" : "") : "",
+    ends_with_exec: !!url && url.endsWith("/exec"),
+    node_env: process.env.NODE_ENV || null,
+  });
+});
+
 app.get("/api/presences", async (req, res) => {
   try {
     const action = String(req.query.action || "");
 
     if (action === "leaves") {
-      const code = req.headers["x-admin-code"] || req.query.adminCode;
+      const code = req.get("X-Admin-Code") || req.query.adminCode;
       if (String(code) !== String(CONGES_ADMIN_CODE)) {
         return res.status(401).json({ error: "unauthorized" });
       }
     }
-    if (!APPS_SCRIPT_PRESENCES_URL) {
+
+    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
+    if (!APPS_SCRIPT_PRESENCES) {
       return res.status(500).json({ error: "apps_script_presences_url_missing" });
     }
-    const r = await axios.get(APPS_SCRIPT_PRESENCES_URL, { params: req.query, timeout: 20000 });
-    res.json(r.data);
+
+    const r = await axios.get(APPS_SCRIPT_PRESENCES, {
+      params: req.query,
+      timeout: 20000,
+      headers: {
+        "X-Admin-Code": req.get("X-Admin-Code") || "",
+      },
+    });
+    res.status(200).json(r.data);
   } catch (e) {
+    console.error("[PRESENCES][GET] proxy_failed:", e?.message || e);
     res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
   }
 });
@@ -107,20 +143,39 @@ app.post("/api/presences", async (req, res) => {
     const action = String(req.body?.action || "");
 
     if (action === "leave_decide") {
-      const code = req.headers["x-admin-code"] || req.query.adminCode;
+      const code = req.get("X-Admin-Code") || req.query.adminCode;
       if (String(code) !== String(CONGES_ADMIN_CODE)) {
         return res.status(401).json({ error: "unauthorized" });
       }
     }
-    if (!APPS_SCRIPT_PRESENCES_URL) {
+
+    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
+    if (!APPS_SCRIPT_PRESENCES) {
       return res.status(500).json({ error: "apps_script_presences_url_missing" });
     }
-    const r = await axios.post(APPS_SCRIPT_PRESENCES_URL, req.body, { timeout: 30000 });
-    res.json(r.data);
+
+    const r = await axios.post(APPS_SCRIPT_PRESENCES, req.body, {
+      timeout: 30000,
+      headers: {
+        "X-Admin-Code": req.get("X-Admin-Code") || "",
+      },
+    });
+    res.status(200).json(r.data);
   } catch (e) {
+    console.error("[PRESENCES][POST] proxy_failed:", e?.message || e);
     res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
   }
 });
+
+(() => {
+  const url = getAppsScriptPresencesUrl();
+  console.log(
+    "[BOOT][PRESENCES] vars:",
+    { APPS_SCRIPT_PRESENCES: !!process.env.APPS_SCRIPT_PRESENCES, APPS_SCRIPT_PRESENCES_URL: !!process.env.APPS_SCRIPT_PRESENCES_URL }
+  );
+  console.log("[BOOT][PRESENCES] using URL:", url ? url.slice(0, 80) + (url.length > 80 ? "…" : "") : "(none)");
+  console.log("[BOOT][PRESENCES] ends_with_/exec ?", !!url && url.endsWith("/exec"));
+})();
 
 app.get("/stats/counters", async (_req, res) => {
   try {
@@ -153,19 +208,24 @@ app.use(
   })
 );
 
-console.log("[BOOT] public/presences ?", fs.existsSync(path.join(__dirname, "public", "presences")));
+console.log("[BOOT] public/presences ?",
+  fs.existsSync(path.join(__dirname, "public", "presences"))
+);
 console.log("[BOOT] public/presences/index.html ?",
   fs.existsSync(path.join(__dirname, "public", "presences", "index.html"))
 );
 
 app.get("/presences/ping", (_req, res) => res.status(200).send("pong"));
-
 app.get("/presences", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "presences", "index.html"));
 });
 
-console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
-console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
+console.log("[BOOT] public/conges ?",
+  fs.existsSync(path.join(__dirname, "public", "conges"))
+);
+console.log("[BOOT] public/conges/index.html ?",
+  fs.existsSync(path.join(__dirname, "public", "conges", "index.html"))
+);
 
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => {
@@ -189,19 +249,22 @@ function resolveRecipient(magasin, service, globalDefault) {
 
 app.post("/conges/api", async (req, res) => {
   try {
-
     const { magasin, nomPrenom, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
     const errors = [];
 
     if (!magasin) errors.push("magasin");
     if (!service) errors.push("service");
     if (!email) errors.push("email");
+
     const n = Number(nbJours);
     if (!Number.isFinite(n) || n <= 0) errors.push("nbJours");
+
     const d1 = new Date(dateDu), d2 = new Date(dateAu);
     if (!dateDu || !dateAu || isNaN(d1) || isNaN(d2) || d2 < d1) errors.push("plageDates");
+
     const reMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!reMail.test(String(email))) errors.push("email");
+
     if (!signatureData || String(signatureData).length < 2000 || !/^data:image\/png;base64,/.test(signatureData)) {
       errors.push("signature");
     }
@@ -216,16 +279,22 @@ app.post("/conges/api", async (req, res) => {
     if (!_nom) errors.push("nom");
     if (!_prenom) errors.push("prenom");
 
-    if (errors.length) { return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors }); }
+    if (errors.length) {
+      return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
+    }
 
     const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
       console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
       return res.status(500).json({ ok: false, error: "smtp_not_configured" });
     }
+
     const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
     const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
-    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: cleanedPass } });
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: cleanedPass },
+    });
 
     const duFR = fmtFR(dateDu);
     const auFR = fmtFR(dateAu);
@@ -260,12 +329,19 @@ app.post("/conges/api", async (req, res) => {
       replyTo: email,
       subject,
       html,
-      attachments: [{ filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
+      attachments: [
+        {
+          filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
     });
 
-    if (APPS_SCRIPT_PRESENCES_URL) {
+    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
+    if (APPS_SCRIPT_PRESENCES) {
       try {
-        await axios.post(APPS_SCRIPT_PRESENCES_URL, {
+        await axios.post(APPS_SCRIPT_PRESENCES, {
           action: "leave_request",
           magasin, nom: _nom, prenom: _prenom, service,
           nbJours: n, dateDu, dateAu, email, signatureData,
@@ -290,7 +366,7 @@ app.use("/formtelevente", formtelevente);
 app.use("/formulaire-piece", formulairePiece);
 app.use("/formulaire-piecepl", formulairePiecePL);
 app.use("/formulaire-pneu", formulairePneu);
-app.use("/suivi-dossier", suiviDossier);
+// (suiviDossier déjà monté plus haut)
 
 const pretPublic = path.join(__dirname, "pretvehiculed", "public");
 app.use("/pret", express.static(pretPublic, { extensions: ["html", "htm"], index: false }));
@@ -299,6 +375,7 @@ app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-
 app.use("/pret/api", loansRouter);
 
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
+
 
 const PORT = process.env.PORT || 3000;
 (async () => {
@@ -318,10 +395,12 @@ function esc(str = "") {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function fmtFR(dateStr = "") {
   const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
 }
+
 async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks = [];
@@ -370,14 +449,17 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
   y += labelGap;
 
+  const parts = String(nomPrenom || "").trim().split(/\s+/);
+  const _nom = parts[0] || "";
+  const _prenom = parts.slice(1).join(" ");
+
   doc.font("Helvetica").fontSize(bodySize);
   doc.text("NOM :", pageLeft, y);
-  const nom = (nomPrenom || "").split(" ").slice(0, 1).join("");
-  const prenom = (nomPrenom || "").split(" ").slice(1).join(" ");
-  doc.text(nom, pageLeft + 55, y, { width: 250 });
+  doc.text(_nom, pageLeft + 55, y, { width: 250 });
   y += rowGap;
+
   doc.text("PRENOM :", pageLeft, y);
-  doc.text(prenom, pageLeft + 85, y, { width: 300 });
+  doc.text(_prenom, pageLeft + 85, y, { width: 300 });
   y += rowGap;
 
   const services = [
@@ -418,7 +500,9 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
       const sigY = y + 14;
       doc.image(sigBuf, 370, sigY, { width: 150 });
       y = Math.max(y + 90, sigY + 90);
-    } catch (e) { y += 70; }
+    } catch (e) {
+      y += 70;
+    }
   } else {
     y += 70;
   }
