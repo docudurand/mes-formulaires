@@ -81,6 +81,7 @@
       .tabs{top:unset;position:static}
     }
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -145,6 +146,7 @@
   </main>
 
 <script>
+
 const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -444,7 +446,7 @@ function renderMonthlyGrid(){
   tr2.appendChild(th(''));
   (state.monthDays||[]).forEach((d, idx)=>{
     (state.monthShifts||[]).forEach(s=>{
-      const th2 = th(sShort(s)); /* <-- corrigé */
+      const th2 = th(sShort(s)));
       if(weekendFlags[idx]) th2.classList.add('weekend');
       tr2.appendChild(th2);
     });
