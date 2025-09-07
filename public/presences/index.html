@@ -104,10 +104,10 @@
 
     <section id="saisie" class="page">
       <div class="toolbar">
-        <button id="fillP">Remplir sélection avec P</button>
+        <button id="fillP">Remplir toutes les cases avec P</button>
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
-        <span class="hint">Astuce: clique une cellule (Ctrl/Cmd = multi), puis une puce P/CP. Alt+clic sur la puce = remplir tout.</span>
+        <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi) puis une puce P/CP. Le bouton « Remplir toutes les cases avec P » met un P partout (Alt+clic sur une puce = idem).</span>
       </div>
       <div class="legend" id="legend"></div>
       <div class="gridWrap"><div id="gridDay"></div></div>
@@ -552,10 +552,7 @@ $('#saveAdminCode').onclick = ()=>{
 };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
-$('#fillP').onclick = ()=>{
-  if(selectedCells.size){ setCodesOnTargets('P'); }
-  else{ applyAllDay('P'); }
-};
+$('#fillP').onclick = ()=> applyAllDay('P');
 $('#fillEmpty').onclick = ()=>{
   if(selectedCells.size){ setCodesOnTargets(''); }
   else{ applyAllDay(''); }
