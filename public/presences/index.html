@@ -182,7 +182,6 @@ function setActiveTab(id){
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
 }
 function currentTab(){ return document.querySelector('.tab.active')?.dataset.tab || 'saisie'; }
-
 function dayLabel(d){
   const dt = new Date(d);
   const J=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -469,20 +468,35 @@ function renderTotalsChips(rows){
 async function loadDayAll(){
   if(dayAbortCtrl) dayAbortCtrl.abort();
   dayAbortCtrl = new AbortController();
-
   const {store} = state; const day = state.day; const signal=dayAbortCtrl.signal;
 
-  const res = {};
-  for(const t of TYPES){
-    const payload = await apiGet({action:'initDay', store, type:t, day}, {}, signal);
-    const {people=[],shifts=[],codes=[],records=[]}=payload||{};
-    const matrix={};
-    people.forEach(p=>{ matrix[p.id]={}; shifts.forEach(s=> matrix[p.id][s]=''); });
-    (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
-    res[t]={people,shifts,codes,matrix};
+  try{
+
+    const payload = await apiGet({action:'initDayAll', store, day}, {}, signal);
+    const res = {};
+    TYPES.forEach(t=>{
+      const pl = payload?.[t]||{};
+      const {people=[],shifts=[],codes=[],records=[]}=pl;
+      const matrix={};
+      people.forEach(p=>{ matrix[p.id]={}; shifts.forEach(s=> matrix[p.id][s]=''); });
+      (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
+      res[t]={people,shifts,codes,matrix};
+    });
+    state.dayByType = res;
+  }catch(e){
+
+    const res = {};
+    for(const t of TYPES){
+      const pl = await apiGet({action:'initDay', store, type:t, day}, {}, signal);
+      const {people=[],shifts=[],codes=[],records=[]}=pl||{};
+      const matrix={};
+      people.forEach(p=>{ matrix[p.id]={}; shifts.forEach(s=> matrix[p.id][s]=''); });
+      (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
+      res[t]={people,shifts,codes,matrix};
+    }
+    state.dayByType=res;
   }
 
-  state.dayByType=res;
   rebuildCodesUnion();
   renderGridDayAll();
 }
@@ -591,23 +605,31 @@ $('#fillEmpty').onclick = ()=>{ if(selectedCells.size){ setCodesOnTargets(''); }
 $('#save').onclick = async ()=>{
   if(!state.store || !state.day){ alert('Sélectionne magasin / jour.'); return; }
   showLoading();
-  const typesOrder = ['EMPLOYE','INTERIM','LIVREUR'];
-  const ok = [];
   try{
-    for(const t of typesOrder){
-      const bucket=state.dayByType?.[t]; if(!bucket) continue;
-      const sparse = buildSparseMatrix(bucket);
-      if(Object.keys(sparse).length===0){ ok.push(`${t} (aucune modif)`); continue; }
-      await apiPostWithRetry({action:'saveDay', store:state.store, type:t, day:state.day, matrix:sparse}, {}, 2);
-      try{
-        const check=await apiGet({action:'summaryDay', store:state.store, type:t, day:state.day});
-        ok.push(check?.filled ? t : `${t} (enregistré, à vérifier)`);
-      }catch(_){ ok.push(`${t} (enregistré)`); }
+    const mats={};
+    TYPES.forEach(t=>{
+      const b=state.dayByType?.[t];
+      if(!b) return;
+      const sp=buildSparseMatrix(b);
+      if(Object.keys(sp).length) mats[t]=sp;
+    });
+
+    if(Object.keys(mats).length===0){
+      alert('Rien à enregistrer 🙂');
+      return;
     }
-    alert('Présences enregistrées ✔\n' + ok.join(', '));
+
+    try{
+
+      await apiPostWithRetry({action:'saveDayAll', store:state.store, day:state.day, matrices:mats}, {}, 2);
+    }catch(e){
+      for(const t of Object.keys(mats)){
+        await apiPostWithRetry({action:'saveDay', store:state.store, type:t, day:state.day, matrix:mats[t]}, {}, 2);
+      }
+    }
+    alert('Présences enregistrées ✔');
   }catch(e){
-    console.error(e);
-    alert("Échec de l'enregistrement : " + e.message);
+    console.error(e); alert("Échec de l'enregistrement : "+e.message);
   }finally{ hideLoading(); }
 };
 
