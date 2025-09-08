@@ -12,6 +12,9 @@
       --brand:#d21f3c; --chip:#111; --chipText:#fff;
       --radius:14px; --pad:12px;
       --cell:38px; --cellSm:32px;
+
+      --nameColW: 260px;
+      --shiftColW: 88px;
     }
     *{box-sizing:border-box}
     body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
@@ -71,6 +74,11 @@
     .actions{display:flex;gap:8px}
     .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
     .no{background:#c62828;color:#fff;border-color:#c62828}
+
+    .gridWrap table.day { table-layout: fixed; }
+    .gridWrap table.day th,
+    .gridWrap table.day td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     @media (max-width:900px){
       :root{--cell:32px}
       header{flex-direction:column;align-items:flex-start;gap:8px}
@@ -102,7 +110,7 @@
         <button id="fillP">Remplir toutes les cases avec P</button>
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
-        <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi). Alt+clic sur une puce = remplir tout le tableau.</span>
+        <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi)</span>
       </div>
       <div id="gridDay"></div>
     </section>
@@ -325,7 +333,14 @@ function renderGridDayOne(type){
   gridSection.appendChild(legendInline);
 
   const wrap=document.createElement('div'); wrap.className='gridWrap';
-  const table=document.createElement('table'); const thead=document.createElement('thead');
+  const table=document.createElement('table'); 
+  table.classList.add('day');
+  const thead=document.createElement('thead');
+
+  const colgroup = document.createElement('colgroup');
+  const colName = document.createElement('col'); colName.style.width = 'var(--nameColW)'; colgroup.appendChild(colName);
+  (shifts||[]).forEach(()=>{ const c=document.createElement('col'); c.style.width='var(--shiftColW)'; colgroup.appendChild(c); });
+  table.appendChild(colgroup);
 
   if(type==='EMPLOYE'){
     const tr0=document.createElement('tr'); const th0=document.createElement('th');
@@ -471,7 +486,6 @@ async function loadDayAll(){
   const {store} = state; const day = state.day; const signal=dayAbortCtrl.signal;
 
   try{
-
     const payload = await apiGet({action:'initDayAll', store, day}, {}, signal);
     const res = {};
     TYPES.forEach(t=>{
@@ -484,7 +498,6 @@ async function loadDayAll(){
     });
     state.dayByType = res;
   }catch(e){
-
     const res = {};
     for(const t of TYPES){
       const pl = await apiGet({action:'initDay', store, type:t, day}, {}, signal);
@@ -620,7 +633,6 @@ $('#save').onclick = async ()=>{
     }
 
     try{
-
       await apiPostWithRetry({action:'saveDayAll', store:state.store, day:state.day, matrices:mats}, {}, 2);
     }catch(e){
       for(const t of Object.keys(mats)){
@@ -661,7 +673,7 @@ $('#exportCsv').onclick = async ()=>{
       const inits = {};
       for(const t of TYPES){ inits[t]=await apiGet({action:'init', store, type:t, month}); }
       for(const t of TYPES){
-        const {people=[],records=[]}=inits[t];
+        const {people=[],records[]}=inits[t];
         const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
         const rowsPeople=people.slice().sort((a,b)=>{
           const na=(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'});
