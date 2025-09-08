@@ -72,7 +72,6 @@
     .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
     .no{background:#c62828;color:#fff;border-color:#c62828}
 
-    /* Onglet Magasins */
     .storeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:6px}
     .storeBtn{display:flex;align-items:center;justify-content:center;height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
     .storeBtn:hover{border-color:#ccc}
@@ -90,7 +89,6 @@
   <header>
     <h1>Présences – Durand Services</h1>
     <div class="filters">
-      <!-- supprimé: select magasin -->
       <input type="date" id="day" />
       <input type="month" id="month" />
       <button id="load" class="primary">Charger</button>
@@ -123,6 +121,8 @@
 
     <section id="resume" class="page" style="display:none">
       <div class="toolbar">
+        <select id="resumeStore" style="min-width:220px"></select>
+        <button id="loadResume" class="primary">Charger résumé</button>
         <button id="exportCsv" class="ghost">Exporter CSV</button>
         <span id="exportMsg" class="hint" role="status" aria-live="polite"></span>
       </div>
@@ -151,7 +151,6 @@ const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
-/* Liste de magasins (fallback) */
 const STORES = [
   "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
   "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
@@ -161,12 +160,11 @@ const STORES = [
 const TYPES = ['EMPLOYE','INTERIM','LIVREUR'];
 const TYPE_LABELS = {EMPLOYE:'Employés', INTERIM:'Intérim', LIVREUR:'Livreurs'};
 
-const state = { store:null, day:null, month:null, dayByType:{}, monthByType:{}, codesUnion:[] };
+const state = { store:null, resumeStore:null, day:null, month:null, dayByType:{}, monthByType:{}, codesUnion:[] };
 let dayAbortCtrl = null; let monthAbortCtrl = null;
 
 const selectedCells = new Set(); let lastCell = null;
 
-/* -------- sélection -------- */
 function clearSelection(){ selectedCells.forEach(td=> td.classList.remove('selected')); selectedCells.clear(); lastCell=null; }
 function selectCell(td, additive=false){
   if(td.classList.contains('weekend') || td.classList.contains('off')) return;
@@ -175,7 +173,6 @@ function selectCell(td, additive=false){
 }
 function getTargetCells(){ return selectedCells.size ? Array.from(selectedCells) : (lastCell ? [lastCell] : []); }
 
-/* -------- couleurs & codes -------- */
 function findColor(code, type){
   const arr = (state.dayByType?.[type]?.codes) || [];
   const found = arr.find(c=>c.code===code) || state.codesUnion.find(c=>c.code===code);
@@ -200,7 +197,6 @@ function setCodesOnTargets(code){
   });
 }
 
-/* -------- tabs & dates -------- */
 function setActiveTab(id){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
   $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
@@ -230,7 +226,6 @@ function setMonthFromDay(){
 }
 const isWeekendISO = iso => { const g=new Date(iso).getDay(); return g===0||g===6; };
 
-/* -------- header helpers -------- */
 function setCurrentStoreChip(){
   const chip = $('#currentStoreChip');
   if(state.store){
@@ -246,7 +241,6 @@ function showLoading(){ const btn=$('#load'); if(btn){ btn.disabled=true; if(!bt
 function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.textContent=btn.dataset.oldLabel||'Charger'; } }
 function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
 
-/* -------- API -------- */
 async function apiGet(params, headers={}, signal){
   const url = API + '?' + new URLSearchParams(params);
   const r = await fetch(url, { headers, signal });
@@ -263,7 +257,6 @@ async function apiPost(body, headers={}, signal){
   return j;
 }
 
-/* Retry + sparse */
 function buildSparseMatrix(bucket){
   const out = {};
   for(const pid in (bucket?.matrix||{})){
@@ -290,7 +283,6 @@ async function apiPostWithRetry(body, headers={}, tries=2){
   throw lastErr;
 }
 
-/* -------- légendes -------- */
 function rebuildCodesUnion(){
   const map=new Map();
   TYPES.forEach(t=> (state.dayByType?.[t]?.codes||[]).forEach(c=>{ if(!map.has(c.code)) map.set(c.code,c); }));
@@ -309,7 +301,6 @@ function renderLegendInline(container, type){
   });
 }
 
-/* -------- bulk -------- */
 function applyAllDay(code, onlyType=null){
   if(isWeekendISO(state.day)){ renderGridDayAll(); return; }
   const types = onlyType ? [onlyType] : TYPES;
@@ -337,7 +328,6 @@ function applyAllDay(code, onlyType=null){
   });
 }
 
-/* -------- rendu jour -------- */
 function attachCellHandlers(td){
   td.addEventListener('mousedown',(e)=> selectCell(td, e.ctrlKey||e.metaKey||e.shiftKey));
   td.addEventListener('input', e=>{
@@ -433,7 +423,6 @@ function renderGridDayAll(){
   TYPES.forEach(t=> grid.appendChild( renderGridDayOne(t) ));
 }
 
-/* -------- résumé mensuel -------- */
 function renderMonthlyGridOne(type){
   const bucket = state.monthByType?.[type]||{};
   const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
@@ -507,7 +496,6 @@ function renderTotalsChips(rows){
   wrap.appendChild(container);
 }
 
-/* -------- chargement jour -------- */
 async function loadDayAll(){
   if(dayAbortCtrl) dayAbortCtrl.abort();
   dayAbortCtrl = new AbortController();
@@ -542,12 +530,13 @@ async function loadDayAll(){
   renderGridDayAll();
 }
 
-/* -------- chargement mensuel -------- */
-async function loadMonthlyAll(){
+async function loadMonthlyAll(storeOverride=null){
   if(monthAbortCtrl) monthAbortCtrl.abort();
   monthAbortCtrl = new AbortController();
 
-  const {store} = state; const month = state.month; const signal=monthAbortCtrl.signal;
+  const store = storeOverride || state.store;
+  const month = state.month;
+  const signal = monthAbortCtrl.signal;
 
   const monthByType={};
   for(const t of TYPES){
@@ -566,7 +555,6 @@ async function loadMonthlyAll(){
   renderTotalsChips(totalsAll);
 }
 
-/* -------- change day -------- */
 async function changeDay(delta){
   if(!state.day) return;
   const d=new Date(state.day); d.setDate(d.getDate()+delta);
@@ -575,11 +563,10 @@ async function changeDay(delta){
   setSectionLoading('#gridDay','Chargement du jour…'); showLoading();
   try{
     await loadDayAll();
-    if(currentTab()==='resume'){ await loadMonthlyAll(); }
+    if(currentTab()==='resume'){ await loadMonthlyAll(state.resumeStore || state.store); }
   } finally { hideLoading(); }
 }
 
-/* -------- congés -------- */
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
 function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
 async function loadLeaves(){
@@ -620,19 +607,46 @@ async function decideLeave(id, decision){
   finally{ hideLoading(); }
 }
 
-/* -------- navigation onglets -------- */
 $('.tab[data-tab="magasins"]').onclick = ()=> setActiveTab('magasins');
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
+
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
-  if(state.store && state.month){
-    setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
-    try{ await loadMonthlyAll(); } catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); } finally{ hideLoading(); }
-  } else {
-    $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis un magasin dans l’onglet <b>Magasins</b>, puis clique <b>Charger</b>.</div>`;
+
+  if(!$('#resumeStore').dataset.ready){
+    $('#resumeStore').innerHTML = '';
+    try{
+      const r = await apiGet({action:'stores'});
+      const stores = (r.stores && r.stores.length) ? r.stores : STORES;
+      $('#resumeStore').innerHTML = stores.map(s=>`<option>${s}</option>`).join('');
+    }catch(e){
+      $('#resumeStore').innerHTML = STORES.map(s=>`<option>${s}</option>`).join('');
+    }
+    const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
+    if(def) $('#resumeStore').value = def;
+    $('#resumeStore').dataset.ready = '1';
+  }
+
+  if(!(state.resumeStore || $('#resumeStore').value) || !state.month){
+    $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis un <b>magasin</b> et un <b>mois</b>, puis clique <b>Charger résumé</b>.</div>`;
     $('#summaryTotals').innerHTML = '';
   }
 };
+
+$('#loadResume').onclick = async ()=>{
+  state.resumeStore = $('#resumeStore').value || null;
+  if(!state.resumeStore){ alert('Choisis un magasin.'); return; }
+  if(!$('#month').value){
+    const now=new Date(); $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
+  state.month = $('#month').value;
+
+  setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
+  try{ await loadMonthlyAll(state.resumeStore); } 
+  catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); } 
+  finally{ hideLoading(); }
+};
+
 $('.tab[data-tab="conges"]').onclick = async ()=>{
   setActiveTab('conges');
   if(!$('#filterStore').innerHTML.trim()){
@@ -646,7 +660,6 @@ $('.tab[data-tab="conges"]').onclick = async ()=>{
   await loadLeaves();
 };
 
-/* -------- actions -------- */
 $('#saveAdminCode').onclick = ()=>{ setAdminCode($('#adminCode').value.trim()); loadLeaves(); };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 $('#fillP').onclick = ()=> applyAllDay('P');
@@ -664,10 +677,7 @@ $('#save').onclick = async ()=>{
       if(Object.keys(sp).length) mats[t]=sp;
     });
 
-    if(Object.keys(mats).length===0){
-      alert('Rien à enregistrer 🙂');
-      return;
-    }
+    if(Object.keys(mats).length===0){ alert('Rien à enregistrer 🙂'); return; }
 
     try{
       await apiPostWithRetry({action:'saveDayAll', store:state.store, day:state.day, matrices:mats}, {}, 2);
@@ -692,7 +702,7 @@ $('#exportCsv').onclick = async ()=>{
     const month=$('#month').value;
     let stores=[];
     try{ const r=await apiGet({action:'stores'}); stores = (r.stores&&r.stores.length)? r.stores : []; } catch(e){ stores=[]; }
-    if(!stores.length) stores = state.store ? [state.store] : STORES;
+    if(!stores.length) stores = state.resumeStore ? [state.resumeStore] : (state.store ? [state.store] : STORES);
 
     const wb=XLSX.utils.book_new();
 
@@ -739,7 +749,7 @@ $('#exportCsv').onclick = async ()=>{
       XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
     }
 
-    const fname=`presences_${state.month || 'mois'}_${state.store || 'ALL'}.xlsx`;
+    const fname=`presences_${state.month || 'mois'}_${(state.resumeStore || state.store || 'ALL')}.xlsx`;
     try{
       const wbArray=XLSX.write(wb,{bookType:'xlsx',type:'array'});
       const blob=new Blob([wbArray],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -754,7 +764,6 @@ $('#exportCsv').onclick = async ()=>{
   }catch(e){ console.error(e); alert('Export Excel impossible : '+e.message); finishKo(); }
 };
 
-/* -------- sélection magasin -------- */
 function buildStoreButtons(stores){
   const box = $('#storesList'); box.innerHTML='';
   stores.forEach(s=>{
@@ -774,6 +783,7 @@ function buildStoreButtons(stores){
 }
 
 async function loadStoresForButtons(){
+  setSectionLoading('#storesList','Chargement des magasins…');
   try{
     const r = await apiGet({action:'stores'});
     const stores = (r.stores && r.stores.length) ? r.stores : STORES;
@@ -783,7 +793,6 @@ async function loadStoresForButtons(){
   }
 }
 
-/* -------- chargement global -------- */
 async function triggerLoad(){
   if(!state.store){ setActiveTab('magasins'); alert('Choisis un magasin dans l’onglet Magasins.'); return; }
   state.day=$('#day').value || state.day;
@@ -795,19 +804,18 @@ async function triggerLoad(){
   showLoading();
   try{
     await loadDayAll();
-    if(currentTab()==='resume'){ await loadMonthlyAll(); }
+    if(currentTab()==='resume'){ await loadMonthlyAll(state.resumeStore || state.store); }
   }catch(e){ console.error('Init error',e); alert("Échec du chargement (réseau/API). Vérifie l’URL API."); }
   finally{ hideLoading(); }
 }
 $('#load').onclick = triggerLoad;
 
-/* -------- boot -------- */
 (async function(){
   const now=new Date(); const todayISO=now.toISOString().slice(0,10);
   $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   setCurrentStoreChip();
+  // message de chargement des magasins + récupération
   await loadStoresForButtons();
-  // Par défaut, on reste sur l’onglet Magasins jusqu’à ce qu’un magasin soit choisi.
 })();
 </script>
 </body>
