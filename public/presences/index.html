@@ -27,10 +27,12 @@
     button{height:38px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-weight:600}
     button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
     button.ghost{background:#fff}
-    .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
+    .legend{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
     .legend .k{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
     .swatch{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
     .gridWrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+    .group{margin:18px 0 26px}
+    .groupTitle{margin:0 0 8px 4px;font-size:16px;font-weight:700;color:#333}
     table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
     th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
     thead th{position:sticky;top:0;background:#fff;font-weight:700}
@@ -89,11 +91,7 @@
     <h1>Présences – Durand Services</h1>
     <div class="filters">
       <select id="store"></select>
-      <select id="ptype">
-        <option value="EMPLOYE" selected>Employés</option>
-        <option value="INTERIM">Intérim</option>
-        <option value="LIVREUR">Livreurs</option>
-      </select>
+
       <input type="date" id="day" />
       <input type="month" id="month" />
       <button id="load" class="primary">Charger</button>
@@ -115,7 +113,10 @@
         <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi) puis une puce P/CP. Le bouton met un P partout. Alt+clic sur une puce = remplir tout.</span>
       </div>
       <div class="legend" id="legend"></div>
-      <div class="gridWrap"><div id="gridDay"></div></div>
+
+      <div id="gridDay">
+
+      </div>
     </section>
 
     <section id="resume" class="page" style="display:none">
@@ -123,10 +124,10 @@
         <button id="exportCsv" class="ghost">Exporter CSV</button>
         <span id="exportMsg" class="hint" role="status" aria-live="polite"></span>
       </div>
-      <div class="summary">
-        <div id="summaryGrid" style="margin-bottom:12px;"></div>
-        <div id="summaryTotals"></div>
+      <div id="summaryGrid" style="margin-bottom:12px;">
+
       </div>
+      <div id="summaryTotals" class="summary"></div>
     </section>
 
     <section id="conges" class="page" style="display:none">
@@ -149,15 +150,23 @@
 const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+const inIframe = (()=>{ try{ return window.top !== window.self; }catch(e){ return true; } })();
+
+const TYPES = ['EMPLOYE','INTERIM','LIVREUR'];
+const TYPE_LABELS = {EMPLOYE:'Employés', INTERIM:'Intérim', LIVREUR:'Livreurs'};
 
 const state = {
-  store:null, ptype:'EMPLOYE', day:null, month:null,
-  people:[], shifts:[], codes:[], matrixDay:{},
-  monthPeople:[], monthDays:[], monthShifts:[], monthCodes:[], monthRecords:[]
+  store:null, day:null, month:null,
+
+  dayByType:{},
+
+  monthByType:{},
+  codesUnion:[]
 };
 
 const selectedCells = new Set();
 let lastCell = null;
+
 function clearSelection(){
   selectedCells.forEach(td=> td.classList.remove('selected'));
   selectedCells.clear();
@@ -174,6 +183,17 @@ function getTargetCells(){
   if(selectedCells.size) return Array.from(selectedCells);
   return lastCell ? [lastCell] : [];
 }
+function findColor(code, type){
+  const arr = (state.dayByType?.[type]?.codes) || [];
+  const found = arr.find(c=>c.code===code) || state.codesUnion.find(c=>c.code===code);
+  return found?.couleur_hex || '';
+}
+function setCellCodeColor(td, code, type){
+  if(td.classList.contains('weekend')) return;
+  const color = findColor(code, type);
+  td.style.backgroundColor = color || '';
+  td.style.color = color ? '#fff' : '';
+}
 function setCodesOnTargets(code){
   const targets = getTargetCells();
   if(!targets.length){ alert('Clique d’abord une cellule (Ctrl/Cmd pour multi-sélection), puis sur la puce.'); return; }
@@ -181,9 +201,12 @@ function setCodesOnTargets(code){
     if(td.classList.contains('weekend')) return;
     const pid = td.dataset.pid;
     const s   = td.dataset.shift;
-    state.matrixDay[pid][s] = code || '';
+    const t   = td.dataset.type;
+    const bucket = state.dayByType?.[t];
+    if(!bucket) return;
+    bucket.matrix[pid][s] = code || '';
     td.textContent = code || '';
-    setCellCodeColor(td, code || '');
+    setCellCodeColor(td, code || '', t);
   });
 }
 
@@ -200,7 +223,7 @@ function dayLabel(d){
 }
 function th(html){ const e = document.createElement('th'); e.innerHTML=html; return e; }
 function sShort(s){
-  const map = {"MATIN":"Matin", "APRÈS-MIDI":"Après-midi", "AM":"Après-midi","NUIT":"Nuit","10H":"10 h","12H":"12 h","16H":"16 h"};
+  const map = {"MATIN":"Matin","APRÈS-MIDI":"Après-midi","AM":"Après-midi","NUIT":"Nuit","10H":"10 h","12H":"12 h","16H":"16 h"};
   return map[s] || s;
 }
 function formatDateLongFR(iso){
@@ -265,9 +288,19 @@ async function apiPost(body, headers={}){
   return j;
 }
 
+function rebuildCodesUnion(){
+  const map = new Map();
+  TYPES.forEach(t=>{
+    (state.dayByType?.[t]?.codes||[]).forEach(c=>{
+      if(!map.has(c.code)) map.set(c.code, c);
+    });
+  });
+  state.codesUnion = Array.from(map.values());
+}
+
 function renderLegend(){
   const el = $('#legend'); el.innerHTML='';
-  (state.codes||[]).forEach(c=>{
+  (state.codesUnion||[]).forEach(c=>{
     const div = document.createElement('div');
     div.className='k';
     div.innerHTML = `<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
@@ -280,89 +313,103 @@ function renderLegend(){
 
 function applyAllDay(code){
   if(isWeekendISO(state.day)){
-    renderGridDay();
+    renderGridDayAll();
     return;
   }
-  for(const pid in state.matrixDay){
-    for(const s of state.shifts){
-      state.matrixDay[pid][s]=code||'';
+  TYPES.forEach(t=>{
+    const bucket = state.dayByType?.[t];
+    if(!bucket) return;
+    for(const pid in bucket.matrix){
+      for(const s of (bucket.shifts||[])){
+        bucket.matrix[pid][s]=code||'';
+      }
     }
-  }
+  });
+
   $$('#gridDay td.cell').forEach(td=>{
     if(td.classList.contains('weekend')) return;
-    const pid=td.dataset.pid, sh=td.dataset.shift;
-    const v=state.matrixDay[pid][sh]||'';
-    td.textContent=v;
-    setCellCodeColor(td, v);
+    const t = td.dataset.type, pid=td.dataset.pid, sh=td.dataset.shift;
+    const v = state.dayByType?.[t]?.matrix?.[pid]?.[sh] || '';
+    td.textContent = v;
+    setCellCodeColor(td, v, t);
   });
 }
-function setCellCodeColor(td, code){
-  if(td.classList.contains('weekend')) return;
-  const color = (state.codes||[]).find(c=>c.code===code)?.couleur_hex || '';
-  td.style.backgroundColor = color || '';
-  td.style.color = color ? '#fff' : '';
-}
+
 function attachCellHandlers(td){
   td.addEventListener('mousedown', (e)=> selectCell(td, e.ctrlKey || e.metaKey || e.shiftKey));
   td.addEventListener('input', e=>{
     const v = e.target.textContent.trim().toUpperCase();
-    const allowed = new Set((state.codes||[]).map(c=>c.code));
+    const t = td.dataset.type;
+    const allowed = new Set(((state.dayByType?.[t]?.codes)||[]).map(c=>c.code).concat(state.codesUnion.map(c=>c.code)));
     const code = allowed.has(v) ? v : '';
     const pid = td.dataset.pid, s = td.dataset.shift;
-    state.matrixDay[pid][s] = code;
+    state.dayByType[t].matrix[pid][s] = code;
     td.textContent = code;
-    setCellCodeColor(td, code);
+    setCellCodeColor(td, code, t);
     selectCell(td, true);
   });
 }
 
-function renderGridDay(){
-  clearSelection();
+function renderGridDayOne(type){
+  const bucket = state.dayByType?.[type];
+  const people = bucket?.people || [];
+  const shifts = bucket?.shifts || [];
+  const gridSection = document.createElement('div');
+  gridSection.className = 'group';
 
-  const grid = $('#gridDay'); grid.innerHTML='';
+  const title = document.createElement('h2');
+  title.className = 'groupTitle';
+  title.textContent = TYPE_LABELS[type] || type;
+  gridSection.appendChild(title);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'gridWrap';
+
   const table = document.createElement('table');
-
   const thead = document.createElement('thead');
+
   const tr0 = document.createElement('tr');
   const th0 = document.createElement('th');
-  th0.colSpan = 1 + (state.shifts?.length||0);
+  th0.colSpan = 1 + (shifts.length||0);
   th0.innerHTML = `
     <div class="dayHeader">
-      <button class="navBtn" id="prevDay" aria-label="Jour précédent">◀</button>
+      <button class="navBtn" aria-label="Jour précédent" data-nav="-1">◀</button>
       <span class="dayTitle">${formatDateLongFR(state.day)}</span>
-      <button class="navBtn" id="nextDay" aria-label="Jour suivant">▶</button>
+      <button class="navBtn" aria-label="Jour suivant" data-nav="1">▶</button>
     </div>`;
   tr0.appendChild(th0);
   thead.appendChild(tr0);
 
   const trh = document.createElement('tr');
   trh.appendChild(th('Nom'));
-  (state.shifts||[]).forEach(s=> trh.appendChild(th(sShort(s))));
+  shifts.forEach(s=> trh.appendChild(th(sShort(s))));
   thead.appendChild(trh);
   table.appendChild(thead);
 
   const weekendDay = isWeekendISO(state.day);
-
   const tbody = document.createElement('tbody');
-  (state.people||[]).forEach(p=>{
+
+  people.forEach(p=>{
     const tr = document.createElement('tr');
-    const thn = th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); 
+    const thn = th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`);
     thn.className='sticky';
     tr.appendChild(thn);
 
-    (state.shifts||[]).forEach(s=>{
+    shifts.forEach(s=>{
       const td = document.createElement('td');
       td.className='cell';
-      td.dataset.pid=p.id; 
-      td.dataset.shift=s;
-      const val = state.matrixDay?.[p.id]?.[s] || '';
+      td.dataset.pid = p.id;
+      td.dataset.shift = s;
+      td.dataset.type = type;
+
+      const val = bucket?.matrix?.[p.id]?.[s] || '';
       td.textContent = val;
 
       if(weekendDay){
         td.classList.add('weekend');
       }else{
         td.setAttribute('contenteditable','true');
-        setCellCodeColor(td, val);
+        setCellCodeColor(td, val, type);
         attachCellHandlers(td);
       }
       tr.appendChild(td);
@@ -372,12 +419,182 @@ function renderGridDay(){
   });
 
   table.appendChild(tbody);
-  grid.appendChild(table);
+  wrap.appendChild(table);
+  gridSection.appendChild(wrap);
 
-  const prev = table.querySelector('#prevDay');
-  const next = table.querySelector('#nextDay');
-  if(prev) prev.onclick = ()=> changeDay(-1);
-  if(next) next.onclick = ()=> changeDay(1);
+  wrap.querySelectorAll('.navBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=> changeDay(parseInt(btn.dataset.nav||'0',10)));
+  });
+
+  return gridSection;
+}
+function renderGridDayAll(){
+  clearSelection();
+  const grid = $('#gridDay'); grid.innerHTML='';
+  TYPES.forEach(t=>{
+    grid.appendChild( renderGridDayOne(t) );
+  });
+}
+
+function renderMonthlyGridOne(type){
+  const bucket = state.monthByType?.[type];
+  const people = bucket?.people || [];
+  const days   = bucket?.days || [];
+  const shifts = bucket?.shifts || [];
+  const codes  = bucket?.codes || [];
+  const records= bucket?.records || [];
+
+  const group = document.createElement('div');
+  group.className = 'group';
+  const title = document.createElement('h2');
+  title.className='groupTitle';
+  title.textContent = TYPE_LABELS[type] || type;
+  group.appendChild(title);
+
+  const container = document.createElement('div');
+  container.className='gridWrap';
+
+  if(!people.length){
+    container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`;
+    group.appendChild(container);
+    return group;
+  }
+
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+
+  const tr1 = document.createElement('tr');
+  tr1.appendChild(document.createElement('th'));
+
+  const weekendFlags = [];
+  days.forEach(d=>{
+    const th1 = document.createElement('th');
+    th1.innerHTML = dayLabel(d);
+    th1.colSpan = shifts.length;
+    th1.style.minWidth = (shifts.length>2? 64 : 44)+'px';
+    const isW = isWeekendISO(d);
+    weekendFlags.push(isW);
+    if(isW) th1.classList.add('weekend');
+    tr1.appendChild(th1);
+  });
+  thead.appendChild(tr1);
+
+  const tr2 = document.createElement('tr');
+  tr2.appendChild(th(''));
+  days.forEach((d, idx)=>{
+    shifts.forEach(s=>{
+      const th2 = th(sShort(s));
+      if(weekendFlags[idx]) th2.classList.add('weekend');
+      tr2.appendChild(th2);
+    });
+  });
+  thead.appendChild(tr2);
+  table.appendChild(thead);
+
+  const map = new Map();
+  (records||[]).forEach(r=> map.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || ''));
+
+  const tbody = document.createElement('tbody');
+  people.forEach(p=>{
+    const tr = document.createElement('tr');
+    const name = `${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`;
+    const thn = th(name); thn.className='sticky'; tr.appendChild(thn);
+
+    days.forEach((d, idx)=>{
+      const isW = weekendFlags[idx];
+      shifts.forEach(s=>{
+        const td = document.createElement('td');
+        td.className = 'cell';
+        if(isW){
+          td.classList.add('weekend');
+          td.textContent = '';
+        }else{
+          const code = map.get(`${p.id}|${d}|${s}`) || '';
+          td.dataset.code = code;
+          td.textContent = code;
+          const color = (codes||[]).find(c=>c.code===code)?.couleur_hex || findColor(code, type);
+          td.style.backgroundColor = color || '';
+          td.style.color = color ? '#fff' : '';
+        }
+        tr.appendChild(td);
+      });
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+  group.appendChild(container);
+  return group;
+}
+function renderMonthlyGridAll(){
+  const container = $('#summaryGrid'); container.innerHTML='';
+  TYPES.forEach(t=> container.appendChild( renderMonthlyGridOne(t) ));
+}
+
+function renderTotalsChips(rows){
+  const wrap = $('#summaryTotals'); wrap.innerHTML='';
+  if(!rows || !rows.length){ wrap.innerHTML = `<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
+  const container = document.createElement('div');
+  container.className='summary';
+  rows.forEach(r=>{
+    const chips = [];
+    if((r.P||0)>0)  chips.push(`<span class="chip">P: ${r.P}</span>`);
+    if((r.CP||0)>0) chips.push(`<span class="chip">CP: ${r.CP}</span>`);
+    if((r.SS||0)>0) chips.push(`<span class="chip">SS: ${r.SS}</span>`);
+    if((r.F||0)>0)  chips.push(`<span class="chip">F: ${r.F}</span>`);
+    const line = `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)">
+        <div style="min-width:260px;"><b>${(r.nom||'').toUpperCase()}</b> <span class="sub">${r.prenom||''}</span> — <span class="sub">${r.magasin||''} · ${r.type||''}</span></div>
+        <div class="chips">${chips.join(' ') || '<span class="sub">Aucun code utilisé ce mois</span>'}</div>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', line);
+  });
+  wrap.appendChild(container);
+}
+
+async function loadDayAll(){
+  const day = state.day;
+  const store = state.store;
+  const res = {};
+  for(const t of TYPES){
+    const {people, shifts, codes, records} = await apiGet({action:'initDay', store, type:t, day});
+    const matrix = {};
+    (people||[]).forEach(p=>{
+      matrix[p.id] = {};
+      (shifts||[]).forEach(s=> matrix[p.id][s]='');
+    });
+    (records||[]).forEach(r=>{
+      if(matrix[r.person_id] && matrix[r.person_id][r.shift]!==undefined){
+        matrix[r.person_id][r.shift] = r.code || '';
+      }
+    });
+    res[t] = {people:people||[], shifts:shifts||[], codes:codes||[], matrix};
+  }
+  state.dayByType = res;
+  rebuildCodesUnion();
+  renderLegend();
+  renderGridDayAll();
+}
+
+async function loadMonthlyAll(){
+  const month = state.month;
+  const store = state.store;
+  const res = {};
+  for(const t of TYPES){
+    const {people, days, shifts, codes, records} = await apiGet({action:'init', store, type:t, month});
+    res[t] = {people:people||[], days:days||[], shifts:shifts||[], codes:codes||[], records:records||[]};
+  }
+  state.monthByType = res;
+  renderMonthlyGridAll();
+
+  const totalsAll = [];
+  for(const t of TYPES){
+    const totals = await apiGet({action:'summary', store, type:t, month});
+    (totals.rows||[]).forEach(r=> totalsAll.push(r));
+  }
+  renderTotalsChips(totalsAll);
 }
 
 async function changeDay(delta){
@@ -391,127 +608,11 @@ async function changeDay(delta){
   setSectionLoading('#gridDay', 'Chargement du jour…');
   showLoading();
   try{
-    await loadDay();
-    if(currentTab()==='resume'){ await loadMonthly(); }
+    await loadDayAll();
+    if(currentTab()==='resume'){ await loadMonthlyAll(); }
   } finally {
     hideLoading();
   }
-}
-async function checkPrevDayWarning(){ /* placeholder */ }
-
-async function loadDay(){
-  const {people, shifts, codes, records} = await apiGet({action:'initDay', store:state.store, type:state.ptype, day:state.day});
-  state.people = people||[]; state.shifts = shifts||[]; state.codes = codes||[];
-  state.matrixDay = {};
-  (state.people||[]).forEach(p=>{
-    state.matrixDay[p.id] = {};
-    (state.shifts||[]).forEach(s=> state.matrixDay[p.id][s]='');
-  });
-  (records||[]).forEach(r=>{
-    if(state.matrixDay[r.person_id] && state.matrixDay[r.person_id][r.shift]!==undefined){
-      state.matrixDay[r.person_id][r.shift] = r.code||'';
-    }
-  });
-  renderLegend();
-  renderGridDay();
-  await checkPrevDayWarning();
-}
-
-function renderMonthlyGrid(){
-  const container = $('#summaryGrid'); container.innerHTML='';
-  if(!state.monthPeople.length){ container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; return; }
-
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-
-  const tr1 = document.createElement('tr');
-  tr1.appendChild(document.createElement('th'));
-
-  const weekendFlags = [];
-  (state.monthDays||[]).forEach(d=>{
-    const th1 = document.createElement('th');
-    th1.innerHTML = dayLabel(d);
-    th1.colSpan = (state.monthShifts||[]).length;
-    th1.style.minWidth = (state.monthShifts.length>2? 64 : 44)+'px';
-    const isW = isWeekendISO(d);
-    weekendFlags.push(isW);
-    if(isW) th1.classList.add('weekend');
-    tr1.appendChild(th1);
-  });
-  thead.appendChild(tr1);
-
-  const tr2 = document.createElement('tr');
-  tr2.appendChild(th(''));
-  (state.monthDays||[]).forEach((d, idx)=>{
-    (state.monthShifts||[]).forEach(s=>{
-      const th2 = th(sShort(s));
-      if(weekendFlags[idx]) th2.classList.add('weekend');
-      tr2.appendChild(th2);
-    });
-  });
-  thead.appendChild(tr2);
-  table.appendChild(thead);
-
-  const map = new Map();
-  (state.monthRecords||[]).forEach(r=> map.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || ''));
-
-  const tbody = document.createElement('tbody');
-  (state.monthPeople||[]).forEach(p=>{
-    const tr = document.createElement('tr');
-    const name = `${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`;
-    const thn = th(name); thn.className='sticky'; tr.appendChild(thn);
-
-    (state.monthDays||[]).forEach((d, idx)=>{
-      const isW = weekendFlags[idx];
-      (state.monthShifts||[]).forEach(s=>{
-        const td = document.createElement('td'); 
-        td.className='cell';
-        if(isW){
-          td.classList.add('weekend');
-          td.textContent = '';
-        }else{
-          const code = map.get(`${p.id}|${d}|${s}`) || '';
-          td.dataset.code = code;
-          td.textContent = code;
-          const color = (state.monthCodes||[]).find(c=>c.code===code)?.couleur_hex || '';
-          td.style.backgroundColor = color || ''; 
-          td.style.color = color ? '#fff' : '';
-        }
-        tr.appendChild(td);
-      });
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  table.appendChild(tbody);
-  container.appendChild(table);
-}
-function renderTotalsChips(rows){
-  const wrap = $('#summaryTotals'); wrap.innerHTML='';
-  if(!rows || !rows.length){ wrap.innerHTML = `<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
-  const container = document.createElement('div');
-  rows.forEach(r=>{
-    const chips = [];
-    if((r.P||0)>0) chips.push(`<span class="chip">P: ${r.P}</span>`);
-    if((r.CP||0)>0) chips.push(`<span class="chip">CP: ${r.CP}</span>`);
-    if((r.SS||0)>0) chips.push(`<span class="chip">SS: ${r.SS}</span>`);
-    if((r.F||0)>0) chips.push(`<span class="chip">F: ${r.F}</span>`);
-    const line = `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)">
-        <div style="min-width:220px;"><b>${r.nom?.toUpperCase()||''}</b> <span class="sub">${r.prenom||''}</span> — <span class="sub">${r.magasin||''} · ${r.type||''}</span></div>
-        <div class="chips">${chips.join(' ') || '<span class="sub">Aucun code utilisé ce mois</span>'}</div>
-      </div>`;
-    container.insertAdjacentHTML('beforeend', line);
-  });
-  wrap.appendChild(container);
-}
-async function loadMonthly(){
-  const {people, days, shifts, codes, records} = await apiGet({action:'init', store:state.store, type:state.ptype, month:state.month});
-  state.monthPeople=people||[]; state.monthDays=days||[]; state.monthShifts=shifts||[]; state.monthCodes=codes||[]; state.monthRecords=records||[];
-  renderMonthlyGrid();
-  const totals = await apiGet({action:'summary', store:state.store, type:state.ptype, month:state.month});
-  renderTotalsChips(totals.rows||[]);
 }
 
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
@@ -559,7 +660,7 @@ async function decideLeave(id, decision){
     const res = await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
     if(res?.accepted){
       await loadLeaves();
-      await loadDay();
+      await loadDayAll();
       alert('Congé accepté et ajouté aux présences (CP).');
     }else if(res?.refused){
       await loadLeaves();
@@ -577,14 +678,14 @@ async function decideLeave(id, decision){
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
-  if(state.store && state.ptype && state.month){
+  if(state.store && state.month){
     setSectionLoading('#summaryGrid','Chargement du résumé…');
     showLoading();
-    try{ await loadMonthly(); }
+    try{ await loadMonthlyAll(); }
     catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); }
     finally{ hideLoading(); }
   } else {
-    $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis magasin / type / mois puis clique <b>Charger</b>.</div>`;
+    $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis magasin / mois puis clique <b>Charger</b>.</div>`;
     $('#summaryTotals').innerHTML = '';
   }
 };
@@ -599,11 +700,7 @@ $('.tab[data-tab="conges"]').onclick = async ()=>{
   await loadLeaves();
 };
 
-$('#saveAdminCode').onclick = ()=>{
-  const v = $('#adminCode').value.trim();
-  setAdminCode(v);
-  loadLeaves();
-};
+$('#saveAdminCode').onclick = ()=>{ setAdminCode($('#adminCode').value.trim()); loadLeaves(); };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
 
 $('#fillP').onclick = ()=> applyAllDay('P');
@@ -614,22 +711,30 @@ $('#fillEmpty').onclick = ()=>{
 
 $('#save').onclick = async ()=>{
   try{
-    if(!state.store || !state.ptype || !state.day){ alert('Sélectionne magasin / type / jour.'); return; }
+    if(!state.store || !state.day){ alert('Sélectionne magasin / jour.'); return; }
     showLoading();
-    const res = await apiPost({action:'saveDay', store:state.store, type:state.ptype, day:state.day, matrix:state.matrixDay});
-    if(res?.ok){ alert('Présences enregistrées ✔'); }
-    else{ throw new Error(res?.error||'Erreur inconnue'); }
-  }catch(e){ console.error(e); alert("Échec de l'enregistrement : "+e.message); }
-  finally{ hideLoading(); }
+    let okCount = 0, errCount = 0;
+    for(const t of TYPES){
+      try{
+        const bucket = state.dayByType?.[t];
+        if(!bucket) continue;
+        const res = await apiPost({action:'saveDay', store:state.store, type:t, day:state.day, matrix:bucket.matrix});
+        if(res?.ok) okCount++; else errCount++;
+      }catch(_){ errCount++; }
+    }
+    if(errCount===0){ alert('Présences enregistrées ✔'); }
+    else alert(`Enregistrement partiel : ${okCount} type(s) OK, ${errCount} en erreur.`);
+  }catch(e){
+    console.error(e); alert("Échec de l'enregistrement : "+e.message);
+  }finally{ hideLoading(); }
 };
 
 async function triggerLoad(){
   state.store = $('#store').value;
-  state.ptype = $('#ptype').value || 'EMPLOYE';
   state.day   = $('#day').value;
   state.month = $('#month').value;
 
-  if(!state.store || !state.ptype){ alert('Sélectionne magasin et type.'); return; }
+  if(!state.store){ alert('Sélectionne un magasin.'); return; }
   if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
   if(!state.month){ setMonthFromDay(); }
 
@@ -638,10 +743,10 @@ async function triggerLoad(){
   showLoading();
 
   try{
-    await loadDay();
-    if(currentTab()==='resume'){ await loadMonthly(); }
+    await loadDayAll();
+    if(currentTab()==='resume'){ await loadMonthlyAll(); }
   }catch(e){
-    console.error('InitDay error', e);
+    console.error('Init error', e);
     alert("Échec du chargement (réseau/API). Vérifie l’URL API.");
   } finally {
     hideLoading();
@@ -649,7 +754,6 @@ async function triggerLoad(){
 }
 $('#load').onclick = triggerLoad;
 $('#store').addEventListener('change', triggerLoad);
-$('#ptype').addEventListener('change', triggerLoad);
 
 $('#exportCsv').onclick = async ()=>{
   const btn = $('#exportCsv');
@@ -663,42 +767,53 @@ $('#exportCsv').onclick = async ()=>{
     setMsg('Export en cours…');
 
     const month = $('#month').value;
-    const ptype = $('#ptype').value || 'EMPLOYE';
     const storesResp = await apiGet({action:'stores'});
     const stores = (storesResp.stores && storesResp.stores.length) ? storesResp.stores : [$('#store').value];
 
     const wb = XLSX.utils.book_new();
 
     for(const store of stores){
-      const {people, days, shifts, records} = await apiGet({action:'init', store, type:ptype, month});
+      let header = ['Magasin','Type','Nom','Prénom'];
 
-      const recMap = new Map();
-      (records||[]).forEach(r=>{
-        recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || '');
-      });
+      let daysRef = null, shiftsRef = null;
 
-      const header = ['Magasin','Type','Nom','Prénom'];
-      (days||[]).forEach(d=> header.push(formatDateHeader(d)));
+      for(const t of TYPES){
+        const probe = await apiGet({action:'init', store, type:t, month});
+        if((probe.days||[]).length && (probe.shifts||[]).length){
+          daysRef = probe.days; shiftsRef = probe.shifts;
+          break;
+        }
+      }
+      const days = daysRef || [];
+      const shifts = shiftsRef || [];
+
+      days.forEach(d=> header.push(formatDateHeader(d)));
       header.push('P','CP','SS','F','Total P');
-
-      const rowsPeople = (people||[]).slice().sort((a,b)=>{
-        const na=(a.nom||'').localeCompare(b.nom||'', 'fr', {sensitivity:'base'});
-        return na!==0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr', {sensitivity:'base'});
-      });
 
       const data = [header];
 
-      for(const p of rowsPeople){
-        const row = [store, (p.type||ptype)||'', (p.nom||'').toUpperCase(), p.prenom||''];
+      for(const t of TYPES){
+        const {people, records} = await apiGet({action:'init', store, type:t, month});
+        const recMap = new Map();
+        (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || ''));
 
-        const counts = {P:0, CP:0, SS:0, F:0};
-        for(const d of (days||[])){
-          const codes = (shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`) || '').filter(Boolean);
-          row.push(codes.join('/'));
-          codes.forEach(c=>{ if(counts[c]!==undefined) counts[c] += 1; });
+        const rowsPeople = (people||[]).slice().sort((a,b)=>{
+          const na=(a.nom||'').localeCompare(b.nom||'', 'fr', {sensitivity:'base'});
+          return na!==0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr', {sensitivity:'base'});
+        });
+
+        for(const p of rowsPeople){
+          const row = [store, (TYPE_LABELS[t]||t), (p.nom||'').toUpperCase(), p.prenom||''];
+          const counts = {P:0, CP:0, SS:0, F:0};
+
+          for(const d of days){
+            const codes = (shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`) || '').filter(Boolean);
+            row.push(codes.join('/'));
+            codes.forEach(c=>{ if(counts[c]!==undefined) counts[c] += 1; });
+          }
+          row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0);
+          data.push(row);
         }
-        row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0);
-        data.push(row);
       }
 
       const ws = XLSX.utils.aoa_to_sheet(data);
@@ -711,16 +826,14 @@ $('#exportCsv').onclick = async ()=>{
       XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
     }
 
-    const fname = `presences_${ptype}_${month}.xlsx`;
+    const fname = `presences_${state.month}_${state.store||'ALL'}.xlsx`;
 
     try{
       const wbArray = XLSX.write(wb, {bookType:'xlsx', type:'array'});
       const blob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = fname;
-      a.rel = 'noopener';
+      a.href = url; a.download = fname; a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
@@ -749,7 +862,6 @@ $('#exportCsv').onclick = async ()=>{
   const todayISO = now.toISOString().slice(0,10);
   $('#day').value = todayISO;
   $('#month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  $('#ptype').value = 'EMPLOYE';
 
   try{
     const stores = (await apiGet({action:'stores'})).stores || ['GLEIZE','VILLEFRANCHE','LYON'];
