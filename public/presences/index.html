@@ -48,26 +48,20 @@
     td.cell[data-code="SS"]{background:#c62828}
     td.cell[data-code="F"]{background:#455a64}
     .sub{font-size:11px;color:var(--muted)}
-
     td.cell.weekend{background:#000 !important;color:#fff !important;cursor:not-allowed}
     th.weekend{background:#111 !important;color:#fff !important}
-
     .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:auto}
     .summary table td,.summary table th{padding:10px}
     .hint{color:var(--muted);font-size:12px}
-
     .chips{display:flex;flex-wrap:wrap;gap:6px}
     .chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
-
     .dayHeader{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px}
     .dayTitle{font-weight:700}
     .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
     .navBtn:active{transform:translateY(1px)}
-
     .spinner{width:16px;height:16px;border:2px solid #ddd;border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{ to{ transform:rotate(360deg) } }
     .sectionLoading{padding:16px;display:flex;align-items:center;gap:10px;color:var(--muted)}
-
     .adminBox{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;display:flex;gap:8px;align-items:center;margin-bottom:10px}
     .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
     .card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
@@ -76,14 +70,12 @@
     .actions{display:flex;gap:8px}
     .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
     .no{background:#c62828;color:#fff;border-color:#c62828}
-
     @media (max-width:900px){
       :root{--cell:32px}
       header{flex-direction:column;align-items:flex-start;gap:8px}
       .tabs{top:unset;position:static}
     }
   </style>
-
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -91,7 +83,6 @@
     <h1>Présences – Durand Services</h1>
     <div class="filters">
       <select id="store"></select>
-
       <input type="date" id="day" />
       <input type="month" id="month" />
       <button id="load" class="primary">Charger</button>
@@ -113,10 +104,7 @@
         <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi) puis une puce P/CP. Le bouton met un P partout. Alt+clic sur une puce = remplir tout.</span>
       </div>
       <div class="legend" id="legend"></div>
-
-      <div id="gridDay">
-
-      </div>
+      <div id="gridDay"></div>
     </section>
 
     <section id="resume" class="page" style="display:none">
@@ -124,9 +112,7 @@
         <button id="exportCsv" class="ghost">Exporter CSV</button>
         <span id="exportMsg" class="hint" role="status" aria-live="polite"></span>
       </div>
-      <div id="summaryGrid" style="margin-bottom:12px;">
-
-      </div>
+      <div id="summaryGrid" style="margin-bottom:12px;"></div>
       <div id="summaryTotals" class="summary"></div>
     </section>
 
@@ -157,32 +143,26 @@ const TYPE_LABELS = {EMPLOYE:'Employés', INTERIM:'Intérim', LIVREUR:'Livreurs'
 
 const state = {
   store:null, day:null, month:null,
-
   dayByType:{},
-
   monthByType:{},
   codesUnion:[]
 };
 
+// ---- Accélération: annule les requêtes en cours si on relance un chargement
+let dayAbortCtrl = null;
+let monthAbortCtrl = null;
+
 const selectedCells = new Set();
 let lastCell = null;
 
-function clearSelection(){
-  selectedCells.forEach(td=> td.classList.remove('selected'));
-  selectedCells.clear();
-  lastCell = null;
-}
+function clearSelection(){ selectedCells.forEach(td=> td.classList.remove('selected')); selectedCells.clear(); lastCell=null; }
 function selectCell(td, additive=false){
   if(td.classList.contains('weekend')) return;
   if(!additive){ clearSelection(); }
-  selectedCells.add(td);
-  td.classList.add('selected');
-  lastCell = td;
+  selectedCells.add(td); td.classList.add('selected'); lastCell=td;
 }
-function getTargetCells(){
-  if(selectedCells.size) return Array.from(selectedCells);
-  return lastCell ? [lastCell] : [];
-}
+function getTargetCells(){ return selectedCells.size ? Array.from(selectedCells) : (lastCell ? [lastCell] : []); }
+
 function findColor(code, type){
   const arr = (state.dayByType?.[type]?.codes) || [];
   const found = arr.find(c=>c.code===code) || state.codesUnion.find(c=>c.code===code);
@@ -199,11 +179,8 @@ function setCodesOnTargets(code){
   if(!targets.length){ alert('Clique d’abord une cellule (Ctrl/Cmd pour multi-sélection), puis sur la puce.'); return; }
   targets.forEach(td=>{
     if(td.classList.contains('weekend')) return;
-    const pid = td.dataset.pid;
-    const s   = td.dataset.shift;
-    const t   = td.dataset.type;
-    const bucket = state.dayByType?.[t];
-    if(!bucket) return;
+    const pid = td.dataset.pid, s = td.dataset.shift, t = td.dataset.type;
+    const bucket = state.dayByType?.[t]; if(!bucket) return;
     bucket.matrix[pid][s] = code || '';
     td.textContent = code || '';
     setCellCodeColor(td, code || '', t);
@@ -221,422 +198,306 @@ function dayLabel(d){
   const JOURS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
   return `${JOURS_FR[dt.getDay()]}<br><span class="sub">${dt.getDate()}</span>`;
 }
-function th(html){ const e = document.createElement('th'); e.innerHTML=html; return e; }
-function sShort(s){
-  const map = {"MATIN":"Matin","APRÈS-MIDI":"Après-midi","AM":"Après-midi","NUIT":"Nuit","10H":"10 h","12H":"12 h","16H":"16 h"};
-  return map[s] || s;
-}
+function th(html){ const e=document.createElement('th'); e.innerHTML=html; return e; }
+function sShort(s){ const map={"MATIN":"Matin","APRÈS-MIDI":"Après-midi","AM":"Après-midi","NUIT":"Nuit","10H":"10 h","12H":"12 h","16H":"16 h"}; return map[s]||s; }
 function formatDateLongFR(iso){
-  const d = new Date(iso);
-  const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
-  const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const d=new Date(iso);
+  const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.']; const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
   return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${M[d.getMonth()]} ${d.getFullYear()}`;
 }
 function formatDateHeader(iso){
-  const d = new Date(iso);
-  const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][d.getDay()];
-  const dd = String(d.getDate()).padStart(2,'0');
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  return `${J} ${dd}/${mm}`;
+  const d=new Date(iso); const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][d.getDay()];
+  return `${J} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function setMonthFromDay(){
   if(!state.day) return;
-  const d = new Date(state.day);
-  const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  $('#month').value = ym;
-  state.month = ym;
+  const d=new Date(state.day);
+  const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  $('#month').value=ym; state.month=ym;
 }
-const isWeekendISO = iso => {
-  const g = new Date(iso).getDay();
-  return g === 0 || g === 6;
-};
+const isWeekendISO = iso => { const g=new Date(iso).getDay(); return g===0||g===6; };
 
-function showLoading(){
-  const btn = $('#load');
-  if(btn){
-    btn.disabled = true;
-    if(!btn.dataset.oldLabel) btn.dataset.oldLabel = btn.textContent;
-    btn.textContent = 'Chargement…';
-  }
-}
-function hideLoading(){
-  const btn = $('#load');
-  if(btn){
-    btn.disabled = false;
-    btn.textContent = btn.dataset.oldLabel || 'Charger';
-  }
-}
-function setSectionLoading(targetSel, msg='Chargement…'){
-  const el = $(targetSel);
-  if(!el) return;
-  el.innerHTML = `<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`;
-}
+function showLoading(){ const btn=$('#load'); if(btn){ btn.disabled=true; if(!btn.dataset.oldLabel) btn.dataset.oldLabel=btn.textContent; btn.textContent='Chargement…'; } }
+function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.textContent=btn.dataset.oldLabel||'Charger'; } }
+function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
 
-async function apiGet(params, headers={}){
+// --- API helpers (avec support AbortController)
+async function apiGet(params, headers={}, signal){
   const url = API + '?' + new URLSearchParams(params);
-  const r = await fetch(url, { headers });
+  const r = await fetch(url, { headers, signal });
   const txt = await r.text();
-  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
+  let j; try{ j=JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
-async function apiPost(body, headers={}){
-  const r = await fetch(API, {method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
+async function apiPost(body, headers={}, signal){
+  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json',...headers}, body:JSON.stringify(body), signal});
   const txt = await r.text();
-  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
+  let j; try{ j=JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
 
 function rebuildCodesUnion(){
-  const map = new Map();
-  TYPES.forEach(t=>{
-    (state.dayByType?.[t]?.codes||[]).forEach(c=>{
-      if(!map.has(c.code)) map.set(c.code, c);
-    });
-  });
+  const map=new Map();
+  TYPES.forEach(t=> (state.dayByType?.[t]?.codes||[]).forEach(c=>{ if(!map.has(c.code)) map.set(c.code,c); }));
   state.codesUnion = Array.from(map.values());
 }
-
 function renderLegend(){
-  const el = $('#legend'); el.innerHTML='';
+  const el=$('#legend'); el.innerHTML='';
   (state.codesUnion||[]).forEach(c=>{
-    const div = document.createElement('div');
+    const div=document.createElement('div');
     div.className='k';
-    div.innerHTML = `<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
-    div.addEventListener('click', (e)=>{
-      if(e.altKey){ applyAllDay(c.code); } else { setCodesOnTargets(c.code); }
-    });
+    div.innerHTML=`<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
+    div.addEventListener('click',(e)=>{ if(e.altKey){ applyAllDay(c.code); } else { setCodesOnTargets(c.code); } });
     el.appendChild(div);
   });
 }
 
 function applyAllDay(code){
-  if(isWeekendISO(state.day)){
-    renderGridDayAll();
-    return;
-  }
+  if(isWeekendISO(state.day)){ renderGridDayAll(); return; }
   TYPES.forEach(t=>{
-    const bucket = state.dayByType?.[t];
-    if(!bucket) return;
-    for(const pid in bucket.matrix){
-      for(const s of (bucket.shifts||[])){
-        bucket.matrix[pid][s]=code||'';
-      }
-    }
+    const b=state.dayByType?.[t]; if(!b) return;
+    for(const pid in b.matrix){ for(const s of (b.shifts||[])){ b.matrix[pid][s]=code||''; } }
   });
-
   $$('#gridDay td.cell').forEach(td=>{
     if(td.classList.contains('weekend')) return;
-    const t = td.dataset.type, pid=td.dataset.pid, sh=td.dataset.shift;
-    const v = state.dayByType?.[t]?.matrix?.[pid]?.[sh] || '';
-    td.textContent = v;
-    setCellCodeColor(td, v, t);
+    const t=td.dataset.type, pid=td.dataset.pid, sh=td.dataset.shift;
+    const v=state.dayByType?.[t]?.matrix?.[pid]?.[sh]||'';
+    td.textContent=v; setCellCodeColor(td,v,t);
   });
 }
-
 function attachCellHandlers(td){
-  td.addEventListener('mousedown', (e)=> selectCell(td, e.ctrlKey || e.metaKey || e.shiftKey));
+  td.addEventListener('mousedown',(e)=> selectCell(td, e.ctrlKey||e.metaKey||e.shiftKey));
   td.addEventListener('input', e=>{
-    const v = e.target.textContent.trim().toUpperCase();
-    const t = td.dataset.type;
-    const allowed = new Set(((state.dayByType?.[t]?.codes)||[]).map(c=>c.code).concat(state.codesUnion.map(c=>c.code)));
-    const code = allowed.has(v) ? v : '';
-    const pid = td.dataset.pid, s = td.dataset.shift;
-    state.dayByType[t].matrix[pid][s] = code;
-    td.textContent = code;
-    setCellCodeColor(td, code, t);
-    selectCell(td, true);
+    const v=e.target.textContent.trim().toUpperCase();
+    const t=td.dataset.type;
+    const allowed=new Set(((state.dayByType?.[t]?.codes)||[]).map(c=>c.code).concat(state.codesUnion.map(c=>c.code)));
+    const code=allowed.has(v)?v:'';
+    const pid=td.dataset.pid, s=td.dataset.shift;
+    state.dayByType[t].matrix[pid][s]=code;
+    td.textContent=code; setCellCodeColor(td,code,t); selectCell(td,true);
   });
 }
 
+// ---------- Rendu JOUR (nav UNIQUEMENT sur “Employés”)
 function renderGridDayOne(type){
-  const bucket = state.dayByType?.[type];
-  const people = bucket?.people || [];
-  const shifts = bucket?.shifts || [];
-  const gridSection = document.createElement('div');
-  gridSection.className = 'group';
+  const bucket = state.dayByType?.[type]||{};
+  const people = bucket.people||[];
+  const shifts = bucket.shifts||[];
 
-  const title = document.createElement('h2');
-  title.className = 'groupTitle';
-  title.textContent = TYPE_LABELS[type] || type;
+  const gridSection=document.createElement('div'); gridSection.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
   gridSection.appendChild(title);
 
-  const wrap = document.createElement('div');
-  wrap.className = 'gridWrap';
+  const wrap=document.createElement('div'); wrap.className='gridWrap';
+  const table=document.createElement('table'); const thead=document.createElement('thead');
 
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
+  // Ligne entête avec NAV pour EMPLOYE UNIQUEMENT
+  if(type==='EMPLOYE'){
+    const tr0=document.createElement('tr'); const th0=document.createElement('th');
+    th0.colSpan = 1 + (shifts.length||0);
+    th0.innerHTML = `
+      <div class="dayHeader">
+        <button class="navBtn" aria-label="Jour précédent" id="prevDayBtn">◀</button>
+        <span class="dayTitle">${formatDateLongFR(state.day)}</span>
+        <button class="navBtn" aria-label="Jour suivant" id="nextDayBtn">▶</button>
+      </div>`;
+    tr0.appendChild(th0); thead.appendChild(tr0);
+  }
 
-  const tr0 = document.createElement('tr');
-  const th0 = document.createElement('th');
-  th0.colSpan = 1 + (shifts.length||0);
-  th0.innerHTML = `
-    <div class="dayHeader">
-      <button class="navBtn" aria-label="Jour précédent" data-nav="-1">◀</button>
-      <span class="dayTitle">${formatDateLongFR(state.day)}</span>
-      <button class="navBtn" aria-label="Jour suivant" data-nav="1">▶</button>
-    </div>`;
-  tr0.appendChild(th0);
-  thead.appendChild(tr0);
-
-  const trh = document.createElement('tr');
+  const trh=document.createElement('tr');
   trh.appendChild(th('Nom'));
   shifts.forEach(s=> trh.appendChild(th(sShort(s))));
   thead.appendChild(trh);
   table.appendChild(thead);
 
-  const weekendDay = isWeekendISO(state.day);
-  const tbody = document.createElement('tbody');
+  const weekendDay=isWeekendISO(state.day);
+  const tbody=document.createElement('tbody');
 
   people.forEach(p=>{
-    const tr = document.createElement('tr');
-    const thn = th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`);
-    thn.className='sticky';
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky';
     tr.appendChild(thn);
 
-    shifts.forEach(s=>{
-      const td = document.createElement('td');
-      td.className='cell';
-      td.dataset.pid = p.id;
-      td.dataset.shift = s;
-      td.dataset.type = type;
-
-      const val = bucket?.matrix?.[p.id]?.[s] || '';
-      td.textContent = val;
-
-      if(weekendDay){
-        td.classList.add('weekend');
-      }else{
-        td.setAttribute('contenteditable','true');
-        setCellCodeColor(td, val, type);
-        attachCellHandlers(td);
-      }
+    (shifts||[]).forEach(s=>{
+      const td=document.createElement('td'); td.className='cell';
+      td.dataset.pid=p.id; td.dataset.shift=s; td.dataset.type=type;
+      const val=bucket?.matrix?.[p.id]?.[s]||''; td.textContent=val;
+      if(weekendDay){ td.classList.add('weekend'); }
+      else{ td.setAttribute('contenteditable','true'); setCellCodeColor(td,val,type); attachCellHandlers(td); }
       tr.appendChild(td);
     });
 
     tbody.appendChild(tr);
   });
 
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  gridSection.appendChild(wrap);
+  table.appendChild(tbody); wrap.appendChild(table); gridSection.appendChild(wrap);
 
-  wrap.querySelectorAll('.navBtn').forEach(btn=>{
-    btn.addEventListener('click', ()=> changeDay(parseInt(btn.dataset.nav||'0',10)));
-  });
+  // brancher la NAV si présent
+  if(type==='EMPLOYE'){
+    const prev = wrap.querySelector('#prevDayBtn');
+    const next = wrap.querySelector('#nextDayBtn');
+    if(prev) prev.addEventListener('click', ()=> changeDay(-1));
+    if(next) next.addEventListener('click', ()=> changeDay(1));
+  }
 
   return gridSection;
 }
 function renderGridDayAll(){
   clearSelection();
-  const grid = $('#gridDay'); grid.innerHTML='';
-  TYPES.forEach(t=>{
-    grid.appendChild( renderGridDayOne(t) );
-  });
+  const grid=$('#gridDay'); grid.innerHTML='';
+  TYPES.forEach(t=> grid.appendChild( renderGridDayOne(t) ));
 }
 
+// ---------- Rendu MOIS
 function renderMonthlyGridOne(type){
-  const bucket = state.monthByType?.[type];
-  const people = bucket?.people || [];
-  const days   = bucket?.days || [];
-  const shifts = bucket?.shifts || [];
-  const codes  = bucket?.codes || [];
-  const records= bucket?.records || [];
-
-  const group = document.createElement('div');
-  group.className = 'group';
-  const title = document.createElement('h2');
-  title.className='groupTitle';
-  title.textContent = TYPE_LABELS[type] || type;
+  const bucket = state.monthByType?.[type]||{};
+  const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
+  const group=document.createElement('div'); group.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
   group.appendChild(title);
 
-  const container = document.createElement('div');
-  container.className='gridWrap';
+  const container=document.createElement('div'); container.className='gridWrap';
+  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
 
-  if(!people.length){
-    container.innerHTML = `<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`;
-    group.appendChild(container);
-    return group;
-  }
-
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-
-  const tr1 = document.createElement('tr');
-  tr1.appendChild(document.createElement('th'));
-
-  const weekendFlags = [];
+  const table=document.createElement('table'); const thead=document.createElement('thead');
+  const tr1=document.createElement('tr'); tr1.appendChild(document.createElement('th'));
+  const weekendFlags=[];
   days.forEach(d=>{
-    const th1 = document.createElement('th');
-    th1.innerHTML = dayLabel(d);
-    th1.colSpan = shifts.length;
-    th1.style.minWidth = (shifts.length>2? 64 : 44)+'px';
-    const isW = isWeekendISO(d);
-    weekendFlags.push(isW);
-    if(isW) th1.classList.add('weekend');
-    tr1.appendChild(th1);
+    const th1=document.createElement('th');
+    th1.innerHTML=dayLabel(d); th1.colSpan=shifts.length; th1.style.minWidth=(shifts.length>2?64:44)+'px';
+    const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
   });
   thead.appendChild(tr1);
+  const tr2=document.createElement('tr'); tr2.appendChild(th(''));
+  days.forEach((d,idx)=> shifts.forEach(s=>{ const th2=th(sShort(s)); if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2); }));
+  thead.appendChild(tr2); table.appendChild(thead);
 
-  const tr2 = document.createElement('tr');
-  tr2.appendChild(th(''));
-  days.forEach((d, idx)=>{
-    shifts.forEach(s=>{
-      const th2 = th(sShort(s));
-      if(weekendFlags[idx]) th2.classList.add('weekend');
-      tr2.appendChild(th2);
-    });
-  });
-  thead.appendChild(tr2);
-  table.appendChild(thead);
-
-  const map = new Map();
-  (records||[]).forEach(r=> map.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || ''));
-
-  const tbody = document.createElement('tbody');
+  const map=new Map(); (records||[]).forEach(r=> map.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+  const tbody=document.createElement('tbody');
   people.forEach(p=>{
-    const tr = document.createElement('tr');
-    const name = `${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`;
-    const thn = th(name); thn.className='sticky'; tr.appendChild(thn);
-
-    days.forEach((d, idx)=>{
-      const isW = weekendFlags[idx];
-      shifts.forEach(s=>{
-        const td = document.createElement('td');
-        td.className = 'cell';
-        if(isW){
-          td.classList.add('weekend');
-          td.textContent = '';
-        }else{
-          const code = map.get(`${p.id}|${d}|${s}`) || '';
-          td.dataset.code = code;
-          td.textContent = code;
-          const color = (codes||[]).find(c=>c.code===code)?.couleur_hex || findColor(code, type);
-          td.style.backgroundColor = color || '';
-          td.style.color = color ? '#fff' : '';
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky'; tr.appendChild(thn);
+    days.forEach((d,idx)=>{
+      const isW=weekendFlags[idx];
+      (shifts||[]).forEach(s=>{
+        const td=document.createElement('td'); td.className='cell';
+        if(isW){ td.classList.add('weekend'); td.textContent=''; }
+        else{
+          const code=map.get(`${p.id}|${d}|${s}`)||''; td.dataset.code=code; td.textContent=code;
+          const color=(codes||[]).find(c=>c.code===code)?.couleur_hex || findColor(code, type);
+          td.style.backgroundColor=color||''; td.style.color=color?'#fff':'';
         }
         tr.appendChild(td);
       });
     });
-
     tbody.appendChild(tr);
   });
-
-  table.appendChild(tbody);
-  container.appendChild(table);
-  group.appendChild(container);
+  table.appendChild(tbody); container.appendChild(table); group.appendChild(container);
   return group;
 }
 function renderMonthlyGridAll(){
-  const container = $('#summaryGrid'); container.innerHTML='';
+  const container=$('#summaryGrid'); container.innerHTML='';
   TYPES.forEach(t=> container.appendChild( renderMonthlyGridOne(t) ));
 }
-
 function renderTotalsChips(rows){
-  const wrap = $('#summaryTotals'); wrap.innerHTML='';
-  if(!rows || !rows.length){ wrap.innerHTML = `<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
-  const container = document.createElement('div');
-  container.className='summary';
+  const wrap=$('#summaryTotals'); wrap.innerHTML='';
+  if(!rows||!rows.length){ wrap.innerHTML=`<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
+  const container=document.createElement('div'); container.className='summary';
   rows.forEach(r=>{
-    const chips = [];
-    if((r.P||0)>0)  chips.push(`<span class="chip">P: ${r.P}</span>`);
-    if((r.CP||0)>0) chips.push(`<span class="chip">CP: ${r.CP}</span>`);
-    if((r.SS||0)>0) chips.push(`<span class="chip">SS: ${r.SS}</span>`);
-    if((r.F||0)>0)  chips.push(`<span class="chip">F: ${r.F}</span>`);
-    const line = `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)">
-        <div style="min-width:260px;"><b>${(r.nom||'').toUpperCase()}</b> <span class="sub">${r.prenom||''}</span> — <span class="sub">${r.magasin||''} · ${r.type||''}</span></div>
-        <div class="chips">${chips.join(' ') || '<span class="sub">Aucun code utilisé ce mois</span>'}</div>
-      </div>`;
+    const chips=[]; if((r.P||0)>0)chips.push(`<span class="chip">P: ${r.P}</span>`); if((r.CP||0)>0)chips.push(`<span class="chip">CP: ${r.CP}</span>`); if((r.SS||0)>0)chips.push(`<span class="chip">SS: ${r.SS}</span>`); if((r.F||0)>0)chips.push(`<span class="chip">F: ${r.F}</span>`);
+    const line=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)">
+      <div style="min-width:260px;"><b>${(r.nom||'').toUpperCase()}</b> <span class="sub">${r.prenom||''}</span> — <span class="sub">${r.magasin||''} · ${r.type||''}</span></div>
+      <div class="chips">${chips.join(' ') || '<span class="sub">Aucun code utilisé ce mois</span>'}</div>
+    </div>`;
     container.insertAdjacentHTML('beforeend', line);
   });
   wrap.appendChild(container);
 }
 
+// ---------- CHARGEMENTS (plus rapides)
 async function loadDayAll(){
-  const day = state.day;
-  const store = state.store;
+  // annule la précédente série de requêtes jour si besoin
+  if(dayAbortCtrl) dayAbortCtrl.abort();
+  dayAbortCtrl = new AbortController();
+
+  const {store} = state; const day = state.day; const signal=dayAbortCtrl.signal;
+
+  // 3 appels en parallèle
+  const results = await Promise.all(
+    TYPES.map(t => apiGet({action:'initDay', store, type:t, day}, {}, signal).then(res => ({t, res})))
+  );
+
   const res = {};
-  for(const t of TYPES){
-    const {people, shifts, codes, records} = await apiGet({action:'initDay', store, type:t, day});
-    const matrix = {};
-    (people||[]).forEach(p=>{
-      matrix[p.id] = {};
-      (shifts||[]).forEach(s=> matrix[p.id][s]='');
-    });
-    (records||[]).forEach(r=>{
-      if(matrix[r.person_id] && matrix[r.person_id][r.shift]!==undefined){
-        matrix[r.person_id][r.shift] = r.code || '';
-      }
-    });
-    res[t] = {people:people||[], shifts:shifts||[], codes:codes||[], matrix};
-  }
-  state.dayByType = res;
+  results.forEach(({t,res:payload})=>{
+    const {people=[],shifts=[],codes=[],records=[]}=payload||{};
+    const matrix={};
+    people.forEach(p=>{ matrix[p.id]={}; shifts.forEach(s=> matrix[p.id][s]=''); });
+    (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
+    res[t]={people,shifts,codes,matrix};
+  });
+
+  state.dayByType=res;
   rebuildCodesUnion();
   renderLegend();
   renderGridDayAll();
 }
 
 async function loadMonthlyAll(){
-  const month = state.month;
-  const store = state.store;
-  const res = {};
-  for(const t of TYPES){
-    const {people, days, shifts, codes, records} = await apiGet({action:'init', store, type:t, month});
-    res[t] = {people:people||[], days:days||[], shifts:shifts||[], codes:codes||[], records:records||[]};
-  }
-  state.monthByType = res;
+  if(monthAbortCtrl) monthAbortCtrl.abort();
+  monthAbortCtrl = new AbortController();
+
+  const {store} = state; const month = state.month; const signal=monthAbortCtrl.signal;
+
+  // 3 init en parallèle
+  const initResults = await Promise.all(
+    TYPES.map(t => apiGet({action:'init', store, type:t, month}, {}, signal).then(res => ({t, res})))
+  );
+  const monthByType={};
+  initResults.forEach(({t,res:payload})=>{
+    const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
+    monthByType[t]={people,days,shifts,codes,records};
+  });
+  state.monthByType=monthByType;
   renderMonthlyGridAll();
 
-  const totalsAll = [];
-  for(const t of TYPES){
-    const totals = await apiGet({action:'summary', store, type:t, month});
-    (totals.rows||[]).forEach(r=> totalsAll.push(r));
-  }
+  // 3 summaries en parallèle
+  const sumResults = await Promise.all(
+    TYPES.map(t => apiGet({action:'summary', store, type:t, month}, {}, signal).then(res => ({t, rows:res.rows||[]})))
+  );
+  const totalsAll = sumResults.flatMap(x=>x.rows);
   renderTotalsChips(totalsAll);
 }
 
 async function changeDay(delta){
-  if(!state.day){ return; }
-  const d = new Date(state.day);
-  d.setDate(d.getDate()+delta);
-  const iso = d.toISOString().slice(0,10);
-  state.day = iso;
-  $('#day').value = iso;
-  setMonthFromDay();
-  setSectionLoading('#gridDay', 'Chargement du jour…');
-  showLoading();
+  if(!state.day) return;
+  const d=new Date(state.day); d.setDate(d.getDate()+delta);
+  const iso=d.toISOString().slice(0,10);
+  state.day=iso; $('#day').value=iso; setMonthFromDay();
+  setSectionLoading('#gridDay','Chargement du jour…'); showLoading();
   try{
     await loadDayAll();
     if(currentTab()==='resume'){ await loadMonthlyAll(); }
-  } finally {
-    hideLoading();
-  }
+  } finally { hideLoading(); }
 }
 
+// ---------- Congés (inchangé)
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
 function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
-
 async function loadLeaves(){
-  const code = getAdminCode();
-  if(!code){ $('#leavesList').innerHTML = `<div class="sectionLoading">Saisis le code pour afficher les demandes.</div>`; return; }
-
-  $('#leavesList').innerHTML = `<div class="sectionLoading"><span class="spinner"></span> Chargement des demandes…</div>`;
-  const store = $('#filterStore').value || '';
-  const month = $('#filterMonth').value || '';
+  const code=getAdminCode();
+  if(!code){ $('#leavesList').innerHTML=`<div class="sectionLoading">Saisis le code pour afficher les demandes.</div>`; return; }
+  $('#leavesList').innerHTML=`<div class="sectionLoading"><span class="spinner"></span> Chargement des demandes…</div>`;
+  const store=$('#filterStore').value||''; const month=$('#filterMonth').value||'';
   try{
-    const data = await apiGet({action:'leaves', status:'EN_ATTENTE', store:store||'ALL', month:month||''}, {'X-Admin-Code': code});
-    const rows = data.rows||[];
-    if(rows.length===0){
-      $('#leavesList').innerHTML = `<div class="sectionLoading">Aucune demande en attente.</div>`;
-      return;
-    }
-    const wrap = document.createElement('div'); wrap.className='cards';
+    const data=await apiGet({action:'leaves', status:'EN_ATTENTE', store:store||'ALL', month:month||''}, {'X-Admin-Code': code});
+    const rows=data.rows||[];
+    if(!rows.length){ $('#leavesList').innerHTML=`<div class="sectionLoading">Aucune demande en attente.</div>`; return; }
+    const wrap=document.createElement('div'); wrap.className='cards';
     rows.forEach(r=>{
-      const div = document.createElement('div'); div.className='card';
-      div.innerHTML = `
-        <h3>${(r.nom||'').toUpperCase()} ${r.prenom||''}</h3>
+      const div=document.createElement('div'); div.className='card';
+      div.innerHTML=`<h3>${(r.nom||'').toUpperCase()} ${r.prenom||''}</h3>
         <div class="rowmeta">${r.magasin||''} · ${r.service||''} · ${r.email||''}</div>
         <div>Du <b>${r.date_du}</b> au <b>${r.date_au}</b> – ${r.nb_jours||0} jour(s)</div>
         <div class="actions" style="margin-top:10px">
@@ -645,45 +506,30 @@ async function loadLeaves(){
         </div>`;
       wrap.appendChild(div);
     });
-    const box = $('#leavesList'); box.innerHTML=''; box.appendChild(wrap);
-
-    $$('#leavesList .ok').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'ACCEPTE'));
-    $$('#leavesList .no').forEach(b=> b.onclick = ()=> decideLeave(b.dataset.id, 'REFUSE'));
-  }catch(e){
-    $('#leavesList').innerHTML = `<div class="sectionLoading">Erreur: ${e.message}</div>`;
-  }
+    const box=$('#leavesList'); box.innerHTML=''; box.appendChild(wrap);
+    $$('#leavesList .ok').forEach(b=> b.onclick=()=> decideLeave(b.dataset.id,'ACCEPTE'));
+    $$('#leavesList .no').forEach(b=> b.onclick=()=> decideLeave(b.dataset.id,'REFUSE'));
+  }catch(e){ $('#leavesList').innerHTML=`<div class="sectionLoading">Erreur: ${e.message}</div>`; }
 }
 async function decideLeave(id, decision){
-  const code = getAdminCode(); if(!code) return alert('Code manquant.');
+  const code=getAdminCode(); if(!code) return alert('Code manquant.');
   try{
     showLoading();
-    const res = await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
-    if(res?.accepted){
-      await loadLeaves();
-      await loadDayAll();
-      alert('Congé accepté et ajouté aux présences (CP).');
-    }else if(res?.refused){
-      await loadLeaves();
-      alert('Demande refusée.');
-    }else{
-      alert('Action non appliquée: ' + (res?.error||''));
-    }
-  }catch(e){
-    alert('Échec: ' + e.message);
-  }finally{
-    hideLoading();
-  }
+    const res=await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
+    if(res?.accepted){ await loadLeaves(); await loadDayAll(); alert('Congé accepté et ajouté aux présences (CP).'); }
+    else if(res?.refused){ await loadLeaves(); alert('Demande refusée.'); }
+    else{ alert('Action non appliquée: ' + (res?.error||'')); }
+  }catch(e){ alert('Échec: ' + e.message); }
+  finally{ hideLoading(); }
 }
 
+// ---------- Onglets
 $('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
 $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
   if(state.store && state.month){
-    setSectionLoading('#summaryGrid','Chargement du résumé…');
-    showLoading();
-    try{ await loadMonthlyAll(); }
-    catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); }
-    finally{ hideLoading(); }
+    setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
+    try{ await loadMonthlyAll(); } catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); } finally{ hideLoading(); }
   } else {
     $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis magasin / mois puis clique <b>Charger</b>.</div>`;
     $('#summaryTotals').innerHTML = '';
@@ -692,189 +538,131 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
 $('.tab[data-tab="conges"]').onclick = async ()=>{
   setActiveTab('conges');
   if(!$('#filterStore').innerHTML.trim()){
-    const stores = (await apiGet({action:'stores'})).stores || [];
-    $('#filterStore').innerHTML = ['ALL', ...stores].map(s=>`<option>${s}</option>`).join('');
-    const now = new Date();
-    $('#filterMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const stores=(await apiGet({action:'stores'})).stores||[];
+    $('#filterStore').innerHTML=['ALL',...stores].map(s=>`<option>${s}</option>`).join('');
+    const now=new Date(); $('#filterMonth').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   }
   await loadLeaves();
 };
 
+// ---------- Boutons
 $('#saveAdminCode').onclick = ()=>{ setAdminCode($('#adminCode').value.trim()); loadLeaves(); };
 $('#refreshLeaves').onclick = ()=> loadLeaves();
-
 $('#fillP').onclick = ()=> applyAllDay('P');
-$('#fillEmpty').onclick = ()=>{
-  if(selectedCells.size){ setCodesOnTargets(''); }
-  else{ applyAllDay(''); }
-};
+$('#fillEmpty').onclick = ()=>{ if(selectedCells.size){ setCodesOnTargets(''); } else { applyAllDay(''); } };
 
 $('#save').onclick = async ()=>{
   try{
     if(!state.store || !state.day){ alert('Sélectionne magasin / jour.'); return; }
     showLoading();
-    let okCount = 0, errCount = 0;
-    for(const t of TYPES){
-      try{
-        const bucket = state.dayByType?.[t];
-        if(!bucket) continue;
-        const res = await apiPost({action:'saveDay', store:state.store, type:t, day:state.day, matrix:bucket.matrix});
-        if(res?.ok) okCount++; else errCount++;
-      }catch(_){ errCount++; }
-    }
-    if(errCount===0){ alert('Présences enregistrées ✔'); }
-    else alert(`Enregistrement partiel : ${okCount} type(s) OK, ${errCount} en erreur.`);
-  }catch(e){
-    console.error(e); alert("Échec de l'enregistrement : "+e.message);
-  }finally{ hideLoading(); }
+    // sauvegardes en parallèle
+    await Promise.all(TYPES.map(async t=>{
+      const bucket=state.dayByType?.[t]; if(!bucket) return;
+      await apiPost({action:'saveDay', store:state.store, type:t, day:state.day, matrix:bucket.matrix});
+    }));
+    alert('Présences enregistrées ✔');
+  }catch(e){ console.error(e); alert("Échec de l'enregistrement : "+e.message); }
+  finally{ hideLoading(); }
 };
 
-async function triggerLoad(){
-  state.store = $('#store').value;
-  state.day   = $('#day').value;
-  state.month = $('#month').value;
-
-  if(!state.store){ alert('Sélectionne un magasin.'); return; }
-  if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
-  if(!state.month){ setMonthFromDay(); }
-
-  setSectionLoading('#gridDay','Chargement des présences…');
-  if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
-  showLoading();
-
-  try{
-    await loadDayAll();
-    if(currentTab()==='resume'){ await loadMonthlyAll(); }
-  }catch(e){
-    console.error('Init error', e);
-    alert("Échec du chargement (réseau/API). Vérifie l’URL API.");
-  } finally {
-    hideLoading();
-  }
-}
-$('#load').onclick = triggerLoad;
-$('#store').addEventListener('change', triggerLoad);
-
+// ---------- Export Excel (tous types)
 $('#exportCsv').onclick = async ()=>{
-  const btn = $('#exportCsv');
-  const msg = $('#exportMsg');
-  const setMsg = (t)=> msg.textContent = t || '';
-  const finishOk = ()=>{ btn.disabled = false; setMsg('Export terminé ✔'); setTimeout(()=> setMsg(''), 2000); };
-  const finishKo = ()=>{ btn.disabled = false; setMsg('Échec export'); setTimeout(()=> setMsg(''), 3000); };
+  const btn=$('#exportCsv'), msg=$('#exportMsg');
+  const setMsg=t=> msg.textContent=t||''; const finishOk=()=>{ btn.disabled=false; setMsg('Export terminé ✔'); setTimeout(()=> setMsg(''),2000); };
+  const finishKo=()=>{ btn.disabled=false; setMsg('Échec export'); setTimeout(()=> setMsg(''),3000); };
 
   try{
-    btn.disabled = true;
-    setMsg('Export en cours…');
-
-    const month = $('#month').value;
-    const storesResp = await apiGet({action:'stores'});
-    const stores = (storesResp.stores && storesResp.stores.length) ? storesResp.stores : [$('#store').value];
-
-    const wb = XLSX.utils.book_new();
+    btn.disabled=true; setMsg('Export en cours…');
+    const month=$('#month').value;
+    const storesResp=await apiGet({action:'stores'});
+    const stores=(storesResp.stores&&storesResp.stores.length)?storesResp.stores:[$('#store').value];
+    const wb=XLSX.utils.book_new();
 
     for(const store of stores){
-      let header = ['Magasin','Type','Nom','Prénom'];
+      let header=['Magasin','Type','Nom','Prénom'];
+      let daysRef=null,shiftsRef=null;
 
-      let daysRef = null, shiftsRef = null;
-
-      for(const t of TYPES){
-        const probe = await apiGet({action:'init', store, type:t, month});
-        if((probe.days||[]).length && (probe.shifts||[]).length){
-          daysRef = probe.days; shiftsRef = probe.shifts;
-          break;
-        }
-      }
-      const days = daysRef || [];
-      const shifts = shiftsRef || [];
-
+      // trouve une réf de days/shifts
+      const probes = await Promise.all(TYPES.map(t=> apiGet({action:'init', store, type:t, month})));
+      for(const p of probes){ if((p.days||[]).length && (p.shifts||[]).length){ daysRef=p.days; shiftsRef=p.shifts; break; } }
+      const days=daysRef||[]; const shifts=shiftsRef||[];
       days.forEach(d=> header.push(formatDateHeader(d)));
       header.push('P','CP','SS','F','Total P');
+      const data=[header];
 
-      const data = [header];
-
-      for(const t of TYPES){
-        const {people, records} = await apiGet({action:'init', store, type:t, month});
-        const recMap = new Map();
-        (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code || ''));
-
-        const rowsPeople = (people||[]).slice().sort((a,b)=>{
-          const na=(a.nom||'').localeCompare(b.nom||'', 'fr', {sensitivity:'base'});
-          return na!==0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr', {sensitivity:'base'});
-        });
-
+      // charge par type en parallèle
+      const inits = await Promise.all(TYPES.map(t=> apiGet({action:'init', store, type:t, month})));
+      for(let i=0;i<TYPES.length;i++){
+        const t=TYPES[i]; const {people=[],records=[]}=inits[i];
+        const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+        const rowsPeople=people.slice().sort((a,b)=>{ const na=(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'}); return na!==0?na:(a.prenom||'').localeCompare(b.prenom||'','fr',{sensitivity:'base'}); });
         for(const p of rowsPeople){
-          const row = [store, (TYPE_LABELS[t]||t), (p.nom||'').toUpperCase(), p.prenom||''];
-          const counts = {P:0, CP:0, SS:0, F:0};
-
+          const row=[store,(TYPE_LABELS[t]||t),(p.nom||'').toUpperCase(),p.prenom||''];
+          const counts={P:0,CP:0,SS:0,F:0};
           for(const d of days){
-            const codes = (shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`) || '').filter(Boolean);
-            row.push(codes.join('/'));
-            codes.forEach(c=>{ if(counts[c]!==undefined) counts[c] += 1; });
+            const codes=(shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`)||'').filter(Boolean);
+            row.push(codes.join('/')); codes.forEach(c=>{ if(counts[c]!==undefined) counts[c]+=1; });
           }
-          row.push(counts.P||0, counts.CP||0, counts.SS||0, counts.F||0, counts.P||0);
+          row.push(counts.P||0,counts.CP||0,counts.SS||0,counts.F||0,counts.P||0);
           data.push(row);
         }
       }
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      ws['!cols'] = header.map(h=>{
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=header.map(h=>{
         if(['Magasin','Type'].includes(h)) return {wch:12};
-        if(['Nom','Prénom'].includes(h))   return {wch:16};
+        if(['Nom','Prénom'].includes(h)) return {wch:16};
         if(['P','CP','SS','F','Total P'].includes(h)) return {wch:8};
         return {wch:10};
       });
       XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
     }
 
-    const fname = `presences_${state.month}_${state.store||'ALL'}.xlsx`;
+    const fname=`presences_${state.month}_${state.store||'ALL'}.xlsx`;
 
     try{
-      const wbArray = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-      const blob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fname; a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
-    }catch(_){ /* ignore */ }
-
+      const wbArray=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+      const blob=new Blob([wbArray],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fname; a.rel='noopener';
+      document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0);
+    }catch(_){}
     try{
-      const base64 = XLSX.write(wb, {bookType:'xlsx', type:'base64'});
-      window.parent?.postMessage({
-        type: 'DOWNLOAD_FILE',
-        filename: fname,
-        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        base64
-      }, '*');
-    }catch(_){ /* ignore */ }
-
+      const base64=XLSX.write(wb,{bookType:'xlsx',type:'base64'});
+      window.parent?.postMessage({type:'DOWNLOAD_FILE', filename:fname, mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', base64}, '*');
+    }catch(_){}
     finishOk();
-  }catch(e){
-    console.error(e);
-    alert('Export Excel impossible : ' + e.message);
-    finishKo();
-  }
+  }catch(e){ console.error(e); alert('Export Excel impossible : '+e.message); finishKo(); }
 };
 
-(async function(){
-  const now = new Date();
-  const todayISO = now.toISOString().slice(0,10);
-  $('#day').value = todayISO;
-  $('#month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-
+// ---------- Déclencheurs
+async function triggerLoad(){
+  state.store=$('#store').value; state.day=$('#day').value; state.month=$('#month').value;
+  if(!state.store){ alert('Sélectionne un magasin.'); return; }
+  if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
+  if(!state.month){ setMonthFromDay(); }
+  setSectionLoading('#gridDay','Chargement des présences…');
+  if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
+  showLoading();
   try{
-    const stores = (await apiGet({action:'stores'})).stores || ['GLEIZE','VILLEFRANCHE','LYON'];
-    $('#store').innerHTML = stores.map(s=>`<option>${s}</option>`).join('');
+    await loadDayAll();
+    if(currentTab()==='resume'){ await loadMonthlyAll(); }
+  }catch(e){ console.error('Init error',e); alert("Échec du chargement (réseau/API). Vérifie l’URL API."); }
+  finally{ hideLoading(); }
+}
+$('#load').onclick = triggerLoad;
+$('#store').addEventListener('change', triggerLoad);
+
+// ---------- Boot
+(async function(){
+  const now=new Date(); const todayISO=now.toISOString().slice(0,10);
+  $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  try{
+    const stores=(await apiGet({action:'stores'})).stores||['GLEIZE','VILLEFRANCHE','LYON'];
+    $('#store').innerHTML=stores.map(s=>`<option>${s}</option>`).join('');
   }catch(e){
     console.error('Stores: échec', e);
-    $('#store').innerHTML = ['GLEIZE','VILLEFRANCHE','LYON'].map(s=>`<option>${s}</option>`).join('');
+    $('#store').innerHTML=['GLEIZE','VILLEFRANCHE','LYON'].map(s=>`<option>${s}</option>`).join('');
   }
-
-  if(!$('#store').value){
-    const first = $('#store').querySelector('option')?.value || '';
-    if(first) $('#store').value = first;
-  }
+  if(!$('#store').value){ const first=$('#store').querySelector('option')?.value||''; if(first) $('#store').value=first; }
   await triggerLoad();
 })();
 </script>
