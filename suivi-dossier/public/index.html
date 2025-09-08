@@ -21,15 +21,8 @@
   tr{background:#f9fafb; border:1px solid var(--line)}
 
   .badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:6px 12px;
-    border-radius:999px;
-    font-weight:700;
-    font-size:.9rem;
-    min-width:100px;
-    text-align:center;
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:6px 12px; border-radius:999px; font-weight:700; font-size:.9rem; min-width:100px; text-align:center;
   }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
@@ -45,20 +38,9 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .loadingBar{
-    position:fixed;left:0;right:0;top:0;z-index:9999;
-    display:none;align-items:center;justify-content:center;gap:10px;
-    background:#0b4a6f;color:#fff;padding:8px 12px;font-weight:700;
-    box-shadow:0 2px 8px rgba(0,0,0,.15)
-  }
-  .loadingBar .spinner{
-    border-color:#ffffff66;border-top-color:#fff;
-  }
-
   .mask{
     position:fixed; inset:0; background:#0008; display:none;
-    align-items:flex-start;
-    justify-content:center;
+    align-items:flex-start; justify-content:center;
     z-index:10000; padding:20px;
   }
   .box{
@@ -77,22 +59,12 @@
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
 
   .bar button{
-    border:1px solid var(--primary);
-    background:#fff;
-    color:var(--primary);
-    padding:6px 12px;
-    border-radius:8px;
-    font-weight:700;
-    cursor:pointer;
-    margin-left:6px;
+    border:1px solid var(--primary); background:#fff; color:var(--primary);
+    padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer; margin-left:6px;
   }
 </style>
 </head>
 <body>
-  <div id="loadingBar" class="loadingBar" role="status" aria-live="polite">
-    <span class="spinner" aria-hidden="true"></span>
-    <span id="loadingMsg">Chargement…</span>
-  </div>
 
   <div class="wrap">
     <h1>Suivi des dossiers Atelier</h1>
@@ -103,12 +75,12 @@
           <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
         </select>
       </label>
-	  
-	  <label>Jour :
+
+      <label>Jour :
         <select id="filterDay"></select>
       </label>
 
-	  <label>Mois :
+      <label>Mois :
         <select id="filterMonth"></select>
       </label>
 
@@ -145,9 +117,9 @@
 <script>
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
-const $year = document.getElementById("filterYear");
-const $q = document.getElementById("q");
-const $mask = document.getElementById("mask");
+const $year   = document.getElementById("filterYear");
+const $q      = document.getElementById("q");
+const $mask   = document.getElementById("mask");
 const $btnClose = document.getElementById("btnClose");
 const $btnPrint = document.getElementById("btnPrint");
 const $modalTitle = document.getElementById("modalTitle");
@@ -155,18 +127,10 @@ const $modalContent = document.getElementById("modalContent");
 const $month = document.getElementById("filterMonth");
 const $day   = document.getElementById("filterDay");
 
-const $loadingBar = document.getElementById("loadingBar");
-const $loadingMsg = document.getElementById("loadingMsg");
 
-let rows = [];
+function showLoading(){  }
+function hideLoading(){  }
 
-function showLoading(msg){
-  $loadingMsg.textContent = msg || "Chargement…";
-  $loadingBar.style.display = "flex";
-}
-function hideLoading(){
-  $loadingBar.style.display = "none";
-}
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
@@ -220,6 +184,8 @@ function updateDayOptions() {
   if (prev && Number(prev) <= maxDay) $day.value = prev; else $day.value = "";
 }
 
+let rows = [];
+
 function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
@@ -258,10 +224,12 @@ function draw(){
       tr.querySelector(".btnSave").addEventListener("click", async ()=>{
         const statusSel = tr.querySelector(".statusSel");
         const saveBtn = tr.querySelector(".btnSave");
+        const oldHtml = saveBtn.innerHTML;
         const status = statusSel.value;
         try{
           saveBtn.disabled = true; statusSel.disabled = true;
-          showLoading("Mise à jour du statut…");
+          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:8px"></span>Enregistrement…`;
+
           const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -270,8 +238,8 @@ function draw(){
           if(!resp.ok){ alert("Erreur de mise à jour"); return; }
           r.status = status;
           draw();
-        }finally{
-          hideLoading();
+        } finally{
+          saveBtn.innerHTML = oldHtml;
           saveBtn.disabled = false; statusSel.disabled = false;
         }
       });
@@ -365,13 +333,13 @@ function openDetails(row){
   $mask.setAttribute("aria-hidden","false");
 }
 
-$btnClose.addEventListener("click", ()=>{
+document.getElementById("btnClose").addEventListener("click", ()=>{
   $mask.style.display = "none";
   $mask.setAttribute("aria-hidden","true");
   $modalContent.innerHTML = "";
 });
 
-$btnPrint.addEventListener("click", ()=>{
+document.getElementById("btnPrint").addEventListener("click", ()=>{
   const w = window.open("", "_blank");
   w.document.write(`
     <html>
@@ -394,45 +362,43 @@ $btnPrint.addEventListener("click", ()=>{
       </body>
     </html>
   `);
-  w.document.close();
-  w.focus();
-  w.print();
-  w.close();
+  w.document.close(); w.focus(); w.print(); w.close();
 });
 
-function buildMonthOptions(){ /* redéfinie plus bas si besoin */ }
-
-async function load(){
-  showLoading("Chargement des dossiers…");
+function load(){
   setTableLoading("Chargement des dossiers…");
-  try{
-    const r = await fetch("/atelier/api/cases");
-    const json = await r.json();
-    const data = (json && json.data) || [];
-
-    rows = data.map(x=>{
-      const h = (x.snapshot && x.snapshot.header) || {};
-      return {
-        ...x,
-        magasin: x.magasin || (h && h.magasin) || "",
-        compte:  x.compte  || (h && h.compte)  || "",
-        client:  x.client  || (h && h.client)  || "",
-        service: x.service || (h && h.service) || "",
-        demandeDate: x.demandeDate || (h && h.dateDemande) || ""
-      };
+  fetch("/atelier/api/cases")
+    .then(r=>r.json())
+    .then(json=>{
+      const data = (json && json.data) || [];
+      rows = data.map(x=>{
+        const h = (x.snapshot && x.snapshot.header) || {};
+        return {
+          ...x,
+          magasin: x.magasin || (h && h.magasin) || "",
+          compte:  x.compte  || (h && h.compte)  || "",
+          client:  x.client  || (h && h.client)  || "",
+          service: x.service || (h && h.service) || "",
+          demandeDate: x.demandeDate || (h && h.dateDemande) || ""
+        };
+      });
+      buildYearOptions(rows);
+      buildMonthOptions();
+      updateDayOptions();
+      draw();
+    })
+    .catch(e=>{
+      console.error(e);
+      $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
+      alert("Erreur de chargement.");
     });
-
-    buildYearOptions(rows);
-    buildMonthOptions();
-    updateDayOptions();
-    draw();
-  }catch(e){
-    $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
-    alert("Erreur de chargement.");
-  }finally{
-    hideLoading();
-  }
 }
+
+function buildMonthOptions(){  }
+
+const $monthEl = document.getElementById("filterMonth");
+const $dayEl   = document.getElementById("filterDay");
+const $yearEl  = document.getElementById("filterYear");
 
 $filter.addEventListener("change", draw);
 $month.addEventListener("change", () => { updateDayOptions(); draw(); });

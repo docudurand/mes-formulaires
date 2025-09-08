@@ -104,8 +104,7 @@
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
         <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi). Alt+clic sur une puce = remplir tout le tableau.</span>
-      </div>
-      <div class="legend" id="legend"></div>
+      </div>   
       <div id="gridDay"></div>
     </section>
 
@@ -236,7 +235,9 @@ function rebuildCodesUnion(){
 }
 
 function renderLegend(){
-  const el=$('#legend'); el.innerHTML='';
+  const el = document.getElementById('legend');
+  if(!el) return;
+  el.innerHTML='';
   (state.codesUnion||[]).forEach(c=>{
     const div=document.createElement('div');
     div.className='k';
