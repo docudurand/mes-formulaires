@@ -28,27 +28,10 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
-.pdfMask{
-  position:fixed; inset:0; background:#0008;
-  display:none; align-items:center; justify-content:center;
-  z-index:10000; padding:20px;
-}
-.pdfBox{
-  width:min(900px,96vw); height:min(90vh,800px);
-  background:#fff; border-radius:14px; overflow:hidden;
-  display:flex; flex-direction:column; border:1px solid var(--line);
-}
-.pdfBar{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff;
-}
-#pdfFrame{
-  flex:1;
-  width:100%;
-  height:100%;
-  border:0;
-}
-
+    .pdfMask{ position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px; }
+    .pdfBox{ width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line); }
+    .pdfBar{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff; }
+    #pdfFrame{ flex:1; width:100%; height:100%; border:0; }
   </style>
 </head>
 <body>
@@ -123,6 +106,15 @@
 
         <div class="grid grid-2">
           <div>
+            <label for="segment">VL / PL</label>
+            <select id="segment" name="segment">
+              <option value="" selected disabled>-- VL ou PL --</option>
+              <option>VL</option>
+              <option>PL</option>
+            </select>
+          </div>
+
+          <div>
             <label for="cylindre">Cylindre</label>
             <select id="cylindre" name="cylindre">
               <option value="" selected disabled>-- Nb de cylindres --</option>
@@ -138,9 +130,7 @@
               <option>2</option><option>4</option><option>8</option><option>16</option><option>24</option>
             </select>
           </div>
-        </div>
 
-        <div class="grid grid-2">
           <div>
             <label for="carburant">Carburant</label>
             <select id="carburant" name="carburant">
@@ -151,7 +141,7 @@
           </div>
         </div>
 
-        <p class="help">Coche les opérations à réaliser. Les références s’affichent quand Cylindre, Soupapes et Carburant sont renseignés.</p>
+        <p class="help">Coche les opérations à réaliser. Les références s’affichent quand VL/PL, Cylindre, Soupapes et Carburant sont renseignés.</p>
 
         <div id="culasse-lignes"></div>
 
@@ -199,16 +189,18 @@
       <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
     </div>
   </div>
+
   <form id="printForm" method="POST" target="pdfFrame" style="display:none">
-  <input type="hidden" name="payload" />
-</form>
+    <input type="hidden" name="payload" />
+  </form>
 
   <script>
-  const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyB-L1TrhB8-QpsjWdW34PMb_XemMR4VNha7IKx2ZiQFg7slL0Q_oLZ8x-rkjmHs2RUg/exec";
+  const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzryNfU5nd-tWMqPmS11E9_ZlvAjG0kpramdDIB8pEcUEaD84Q4ZHoz_hdEhM7fwoBUSQ/exec";
 
   let LIGNES = [], REGLES = [];
   const el = id => document.getElementById(id);
-  const allCulasseChosen = () => el('cylindre').value && el('soupapes').value && el('carburant').value;
+  const allCulasseChosen = () =>
+  el('segment').value && el('cylindre').value && el('carburant').value;
 
   async function loadConfig(){
     try{
@@ -235,30 +227,49 @@
     });
   }
 
-  function matchRegles(service, cyl, soup, carb, ligne){
-    const cand = REGLES.filter(r =>
-      String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
-      String(r.service).toLowerCase() === String(service).toLowerCase()
-    );
-    const score = r => {
-      let s=0;
-      s += (String(r.cylindres)===String(cyl))?1:(r.cylindres==='*'?0:-999);
-      s += (String(r.soupapes)===String(soup))?1:(r.soupapes==='*'?0:-999);
-      s += (String(r.carburant).toLowerCase()===String(carb).toLowerCase())?1:(r.carburant==='*'?0:-999);
-      return s;
-    };
-    return cand.map(r=>({r,s:score(r)})).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s).map(x=>x.r);
-  }
+function matchRegles(service, cyl, soup, carb, seg, ligne){
+  const cand = REGLES.filter(r =>
+    String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
+    String(r.service).toLowerCase() === String(service).toLowerCase()
+  );
+  const score = r => {
+    const vlpl = String(r.vl_pl || r['vl/pl'] || r.vlpl || '').trim().toUpperCase();
+    const segU = String(seg||'').toUpperCase();
+    let s = 0;
+
+    s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === '*' ? 0 : -999);
+
+    if (String(soup || '') === '') {
+
+    } else {
+      s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
+    }
+
+    s += (String(r.carburant).toLowerCase() === String(carb).toLowerCase()) ? 1 : (r.carburant === '*' ? 0 : -999);
+
+    s += (vlpl === '' || vlpl === '*' || vlpl === segU) ? 1 : -999;
+
+    return s;
+  };
+  return cand
+    .map(r => ({ r, s: score(r) }))
+    .filter(x => x.s >= 0)
+    .sort((a,b) => b.s - a.s)
+    .map(x => x.r);
+}
 
   function refreshReferences(){
     if (el('service').value !== 'Rectification Culasse') return;
-    const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+    const seg = el('segment').value,
+          cyl = el('cylindre').value,
+          soup = el('soupapes').value,
+          carb = el('carburant').value;
     const ready = allCulasseChosen();
     LIGNES.forEach(l=>{
       const holder = el('refs_'+l.ligne), cb = el('input_'+l.ligne);
       if(!holder||!cb) return;
       if(!cb.checked || !ready){ holder.textContent=''; return; }
-      const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
+      const regles = matchRegles('culasse', cyl, soup, carb, seg, l.ligne);
       if(!regles.length){ holder.textContent=''; return; }
       holder.innerHTML = '<ul style="margin:6px 0 0; padding-left:18px;">' +
         regles.map(r =>
@@ -274,7 +285,8 @@
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
     blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
-    el('cylindre').required = el('soupapes').required = el('carburant').required = isC;
+    el('segment').required = el('cylindre').required = el('carburant').required = isC;
+	el('soupapes').required = false;
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
@@ -286,27 +298,27 @@
   }
 
   el('service').addEventListener('change', toggleCulasseFields);
-  ['cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
+  ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
   const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
         $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
 
   function openPrintPreview(payload){
-  document.body.style.overflow = "hidden";
-  $printForm.action = "/atelier/api/print-html";
-  $printForm.querySelector('[name="payload"]').value = JSON.stringify(payload);
-  $pdfFrame.src = "about:blank";
-  $pdfMask.style.display = "flex";
-  $pdfMask.setAttribute("aria-hidden","false");
-  $printForm.submit();
-}
+    document.body.style.overflow = "hidden";
+    $printForm.action = "/atelier/api/print-html";
+    $printForm.querySelector('[name="payload"]').value = JSON.stringify(payload);
+    $pdfFrame.src = "about:blank";
+    $pdfMask.style.display = "flex";
+    $pdfMask.setAttribute("aria-hidden","false");
+    $printForm.submit();
+  }
 
-$pdfClose.addEventListener('click', ()=>{
-  $pdfMask.style.display = 'none';
-  $pdfMask.setAttribute('aria-hidden','true');
-  $pdfFrame.src = 'about:blank';
-  document.body.style.overflow = "";
-});
+  $pdfClose.addEventListener('click', ()=>{
+    $pdfMask.style.display = 'none';
+    $pdfMask.setAttribute('aria-hidden','true');
+    $pdfFrame.src = 'about:blank';
+    document.body.style.overflow = "";
+  });
   $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
@@ -324,11 +336,15 @@ $pdfClose.addEventListener('click', ()=>{
     const ops = [];
     const service = el('service').value;
     if (service === 'Rectification Culasse') {
-      const cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+      const seg = el('segment').value,
+            cyl = el('cylindre').value,
+            soup = el('soupapes').value,
+            carb = el('carburant').value;
+
       LIGNES.forEach(l=>{
         const cb = el('input_'+l.ligne);
         if (cb && cb.checked) {
-          const regles = matchRegles('culasse', cyl, soup, carb, l.ligne);
+          const regles = matchRegles('culasse', cyl, soup, carb, seg, l.ligne);
           ops.push({
             ligne: l.ligne,
             libelle: l.libelle || l.ligne,
@@ -372,6 +388,7 @@ $pdfClose.addEventListener('click', ()=>{
       commentaires,
       injecteur,
       culasse: (service === 'Rectification Culasse') ? {
+        segment: el('segment').value || '',
         cylindre: el('cylindre').value || '',
         soupapes: el('soupapes').value || '',
         carburant: el('carburant').value || '',

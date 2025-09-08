@@ -39,6 +39,22 @@
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
   .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
 
+  .spinner{
+    width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--primary);
+    border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .loadingBar{
+    position:fixed;left:0;right:0;top:0;z-index:9999;
+    display:none;align-items:center;justify-content:center;gap:10px;
+    background:#0b4a6f;color:#fff;padding:8px 12px;font-weight:700;
+    box-shadow:0 2px 8px rgba(0,0,0,.15)
+  }
+  .loadingBar .spinner{
+    border-color:#ffffff66;border-top-color:#fff;
+  }
+
   .mask{
     position:fixed; inset:0; background:#0008; display:none;
     align-items:flex-start;
@@ -73,6 +89,11 @@
 </style>
 </head>
 <body>
+  <div id="loadingBar" class="loadingBar" role="status" aria-live="polite">
+    <span class="spinner" aria-hidden="true"></span>
+    <span id="loadingMsg">Chargement…</span>
+  </div>
+
   <div class="wrap">
     <h1>Suivi des dossiers Atelier</h1>
     <div class="toolbar">
@@ -84,13 +105,12 @@
       </label>
 	  
 	  <label>Jour :
-  <select id="filterDay"></select>
-</label>
+        <select id="filterDay"></select>
+      </label>
 
 	  <label>Mois :
-  <select id="filterMonth"></select>
-</label>
-
+        <select id="filterMonth"></select>
+      </label>
 
       <label>Année :
         <select id="filterYear"></select>
@@ -135,7 +155,23 @@ const $modalContent = document.getElementById("modalContent");
 const $month = document.getElementById("filterMonth");
 const $day   = document.getElementById("filterDay");
 
+const $loadingBar = document.getElementById("loadingBar");
+const $loadingMsg = document.getElementById("loadingMsg");
+
 let rows = [];
+
+function showLoading(msg){
+  $loadingMsg.textContent = msg || "Chargement…";
+  $loadingBar.style.display = "flex";
+}
+function hideLoading(){
+  $loadingBar.style.display = "none";
+}
+function setTableLoading(msg){
+  $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#334155">
+    <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
+  </td></tr>`;
+}
 
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
 function badge(status){
@@ -159,35 +195,24 @@ function fmtJJMMYYYYdash(v){
 function buildYearOptions(list){
   const years = new Set();
   const nowY = new Date().getFullYear();
-
   (list||[]).forEach(r=>{
     const d = r.demandeDate ? new Date(r.demandeDate) : null;
     if (d && !isNaN(d)) years.add(d.getFullYear());
   });
-
   if (years.size === 0) years.add(nowY);
-
   const sorted = Array.from(years).sort((a,b)=>b-a);
   $year.innerHTML = sorted.map(y=>`<option value="${y}">${y}</option>`).join("");
-
   $year.value = String(sorted.includes(nowY) ? nowY : (sorted[0] || nowY));
 }
 function buildMonthOptions() {
-  const months = [
-    "Janvier","Février","Mars","Avril","Mai","Juin",
-    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
-  ];
-  $month.innerHTML =
-    `<option value="">Tous</option>` +
-    months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
+  const months = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  $month.innerHTML = `<option value="">Tous</option>` + months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
   $month.value = "";
 }
-
 function updateDayOptions() {
   const y = Number($year.value) || new Date().getFullYear();
   const m = Number($month.value) || 0;
   const maxDay = m ? new Date(y, m, 0).getDate() : 31;
-
   const prev = $day.value;
   let html = `<option value="">Tous</option>`;
   for (let d = 1; d <= maxDay; d++) html += `<option value="${d}">${String(d).padStart(2,"0")}</option>`;
@@ -204,34 +229,11 @@ function draw(){
 
   $tbody.innerHTML = "";
   rows
-
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
-
-    .filter(r => {
-      if (!monthVal) return true;
-      const d = r.demandeDate ? new Date(r.demandeDate) : null;
-      return d && !isNaN(d) && (d.getMonth()+1) === Number(monthVal);
-    })
-
-    .filter(r => {
-      if (!dayVal) return true;
-      const d = r.demandeDate ? new Date(r.demandeDate) : null;
-      return d && !isNaN(d) && d.getDate() === Number(dayVal);
-    })
-
-    .filter(r => {
-      if (!yearVal) return true;
-      const d = r.demandeDate ? new Date(r.demandeDate) : null;
-      return d && !isNaN(d) && String(d.getFullYear()) === yearVal;
-    })
-
-    .filter(r => {
-      if (!q) return true;
-      const searchable =
-        (JSON.stringify(r) + ' ' + String(r.no).padStart(5,'0')).toLowerCase();
-      return searchable.includes(q);
-    })
-
+    .filter(r => { if (!monthVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && (d.getMonth()+1) === Number(monthVal); })
+    .filter(r => { if (!dayVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && d.getDate() === Number(dayVal); })
+    .filter(r => { if (!yearVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && String(d.getFullYear()) === yearVal; })
+    .filter(r => { if (!q) return true; const searchable = (JSON.stringify(r) + ' ' + String(r.no).padStart(5,'0')).toLowerCase(); return searchable.includes(q); })
     .forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -254,15 +256,24 @@ function draw(){
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
 
       tr.querySelector(".btnSave").addEventListener("click", async ()=>{
-        const status = tr.querySelector(".statusSel").value;
-        const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ status })
-        });
-        if(!resp.ok){ alert("Erreur de mise à jour"); return; }
-        r.status = status;
-        draw();
+        const statusSel = tr.querySelector(".statusSel");
+        const saveBtn = tr.querySelector(".btnSave");
+        const status = statusSel.value;
+        try{
+          saveBtn.disabled = true; statusSel.disabled = true;
+          showLoading("Mise à jour du statut…");
+          const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ status })
+          });
+          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+          r.status = status;
+          draw();
+        }finally{
+          hideLoading();
+          saveBtn.disabled = false; statusSel.disabled = false;
+        }
       });
 
       $tbody.appendChild(tr);
@@ -277,7 +288,7 @@ function openDetails(row){
   const inj = (row.snapshot && row.snapshot.injecteur) || null;
   const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
 
-$modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
+  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
 
   let opsHTML = "";
   if (cul && Array.isArray(cul.operations) && cul.operations.length){
@@ -389,7 +400,11 @@ $btnPrint.addEventListener("click", ()=>{
   w.close();
 });
 
+function buildMonthOptions(){ /* redéfinie plus bas si besoin */ }
+
 async function load(){
+  showLoading("Chargement des dossiers…");
+  setTableLoading("Chargement des dossiers…");
   try{
     const r = await fetch("/atelier/api/cases");
     const json = await r.json();
@@ -408,11 +423,14 @@ async function load(){
     });
 
     buildYearOptions(rows);
-buildMonthOptions();
-updateDayOptions();
-draw();
+    buildMonthOptions();
+    updateDayOptions();
+    draw();
   }catch(e){
+    $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
     alert("Erreur de chargement.");
+  }finally{
+    hideLoading();
   }
 }
 
@@ -421,6 +439,7 @@ $month.addEventListener("change", () => { updateDayOptions(); draw(); });
 $day.addEventListener("change", draw);
 $year.addEventListener("change", () => { updateDayOptions(); draw(); });
 $q.addEventListener("input", draw);
+
 load();
 </script>
 </body>
