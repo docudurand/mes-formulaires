@@ -42,8 +42,23 @@
     tbody th.sticky{position:sticky;left:0;background:#fff;font-weight:600;z-index:2}
     td,th{height:var(--cell);min-width:42px;padding:0}
 
-    table .col-name{min-width:var(--nameW); padding:0 14px; text-align:left}
-    table .col-shift{min-width:var(--shiftW); width:var(--shiftW); padding:0 6px}
+    table .col-name{ padding:0 14px; text-align:left; }
+	table .col-shift{ padding:0 6px; }
+	#saisie table .col-name{
+  min-width: auto; width: auto; padding:0 8px;
+}
+#saisie table .col-shift{
+
+  min-width: 42px; width: auto;
+}
+
+#resume table .col-name{
+  min-width: var(--nameW);
+}
+#resume table .col-shift{
+  min-width: var(--shiftW);
+  width: var(--shiftW);
+}
     td.cell{cursor:text}
     td.cell[contenteditable="true"]:focus{outline:2px solid #2684ff;outline-offset:-2px}
     td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px}
