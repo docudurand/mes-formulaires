@@ -50,7 +50,6 @@
     .sub{font-size:11px;color:var(--muted)}
     td.cell.weekend{background:#000 !important;color:#fff !important;cursor:not-allowed}
     th.weekend{background:#111 !important;color:#fff !important}
-
     td.cell.off{background:#000 !important;color:#fff !important;cursor:not-allowed}
     .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:auto}
     .summary table td,.summary table th{padding:10px}
@@ -104,7 +103,7 @@
         <button id="fillEmpty">Vider sélection</button>
         <button id="save" class="primary">Enregistrer</button>
         <span class="hint">Astuce : clique une cellule (Ctrl/Cmd = multi). Alt+clic sur une puce = remplir tout le tableau.</span>
-      </div>   
+      </div>
       <div id="gridDay"></div>
     </section>
 
@@ -228,25 +227,37 @@ async function apiPost(body, headers={}, signal){
   return j;
 }
 
+function buildSparseMatrix(bucket){
+  const out = {};
+  for(const pid in (bucket?.matrix||{})){
+    const row = bucket.matrix[pid] || {};
+    const filtered = {};
+    for(const sh in row){
+      const v = String(row[sh]||'').trim();
+      if(v) filtered[sh] = v;
+    }
+    if(Object.keys(filtered).length) out[pid] = filtered;
+  }
+  return out;
+}
+async function apiPostWithRetry(body, headers={}, tries=2){
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{ return await apiPost(body, headers); }
+    catch(e){
+      lastErr = e;
+      if(!/timeout|proxy_failed|network/i.test(String(e))) break;
+      await new Promise(r=> setTimeout(r, 800*(i+1)));
+    }
+  }
+  throw lastErr;
+}
+
 function rebuildCodesUnion(){
   const map=new Map();
   TYPES.forEach(t=> (state.dayByType?.[t]?.codes||[]).forEach(c=>{ if(!map.has(c.code)) map.set(c.code,c); }));
   state.codesUnion = Array.from(map.values());
 }
-
-function renderLegend(){
-  const el = document.getElementById('legend');
-  if(!el) return;
-  el.innerHTML='';
-  (state.codesUnion||[]).forEach(c=>{
-    const div=document.createElement('div');
-    div.className='k';
-    div.innerHTML=`<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
-    div.addEventListener('click',(e)=>{ if(e.altKey){ applyAllDay(c.code); } else { setCodesOnTargets(c.code); } });
-    el.appendChild(div);
-  });
-}
-
 function renderLegendInline(container, type){
   container.innerHTML='';
   (state.codesUnion||[]).forEach(c=>{
@@ -268,10 +279,9 @@ function applyAllDay(code, onlyType=null){
     const b=state.dayByType?.[t]; if(!b) return;
     for(const pid in b.matrix){
       for(const s of (b.shifts||[])){
-
         if(t==='LIVREUR'){
           const person = (b.people||[]).find(p=> String(p.id)===String(pid));
-          const allowed = Array.isArray(person?.allowed) ? person.allowed : [];
+          const allowed = Array.isArray(person?.allowed) ? person.allowed.map(x=>String(x).toUpperCase()) : [];
           if(allowed.length && !allowed.includes(String(s).toUpperCase())) continue;
         }
         b.matrix[pid][s]=code||'';
@@ -462,22 +472,18 @@ async function loadDayAll(){
 
   const {store} = state; const day = state.day; const signal=dayAbortCtrl.signal;
 
-  const results = await Promise.all(
-    TYPES.map(t => apiGet({action:'initDay', store, type:t, day}, {}, signal).then(res => ({t, res})))
-  );
-
   const res = {};
-  results.forEach(({t,res:payload})=>{
+  for(const t of TYPES){
+    const payload = await apiGet({action:'initDay', store, type:t, day}, {}, signal);
     const {people=[],shifts=[],codes=[],records=[]}=payload||{};
     const matrix={};
     people.forEach(p=>{ matrix[p.id]={}; shifts.forEach(s=> matrix[p.id][s]=''); });
     (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
     res[t]={people,shifts,codes,matrix};
-  });
+  }
 
   state.dayByType=res;
   rebuildCodesUnion();
-  renderLegend();
   renderGridDayAll();
 }
 
@@ -487,21 +493,20 @@ async function loadMonthlyAll(){
 
   const {store} = state; const month = state.month; const signal=monthAbortCtrl.signal;
 
-  const initResults = await Promise.all(
-    TYPES.map(t => apiGet({action:'init', store, type:t, month}, {}, signal).then(res => ({t, res})))
-  );
   const monthByType={};
-  initResults.forEach(({t,res:payload})=>{
+  for(const t of TYPES){
+    const payload = await apiGet({action:'init', store, type:t, month}, {}, signal);
     const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
     monthByType[t]={people,days,shifts,codes,records};
-  });
+  }
   state.monthByType=monthByType;
   renderMonthlyGridAll();
 
-  const sumResults = await Promise.all(
-    TYPES.map(t => apiGet({action:'summary', store, type:t, month}, {}, signal).then(res => ({t, rows:res.rows||[]})))
-  );
-  const totalsAll = sumResults.flatMap(x=>x.rows);
+  const totalsAll = [];
+  for(const t of TYPES){
+    const r = await apiGet({action:'summary', store, type:t, month}, {}, signal);
+    totalsAll.push(...(r.rows||[]));
+  }
   renderTotalsChips(totalsAll);
 }
 
@@ -519,7 +524,6 @@ async function changeDay(delta){
 
 function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
 function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
-
 async function loadLeaves(){
   const code=getAdminCode();
   if(!code){ $('#leavesList').innerHTML=`<div class="sectionLoading">Saisis le code pour afficher les demandes.</div>`; return; }
@@ -585,16 +589,26 @@ $('#fillP').onclick = ()=> applyAllDay('P');
 $('#fillEmpty').onclick = ()=>{ if(selectedCells.size){ setCodesOnTargets(''); } else { applyAllDay(''); } };
 
 $('#save').onclick = async ()=>{
+  if(!state.store || !state.day){ alert('Sélectionne magasin / jour.'); return; }
+  showLoading();
+  const typesOrder = ['EMPLOYE','INTERIM','LIVREUR'];
+  const ok = [];
   try{
-    if(!state.store || !state.day){ alert('Sélectionne magasin / jour.'); return; }
-    showLoading();
-    await Promise.all(TYPES.map(async t=>{
-      const bucket=state.dayByType?.[t]; if(!bucket) return;
-      await apiPost({action:'saveDay', store:state.store, type:t, day:state.day, matrix:bucket.matrix});
-    }));
-    alert('Présences enregistrées ✔');
-  }catch(e){ console.error(e); alert("Échec de l'enregistrement : "+e.message); }
-  finally{ hideLoading(); }
+    for(const t of typesOrder){
+      const bucket=state.dayByType?.[t]; if(!bucket) continue;
+      const sparse = buildSparseMatrix(bucket);
+      if(Object.keys(sparse).length===0){ ok.push(`${t} (aucune modif)`); continue; }
+      await apiPostWithRetry({action:'saveDay', store:state.store, type:t, day:state.day, matrix:sparse}, {}, 2);
+      try{
+        const check=await apiGet({action:'summaryDay', store:state.store, type:t, day:state.day});
+        ok.push(check?.filled ? t : `${t} (enregistré, à vérifier)`);
+      }catch(_){ ok.push(`${t} (enregistré)`); }
+    }
+    alert('Présences enregistrées ✔\n' + ok.join(', '));
+  }catch(e){
+    console.error(e);
+    alert("Échec de l'enregistrement : " + e.message);
+  }finally{ hideLoading(); }
 };
 
 $('#exportCsv').onclick = async ()=>{
@@ -613,18 +627,24 @@ $('#exportCsv').onclick = async ()=>{
       let header=['Magasin','Type','Nom','Prénom'];
       let daysRef=null,shiftsRef=null;
 
-      const probes = await Promise.all(TYPES.map(t=> apiGet({action:'init', store, type:t, month})));
-      for(const p of probes){ if((p.days||[]).length && (p.shifts||[]).length){ daysRef=p.days; shiftsRef=p.shifts; break; } }
+      for(const t of TYPES){
+        const p = await apiGet({action:'init', store, type:t, month});
+        if((p.days||[]).length && (p.shifts||[]).length){ daysRef=p.days; shiftsRef=p.shifts; break; }
+      }
       const days=daysRef||[]; const shifts=shiftsRef||[];
       days.forEach(d=> header.push(formatDateHeader(d)));
       header.push('P','CP','SS','F','Total P');
       const data=[header];
 
-      const inits = await Promise.all(TYPES.map(t=> apiGet({action:'init', store, type:t, month})));
-      for(let i=0;i<TYPES.length;i++){
-        const t=TYPES[i]; const {people=[],records=[]}=inits[i];
+      const inits = {};
+      for(const t of TYPES){ inits[t]=await apiGet({action:'init', store, type:t, month}); }
+      for(const t of TYPES){
+        const {people=[],records=[]}=inits[t];
         const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
-        const rowsPeople=people.slice().sort((a,b)=>{ const na=(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'}); return na!==0?na:(a.prenom||'').localeCompare(b.prenom||'','fr',{sensitivity:'base'}); });
+        const rowsPeople=people.slice().sort((a,b)=>{
+          const na=(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'});
+          return na!==0?na:(a.prenom||'').localeCompare(b.prenom||'','fr',{sensitivity:'base'});
+        });
         for(const p of rowsPeople){
           const row=[store,(TYPE_LABELS[t]||t),(p.nom||'').toUpperCase(),p.prenom||''];
           const counts={P:0,CP:0,SS:0,F:0};
@@ -647,7 +667,6 @@ $('#exportCsv').onclick = async ()=>{
     }
 
     const fname=`presences_${state.month}_${state.store||'ALL'}.xlsx`;
-
     try{
       const wbArray=XLSX.write(wb,{bookType:'xlsx',type:'array'});
       const blob=new Blob([wbArray],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
