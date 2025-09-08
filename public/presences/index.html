@@ -12,6 +12,9 @@
       --brand:#d21f3c; --chip:#111; --chipText:#fff;
       --radius:14px; --pad:12px;
       --cell:38px; --cellSm:32px;
+
+      --nameW:240px;
+      --shiftW:72px;
     }
     *{box-sizing:border-box}
     body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
@@ -38,6 +41,9 @@
     thead th{position:sticky;top:0;background:#fff;font-weight:700}
     tbody th.sticky{position:sticky;left:0;background:#fff;font-weight:600;z-index:2}
     td,th{height:var(--cell);min-width:42px;padding:0}
+
+    table .col-name{min-width:var(--nameW); padding:0 14px; text-align:left}
+    table .col-shift{min-width:var(--shiftW); width:var(--shiftW); padding:0 6px}
     td.cell{cursor:text}
     td.cell[contenteditable="true"]:focus{outline:2px solid #2684ff;outline-offset:-2px}
     td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px}
@@ -78,7 +84,7 @@
     .currentStore{margin-left:8px}
 
     @media (max-width:900px){
-      :root{--cell:32px}
+      :root{--cell:32px; --nameW:180px; --shiftW:56px}
       header{flex-direction:column;align-items:flex-start;gap:8px}
       .tabs{top:unset;position:static}
     }
@@ -164,6 +170,12 @@ const state = { store:null, resumeStore:null, day:null, month:null, dayByType:{}
 let dayAbortCtrl = null; let monthAbortCtrl = null;
 
 const selectedCells = new Set(); let lastCell = null;
+
+function cssVarInt(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  const n = parseInt(v,10);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 function clearSelection(){ selectedCells.forEach(td=> td.classList.remove('selected')); selectedCells.clear(); lastCell=null; }
 function selectCell(td, additive=false){
@@ -371,8 +383,11 @@ function renderGridDayOne(type){
   }
 
   const trh=document.createElement('tr');
-  trh.appendChild(th('Nom'));
-  (shifts||[]).forEach(s=> trh.appendChild(th(sShort(s))));
+  const nameHead = th('Nom'); nameHead.className='col-name';
+  trh.appendChild(nameHead);
+  (shifts||[]).forEach(s=>{
+    const h = th(sShort(s)); h.className='col-shift'; trh.appendChild(h);
+  });
   thead.appendChild(trh);
   table.appendChild(thead);
 
@@ -381,14 +396,15 @@ function renderGridDayOne(type){
 
   (people||[]).forEach(p=>{
     const tr=document.createElement('tr');
-    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky';
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`);
+    thn.className='sticky col-name';
     tr.appendChild(thn);
 
     const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
 
     (shifts||[]).forEach(s=>{
       const sU = String(s).toUpperCase();
-      const td=document.createElement('td'); td.className='cell';
+      const td=document.createElement('td'); td.className='cell col-shift';
       td.dataset.pid=p.id; td.dataset.shift=s; td.dataset.type=type;
 
       const val=bucket?.matrix?.[p.id]?.[s]||''; td.textContent=val;
@@ -434,16 +450,24 @@ function renderMonthlyGridOne(type){
   if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
 
   const table=document.createElement('table'); const thead=document.createElement('thead');
-  const tr1=document.createElement('tr'); tr1.appendChild(document.createElement('th'));
+  const tr1=document.createElement('tr'); 
+  const blankHead = document.createElement('th'); blankHead.className='col-name'; tr1.appendChild(blankHead);
   const weekendFlags=[];
+  const shiftW = cssVarInt('--shiftW', 72);
+
   (days||[]).forEach(d=>{
     const th1=document.createElement('th');
-    th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length; th1.style.minWidth=((shifts||[]).length>2?64:44)+'px';
+    th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length;
+    th1.style.minWidth = ((shifts||[]).length * shiftW) + 'px';
     const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
   });
   thead.appendChild(tr1);
-  const tr2=document.createElement('tr'); tr2.appendChild(th(''));
-  (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{ const th2=th(sShort(s)); if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2); }));
+
+  const tr2=document.createElement('tr'); 
+  const nameSpacer = th(''); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
+  (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{
+    const th2=th(sShort(s)); th2.className='col-shift'; if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
+  }));
   thead.appendChild(tr2); table.appendChild(thead);
 
   const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
@@ -451,7 +475,7 @@ function renderMonthlyGridOne(type){
   const tbody=document.createElement('tbody');
   (people||[]).forEach(p=>{
     const tr=document.createElement('tr');
-    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky'; tr.appendChild(thn);
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky col-name'; tr.appendChild(thn);
 
     const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
 
@@ -459,7 +483,7 @@ function renderMonthlyGridOne(type){
       const isW=weekendFlags[idx];
       (shifts||[]).forEach(s=>{
         const sU=String(s).toUpperCase();
-        const td=document.createElement('td'); td.className='cell';
+        const td=document.createElement('td'); td.className='cell col-shift';
         if(isW){
           td.classList.add('weekend'); td.textContent='';
         }else if(type==='LIVREUR' && allowed.length && !allowed.includes(sU)){
@@ -814,7 +838,6 @@ $('#load').onclick = triggerLoad;
   const now=new Date(); const todayISO=now.toISOString().slice(0,10);
   $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   setCurrentStoreChip();
-  // message de chargement des magasins + récupération
   await loadStoresForButtons();
 })();
 </script>
