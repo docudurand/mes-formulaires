@@ -103,6 +103,11 @@
       header{flex-direction:column;align-items:flex-start;gap:8px}
       .tabs{top:unset;position:static}
     }
+  
+/* Bouton secret de rechargement: quasi invisible, visible au survol du header */
+header:hover #secretReload{ opacity:.35 }
+#secretReload:focus, #secretReload:active{ opacity:.9 }
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -114,6 +119,8 @@
       <input type="month" id="month" />
       <button id="load" class="primary">Charger</button>
       <span id="currentStoreChip" class="chip currentStore" style="display:none"></span>
+      <button id="secretReload" title="Recharger toutes les données" style="opacity:0; transition:.2s; margin-left:6px; width:28px; height:28px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer">↻</button>
+
     </div>
   </header>
 
@@ -270,7 +277,9 @@ function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.t
 function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
 
 async function apiGet(params, headers = {}, signal){
-  const url = API + '?' + new URLSearchParams(params);
+  const p = { ...params };
+  if (forceReload) p.force = '1';
+  const url = API + '?' + new URLSearchParams(p);
   const extra = forceReload ? {'X-Force-Reload': '1'} : {};
   const r = await fetch(url, { headers: { ...extra, ...headers }, signal });
   const txt = await r.text();
@@ -279,12 +288,15 @@ async function apiGet(params, headers = {}, signal){
   return j;
 }
 
+
 async function apiPost(body, headers = {}, signal){
+  const b = { ...body };
+  if (forceReload) b.force = '1';
   const extra = forceReload ? {'X-Force-Reload': '1'} : {};
   const r = await fetch(API, {
     method:'POST',
     headers:{ 'Content-Type':'application/json', ...extra, ...headers },
-    body: JSON.stringify(body),
+    body: JSON.stringify(b),
     signal
   });
   const txt = await r.text();
@@ -292,6 +304,7 @@ async function apiPost(body, headers = {}, signal){
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
+
 
 function buildSparseMatrix(bucket){
   const out = {};
@@ -871,6 +884,36 @@ $('#load').onclick = async ()=>{
   }
 };
 
+
+// Raccourci clavier : Ctrl/Cmd + Alt + R  => purge cache + reload
+window.addEventListener('keydown', async (e)=>{
+  if ((e.ctrlKey||e.metaKey) && e.altKey && (e.key==='r' || e.key==='R')){
+    e.preventDefault();
+    await purgeAndReload();
+  }
+});
+
+// Bouton discret (Alt+clic pour éviter un clic accidentel)
+$('#secretReload')?.addEventListener('click', async (e)=>{
+  if (!e.altKey) return;
+  await purgeAndReload();
+});
+
+async function purgeAndReload(){
+  const code = getAdminCode && getAdminCode();
+  if(!code){ alert('Entre d\u2019abord le code d\u2019accès (onglet Congés).'); return; }
+  try{
+    showLoading();
+    await apiGet({action:'purge_cache', code});
+    forceReload = true;
+    await triggerLoad();
+  }catch(e){
+    alert('Échec purge/rechargement : ' + e.message);
+  }finally{
+    forceReload = false;
+    hideLoading();
+  }
+}
 (async function(){
   const now=new Date(); const todayISO=now.toISOString().slice(0,10);
   $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
