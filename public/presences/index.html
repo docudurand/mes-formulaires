@@ -168,6 +168,7 @@
   </main>
 
 <script>
+let forceReload = false;
 const API = '/api/presences';
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -268,18 +269,26 @@ function showLoading(){ const btn=$('#load'); if(btn){ btn.disabled=true; if(!bt
 function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.textContent=btn.dataset.oldLabel||'Charger'; } }
 function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
 
-async function apiGet(params, headers={}, signal){
+async function apiGet(params, headers = {}, signal){
   const url = API + '?' + new URLSearchParams(params);
-  const r = await fetch(url, { headers, signal });
+  const extra = forceReload ? {'X-Force-Reload': '1'} : {};
+  const r = await fetch(url, { headers: { ...extra, ...headers }, signal });
   const txt = await r.text();
-  let j; try{ j=JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: ' + txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
-async function apiPost(body, headers={}, signal){
-  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json',...headers}, body:JSON.stringify(body), signal});
+
+async function apiPost(body, headers = {}, signal){
+  const extra = forceReload ? {'X-Force-Reload': '1'} : {};
+  const r = await fetch(API, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...extra, ...headers },
+    body: JSON.stringify(body),
+    signal
+  });
   const txt = await r.text();
-  let j; try{ j=JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: '+txt.slice(0,120)); }
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: ' + txt.slice(0,120)); }
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
@@ -681,9 +690,15 @@ $('#loadResume').onclick = async ()=>{
   state.month = $('#month').value;
 
   setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
-  try{ await loadMonthlyAll(state.resumeStore); } 
-  catch(e){ console.error(e); alert('Erreur chargement résumé : '+e.message); } 
-  finally{ hideLoading(); }
+  forceReload = true;
+  try{
+    await loadMonthlyAll(state.resumeStore);
+  } catch(e){
+    console.error(e); alert('Erreur chargement résumé : '+e.message);
+  } finally {
+    forceReload = false;
+    hideLoading();
+  }
 };
 
 $('.tab[data-tab="conges"]').onclick = async ()=>{
@@ -847,7 +862,14 @@ async function triggerLoad(){
   }catch(e){ console.error('Init error',e); alert("Échec du chargement (réseau/API). Vérifie l’URL API."); }
   finally{ hideLoading(); }
 }
-$('#load').onclick = triggerLoad;
+$('#load').onclick = async ()=>{
+  forceReload = true;
+  try{
+    await triggerLoad();
+  } finally {
+    forceReload = false;
+  }
+};
 
 (async function(){
   const now=new Date(); const todayISO=now.toISOString().slice(0,10);
