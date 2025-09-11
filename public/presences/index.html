@@ -288,7 +288,7 @@ async function apiGetWithRetry(params, headers={}, tries=3){
       await new Promise(r=> setTimeout(r, 800*(i+1)));
     }
   }
-  throw lastErr;
+  throw lastErr || new Error('request_failed');
 }
 
 
@@ -329,7 +329,7 @@ async function apiPostWithRetry(body, headers={}, tries=2){
       await new Promise(r=> setTimeout(r, 800*(i+1)));
     }
   }
-  throw lastErr;
+  throw lastErr || new Error('request_failed');
 }
 
 function rebuildCodesUnion(){
@@ -755,7 +755,7 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
   }
 };
 
-$('#loadResume').onclick = async ()=>{
+$('#loadResume').onclick = async ()=>{try{
   state.resumeStore = $('#resumeStore').value || null;
   if(!state.resumeStore){ alert('Choisis un magasin.'); return; }
   if(!$('#month').value){
@@ -769,6 +769,7 @@ $('#loadResume').onclick = async ()=>{
     if(state.resumeStore==='ALL'){
       const grid=$('#summaryGrid'); grid.innerHTML='';
       $('#summaryTotals').innerHTML='';
+      setSectionLoading('#summaryGrid', true);
       const r = await apiGetWithRetry({action:'stores'});
       let stores = (r.stores && r.stores.length) ? r.stores : STORES;
       stores = (stores||[]).slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
@@ -781,12 +782,18 @@ $('#loadResume').onclick = async ()=>{
     }else{
       await loadMonthlyAll(state.resumeStore);
     }
+    setSectionLoading('#summaryGrid', false);
   } catch(e){
     console.error(e); alert('Erreur chargement résumé : '+e.message);
   } finally {
     forceReload = false;
     hideLoading();
-  }
+  }}catch(e){
+      const _err = e||new Error('unknown_error');
+      console.error(_err);
+      const msg = (_err && _err.message) ? _err.message : String(_err);
+      alert('Erreur Résumé : ' + msg);
+    }
 };
 
 $('.tab[data-tab="conges"]').onclick = async ()=>{
