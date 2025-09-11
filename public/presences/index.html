@@ -542,6 +542,64 @@ function renderMonthlyGridAll(){
   const container=$('#summaryGrid'); container.innerHTML='';
   TYPES.forEach(t=> container.appendChild( renderMonthlyGridOne(t) ));
 }
+
+// Helpers pour rendre un tableau mensuel à partir d'un objet monthByType SANS modifier l'état global
+function renderMonthlyGridOneFrom(type, monthByType){
+  const bucket = (monthByType && monthByType[type]) || {};
+  const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
+  const group=document.createElement('div'); group.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
+  group.appendChild(title);
+  const container=document.createElement('div'); container.className='gridWrap';
+  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
+  const table=document.createElement('table'); const thead=document.createElement('thead');
+  const tr1=document.createElement('tr');
+  const blankHead = document.createElement('th'); blankHead.className='col-name'; tr1.appendChild(blankHead);
+  const weekendFlags=[]; const shiftW = cssVarInt('--shiftW', 72);
+  (days||[]).forEach(d=>{
+    const th1=document.createElement('th');
+    th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length;
+    th1.style.minWidth = ((shifts||[]).length * shiftW) + 'px';
+    const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
+  });
+  thead.appendChild(tr1);
+  const tr2=document.createElement('tr');
+  const nameSpacer = th(''); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
+  (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{
+    const th2=th(sShort(s)); th2.className='col-shift'; if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
+  }));
+  thead.appendChild(tr2); table.appendChild(thead);
+  const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+  const tbody=document.createElement('tbody');
+  (people||[]).forEach(p=>{
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky col-name'; tr.appendChild(thn);
+    const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
+    (days||[]).forEach((d,idx)=>{
+      const isW=weekendFlags[idx];
+      (shifts||[]).forEach(s=>{
+        const sU=String(s).toUpperCase();
+        const td=document.createElement('td'); td.className='cell col-shift';
+        if(isW){
+          td.classList.add('weekend'); td.textContent='';
+        }else if((TYPE_LABELS.LIVREUR==='Livreurs' ? 'LIVREUR' : 'LIVREUR')==='LIVREUR' && allowed.length && !allowed.includes(sU)){
+          td.classList.add('off'); td.textContent='';
+        }else{
+          const code=recMap.get(`${p.id}|${d}|${s}`)||''; td.dataset.code=code; td.textContent=code;
+          const color=(codes||[]).find(c=>c.code===code)?.couleur_hex || '';
+          td.style.backgroundColor=color||''; td.style.color=color?'#fff':'';
+        }
+        tr.appendChild(td);
+      });
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); container.appendChild(table); group.appendChild(container);
+  return group;
+}
+function renderMonthlyGridAllFrom(monthByType, target){
+  TYPES.forEach(t=> target.appendChild( renderMonthlyGridOneFrom(t, monthByType) ));
+}
 function renderTotalsChips(rows){
   const wrap=$('#summaryTotals'); wrap.innerHTML='';
   if(!rows||!rows.length){ wrap.innerHTML=`<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
@@ -678,10 +736,12 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
     $('#resumeStore').innerHTML = '';
     try{
       const r = await apiGet({action:'stores'});
-      const stores = (r.stores && r.stores.length) ? r.stores : STORES;
-      $('#resumeStore').innerHTML = stores.map(s=>`<option>${s}</option>`).join('');
+      let stores = (r.stores && r.stores.length) ? r.stores : STORES;
+      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
     }catch(e){
-      $('#resumeStore').innerHTML = STORES.map(s=>`<option>${s}</option>`).join('');
+      let stores = STORES.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
     }
     const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
     if(def) $('#resumeStore').value = def;
@@ -705,9 +765,29 @@ $('#loadResume').onclick = async ()=>{
   setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
   forceReload = true;
   try{
-    await loadMonthlyAll(state.resumeStore);
+    if(state.resumeStore==='ALL'){
+      const grid=$('#summaryGrid'); grid.innerHTML='';
+      $('#summaryTotals').innerHTML='';
+      let stores=[];
+      try{ const r=await apiGet({action:'stores'}); stores=(r.stores&&r.stores.length)?r.stores:STORES; }catch(_){ stores=STORES; }
+      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      const month=state.month;
+      for(const store of stores){
+        const monthByType={};
+        for(const t of TYPES){
+          const payload = await apiGet({action:'init', store, type:t, month});
+          const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
+          monthByType[t]={people,days,shifts,codes,records};
+        }
+        const h=document.createElement('h2'); h.className='groupTitle'; h.textContent=store;
+        grid.appendChild(h);
+        renderMonthlyGridAllFrom(monthByType, grid);
+      }
+    }else{
+      await loadMonthlyAll(state.resumeStore);
+    }
   } catch(e){
-    console.error(e); alert('Erreur chargement résumé : '+e.message);
+    console.error(e); alert('Erreur chargement résumé : '+(e && e.message ? e.message : e));
   } finally {
     forceReload = false;
     hideLoading();
