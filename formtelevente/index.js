@@ -57,7 +57,7 @@ router.post('/send-order', async (req, res) => {
   }
 
   const today = new Date();
-  const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
+  const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}`;
 
   const safeClient = (client || 'Client inconnu')
     .replace(/[^\w\s-]/g, ' ')
@@ -76,12 +76,12 @@ router.post('/send-order', async (req, res) => {
     to,
     subject: `${subjectPrefix} ${salesperson || ''} – ${client || 'Client inconnu'}`,
     text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
-    attachments: [{
-      filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
-      content: Buffer.from(pdf, 'base64'),
-      contentType: 'application/pdf'
-    }]
-  };
+     attachments: [{
+    filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
+    content: Buffer.from(pdf, 'base64'),
+    contentType: 'application/pdf'
+  }]
+};
 
   try {
     await transporter.sendMail(mailOptions);
