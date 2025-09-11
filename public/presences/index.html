@@ -733,20 +733,22 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
 
   if(!$('#resumeStore').dataset.ready){
-    $('#resumeStore').innerHTML = '';
-    try{
-      const r = await apiGet({action:'stores'});
-      let stores = (r.stores && r.stores.length) ? r.stores : STORES;
-      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
-      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
-    }catch(e){
-      let stores = STORES.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
-      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
-    }
-    const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
-    if(def) $('#resumeStore').value = def;
-    $('#resumeStore').dataset.ready = '1';
+  $('#resumeStore').innerHTML = '';
+  try{
+    const r = await apiGet({action:'stores'});
+    let stores = (r.stores && r.stores.length) ? r.stores : STORES;
+    stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+    $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>']
+      .concat(stores.map(s=>`<option>${s}</option>`)).join('');
+  }catch(e){
+    let stores = (STORES||[]).slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+    $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>']
+      .concat(stores.map(s=>`<option>${s}</option>`)).join('');
   }
+  const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
+  if(def) $('#resumeStore').value = def;
+  $('#resumeStore').dataset.ready = '1';
+}
 
   if(!(state.resumeStore || $('#resumeStore').value) || !state.month){
     $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis un <b>magasin</b> et un <b>mois</b>, puis clique <b>Charger résumé</b>.</div>`;
@@ -768,16 +770,28 @@ $('#loadResume').onclick = async ()=>{
     if(state.resumeStore==='ALL'){
       const grid=$('#summaryGrid'); grid.innerHTML='';
       $('#summaryTotals').innerHTML='';
+
       let stores=[];
-      try{ const r=await apiGet({action:'stores'}); stores=(r.stores&&r.stores.length)?r.stores:STORES; }catch(_){ stores=STORES; }
+      try{
+        const r=await apiGet({action:'stores'});
+        stores=(r.stores&&r.stores.length)?r.stores:STORES;
+      }catch(_){
+        stores=STORES||[];
+      }
       stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+
       const month=state.month;
       for(const store of stores){
-        const monthByType={};
+        const monthByType = {};
         for(const t of TYPES){
           const payload = await apiGet({action:'init', store, type:t, month});
-          const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
-          monthByType[t]={people,days,shifts,codes,records};
+          monthByType[t] = {
+            people:payload.people||[],
+            days:payload.days||[],
+            shifts:payload.shifts||[],
+            codes:payload.codes||[],
+            records:payload.records||[]
+          };
         }
         const h=document.createElement('h2'); h.className='groupTitle'; h.textContent=store;
         grid.appendChild(h);
@@ -787,7 +801,9 @@ $('#loadResume').onclick = async ()=>{
       await loadMonthlyAll(state.resumeStore);
     }
   } catch(e){
-    console.error(e); alert('Erreur chargement résumé : '+(e && e.message ? e.message : e));
+    console.error(e);
+    const msg = (e && e.message) ? e.message : String(e||'');
+    alert('Erreur chargement résumé : '+msg);
   } finally {
     forceReload = false;
     hideLoading();
