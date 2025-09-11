@@ -103,11 +103,6 @@
       header{flex-direction:column;align-items:flex-start;gap:8px}
       .tabs{top:unset;position:static}
     }
-  
-/* Bouton secret de rechargement: quasi invisible, visible au survol du header */
-header:hover #secretReload{ opacity:.35 }
-#secretReload:focus, #secretReload:active{ opacity:.9 }
-
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -119,8 +114,6 @@ header:hover #secretReload{ opacity:.35 }
       <input type="month" id="month" />
       <button id="load" class="primary">Charger</button>
       <span id="currentStoreChip" class="chip currentStore" style="display:none"></span>
-      <button id="secretReload" title="Recharger toutes les données" style="opacity:0; transition:.2s; margin-left:6px; width:28px; height:28px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer">↻</button>
-
     </div>
   </header>
 
@@ -277,9 +270,7 @@ function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.t
 function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
 
 async function apiGet(params, headers = {}, signal){
-  const p = { ...params };
-  if (forceReload) p.force = '1';
-  const url = API + '?' + new URLSearchParams(p);
+  const url = API + '?' + new URLSearchParams(params);
   const extra = forceReload ? {'X-Force-Reload': '1'} : {};
   const r = await fetch(url, { headers: { ...extra, ...headers }, signal });
   const txt = await r.text();
@@ -288,15 +279,12 @@ async function apiGet(params, headers = {}, signal){
   return j;
 }
 
-
 async function apiPost(body, headers = {}, signal){
-  const b = { ...body };
-  if (forceReload) b.force = '1';
   const extra = forceReload ? {'X-Force-Reload': '1'} : {};
   const r = await fetch(API, {
     method:'POST',
     headers:{ 'Content-Type':'application/json', ...extra, ...headers },
-    body: JSON.stringify(b),
+    body: JSON.stringify(body),
     signal
   });
   const txt = await r.text();
@@ -304,7 +292,6 @@ async function apiPost(body, headers = {}, signal){
   if(j && j.error){ throw new Error(j.error); }
   return j;
 }
-
 
 function buildSparseMatrix(bucket){
   const out = {};
@@ -542,8 +529,7 @@ function renderMonthlyGridAll(){
   const container=$('#summaryGrid'); container.innerHTML='';
   TYPES.forEach(t=> container.appendChild( renderMonthlyGridOne(t) ));
 }
-
-// Helpers pour rendre un tableau mensuel à partir d'un objet monthByType SANS modifier l'état global
+// Helpers pour rendre à partir d'un objet monthByType fourni (sans toucher à state.monthByType)
 function renderMonthlyGridOneFrom(type, monthByType){
   const bucket = (monthByType && monthByType[type]) || {};
   const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
@@ -551,11 +537,14 @@ function renderMonthlyGridOneFrom(type, monthByType){
   const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
   group.appendChild(title);
   const container=document.createElement('div'); container.className='gridWrap';
-  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
+  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucun élément à afficher.</div>`; group.appendChild(container); return group; }
+
   const table=document.createElement('table'); const thead=document.createElement('thead');
-  const tr1=document.createElement('tr');
+  const tr1=document.createElement('tr'); 
   const blankHead = document.createElement('th'); blankHead.className='col-name'; tr1.appendChild(blankHead);
-  const weekendFlags=[]; const shiftW = cssVarInt('--shiftW', 72);
+  const weekendFlags=[];
+  const shiftW = cssVarInt('--shiftW', 72);
+
   (days||[]).forEach(d=>{
     const th1=document.createElement('th');
     th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length;
@@ -563,28 +552,25 @@ function renderMonthlyGridOneFrom(type, monthByType){
     const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
   });
   thead.appendChild(tr1);
-  const tr2=document.createElement('tr');
-  const nameSpacer = th(''); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
+
+  const tr2=document.createElement('tr'); 
+  const nameSpacer = document.createElement('th'); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
   (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{
-    const th2=th(sShort(s)); th2.className='col-shift'; if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
+    const th2=document.createElement('th'); th2.className='col-shift'; th2.textContent=sShort(s); if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
   }));
   thead.appendChild(tr2); table.appendChild(thead);
+
   const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
   const tbody=document.createElement('tbody');
   (people||[]).forEach(p=>{
     const tr=document.createElement('tr');
-    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky col-name'; tr.appendChild(thn);
-    const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
+    const thn=document.createElement('th'); thn.className='sticky col-name'; thn.innerHTML=`<div class="name"><b>${(p.nom||'').toUpperCase()}</b> ${p.prenom||''}</div>`; tr.appendChild(thn);
     (days||[]).forEach((d,idx)=>{
       const isW=weekendFlags[idx];
       (shifts||[]).forEach(s=>{
-        const sU=String(s).toUpperCase();
         const td=document.createElement('td'); td.className='cell col-shift';
-        if(isW){
-          td.classList.add('weekend'); td.textContent='';
-        }else if((TYPE_LABELS.LIVREUR==='Livreurs' ? 'LIVREUR' : 'LIVREUR')==='LIVREUR' && allowed.length && !allowed.includes(sU)){
-          td.classList.add('off'); td.textContent='';
-        }else{
+        if(isW){ td.classList.add('weekend'); td.textContent=''; }
+        else{
           const code=recMap.get(`${p.id}|${d}|${s}`)||''; td.dataset.code=code; td.textContent=code;
           const color=(codes||[]).find(c=>c.code===code)?.couleur_hex || '';
           td.style.backgroundColor=color||''; td.style.color=color?'#fff':'';
@@ -600,6 +586,7 @@ function renderMonthlyGridOneFrom(type, monthByType){
 function renderMonthlyGridAllFrom(monthByType, target){
   TYPES.forEach(t=> target.appendChild( renderMonthlyGridOneFrom(t, monthByType) ));
 }
+
 function renderTotalsChips(rows){
   const wrap=$('#summaryTotals'); wrap.innerHTML='';
   if(!rows||!rows.length){ wrap.innerHTML=`<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
@@ -733,22 +720,20 @@ $('.tab[data-tab="resume"]').onclick = async ()=>{
   setActiveTab('resume');
 
   if(!$('#resumeStore').dataset.ready){
-  $('#resumeStore').innerHTML = '';
-  try{
-    const r = await apiGet({action:'stores'});
-    let stores = (r.stores && r.stores.length) ? r.stores : STORES;
-    stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
-    $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>']
-      .concat(stores.map(s=>`<option>${s}</option>`)).join('');
-  }catch(e){
-    let stores = (STORES||[]).slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
-    $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>']
-      .concat(stores.map(s=>`<option>${s}</option>`)).join('');
+    $('#resumeStore').innerHTML = '';
+    try{
+      const r = await apiGet({action:'stores'});
+      let stores = (r.stores && r.stores.length) ? r.stores : STORES;
+      stores = (stores||[]).slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
+    }catch(e){
+      let stores = (STORES||[]).slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
+    }
+    const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
+    if(def) $('#resumeStore').value = def;
+    $('#resumeStore').dataset.ready = '1';
   }
-  const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
-  if(def) $('#resumeStore').value = def;
-  $('#resumeStore').dataset.ready = '1';
-}
 
   if(!(state.resumeStore || $('#resumeStore').value) || !state.month){
     $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis un <b>magasin</b> et un <b>mois</b>, puis clique <b>Charger résumé</b>.</div>`;
@@ -770,40 +755,19 @@ $('#loadResume').onclick = async ()=>{
     if(state.resumeStore==='ALL'){
       const grid=$('#summaryGrid'); grid.innerHTML='';
       $('#summaryTotals').innerHTML='';
-
-      let stores=[];
-      try{
-        const r=await apiGet({action:'stores'});
-        stores=(r.stores&&r.stores.length)?r.stores:STORES;
-      }catch(_){
-        stores=STORES||[];
-      }
-      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
-
-      const month=state.month;
-      for(const store of stores){
-        const monthByType = {};
-        for(const t of TYPES){
-          const payload = await apiGet({action:'init', store, type:t, month});
-          monthByType[t] = {
-            people:payload.people||[],
-            days:payload.days||[],
-            shifts:payload.shifts||[],
-            codes:payload.codes||[],
-            records:payload.records||[]
-          };
-        }
-        const h=document.createElement('h2'); h.className='groupTitle'; h.textContent=store;
+      const resp = await apiGet({ action:'initMonthAll', month: state.month });
+      const entries = (resp && resp.stores) ? resp.stores.slice() : [];
+      entries.sort((a,b)=> String(a.store).localeCompare(String(b.store),'fr',{sensitivity:'base'}));
+      for(const entry of entries){
+        const h=document.createElement('h2'); h.className='groupTitle'; h.textContent=entry.store;
         grid.appendChild(h);
-        renderMonthlyGridAllFrom(monthByType, grid);
+        renderMonthlyGridAllFrom(entry.monthByType, grid);
       }
     }else{
       await loadMonthlyAll(state.resumeStore);
     }
   } catch(e){
-    console.error(e);
-    const msg = (e && e.message) ? e.message : String(e||'');
-    alert('Erreur chargement résumé : '+msg);
+    console.error(e); alert('Erreur chargement résumé : '+e.message);
   } finally {
     forceReload = false;
     hideLoading();
@@ -980,36 +944,6 @@ $('#load').onclick = async ()=>{
   }
 };
 
-
-// Raccourci clavier : Ctrl/Cmd + Alt + R  => purge cache + reload
-window.addEventListener('keydown', async (e)=>{
-  if ((e.ctrlKey||e.metaKey) && e.altKey && (e.key==='r' || e.key==='R')){
-    e.preventDefault();
-    await purgeAndReload();
-  }
-});
-
-// Bouton discret (Alt+clic pour éviter un clic accidentel)
-$('#secretReload')?.addEventListener('click', async (e)=>{
-  if (!e.altKey) return;
-  await purgeAndReload();
-});
-
-async function purgeAndReload(){
-  const code = getAdminCode && getAdminCode();
-  if(!code){ alert('Entre d\u2019abord le code d\u2019accès (onglet Congés).'); return; }
-  try{
-    showLoading();
-    await apiGet({action:'purge_cache', code});
-    forceReload = true;
-    await triggerLoad();
-  }catch(e){
-    alert('Échec purge/rechargement : ' + e.message);
-  }finally{
-    forceReload = false;
-    hideLoading();
-  }
-}
 (async function(){
   const now=new Date(); const todayISO=now.toISOString().slice(0,10);
   $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
