@@ -1,80 +1,54 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Présences DSG</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --brand:#d21f3c;
-      --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb;
-      --ok:#1a7f37; --info:#0b63c6; --warn:#b36b00; --abs:#b00020; --neutral:#555;
-      --sel: color-mix(in srgb, var(--info) 22%, transparent);
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:#f6f7f8}
-    a{color:inherit}
-    .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
-    .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
-    .app-header .today{color:var(--muted)}
-    .tabs{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
-    .tab{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
-    .tab.active{border-color:var(--brand);color:#fff;background:var(--brand)}
-    .tab-panel{display:none;padding:16px}
-    .tab-panel.active{display:block}
-    .hint{color:var(--muted)}
-    .grid-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-    .grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
-    .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
-    .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px}
-    .toolbar .spacer{flex:1 1 auto}
-    button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-    button.ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
-    .table th,.table td{border-right:1px solid var(--line);border-top:1px solid var(--line);padding:8px;text-align:center}
-    .table tr:first-child th{border-top:0}
-    .table td:first-child,.table th:first-child{border-left:0}
-    .table thead th{background:#fafafa;font-weight:800;cursor:pointer;position:sticky;top:0}
-    .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
-    .cell{min-width:48px;height:32px;display:grid;place-items:center;cursor:pointer;user-select:none}
-    .cell.selected{outline:2px solid var(--info); outline-offset:-2px; background:var(--sel)}
-    .cell.weekend{background:#000;color:#fff}
-    .row-label{white-space:nowrap;text-align:left;font-weight:600; cursor:default;}
-    .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
-    .legend{color:var(--muted);font-size:.9rem;margin-top:6px}
-    .resume .store-block{margin-bottom:32px}
-    .resume .store-title{font-weight:800;font-size:1.25rem;margin:10px 0}
-    .error{color:#a40000;font-weight:700}
-    @media (max-width:900px){ .cell{min-width:36px} }
-    /* Couleurs par code */
-    .code-P  { background:#e8f4ec; color:var(--ok); font-weight:800; }
-    .code-CP { background:#e7f0fb; color:var(--info); font-weight:800; }
-    .code-ABS{ background:#fde7ea; color:var(--abs); font-weight:800; }
-    .code-MAL{ background:#fff4e5; color:var(--warn); font-weight:800; }
-    .code-R  { background:#efefef; color:#333;   font-weight:800; }
-    /* Palette */
-    .palette{display:flex;flex-wrap:wrap;gap:6px}
-    .palette .opt{border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-weight:700;background:#fff}
-    .opt[data-v="P"]{background:#e8f4ec;color:var(--ok)}
-    .opt[data-v="CP"]{background:#e7f0fb;color:var(--info)}
-    .opt[data-v="ABS"]{background:#fde7ea;color:var(--abs)}
-    .opt[data-v="MAL"]{background:#fff4e5;color:var(--warn)}
-    .opt[data-v="R"]{background:#efefef;color:#333}
-    .opt[data-v=""]{background:#fff;color:var(--neutral)}
-    /* Loader */
-    .loader{display:inline-flex;align-items:center;gap:10px;color:var(--muted)}
-    .spinner{width:18px;height:18px;border:3px solid #ddd;border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Présences DSG</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#d21f3c;--bg:#f6f7f8;--text:#111;--muted:#666;--line:#e5e7eb;--ok:#1a7f37;--warn:#b45309;--abs:#9b1c1c}
+*{box-sizing:border-box} html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+.app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
+.app-header .today{color:var(--muted)}
+.tabs{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+.tab{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+.tab.active{border-color:var(--brand);color:#fff;background:var(--brand)}
+.tab-panel{display:none;padding:16px} .tab-panel.active{display:block}
+.grid-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
+.grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
+.toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
+button.badge[data-code="P"]{color:var(--ok)}
+button.badge[data-code="ABS"]{color:var(--abs)}
+button.badge[data-code="MAL"]{color:#946200}
+.table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
+.table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
+.table thead th{background:#fafafa;font-weight:800}
+.section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
+.row-label{white-space:nowrap;text-align:left;font-weight:600}
+.sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
+.cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
+.cell.weekend{background:#000;color:#fff}
+.cell.selected{outline:3px solid #2563eb44}
+.cell.P{background:#e8f5ec;color:var(--ok);font-weight:700}
+.cell.CP{background:#e8f0fe;color:#1f3aa8;font-weight:700}
+.cell.ABS{background:#fdecec;color:#a20000;font-weight:700}
+.cell.MAL{background:#fff6e5;color:#946200;font-weight:700}
+.cell.R{background:#f3f3f3;color:#333;font-weight:700}
+.hint,.legend{color:var(--muted);font-size:.9rem}
+.error{color:#a40000;font-weight:700}
+.loading{padding:14px;color:var(--muted)}
+@media (max-width:900px){ .cell{min-width:26px;height:28px} }
+</style>
 </head>
 <body>
   <header class="app-header">
     <h1>Présences DSG</h1>
-    <div class="today">Aujourd’hui : <span id="today"></span></div>
+    <div class="today">Aujourd’hui : <span id="today"></span></div>
   </header>
 
   <main>
@@ -84,477 +58,353 @@
       <button class="tab" data-tab="resume">Résumé du mois</button>
     </nav>
 
+    <!-- Onglet 1 -->
     <section id="tab-magasins" class="tab-panel active">
       <p class="hint">Choisissez un magasin :</p>
       <div id="magasin-buttons" class="grid-buttons"></div>
     </section>
 
+    <!-- Onglet 2 -->
     <section id="tab-saisie" class="tab-panel">
       <div class="toolbar">
-        <div>
-          <label>Magasin :</label>
-          <strong id="current-magasin">—</strong>
-        </div>
-        <div>
-          <label>Date :</label>
-          <input id="saisie-date" type="date" />
-        </div>
+        <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
+        <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
         <div class="spacer"></div>
-        <div class="palette">
-          <button class="opt" data-v="">Vider</button>
-          <button class="opt" data-v="P">P</button>
-          <button class="opt" data-v="CP">CP</button>
-          <button class="opt" data-v="ABS">ABS</button>
-          <button class="opt" data-v="MAL">MAL</button>
-          <button class="opt" data-v="R">R</button>
-          <button id="btn-fill-all-P" class="opt" title="Tout mettre P">Tout mettre P</button>
-        </div>
-        <button id="btn-diag" class="ghost">Diag API</button>
+        <button class="badge" id="btn-clear">Vider</button>
+        <button class="badge" data-code="P">P</button>
+        <button class="badge" data-code="CP">CP</button>
+        <button class="badge" data-code="ABS">ABS</button>
+        <button class="badge" data-code="MAL">MAL</button>
+        <button class="badge" data-code="R">R</button>
+        <button class="badge" id="btn-fill-all">Tout mettre P</button>
         <button id="btn-save" class="primary">Enregistrer</button>
+        <button class="badge" id="btn-diag">Diag API</button>
       </div>
-
-      <div id="saisie-content" class="saisie"></div>
-      <div class="legend">
-        <span>Sélection : clic pour sélectionner / Ctrl (Cmd) pour ajouter / Shift pour une plage. Clic sur l’en‑tête d’une colonne pour tout sélectionner. Puis cliquez sur un code (P, CP…) pour appliquer.</span>
-      </div>
+      <div id="saisie-content"></div>
+      <div class="legend">Sélection : clic (cellule), Ctrl/Cmd (ajouts), Shift (plage), clic sur l’entête = toute la colonne.</div>
       <p id="saisie-error" class="error" style="display:none"></p>
     </section>
 
+    <!-- Onglet 3 -->
     <section id="tab-resume" class="tab-panel">
       <div class="toolbar">
-        <div>
-          <label>Mois :</label>
-          <input id="resume-month" type="month" />
-        </div>
+        <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
         <div class="spacer"></div>
         <button id="btn-refresh-resume">Recharger</button>
       </div>
-
-      <div id="resume-content" class="resume"></div>
+      <div id="resume-content"></div>
       <p id="resume-error" class="error" style="display:none"></p>
     </section>
   </main>
 
-  <script>
-    const PARAM_API = new URLSearchParams(location.search).get("api");
-    const DEFAULT_SAME_ORIGIN = "/presence";
-    const WIX_FALLBACK = (location.host.includes("wixsite.com")||location.host.includes("wix.com"))
-      ? "https://mes-formulaires.onrender.com/presence"
-      : DEFAULT_SAME_ORIGIN;
-    const API_BASE = (PARAM_API || WIX_FALLBACK).replace(/\/$/, "");
+<script>
+/* ---------- util ---------- */
+const pad=n=>n<10?`0${n}`:`${n}`;
+const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+const thisYM=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;}
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const daysOfMonth=ym=>{ const [y,m]=ym.split('-').map(x=>+x); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
+const dowLetter=d=>["D","L","M","M","J","V","S"][d.getDay()];
+const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
 
-    const CONFIG = {
-      apiBase: API_BASE,
-      magasins: [
-        "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
-        "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
-        "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
-      ],
-      presenceCodes: ["", "P", "CP", "ABS", "MAL", "R"]
-    };
+const MAGASINS = [
+ "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
+ "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
+ "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+];
+const CODES=["P","CP","ABS","MAL","R"];
 
-    const CODE_CLASSES = {
-      "": [],
-      "P":  ["code-P"],
-      "CP": ["code-CP"],
-      "ABS":["code-ABS"],
-      "MAL":["code-MAL"],
-      "R":  ["code-R"]
-    };
+/* ---------- état ---------- */
+let currentMagasin=null;
+let personnel=null;
+let selectedCells=new Set();
 
-    const pad = n => (n<10? "0"+n : ""+n);
-    const todayLocalISO = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
-    const ymLocal = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1); };
-    const daysOfMonthLocal = (yyyymm) => {
-      const [y, m] = yyyymm.split("-").map(n=>parseInt(n,10));
-      const res = []; const days = new Date(y, m, 0).getDate();
-      for(let d=1; d<=days; d++) res.push(new Date(y, m-1, d));
-      return res;
-    };
-    const ymd = (d) => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-    const dowLetter = (d) => ["D","L","M","M","J","V","S"][d.getDay()];
+/* ---------- DOM ---------- */
+const $today=document.getElementById('today');
+const $tabs=[...document.querySelectorAll('.tab')];
+const $panels={ magasins:document.getElementById('tab-magasins'),
+                saisie:document.getElementById('tab-saisie'),
+                resume:document.getElementById('tab-resume') };
+const $magBtnsWrap=document.getElementById('magasin-buttons');
+const $currMag=document.getElementById('current-magasin');
+const $dateInput=document.getElementById('saisie-date');
+const $saisieContent=document.getElementById('saisie-content');
+const $btnSave=document.getElementById('btn-save');
+const $btnFillAll=document.getElementById('btn-fill-all');
+const $btnClear=document.getElementById('btn-clear');
+const $resumeMonth=document.getElementById('resume-month');
+const $btnRefreshResume=document.getElementById('btn-refresh-resume');
+const $resumeContent=document.getElementById('resume-content');
+const $saisieError=document.getElementById('saisie-error');
+const $resumeError=document.getElementById('resume-error');
+const $btnDiag=document.getElementById('btn-diag');
 
-    const api = (path, opts={}) => {
-      const url = CONFIG.apiBase + path;
-      console.log("[UI] fetch", url, opts?.method||"GET");
-      return fetch(url, {
-        headers: {"Content-Type":"application/json"},
-        credentials: "include",
-        ...opts
-      });
-    };
+$today.textContent=todayISO();
+$dateInput.value=todayISO();
+$resumeMonth.value=thisYM();
 
-    let currentMagasin = null;
-    let personnel = null;
-    let selection = new Set();
-    let lastClickedCell = null;
+/* ---------- tabs ---------- */
+$tabs.forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+function switchTab(key){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
+  Object.entries($panels).forEach(([k,el])=>el.classList.toggle('active',k===key));
+  if(key==="resume") loadResume();
+}
 
-    const $today = document.getElementById("today");
-    const $tabButtons = document.querySelectorAll(".tab");
-    const $panels = { magasins: document.getElementById("tab-magasins"), saisie: document.getElementById("tab-saisie"), resume: document.getElementById("tab-resume") };
-    const $magBtnsWrap = document.getElementById("magasin-buttons");
-    const $currMag = document.getElementById("current-magasin");
-    const $dateInput = document.getElementById("saisie-date");
-    const $saisieContent = document.getElementById("saisie-content");
-    const $btnSave = document.getElementById("btn-save");
-    const $btnDiag = document.getElementById("btn-diag");
-    const $resumeMonth = document.getElementById("resume-month");
-    const $btnRefreshResume = document.getElementById("btn-refresh-resume");
-    const $resumeContent = document.getElementById("resume-content");
-    const $saisieError = document.getElementById("saisie-error");
-    const $resumeError = document.getElementById("resume-error");
-    const $btnFillAllP = document.getElementById("btn-fill-all-P");
+/* ---------- magasins ---------- */
+MAGASINS.forEach(m=>{
+  const b=document.createElement('button'); b.textContent=m;
+  b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b);
+});
+async function selectMagasin(mag,btn){
+  currentMagasin=mag;
+  document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active'); $currMag.textContent=mag;
+  await loadPersonnel();
+  buildSaisieUI();
+  await prefillDay();
+  switchTab('saisie');
+}
 
-    (function init(){
-      $today.textContent = todayLocalISO();
-      $dateInput.value = todayLocalISO();
-      $resumeMonth.value = ymLocal();
-      $tabButtons.forEach(btn => btn.addEventListener("click", ()=> switchTab(btn.dataset.tab)));
-      CONFIG.magasins.forEach(m=>{
-        const b = document.createElement("button");
-        b.textContent = m;
-        b.addEventListener("click", ()=> selectMagasin(m,b));
-        $magBtnsWrap.appendChild(b);
-      });
-      $btnSave.addEventListener("click", saveSaisie);
-      $btnDiag.addEventListener("click", diagApi);
-      $dateInput.addEventListener("change", loadPrefillForDay);
-      $btnRefreshResume.addEventListener("click", loadResume);
+/* ---------- API helpers ---------- */
+const api = (path,opt={}) => fetch(apiBase+path,{headers:{'Content-Type':'application/json'},...opt});
 
-      document.querySelectorAll(".palette .opt").forEach(opt=>{
-        const v = opt.dataset.v;
-        if (opt.id === "btn-fill-all-P") return;
-        if (v === undefined) return;
-        opt.addEventListener("click", ()=> applyCodeToSelection(v));
-      });
-      $btnFillAllP.addEventListener("click", ()=> fillAll("P"));
-
-      document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ clearSelection(); } });
-    })();
-
-    function switchTab(key){
-      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===key));
-      Object.entries($panels).forEach(([k,el])=> el.classList.toggle("active", k===key));
-      if(key==="resume") loadResume();
-    }
-
-    async function selectMagasin(magasin, button){
-      currentMagasin = magasin;
-      document.querySelectorAll("#magasin-buttons button").forEach(b=>b.classList.remove("active"));
-      button.classList.add("active");
-      $currMag.textContent = magasin;
-      await loadPersonnel();
-      buildSaisieUI();
-      await loadPrefillForDay();
-      switchTab("saisie");
-    }
-
-    async function loadPersonnel(){
-      try{
-        const res = await api(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        personnel = await res.json();
-      }catch(e){
-        console.warn("[UI] Personnel fallback", e);
-        personnel = {
-          employes:[{nom:"BARRET", prenom:"Olivier"},{nom:"PICHARD", prenom:"Damien"}],
-          interims:[{nom:"PEREZ"}],
-          livreurs:{
-            "WARNING": ["Matin","A. Midi"],
-            "NAVETTE NUIT ALL COURS": ["NUIT"],
-            "C CHEZ VOUS": ["10H","12H","16H"]
-          }
-        };
+/* ---------- personnel ---------- */
+async function loadPersonnel(){
+  try{
+    const r=await api(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    personnel=await r.json();
+  }catch(e){
+    // fallback lisible
+    personnel={
+      employes:[{nom:"BARRET",prenom:"Olivier"},{nom:"THOLIN",prenom:"Claire"},{nom:"PICHARD",prenom:"Damien"}],
+      interims:[{nom:"PEREZ",prenom:"Clara"}],
+      livreurs:{
+        "WARNING":["Matin","A. Midi"],
+        "NAVETTE NUIT ALL COURS":["NUIT"],
+        "C CHEZ VOUS":["10H","12H","16H"]
       }
-    }
+    };
+  }
+}
 
-    // NEW: construit l'en-tête à partir de l'union des slots de la section
-    function uniqueSlots(rows){
-      const set = new Set();
-      rows.forEach(r => (r.slots||[]).forEach(s => set.add(String(s))));
-      return Array.from(set);
-    }
-
-    function buildSaisieUI(){
-      $saisieContent.innerHTML = "";
-      $saisieError.style.display = "none";
-      selection.clear();
-
-      const sections = [];
-
-      if(personnel?.employes?.length){
-        sections.push({title:"Employés", rows: personnel.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
+/* ---------- UI Saisie ---------- */
+function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
+function handleCellClick(ev,td){
+  const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
+  if(isShift && selectedCells.size){
+    // sélection rectangulaire
+    const last=[...selectedCells][selectedCells.size-1];
+    const rectRange=(a,b)=>{
+      const ar=a.closest('tr').rowIndex, ac=a.cellIndex;
+      const br=b.closest('tr').rowIndex, bc=b.cellIndex;
+      const r1=Math.min(ar,br), r2=Math.max(ar,br);
+      const c1=Math.min(ac,bc), c2=Math.max(ac,bc);
+      const table=a.closest('table');
+      for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){
+        const cell=table.rows[r].cells[c]; if(cell && cell.classList.contains('cell')){ cell.classList.add('selected'); selectedCells.add(cell);}
       }
-      if(personnel?.interims?.length){
-        sections.push({title:"Intérim", rows: personnel.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
-      }
-      if(personnel?.livreurs){
-        Object.entries(personnel.livreurs).forEach(([gLabel, slots])=>{
-          sections.push({title:`Livreurs — ${gLabel}`, rows:[{label:gLabel, slots}]});
-        });
-      }
+    };
+    rectRange(last,td);
+  }else if(isCtrl){
+    td.classList.toggle('selected'); td.classList.contains('selected')?selectedCells.add(td):selectedCells.delete(td);
+  }else{
+    clearSelection(); td.classList.add('selected'); selectedCells.add(td);
+  }
+}
+function headerSelectColumn(th){
+  const idx=th.cellIndex; const table=th.closest('table'); clearSelection();
+  [...table.tBodies[0].rows].forEach(tr=>{
+    const td=tr.cells[idx]; if(td && td.classList.contains('cell')){ td.classList.add('selected'); selectedCells.add(td); }
+  });
+}
+function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
-      sections.forEach(section=>{
-        const headerSlots = uniqueSlots(section.rows);
-        const h = document.createElement("div");
-        h.className = "section-title";
-        h.textContent = section.title;
-        $saisieContent.appendChild(h);
+function buildSection(title, rows){
+  // slots = union de tous les créneaux de la section
+  const headerSlots = union(...rows.map(r=>r.slots||[]));
+  const table=document.createElement('table'); table.className='table';
+  const thead=document.createElement('thead');
+  const tr1=document.createElement('tr');
+  tr1.innerHTML='<th class="row-label">Nom / Ligne</th>'+headerSlots.map(s=>`<th>${s}</th>`).join('');
+  tr1.querySelectorAll('th').forEach((th,i)=>{ if(i>0) th.addEventListener('click',()=>headerSelectColumn(th)); });
+  thead.appendChild(tr1); table.appendChild(thead);
+  const tbody=document.createElement('tbody');
 
-        const table = document.createElement("table");
-        table.className = "table";
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    const nameTd=document.createElement('td'); nameTd.className='row-label'; nameTd.textContent=r.label; tr.appendChild(nameTd);
+    headerSlots.forEach(slot=>{
+      const td=document.createElement('td'); td.className='cell'; td.dataset.slot=slot;
+      td.addEventListener('click',ev=>handleCellClick(ev,td)); tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
 
-        const cg = document.createElement("colgroup");
-        const colLabel = document.createElement("col"); colLabel.style.width = "55%"; cg.appendChild(colLabel);
-        headerSlots.forEach(()=> { const col = document.createElement("col"); col.style.width="22.5%"; cg.appendChild(col); });
-        table.appendChild(cg);
+  const h=document.createElement('div'); h.className='section-title'; h.textContent=title;
+  const wrap=document.createElement('div'); wrap.appendChild(h); wrap.appendChild(table);
+  return wrap;
+}
 
-        const thead = document.createElement("thead");
-        const trh = document.createElement("tr");
-        trh.innerHTML = `<th class="row-label" data-col="0" title="En-tête (non sélectionnable)">Nom / Ligne</th>` + headerSlots.map((s,i)=>`<th data-col="${i+1}" title="Cliquer pour sélectionner la colonne">${s}</th>`).join("");
-        thead.appendChild(trh);
-        table.appendChild(thead);
+function buildSaisieUI(){
+  $saisieContent.innerHTML='';
+  clearSelection();
+  const sections=[];
 
-        const tbody = document.createElement("tbody");
-        section.rows.forEach(r=>{
-          const tr = document.createElement("tr");
-          const td0 = document.createElement("td");
-          td0.className = "row-label";
-          td0.textContent = r.label;
-          tr.appendChild(td0);
-          headerSlots.forEach((slot,i)=>{
-            const td = document.createElement("td");
-            td.className = "cell";
-            td.dataset.slot = slot;
-            td.dataset.col = (i+1).toString();
-            td.dataset.key = btoa(unescape(encodeURIComponent(section.title+"|"+r.label+"|"+slot)));
-            td.addEventListener("click", (ev)=> onCellClick(ev, td));
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
+  // Employés
+  const empRows=(personnel?.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+  if(empRows.length) sections.push({title:"EMPLOYÉS", rows:empRows});
 
-        trh.querySelectorAll("th[data-col]").forEach(th=>{
-          const col = th.dataset.col;
-          if(col==="0") return;
-          th.addEventListener("click", ()=>{
-            clearSelection();
-            table.querySelectorAll(`td.cell[data-col="${col}"]`).forEach(td=> selectCell(td,true));
-          });
-        });
-        $saisieContent.appendChild(table);
-      });
-    }
+  // Intérim
+  const intRows=(personnel?.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+  if(intRows.length) sections.push({title:"INTÉRIM", rows:intRows});
 
-    function onCellClick(ev, td){
-      const all = Array.from(document.querySelectorAll("#saisie-content td.cell"));
-      if(ev.shiftKey && lastClickedCell){
-        const a = all.indexOf(lastClickedCell);
-        const b = all.indexOf(td);
-        if(a>-1 && b>-1){
-          const [from,to] = a<b ? [a,b] : [b,a];
-          for(let i=from;i<=to;i++){
-            selectCell(all[i], true);
+  // Livreurs : un bloc par groupe (WARNING, NAVETTE…, C CHEZ VOUS…)
+  Object.entries(personnel?.livreurs||{}).forEach(([g,slots])=>{
+    const rows=[{label:g, slots: slots && slots.length? slots: ["Matin","A. Midi"]}];
+    sections.push({title:`LIVREURS — ${g}`, rows});
+  });
+
+  sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
+}
+
+/* ---------- actions palette ---------- */
+document.querySelectorAll('button.badge[data-code]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.dataset.code; if(!selectedCells.size) return;
+    selectedCells.forEach(td=>{
+      CODES.forEach(c=>td.classList.remove(c));
+      td.textContent = code==='P'||code==='CP'||code==='ABS'||code==='MAL'||code==='R' ? code : '';
+      if(code) td.classList.add(code);
+    });
+  });
+});
+$btnFillAll.addEventListener('click',()=>{
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
+    CODES.forEach(c=>td.classList.remove(c));
+    td.textContent='P'; td.classList.add('P');
+  });
+});
+$btnClear.addEventListener('click',()=>{
+  selectedCells.forEach(td=>{ CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
+});
+
+/* ---------- prefill / save ---------- */
+async function prefillDay(){
+  if(!currentMagasin) return;
+  try{
+    const day=$dateInput.value;
+    const r=await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+    if(!r.ok) return;
+    const payload=await r.json(); applyPrefill(payload?.data||{});
+  }catch{}
+}
+function applyPrefill(data){
+  const map=new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
+  $saisieContent.querySelectorAll('tbody tr').forEach(tr=>{
+    const label=tr.querySelector('.row-label').textContent.trim();
+    const vals=map.get(label)||{};
+    tr.querySelectorAll('td.cell').forEach(td=>{
+      const v=vals[td.dataset.slot]||''; CODES.forEach(c=>td.classList.remove(c));
+      td.textContent=v; if(v) td.classList.add(v);
+    });
+  });
+}
+function collectData(){
+  const rows=[];
+  $saisieContent.querySelectorAll('tbody tr').forEach(tr=>{
+    const label=tr.querySelector('.row-label').textContent.trim();
+    const values={};
+    tr.querySelectorAll('td.cell').forEach(td=>values[td.dataset.slot]=td.textContent.trim());
+    rows.push({label, values});
+  });
+  return {rows};
+}
+$btnSave.addEventListener('click', async ()=>{
+  if(!currentMagasin) return;
+  const data=collectData(); $btnSave.disabled=true;
+  try{
+    const r=await api('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
+    if(!r.ok) throw new Error('save failed');
+    alert('Enregistré ✔');
+  }catch{ alert("Échec de l'enregistrement"); }
+  finally{ $btnSave.disabled=false; }
+});
+$dateInput.addEventListener('change',prefillDay);
+
+/* ---------- résumé du mois ---------- */
+async function loadResume(){
+  $resumeError.style.display='none';
+  $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
+  try{
+    const ym=$resumeMonth.value;
+    const r=await api(`/month?yyyymm=${ym}`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    renderResume(ym,data);
+  }catch(e){
+    $resumeError.textContent="Impossible de charger le résumé.";
+    $resumeError.style.display='block';
+    $resumeContent.innerHTML='';
+  }
+}
+$btnRefreshResume.addEventListener('click',loadResume);
+
+function renderResume(ym,monthData){
+  const days=daysOfMonth(ym);
+  const container=document.createElement('div'); container.innerHTML='';
+  MAGASINS.forEach(mag=>{
+    const block=document.createElement('div'); block.style.marginBottom='26px';
+    const title=document.createElement('div'); title.className='section-title'; title.textContent=mag; block.appendChild(title);
+
+    const table=document.createElement('table'); table.className='table';
+    const thead=document.createElement('thead');
+    const t1=document.createElement('tr'); t1.innerHTML='<th class="row-label">Nom / Ligne</th>'+days.map(d=>`<th>${dowLetter(d)}</th>`).join('');
+    const t2=document.createElement('tr'); t2.innerHTML='<th class="sub-label">&nbsp;</th>'+days.map(d=>`<th>${d.getDate()}</th>`).join('');
+    thead.appendChild(t1); thead.appendChild(t2); table.appendChild(thead);
+    const tbody=document.createElement('tbody');
+
+    const pers=monthData.personnel?.[mag] || {employes:[],interims:[],livreurs:{}};
+    const rows=[];
+    pers.employes.forEach(p=>rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+    pers.interims.forEach(p=>rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+    Object.entries(pers.livreurs||{}).forEach(([g,slots])=>rows.push({label:g, slots}));
+
+    const file=monthData.files?.[mag]||{};
+    const dayKeys=days.map(d=>ymd(d));
+
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=r.label; tr.appendChild(td0);
+      dayKeys.forEach(dk=>{
+        const td=document.createElement('td'); td.className='cell';
+        const dow=new Date(dk).getDay(); if(dow===0||dow===6) td.classList.add('weekend');
+        const rec=file[dk];
+        if(rec?.data?.rows){
+          const found=rec.data.rows.find(x=>x.label===r.label);
+          if(found){
+            // on cherche un code non vide parmi les slots de cette ligne
+            const vals=r.slots||[];
+            const v=vals.map(s=>found.values?.[s]).find(Boolean) || "";
+            td.textContent=v; if(v) td.classList.add(v);
           }
         }
-      }else if(ev.ctrlKey || ev.metaKey){
-        if(selection.has(td.dataset.key)){ deselectCell(td); } else { selectCell(td); }
-      }else{
-        clearSelection();
-        selectCell(td);
-      }
-      lastClickedCell = td;
-    }
-
-    function selectCell(td){
-      if(!td || !td.dataset.key) return;
-      selection.add(td.dataset.key);
-      td.classList.add("selected");
-    }
-    function deselectCell(td){
-      if(!td || !td.dataset.key) return;
-      selection.delete(td.dataset.key);
-      td.classList.remove("selected");
-    }
-    function clearSelection(){
-      selection.forEach(k=>{
-        const el = document.querySelector(`[data-key="${k}"]`);
-        if(el) el.classList.remove("selected");
+        tr.appendChild(td);
       });
-      selection.clear();
-    }
+      tbody.appendChild(tr);
+    });
 
-    function applyCodeToSelection(code){
-      selection.forEach(k=>{
-        const td = document.querySelector(`[data-key="${k}"]`);
-        if(!td) return;
-        setCellCode(td, code);
-      });
-    }
+    table.appendChild(tbody); block.appendChild(table); container.appendChild(block);
+  });
+  $resumeContent.innerHTML=''; $resumeContent.appendChild(container);
+}
 
-    function fillAll(code){
-      document.querySelectorAll("#saisie-content td.cell").forEach(td=> setCellCode(td, code));
-    }
-
-    function setCellCode(td, code){
-      td.textContent = code;
-      td.classList.remove("code-P","code-CP","code-ABS","code-MAL","code-R");
-      (CODE_CLASSES[code]||[]).forEach(c=> td.classList.add(c));
-    }
-
-    async function loadPrefillForDay(){
-      if(!currentMagasin) return;
-      try{
-        const day = $dateInput.value;
-        const res = await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
-        if(!res.ok) return;
-        const payload = await res.json();
-        applyPrefill(payload?.data||{});
-      }catch(_){/*ignore*/}
-    }
-
-    function applyPrefill(data){
-      const map = new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
-      $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
-        const label = tr.querySelector(".row-label")?.textContent.trim();
-        const values = map.get(label)||{};
-        tr.querySelectorAll("td.cell").forEach(td=>{
-          const slot = td.dataset.slot;
-          const v = values[slot] || "";
-          setCellCode(td, v);
-        });
-      });
-    }
-
-    function collectSaisie(){
-      const rows=[];
-      $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
-        const label = tr.querySelector(".row-label")?.textContent.trim();
-        const values={};
-        tr.querySelectorAll("td.cell").forEach(td=>{ values[td.dataset.slot] = td.textContent.trim(); });
-        rows.push({label, values});
-      });
-      return { rows };
-    }
-
-    async function saveSaisie(){
-      $saisieError.style.display = "none";
-      if(!$dateInput.value || !currentMagasin){
-        $saisieError.textContent = "Sélectionnez un magasin et une date.";
-        $saisieError.style.display = "block";
-        return;
-      }
-      const data = collectSaisie();
-      $btnSave.disabled = true;
-      try{
-        const body = { magasin: currentMagasin, date: $dateInput.value, data };
-        console.log("[UI] POST", CONFIG.apiBase+"/save", body);
-        const res = await api("/save", {method:"POST", body: JSON.stringify(body)});
-        if(!res.ok){
-          const t = await res.text().catch(()=> "");
-          throw new Error("save failed "+res.status+" "+t);
-        }
-        alert("Enregistré ✔");
-      }catch(e){
-        console.error("[UI] SAVE ERROR", e);
-        $saisieError.textContent = "Échec de l'enregistrement (serveur non joignable ?).";
-        $saisieError.style.display = "block";
-      }finally{
-        $btnSave.disabled = false;
-      }
-    }
-
-    async function diagApi(){
-      try{
-        console.log("[DIAG] API_BASE =", CONFIG.apiBase);
-        const u = `/month?yyyymm=${ymLocal()}`;
-        const res = await api(u);
-        console.log("[DIAG] status", res.status);
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        console.log("[DIAG] OK: /month");
-        alert("API OK ("+CONFIG.apiBase+")");
-      }catch(e){
-        console.error("[DIAG] API KO", e);
-        alert("API KO ("+CONFIG.apiBase+"). Ouvre la console pour le détail.");
-      }
-    }
-
-    async function loadResume(){
-      $resumeError.style.display = "none";
-      const yyyymm = $resumeMonth.value;
-      if(!yyyymm) return;
-      $resumeContent.innerHTML = '<div class="loader"><div class="spinner"></div><span>Chargement en cours…</span></div>';
-      try{
-        const url = `/month?yyyymm=${yyyymm}`;
-        console.log("[UI] GET", CONFIG.apiBase+url);
-        const res = await api(url);
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        const monthData = await res.json();
-        renderResume(yyyymm, monthData);
-      }catch(e){
-        console.error("[UI] MONTH ERROR", e);
-        $resumeContent.innerHTML = "";
-        $resumeError.textContent = "Impossible de charger le résumé (serveur non joignable ?).";
-        $resumeError.style.display = "block";
-      }
-    }
-
-    function renderResume(yyyymm, monthData){
-      const days = daysOfMonthLocal(yyyymm);
-      const container = document.createElement("div");
-      CONFIG.magasins.forEach(mag=>{
-        const block = document.createElement("div"); block.className="store-block";
-        const title = document.createElement("div"); title.className="store-title"; title.textContent = mag; block.appendChild(title);
-
-        const table = document.createElement("table"); table.className="table";
-        const thead = document.createElement("thead");
-        const tr1 = document.createElement("tr");
-        tr1.innerHTML = '<th class="row-label">Nom / Ligne</th>' + days.map(d=>`<th>${dowLetter(d)}</th>`).join("");
-        const tr2 = document.createElement("tr");
-        tr2.innerHTML = '<th class="sub-label">&nbsp;</th>' + days.map(d=>`<th>${d.getDate()}</th>`).join("");
-        thead.appendChild(tr1); thead.appendChild(tr2); table.appendChild(thead);
-
-        const tbody = document.createElement("tbody");
-        const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
-        const rows = [];
-        pers.employes.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-        pers.interims.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-        Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{ rows.push({label:g, slots}); });
-
-        const file = monthData.files?.[mag] || {};
-        const daysKey = days.map(d=> ymd(d));
-
-        rows.forEach(r=>{
-          const tr = document.createElement("tr");
-          const td0 = document.createElement("td"); td0.className="row-label"; td0.textContent=r.label; tr.appendChild(td0);
-          daysKey.forEach(dayStr=>{
-            const td = document.createElement("td"); td.className="cell";
-            const dow = (new Date(dayStr)).getDay();
-            if(dow===0 || dow===6) td.classList.add("weekend");
-            const rec = file[dayStr];
-            if(rec?.data?.rows){
-              const found = rec.data.rows.find(x=> x.label===r.label);
-              if(found){
-                const vals = Object.values(found.values||{}).filter(Boolean);
-                const code = vals[0] || "";
-                td.textContent = code;
-                td.classList.remove("code-P","code-CP","code-ABS","code-MAL","code-R");
-                (CODE_CLASSES[code]||[]).forEach(c=> td.classList.add(c));
-              }
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
-
-        table.appendChild(tbody);
-        block.appendChild(table);
-        container.appendChild(block);
-      });
-      $resumeContent.innerHTML = "";
-      $resumeContent.appendChild(container);
-    }
-  </script>
+/* ---------- diag ---------- */
+$btnDiag.addEventListener('click', async ()=>{
+  try{ const r=await api('/_diag'); alert((await r.json()).ok?'API OK':'API KO'); }catch{ alert('API KO');}
+});
+</script>
 </body>
 </html>
