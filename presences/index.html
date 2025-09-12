@@ -136,11 +136,10 @@
   </main>
 
   <script>
-    // --- API base: par défaut /presence ; sur Wix passer ?api=https://VOTRE-RENDER/presence
     const PARAM_API = new URLSearchParams(location.search).get("api");
     const DEFAULT_SAME_ORIGIN = "/presence";
     const WIX_FALLBACK = (location.host.includes("wixsite.com")||location.host.includes("wix.com"))
-      ? "https://mes-formulaires.onrender.com/presence"   // <-- remplace par ton domaine Render si besoin
+      ? "https://mes-formulaires.onrender.com/presence"
       : DEFAULT_SAME_ORIGIN;
     const API_BASE = (PARAM_API || WIX_FALLBACK).replace(/\/$/, "");
 
@@ -269,6 +268,13 @@
       }
     }
 
+    // NEW: construit l'en-tête à partir de l'union des slots de la section
+    function uniqueSlots(rows){
+      const set = new Set();
+      rows.forEach(r => (r.slots||[]).forEach(s => set.add(String(s))));
+      return Array.from(set);
+    }
+
     function buildSaisieUI(){
       $saisieContent.innerHTML = "";
       $saisieError.style.display = "none";
@@ -289,6 +295,7 @@
       }
 
       sections.forEach(section=>{
+        const headerSlots = uniqueSlots(section.rows);
         const h = document.createElement("div");
         h.className = "section-title";
         h.textContent = section.title;
@@ -297,15 +304,14 @@
         const table = document.createElement("table");
         table.className = "table";
 
-        // colgroup pour forcer l'existence de toutes les colonnes
         const cg = document.createElement("colgroup");
         const colLabel = document.createElement("col"); colLabel.style.width = "55%"; cg.appendChild(colLabel);
-        section.rows[0].slots.forEach(()=> { const col = document.createElement("col"); col.style.width="22.5%"; cg.appendChild(col); });
+        headerSlots.forEach(()=> { const col = document.createElement("col"); col.style.width="22.5%"; cg.appendChild(col); });
         table.appendChild(cg);
 
         const thead = document.createElement("thead");
         const trh = document.createElement("tr");
-        trh.innerHTML = `<th class="row-label" data-col="0" title="En-tête (non sélectionnable)">Nom / Ligne</th>` + section.rows[0].slots.map((s,i)=>`<th data-col="${i+1}" title="Cliquer pour sélectionner la colonne">${s}</th>`).join("");
+        trh.innerHTML = `<th class="row-label" data-col="0" title="En-tête (non sélectionnable)">Nom / Ligne</th>` + headerSlots.map((s,i)=>`<th data-col="${i+1}" title="Cliquer pour sélectionner la colonne">${s}</th>`).join("");
         thead.appendChild(trh);
         table.appendChild(thead);
 
@@ -316,7 +322,7 @@
           td0.className = "row-label";
           td0.textContent = r.label;
           tr.appendChild(td0);
-          r.slots.forEach((slot,i)=>{
+          headerSlots.forEach((slot,i)=>{
             const td = document.createElement("td");
             td.className = "cell";
             td.dataset.slot = slot;
@@ -328,7 +334,7 @@
           tbody.appendChild(tr);
         });
         table.appendChild(tbody);
-        // Sélection de colonne via en-tête
+
         trh.querySelectorAll("th[data-col]").forEach(th=>{
           const col = th.dataset.col;
           if(col==="0") return;
@@ -516,7 +522,7 @@
         pers.interims.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
         Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{ rows.push({label:g, slots}); });
 
-        const file = monthData.files?.[mag] || {}; // {"YYYY-MM-DD": {data:{rows:[...]}}}
+        const file = monthData.files?.[mag] || {};
         const daysKey = days.map(d=> ymd(d));
 
         rows.forEach(r=>{
