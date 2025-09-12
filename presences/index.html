@@ -32,12 +32,15 @@
     .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px}
     .toolbar .spacer{flex:1 1 auto}
     button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    button.ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
-    .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
-    .table thead th{background:#fafafa;font-weight:800;cursor:pointer}
+    .table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
+    .table th,.table td{border-right:1px solid var(--line);border-top:1px solid var(--line);padding:8px;text-align:center}
+    .table tr:first-child th{border-top:0}
+    .table td:first-child,.table th:first-child{border-left:0}
+    .table thead th{background:#fafafa;font-weight:800;cursor:pointer;position:sticky;top:0}
     .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
-    .cell{min-width:28px;height:28px;display:grid;place-items:center;cursor:pointer;user-select:none}
+    .cell{min-width:48px;height:32px;display:grid;place-items:center;cursor:pointer;user-select:none}
     .cell.selected{outline:2px solid var(--info); outline-offset:-2px; background:var(--sel)}
     .cell.weekend{background:#000;color:#fff}
     .row-label{white-space:nowrap;text-align:left;font-weight:600; cursor:default;}
@@ -46,7 +49,7 @@
     .resume .store-block{margin-bottom:32px}
     .resume .store-title{font-weight:800;font-size:1.25rem;margin:10px 0}
     .error{color:#a40000;font-weight:700}
-    @media (max-width:900px){ .cell{min-width:24px} }
+    @media (max-width:900px){ .cell{min-width:36px} }
     /* Couleurs par code */
     .code-P  { background:#e8f4ec; color:var(--ok); font-weight:800; }
     .code-CP { background:#e7f0fb; color:var(--info); font-weight:800; }
@@ -106,6 +109,7 @@
           <button class="opt" data-v="R">R</button>
           <button id="btn-fill-all-P" class="opt" title="Tout mettre P">Tout mettre P</button>
         </div>
+        <button id="btn-diag" class="ghost">Diag API</button>
         <button id="btn-save" class="primary">Enregistrer</button>
       </div>
 
@@ -173,6 +177,7 @@
 
     const api = (path, opts={}) => {
       const url = CONFIG.apiBase + path;
+      console.log("[UI] fetch", url, opts?.method||"GET");
       return fetch(url, {
         headers: {"Content-Type":"application/json"},
         credentials: "include",
@@ -187,16 +192,13 @@
 
     const $today = document.getElementById("today");
     const $tabButtons = document.querySelectorAll(".tab");
-    const $panels = {
-      magasins: document.getElementById("tab-magasins"),
-      saisie: document.getElementById("tab-saisie"),
-      resume: document.getElementById("tab-resume")
-    };
+    const $panels = { magasins: document.getElementById("tab-magasins"), saisie: document.getElementById("tab-saisie"), resume: document.getElementById("tab-resume") };
     const $magBtnsWrap = document.getElementById("magasin-buttons");
     const $currMag = document.getElementById("current-magasin");
     const $dateInput = document.getElementById("saisie-date");
     const $saisieContent = document.getElementById("saisie-content");
     const $btnSave = document.getElementById("btn-save");
+    const $btnDiag = document.getElementById("btn-diag");
     const $resumeMonth = document.getElementById("resume-month");
     const $btnRefreshResume = document.getElementById("btn-refresh-resume");
     const $resumeContent = document.getElementById("resume-content");
@@ -216,6 +218,7 @@
         $magBtnsWrap.appendChild(b);
       });
       $btnSave.addEventListener("click", saveSaisie);
+      $btnDiag.addEventListener("click", diagApi);
       $dateInput.addEventListener("change", loadPrefillForDay);
       $btnRefreshResume.addEventListener("click", loadResume);
 
@@ -253,6 +256,7 @@
         if(!res.ok) throw new Error("HTTP "+res.status);
         personnel = await res.json();
       }catch(e){
+        console.warn("[UI] Personnel fallback", e);
         personnel = {
           employes:[{nom:"BARRET", prenom:"Olivier"},{nom:"PICHARD", prenom:"Damien"}],
           interims:[{nom:"PEREZ"}],
@@ -292,6 +296,13 @@
 
         const table = document.createElement("table");
         table.className = "table";
+
+        // colgroup pour forcer l'existence de toutes les colonnes
+        const cg = document.createElement("colgroup");
+        const colLabel = document.createElement("col"); colLabel.style.width = "55%"; cg.appendChild(colLabel);
+        section.rows[0].slots.forEach(()=> { const col = document.createElement("col"); col.style.width="22.5%"; cg.appendChild(col); });
+        table.appendChild(cg);
+
         const thead = document.createElement("thead");
         const trh = document.createElement("tr");
         trh.innerHTML = `<th class="row-label" data-col="0" title="En-tête (non sélectionnable)">Nom / Ligne</th>` + section.rows[0].slots.map((s,i)=>`<th data-col="${i+1}" title="Cliquer pour sélectionner la colonne">${s}</th>`).join("");
@@ -448,6 +459,21 @@
       }
     }
 
+    async function diagApi(){
+      try{
+        console.log("[DIAG] API_BASE =", CONFIG.apiBase);
+        const u = `/month?yyyymm=${ymLocal()}`;
+        const res = await api(u);
+        console.log("[DIAG] status", res.status);
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        console.log("[DIAG] OK: /month");
+        alert("API OK ("+CONFIG.apiBase+")");
+      }catch(e){
+        console.error("[DIAG] API KO", e);
+        alert("API KO ("+CONFIG.apiBase+"). Ouvre la console pour le détail.");
+      }
+    }
+
     async function loadResume(){
       $resumeError.style.display = "none";
       const yyyymm = $resumeMonth.value;
@@ -504,7 +530,6 @@
             if(rec?.data?.rows){
               const found = rec.data.rows.find(x=> x.label===r.label);
               if(found){
-                // afficher la première valeur non vide des slots (priorité visuelle simple)
                 const vals = Object.values(found.values||{}).filter(Boolean);
                 const code = vals[0] || "";
                 td.textContent = code;
