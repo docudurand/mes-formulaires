@@ -28,8 +28,10 @@ button.badge[data-code="MAL"]{color:#946200}
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
-.table thead th.sub-label{ color: var(--muted); font-weight:600 }
+.table thead th.sub-label{color:var(--muted);font-weight:600}
 .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
+.section-sub{font-weight:800;margin:8px 0 0 2px;color:#111; font-size:.95rem}
+.mag-divider{border-top:2px solid var(--line); margin:24px 0 8px}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
@@ -47,56 +49,56 @@ button.badge[data-code="MAL"]{color:#946200}
 </style>
 </head>
 <body>
-  <header class="app-header">
-    <h1>Présences DSG</h1>
-    <div class="today">Aujourd’hui : <span id="today"></span></div>
-  </header>
+<header class="app-header">
+  <h1>Présences DSG</h1>
+  <div class="today">Aujourd’hui : <span id="today"></span></div>
+</header>
 
-  <main>
-    <nav class="tabs">
-      <button class="tab active" data-tab="magasins">Magasins</button>
-      <button class="tab" data-tab="saisie">Saisie du jour</button>
-      <button class="tab" data-tab="resume">Résumé du mois</button>
-    </nav>
+<main>
+  <nav class="tabs">
+    <button class="tab active" data-tab="magasins">Magasins</button>
+    <button class="tab" data-tab="saisie">Saisie du jour</button>
+    <button class="tab" data-tab="resume">Résumé du mois</button>
+  </nav>
 
-    <!-- Onglet 1 -->
-    <section id="tab-magasins" class="tab-panel active">
-      <p class="hint">Choisissez un magasin :</p>
-      <div id="magasin-buttons" class="grid-buttons"></div>
-    </section>
+  <!-- Onglet 1 -->
+  <section id="tab-magasins" class="tab-panel active">
+    <p class="hint">Choisissez un magasin :</p>
+    <div id="magasin-buttons" class="grid-buttons"></div>
+  </section>
 
-    <!-- Onglet 2 -->
-    <section id="tab-saisie" class="tab-panel">
-      <div class="toolbar">
-        <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
-        <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
-        <div class="spacer"></div>
-        <button class="badge" id="btn-clear">Vider</button>
-        <button class="badge" data-code="P">P</button>
-        <button class="badge" data-code="CP">CP</button>
-        <button class="badge" data-code="ABS">ABS</button>
-        <button class="badge" data-code="MAL">MAL</button>
-        <button class="badge" data-code="R">R</button>
-        <button class="badge" id="btn-fill-all">Tout mettre P</button>
-        <button id="btn-save" class="primary">Enregistrer</button>
-        <button class="badge" id="btn-diag">Diag API</button>
-      </div>
-      <div id="saisie-content"></div>
-      <div class="legend">Sélection : clic (cellule), Ctrl/Cmd (ajouts), Shift (plage), clic sur l’entête = toute la colonne.</div>
-      <p id="saisie-error" class="error" style="display:none"></p>
-    </section>
+  <!-- Onglet 2 -->
+  <section id="tab-saisie" class="tab-panel">
+    <div class="toolbar">
+      <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
+      <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
+      <div class="spacer"></div>
+      <button class="badge" id="btn-clear">Vider</button>
+      <button class="badge" data-code="P">P</button>
+      <button class="badge" data-code="CP">CP</button>
+      <button class="badge" data-code="ABS">ABS</button>
+      <button class="badge" data-code="MAL">MAL</button>
+      <button class="badge" data-code="R">R</button>
+      <button class="badge" id="btn-fill-all">Tout mettre P</button>
+      <button id="btn-save" class="primary">Enregistrer</button>
+      <button class="badge" id="btn-diag">Diag API</button>
+    </div>
+    <div id="saisie-content"></div>
+    <div class="legend">Sélection : clic (cellule), Ctrl/Cmd (ajouts), Shift (plage), clic sur l’entête = toute la colonne.</div>
+    <p id="saisie-error" class="error" style="display:none"></p>
+  </section>
 
-    <!-- Onglet 3 -->
-    <section id="tab-resume" class="tab-panel">
-      <div class="toolbar">
-        <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
-        <div class="spacer"></div>
-        <button id="btn-refresh-resume">Recharger</button>
-      </div>
-      <div id="resume-content"></div>
-      <p id="resume-error" class="error" style="display:none"></p>
-    </section>
-  </main>
+  <!-- Onglet 3 -->
+  <section id="tab-resume" class="tab-panel">
+    <div class="toolbar">
+      <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
+      <div class="spacer"></div>
+      <button id="btn-refresh-resume">Recharger</button>
+    </div>
+    <div id="resume-content"></div>
+    <p id="resume-error" class="error" style="display:none"></p>
+  </section>
+</main>
 
 <script>
 /* ---------- util ---------- */
@@ -177,20 +179,16 @@ async function loadPersonnel(){
     if(!r.ok) throw new Error("HTTP "+r.status);
     personnel=await r.json();
   }catch(e){
-    // fallback lisible
+    // Fallback local
     personnel={
-      employes:[{nom:"BARRET",prenom:"Olivier"},{nom:"THOLIN",prenom:"Claire"},{nom:"PICHARD",prenom:"Damien"}],
-      interims:[{nom:"PEREZ",prenom:"Clara"}],
-      livreurs:{
-        "WARNING":["Matin","A. Midi"],
-        "NAVETTE NUIT ALL COURS":["NUIT"],
-        "C CHEZ VOUS":["10H","12H","16H"]
-      }
+      employes:[],
+  interims:[],
+  livreurs:{}
     };
   }
 }
 
-/* ---------- UI Saisie ---------- */
+/* ---------- UI Saisie (inchangé) ---------- */
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
@@ -220,7 +218,6 @@ function headerSelectColumn(th){
   });
 }
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
-
 function buildSection(title, rows){
   const headerSlots = union(...rows.map(r=>r.slots||[]));
   const table=document.createElement('table'); table.className='table';
@@ -246,46 +243,20 @@ function buildSection(title, rows){
   const wrap=document.createElement('div'); wrap.appendChild(h); wrap.appendChild(table);
   return wrap;
 }
-
 function buildSaisieUI(){
   $saisieContent.innerHTML='';
   clearSelection();
   const sections=[];
-
   const empRows=(personnel?.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
   if(empRows.length) sections.push({title:"EMPLOYÉS", rows:empRows});
-
   const intRows=(personnel?.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
   if(intRows.length) sections.push({title:"INTÉRIM", rows:intRows});
-
   Object.entries(personnel?.livreurs||{}).forEach(([g,slots])=>{
     const rows=[{label:g, slots: slots && slots.length? slots: ["Matin","A. Midi"]}];
     sections.push({title:`LIVREURS — ${g}`, rows});
   });
-
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
 }
-
-/* ---------- actions palette ---------- */
-document.querySelectorAll('button.badge[data-code]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const code=btn.dataset.code; if(!selectedCells.size) return;
-    selectedCells.forEach(td=>{
-      CODES.forEach(c=>td.classList.remove(c));
-      td.textContent = code==='P'||code==='CP'||code==='ABS'||code==='MAL'||code==='R' ? code : '';
-      if(code) td.classList.add(code);
-    });
-  });
-});
-$btnFillAll.addEventListener('click',()=>{
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    CODES.forEach(c=>td.classList.remove(c));
-    td.textContent='P'; td.classList.add('P');
-  });
-});
-$btnClear.addEventListener('click',()=>{
-  selectedCells.forEach(td=>{ CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
-});
 
 /* ---------- prefill / save ---------- */
 async function prefillDay(){
@@ -330,7 +301,7 @@ $btnSave.addEventListener('click', async ()=>{
 });
 $dateInput.addEventListener('change',prefillDay);
 
-/* ---------- résumé du mois ---------- */
+/* ---------- résumé du mois (séparé par sections) ---------- */
 async function loadResume(){
   $resumeError.style.display='none';
   $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
@@ -348,124 +319,77 @@ async function loadResume(){
 }
 $btnRefreshResume.addEventListener('click',loadResume);
 
-/* ====== NE PAS OUVRIR UN NOUVEAU <script> ICI ====== */
+/* ====== RENDER RESUME ====== */
 function renderResume(yyyymm, monthData){
   const days = daysOfMonth(yyyymm);
+  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
   const container = document.createElement("div");
   container.innerHTML = "";
 
-  const ORDERED_SLOTS = ["Matin","A. Midi","NUIT","10H","12H","16H"];
-  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+  // fabrique un tableau pour une section donnée
+  function buildResumeTable(title, rows, file){
+    if(!rows.length) return null;
 
-  MAGASINS.forEach(mag=>{
-    const file = monthData.files?.[mag] || {};
-    const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
-
-    const labelSet = new Map();
-    pers.employes.forEach(p=>{
-      const label = `${p.nom} ${p.prenom||""}`.trim();
-      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
-    });
-    pers.interims.forEach(p=>{
-      const label = `${p.nom} ${p.prenom||""}`.trim();
-      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
-    });
-    Object.entries(pers.livreurs||{}).forEach(([g, slots])=>{
-      const label = g;
-      labelSet.set(norm(label), {label, slots:new Set(slots && slots.length ? slots : ["Matin","A. Midi"])});
+    // Collecte des slots utiles (union, dans l'ordre d'apparition)
+    const seen = new Set();
+    const slotOrder = [];
+    rows.forEach(r=>{
+      (r.slots||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); slotOrder.push(s); }});
     });
 
-    Object.values(file).forEach(dayRec=>{
-      const rows = dayRec?.data?.rows || [];
-      rows.forEach(r=>{
-        const key = norm(r.label);
-        if(!labelSet.has(key)) labelSet.set(key, {label:r.label, slots:new Set()});
-        Object.keys(r.values||{}).forEach(s=> labelSet.get(key).slots.add(s));
-      });
+    const block = document.createElement("div");
+    const subtitle = document.createElement("div");
+    subtitle.className = "section-sub";
+    subtitle.textContent = title;
+    block.appendChild(subtitle);
+
+    const table = document.createElement("table"); table.className="table";
+    const thead = document.createElement("thead");
+
+    // Ligne 1 : lettres (colspan = nb slots)
+    const tr1 = document.createElement("tr");
+    const th0 = document.createElement("th"); th0.className="row-label"; th0.textContent="Nom / Ligne";
+    tr1.appendChild(th0);
+    days.forEach(d=>{
+      const th=document.createElement("th"); th.colSpan=slotOrder.length; th.textContent=dowLetter(d);
+      tr1.appendChild(th);
     });
+    thead.appendChild(tr1);
 
-    const allSlots = new Set();
-    for (const {slots} of labelSet.values()) slots.forEach(s=>allSlots.add(s));
-    const slotOrder = [
-      ...ORDERED_SLOTS.filter(s=>allSlots.has(s)),
-      ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))
-    ];
+    // Ligne 2 : numéros
+    const tr2a = document.createElement("tr");
+    const th0b = document.createElement("th"); th0b.className="sub-label"; th0b.textContent=" "; tr2a.appendChild(th0b);
+    days.forEach(d=>{
+      const th=document.createElement("th"); th.colSpan=slotOrder.length; th.textContent=String(d.getDate());
+      tr2a.appendChild(th);
+    });
+    thead.appendChild(tr2a);
 
-    const block = document.createElement("div"); block.style.marginBottom = "26px";
-    const title = document.createElement("div"); title.className = "section-title"; title.textContent = mag;
-    block.appendChild(title);
+    // Ligne 3 : slots
+    const tr2 = document.createElement("tr");
+    const th00 = document.createElement("th"); th00.className="sub-label"; th00.textContent=" "; tr2.appendChild(th00);
+    days.forEach(()=>{ slotOrder.forEach(s=>{ const th=document.createElement("th"); th.textContent=s; tr2.appendChild(th); }); });
+    thead.appendChild(tr2);
 
-    const table = document.createElement("table"); table.className = "table";
-    // --- EN-TÊTE À 3 LIGNES : (1) lettre du jour, (2) numéro, (3) créneaux ---
-const thead = document.createElement("thead");
-
-// Ligne 1 : "Nom / Ligne" + lettres (colspan = nb de slots)
-const tr1 = document.createElement("tr");
-const th0 = document.createElement("th");
-th0.className = "row-label";
-th0.textContent = "Nom / Ligne";
-tr1.appendChild(th0);
-days.forEach(d=>{
-  const th = document.createElement("th");
-  th.colSpan = slotOrder.length;
-  th.textContent = dowLetter(d);     // L M M J V S D
-  tr1.appendChild(th);
-});
-thead.appendChild(tr1);
-
-// Ligne 2 : numéro du jour (1..31) avec le même colspan
-const tr1b = document.createElement("tr");
-const th0b = document.createElement("th");
-th0b.className = "sub-label";
-th0b.textContent = " ";
-tr1b.appendChild(th0b);
-days.forEach(d=>{
-  const th = document.createElement("th");
-  th.colSpan = slotOrder.length;
-  th.textContent = String(d.getDate());  // 1 2 3 ...
-  tr1b.appendChild(th);
-});
-thead.appendChild(tr1b);
-
-// Ligne 3 : libellés de créneaux sous chaque jour
-const tr2 = document.createElement("tr");
-const th00 = document.createElement("th");
-th00.className = "sub-label";
-th00.textContent = " ";
-tr2.appendChild(th00);
-days.forEach(()=>{
-  slotOrder.forEach(s=>{
-    const th = document.createElement("th");
-    th.textContent = s;               // Matin, A. Midi, NUIT, 10H, 12H, 16H
-    tr2.appendChild(th);
-  });
-});
-thead.appendChild(tr2);
-
-table.appendChild(thead);
+    table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
     const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
 
-    const labels = [...labelSet.values()].map(o=>o.label);
-    labels.forEach(label=>{
-      const tr = document.createElement("tr");
-      const td0 = document.createElement("td");
-      td0.className = "row-label";
-      td0.textContent = label;
-      tr.appendChild(td0);
+    rows.forEach(row=>{
+      const tr=document.createElement("tr");
+      const td0=document.createElement("td"); td0.className="row-label"; td0.textContent=row.label; tr.appendChild(td0);
 
       days.forEach(d=>{
-        const dk = ymd(d);
-        const rec = file[dk];
-        let values = {};
+        const dk=ymd(d);
+        const rec=file[dk];
+        let values={};
         if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(label));
+          const found = rec.data.rows.find(r => norm(r.label) === norm(row.label));
           values = found?.values || {};
         }
         slotOrder.forEach(slot=>{
-          const td = document.createElement("td");
-          td.className = "cell";
+          const td=document.createElement("td"); td.className="cell";
           if(isWE(d)) td.classList.add("weekend");
           const v = values[slot] || "";
           td.textContent = v;
@@ -479,10 +403,44 @@ table.appendChild(thead);
 
     table.appendChild(tbody);
     block.appendChild(table);
-    container.appendChild(block);
+    return block;
+  }
+
+  MAGASINS.forEach(mag=>{
+    const file = monthData.files?.[mag] || {};
+    const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
+
+    // Titre magasin + séparateur
+    const magWrap = document.createElement("div");
+    const magTitle = document.createElement("div");
+    magTitle.className="section-title";
+    magTitle.textContent = mag;
+    const divider = document.createElement("div");
+    divider.className = "mag-divider";
+    magWrap.appendChild(magTitle);
+
+    // Section EMPLOYÉS
+    const empRows = (pers.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+    const empTable = buildResumeTable("EMPLOYÉS", empRows, file);
+    if(empTable) magWrap.appendChild(empTable);
+
+    // Section INTÉRIM
+    const intRows = (pers.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+    const intTable = buildResumeTable("INTÉRIM", intRows, file);
+    if(intTable) magWrap.appendChild(intTable);
+
+    // Sections LIVREURS par groupe
+    Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
+      const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
+      const tab = buildResumeTable(`LIVREURS — ${g}`, rows, file);
+      if(tab) magWrap.appendChild(tab);
+    });
+
+    magWrap.appendChild(divider);
+    container.appendChild(magWrap);
   });
 
-  $resumeContent.innerHTML = "";
+  $resumeContent.innerHTML="";
   $resumeContent.appendChild(container);
 }
 </script>
