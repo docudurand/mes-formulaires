@@ -11,10 +11,11 @@
     :root{
       --brand:#d21f3c;
       --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb;
+      --ok:#1a7f37; --warn:#b36b00; --info:#0b63c6; --abs:#b00020; --neutral:#777;
+      --sel: color-mix(in srgb, var(--brand) 20%, transparent);
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
-    a{color:inherit}
     .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
     .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
     .app-header .today{color:var(--muted)}
@@ -35,7 +36,8 @@
     .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
     .table thead th{background:#fafafa;font-weight:800}
     .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
-    .cell{min-width:28px;height:28px;display:grid;place-items:center;cursor:pointer}
+    .cell{min-width:48px;height:34px;display:grid;place-items:center;cursor:pointer;user-select:none;position:relative}
+    .cell.selected{outline:2px solid var(--brand); outline-offset:-2px; background:var(--sel)}
     .cell.weekend{background:#000;color:#fff}
     .row-label{white-space:nowrap;text-align:left;font-weight:600}
     .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
@@ -43,7 +45,27 @@
     .resume .store-block{margin-bottom:32px}
     .resume .store-title{font-weight:800;font-size:1.25rem;margin:10px 0}
     .error{color:#a40000;font-weight:700}
-    @media (max-width:900px){ .cell{min-width:24px} }
+    @media (max-width:900px){ .cell{min-width:36px} }
+    /* Codes couleurs */
+    .code-P  { background:#e8f4ec; color:var(--ok); font-weight:700; }
+    .code-CP { background:#e7f0fb; color:var(--info); font-weight:700; }
+    .code-ABS{ background:#fde7ea; color:var(--abs); font-weight:700; }
+    .code-MAL{ background:#fff4e5; color:var(--warn); font-weight:700; }
+    .code-R  { background:#efefef; color:#333; font-weight:700; }
+    /* Palette flottante */
+    .palette{position:sticky;bottom:12px;display:none;gap:8px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .palette.visible{display:flex}
+    .palette .opt{border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-weight:700}
+    .opt[data-v="P"]{background:#e8f4ec;color:var(--ok)}
+    .opt[data-v="CP"]{background:#e7f0fb;color:var(--info)}
+    .opt[data-v="ABS"]{background:#fde7ea;color:var(--abs)}
+    .opt[data-v="MAL"]{background:#fff4e5;color:var(--warn)}
+    .opt[data-v="R"]{background:#efefef;color:#333}
+    .opt[data-v=""]{background:#fff;color:var(--neutral)}
+    /* Loader */
+    .loader{display:inline-flex;align-items:center;gap:10px;color:var(--muted)}
+    .spinner{width:18px;height:18px;border:3px solid #ddd;border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
@@ -80,7 +102,15 @@
 
       <div id="saisie-content" class="saisie"></div>
       <div class="legend">
-        <span>Légende : cliquer pour faire défiler → ␀ (vide) → P → P5 → P9 → S</span>
+        <span>Sélection multiple : cliquez sur plusieurs cases (Shift = plage). Choisissez un code ci‑dessous.</span>
+      </div>
+      <div id="palette" class="palette">
+        <div class="opt" data-v="">Vider</div>
+        <div class="opt" data-v="P">P</div>
+        <div class="opt" data-v="CP">CP</div>
+        <div class="opt" data-v="ABS">ABS</div>
+        <div class="opt" data-v="MAL">MAL</div>
+        <div class="opt" data-v="R">R</div>
       </div>
       <p id="saisie-error" class="error" style="display:none"></p>
     </section>
@@ -101,7 +131,6 @@
   </main>
 
   <script>
-
     const CONFIG = {
       apiBase: "/presence",
       magasins: [
@@ -109,22 +138,15 @@
         "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
         "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
       ],
-      presenceCodes: ["", "P", "P5", "P9", "S"]
+      presenceCodes: ["", "P", "CP", "ABS", "MAL", "R"]
     };
 
     const pad = n => (n<10? "0"+n : ""+n);
-    const todayLocalISO = () => {
-      const d = new Date();
-      return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-    };
-    const ymLocal = () => {
-      const d = new Date();
-      return d.getFullYear()+"-"+pad(d.getMonth()+1);
-    };
+    const todayLocalISO = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+    const ymLocal = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1); };
     const daysOfMonthLocal = (yyyymm) => {
       const [y, m] = yyyymm.split("-").map(n=>parseInt(n,10));
-      const res = [];
-      const days = new Date(y, m, 0).getDate();
+      const res = []; const days = new Date(y, m, 0).getDate();
       for(let d=1; d<=days; d++) res.push(new Date(y, m-1, d));
       return res;
     };
@@ -139,14 +161,12 @@
 
     let currentMagasin = null;
     let personnel = null;
+    let selection = new Set();
+    let lastClickedCell = null;
 
     const $today = document.getElementById("today");
     const $tabButtons = document.querySelectorAll(".tab");
-    const $panels = {
-      magasins: document.getElementById("tab-magasins"),
-      saisie: document.getElementById("tab-saisie"),
-      resume: document.getElementById("tab-resume")
-    };
+    const $panels = { magasins: document.getElementById("tab-magasins"), saisie: document.getElementById("tab-saisie"), resume: document.getElementById("tab-resume") };
     const $magBtnsWrap = document.getElementById("magasin-buttons");
     const $currMag = document.getElementById("current-magasin");
     const $dateInput = document.getElementById("saisie-date");
@@ -157,6 +177,7 @@
     const $resumeContent = document.getElementById("resume-content");
     const $saisieError = document.getElementById("saisie-error");
     const $resumeError = document.getElementById("resume-error");
+    const $palette = document.getElementById("palette");
 
     (function init(){
       $today.textContent = todayLocalISO();
@@ -172,6 +193,8 @@
       $btnSave.addEventListener("click", saveSaisie);
       $dateInput.addEventListener("change", loadPrefillForDay);
       $btnRefreshResume.addEventListener("click", loadResume);
+      $palette.querySelectorAll(".opt").forEach(opt=> opt.addEventListener("click", ()=> applyCodeToSelection(opt.dataset.v)));
+      document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ clearSelection(); } });
     })();
 
     function switchTab(key){
@@ -197,15 +220,10 @@
         if(!res.ok) throw new Error("HTTP "+res.status);
         personnel = await res.json();
       }catch(e){
-
         personnel = {
           employes:[{nom:"BARRET", prenom:"Olivier"},{nom:"PICHARD", prenom:"Damien"}],
           interims:[{nom:"PEREZ"}],
-          livreurs:{
-            "WARNING": ["Matin","A. Midi"],
-            "NAVETTE NUIT ALL COURS": ["NUIT"],
-            "C CHEZ VOUS": ["10H","12H","16H"]
-          }
+          livreurs:{ "WARNING": ["Journée"], "NAVETTE NUIT ALL COURS": ["Journée"], "C CHEZ VOUS": ["Journée"] }
         };
       }
     }
@@ -213,18 +231,20 @@
     function buildSaisieUI(){
       $saisieContent.innerHTML = "";
       $saisieError.style.display = "none";
+      selection.clear(); togglePalette();
 
       const sections = [];
+      const JOUR = ["Journée"];
 
       if(personnel?.employes?.length){
-        sections.push({title:"Employés", rows: personnel.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
+        sections.push({title:"Employés", rows: personnel.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:JOUR}))});
       }
       if(personnel?.interims?.length){
-        sections.push({title:"Intérim", rows: personnel.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
+        sections.push({title:"Intérim", rows: personnel.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:JOUR}))});
       }
       if(personnel?.livreurs){
-        Object.entries(personnel.livreurs).forEach(([gLabel, slots])=>{
-          sections.push({title:`Livreurs — ${gLabel}`, rows:[{label:gLabel, slots}]});
+        Object.entries(personnel.livreurs).forEach(([gLabel, _slots])=>{
+          sections.push({title:`Livreurs — ${gLabel}`, rows:[{label:gLabel, slots:JOUR}]});
         });
       }
 
@@ -238,7 +258,7 @@
         table.className = "table";
         const thead = document.createElement("thead");
         const trh = document.createElement("tr");
-        trh.innerHTML = `<th class="row-label">Nom / Ligne</th>` + section.rows[0].slots.map(s=>`<th>${s}</th>`).join("");
+        trh.innerHTML = `<th class="row-label">Nom / Ligne</th><th>Journée</th>`;
         thead.appendChild(trh);
         table.appendChild(thead);
 
@@ -249,13 +269,13 @@
           td0.className = "row-label";
           td0.textContent = r.label;
           tr.appendChild(td0);
-          r.slots.forEach(slot=>{
-            const td = document.createElement("td");
-            td.className = "cell";
-            td.dataset.slot = slot;
-            td.addEventListener("click", ()=> cycleCell(td));
-            tr.appendChild(td);
-          });
+
+          const td = document.createElement("td");
+          td.className = "cell";
+          td.dataset.slot = "Journée";
+          td.addEventListener("click", (ev)=> onCellClick(ev, td));
+          tr.appendChild(td);
+
           tbody.appendChild(tr);
         });
         table.appendChild(tbody);
@@ -263,18 +283,80 @@
       });
     }
 
-    function cycleCell(td){
-      const curr = td.textContent.trim();
-      const idx = CONFIG.presenceCodes.indexOf(curr);
-      const next = CONFIG.presenceCodes[(idx+1) % CONFIG.presenceCodes.length];
-      td.textContent = next;
+    function onCellClick(ev, td){
+      if(ev.shiftKey && lastClickedCell){
+        const rows = Array.from($saisieContent.querySelectorAll("tbody tr"));
+        const a = rows.indexOf(lastClickedCell.closest("tr"));
+        const b = rows.indexOf(td.closest("tr"));
+        if(a>-1 && b>-1){
+          const [from,to] = a<b ? [a,b] : [b,a];
+          for(let i=from;i<=to;i++){
+            const cell = rows[i].querySelector('td.cell');
+            if(cell) addToSelection(cell);
+          }
+        }else{
+          toggleSelection(td);
+        }
+      }else if(ev.ctrlKey || ev.metaKey){
+        toggleSelection(td);
+      }else{
+        clearSelection();
+        addToSelection(td);
+      }
+      lastClickedCell = td;
+      togglePalette();
+    }
+
+    function toggleSelection(td){
+      const key = cellKey(td);
+      if(selection.has(key)){ selection.delete(key); td.classList.remove("selected"); }
+      else { selection.add(key); td.classList.add("selected"); }
+    }
+    function addToSelection(td){
+      const key = cellKey(td);
+      selection.add(key);
+      td.classList.add("selected");
+    }
+    function clearSelection(){
+      selection.forEach(k=>{
+        const el = document.querySelector(`[data-key="\${k}"]`);
+        if(el) el.classList.remove("selected");
+      });
+      selection.clear();
+      togglePalette();
+    }
+    function cellKey(td){
+      const label = td.closest("tr").querySelector(".row-label")?.textContent.trim();
+      const slot = td.dataset.slot || "Journée";
+      const key = btoa(unescape(encodeURIComponent(label+"__"+slot)));
+      td.dataset.key = key;
+      return key;
+    }
+    function getCellByKey(k){ return document.querySelector(`[data-key="\${k}"]`); }
+
+    function applyCodeToSelection(code){
+      selection.forEach(k=>{
+        const td = getCellByKey(k);
+        if(!td) return;
+        td.textContent = code;
+        applyColor(td, code);
+      });
+    }
+
+    function applyColor(td, code){
+      td.classList.remove("code-P","code-CP","code-ABS","code-MAL","code-R");
+      if(code) td.classList.add("code-"+code);
+    }
+
+    function togglePalette(){
+      $palette.classList.toggle("visible", selection.size>0);
     }
 
     async function loadPrefillForDay(){
       if(!currentMagasin) return;
       try{
         const day = $dateInput.value;
-        const res = await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+        const res = await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=\${day}`);
         if(!res.ok) return;
         const payload = await res.json();
         applyPrefill(payload?.data||{});
@@ -282,14 +364,14 @@
     }
 
     function applyPrefill(data){
-      const map = new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
+      const map = new Map((data.rows||[]).map(r=>[`\${r.label}`, r.values||{}]));
       $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
         const label = tr.querySelector(".row-label")?.textContent.trim();
         const values = map.get(label)||{};
-        tr.querySelectorAll("td.cell").forEach(td=>{
-          const slot = td.dataset.slot;
-          td.textContent = values[slot] || "";
-        });
+        const td = tr.querySelector("td.cell");
+        const code = values["Journée"] || "";
+        td.textContent = code;
+        applyColor(td, code);
       });
     }
 
@@ -297,9 +379,8 @@
       const rows=[];
       $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
         const label = tr.querySelector(".row-label")?.textContent.trim();
-        const values={};
-        tr.querySelectorAll("td.cell").forEach(td=>{ values[td.dataset.slot] = td.textContent.trim(); });
-        rows.push({label, values});
+        const td = tr.querySelector("td.cell");
+        rows.push({label, values: {"Journée": td.textContent.trim()}});
       });
       return { rows };
     }
@@ -333,13 +414,14 @@
       $resumeError.style.display = "none";
       const yyyymm = $resumeMonth.value;
       if(!yyyymm) return;
-      $resumeContent.innerHTML = "";
+      $resumeContent.innerHTML = '<div class="loader"><div class="spinner"></div><span>Chargement en cours…</span></div>';
       try{
-        const res = await api(`/month?yyyymm=${yyyymm}`);
+        const res = await api(`/month?yyyymm=\${yyyymm}`);
         if(!res.ok) throw new Error("HTTP "+res.status);
         const monthData = await res.json();
         renderResume(yyyymm, monthData);
       }catch(e){
+        $resumeContent.innerHTML = "";
         $resumeError.textContent = "Impossible de charger le résumé (serveur non joignable ?).";
         $resumeError.style.display = "block";
       }
@@ -347,6 +429,7 @@
 
     function renderResume(yyyymm, monthData){
       const days = daysOfMonthLocal(yyyymm);
+      const container = document.createElement("div");
       CONFIG.magasins.forEach(mag=>{
         const block = document.createElement("div"); block.className="store-block";
         const title = document.createElement("div"); title.className="store-title"; title.textContent = mag; block.appendChild(title);
@@ -354,19 +437,19 @@
         const table = document.createElement("table"); table.className="table";
         const thead = document.createElement("thead");
         const tr1 = document.createElement("tr");
-        tr1.innerHTML = '<th class="row-label">Nom / Ligne</th>' + days.map(d=>`<th>${dowLetter(d)}</th>`).join("");
+        tr1.innerHTML = '<th class="row-label">Nom / Ligne</th>' + days.map(d=>`<th>\${dowLetter(d)}</th>`).join("");
         const tr2 = document.createElement("tr");
-        tr2.innerHTML = '<th class="sub-label">&nbsp;</th>' + days.map(d=>`<th>${d.getDate()}</th>`).join("");
+        tr2.innerHTML = '<th class="sub-label">&nbsp;</th>' + days.map(d=>`<th>\${d.getDate()}</th>`).join("");
         thead.appendChild(tr1); thead.appendChild(tr2); table.appendChild(thead);
 
         const tbody = document.createElement("tbody");
         const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
         const rows = [];
-        pers.employes.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-        pers.interims.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-        Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{ rows.push({label:g, slots}); });
+        pers.employes.forEach(p=> rows.push({label:`\${p.nom} \${p.prenom||""}`.trim()}));
+        pers.interims.forEach(p=> rows.push({label:`\${p.nom} \${p.prenom||""}`.trim()}));
+        Object.keys(pers.livreurs||{}).forEach(g=> rows.push({label:g}));
 
-        const file = monthData.files?.[mag] || {}; // {"YYYY-MM-DD": {data:{rows:[...]}}}
+        const file = monthData.files?.[mag] || {};
         const daysKey = days.map(d=> ymd(d));
 
         rows.forEach(r=>{
@@ -380,8 +463,9 @@
             if(rec?.data?.rows){
               const found = rec.data.rows.find(x=> x.label===r.label);
               if(found){
-                const vals = Object.values(found.values||{}).filter(Boolean);
-                td.textContent = vals[0] || "";
+                const code = (found.values && (found.values["Journée"]||"")) || "";
+                td.textContent = code;
+                applyColor(td, code);
               }
             }
             tr.appendChild(td);
@@ -391,8 +475,10 @@
 
         table.appendChild(tbody);
         block.appendChild(table);
-        $resumeContent.appendChild(block);
+        container.appendChild(block);
       });
+      $resumeContent.innerHTML = "";
+      $resumeContent.appendChild(container);
     }
   </script>
 </body>
