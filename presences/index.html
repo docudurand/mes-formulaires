@@ -194,7 +194,6 @@ function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
   if(isShift && selectedCells.size){
-    // sélection rectangulaire
     const last=[...selectedCells][selectedCells.size-1];
     const rectRange=(a,b)=>{
       const ar=a.closest('tr').rowIndex, ac=a.cellIndex;
@@ -222,7 +221,6 @@ function headerSelectColumn(th){
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
 function buildSection(title, rows){
-  // slots = union de tous les créneaux de la section
   const headerSlots = union(...rows.map(r=>r.slots||[]));
   const table=document.createElement('table'); table.className='table';
   const thead=document.createElement('thead');
@@ -253,15 +251,12 @@ function buildSaisieUI(){
   clearSelection();
   const sections=[];
 
-  // Employés
   const empRows=(personnel?.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
   if(empRows.length) sections.push({title:"EMPLOYÉS", rows:empRows});
 
-  // Intérim
   const intRows=(personnel?.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
   if(intRows.length) sections.push({title:"INTÉRIM", rows:intRows});
 
-  // Livreurs : un bloc par groupe (WARNING, NAVETTE…, C CHEZ VOUS…)
   Object.entries(personnel?.livreurs||{}).forEach(([g,slots])=>{
     const rows=[{label:g, slots: slots && slots.length? slots: ["Matin","A. Midi"]}];
     sections.push({title:`LIVREURS — ${g}`, rows});
@@ -352,7 +347,7 @@ async function loadResume(){
 }
 $btnRefreshResume.addEventListener('click',loadResume);
 
-<script>
+/* ====== NE PAS OUVRIR UN NOUVEAU <script> ICI ====== */
 function renderResume(yyyymm, monthData){
   const days = daysOfMonth(yyyymm);
   const container = document.createElement("div");
@@ -365,8 +360,7 @@ function renderResume(yyyymm, monthData){
     const file = monthData.files?.[mag] || {};
     const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    // 1) Lignes à afficher (labels + slots par défaut)
-    const labelSet = new Map(); // normLabel -> {label, slots:Set}
+    const labelSet = new Map();
     pers.employes.forEach(p=>{
       const label = `${p.nom} ${p.prenom||""}`.trim();
       labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
@@ -380,7 +374,6 @@ function renderResume(yyyymm, monthData){
       labelSet.set(norm(label), {label, slots:new Set(slots && slots.length ? slots : ["Matin","A. Midi"])});
     });
 
-    // 2) Enrichir avec ce qu’on trouve réellement dans les fichiers
     Object.values(file).forEach(dayRec=>{
       const rows = dayRec?.data?.rows || [];
       rows.forEach(r=>{
@@ -390,7 +383,6 @@ function renderResume(yyyymm, monthData){
       });
     });
 
-    // 3) Ordre des slots pour l’en-tête
     const allSlots = new Set();
     for (const {slots} of labelSet.values()) slots.forEach(s=>allSlots.add(s));
     const slotOrder = [
@@ -398,7 +390,6 @@ function renderResume(yyyymm, monthData){
       ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))
     ];
 
-    // 4) Construction du tableau
     const block = document.createElement("div"); block.style.marginBottom = "26px";
     const title = document.createElement("div"); title.className = "section-title"; title.textContent = mag;
     block.appendChild(title);
@@ -406,7 +397,6 @@ function renderResume(yyyymm, monthData){
     const table = document.createElement("table"); table.className = "table";
     const thead = document.createElement("thead");
 
-    // Ligne 1 : jours (colspan = nb slots)
     const tr1 = document.createElement("tr");
     const th0 = document.createElement("th");
     th0.className = "row-label";
@@ -420,7 +410,6 @@ function renderResume(yyyymm, monthData){
     });
     thead.appendChild(tr1);
 
-    // Ligne 2 : libellés de slots sous chaque jour
     const tr2 = document.createElement("tr");
     const th00 = document.createElement("th");
     th00.className = "sub-label";
@@ -461,7 +450,7 @@ function renderResume(yyyymm, monthData){
           if(isWE(d)) td.classList.add("weekend");
           const v = values[slot] || "";
           td.textContent = v;
-          if(v) td.classList.add(v); // .P, .CP, .ABS, .MAL, .R -> déjà stylées
+          if(v) td.classList.add(v);
           tr.appendChild(td);
         });
       });
