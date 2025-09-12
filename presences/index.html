@@ -126,6 +126,7 @@ const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+/* IMPORTANT: garder /presence (singulier) */
 const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
 
 /* ====== constantes ====== */
@@ -172,7 +173,7 @@ MAGASINS.forEach(m=>{
   $resumeStore.appendChild(opt);
 });
 
-/* ====== helpers réseau (avec retry + timeout) ====== */
+/* ====== helpers réseau (retry + timeout) ====== */
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=2){
   const ctrl = new AbortController();
@@ -365,8 +366,6 @@ async function loadResumeForStore(){
   const ym=$resumeMonth.value;
   const mag=$resumeStore.value;
   try{
-    // On récupère le mois (backend actuel renvoie tous les magasins),
-    // puis on filtre côté client pour n'afficher QUE le magasin choisi.
     const monthData = await fetchJSON(`/month?yyyymm=${ym}`);
     renderOneStore(ym, mag, monthData);
   }catch(e){
@@ -376,45 +375,71 @@ async function loadResumeForStore(){
   }
 }
 
-/* rendu d’un seul magasin (séparé par sections) */
+/* rendu d’un seul magasin (séparé par sections) – fusion Sheets + fichiers */
 function renderOneStore(yyyymm, magasin, monthData){
   const days = daysOfMonth(yyyymm);
   const file = monthData.files?.[magasin] || {};
   const pers = monthData.personnel?.[magasin] || {employes:[], interims:[], livreurs:{}};
 
+  // 1) Construire les ensembles de labels depuis Sheets
+  const labelsEmp = new Set((pers.employes||[]).map(p=>norm(`${p.nom} ${p.prenom||""}`.trim())));
+  const labelsInt = new Set((pers.interims||[]).map(p=>norm(`${p.nom} ${p.prenom||""}`.trim())));
+  const livreurGroups = Object.keys(pers.livreurs||{}).map(norm);
+
+  // 2) Scanner les fichiers pour récupérer tous les labels rencontrés et leurs slots observés
+  const observed = new Map(); // normLabel -> { label, slots:Set }
+  Object.values(file).forEach(rec=>{
+    const rows = rec?.data?.rows || [];
+    rows.forEach(r=>{
+      const key = norm(r.label);
+      if(!observed.has(key)) observed.set(key, {label:r.label, slots:new Set()});
+      Object.keys(r.values||{}).forEach(s=> observed.get(key).slots.add(s));
+    });
+  });
+
+  // 3) Déterminer à quelle section rattacher chaque label observé (si pas déjà dans Sheets)
+  //    Heuristique: si le label correspond EXACTEMENT à un groupe livreur -> section de ce groupe,
+  //    sinon par défaut EMPLOYÉS (slots par défaut Matin/A. Midi si rien observé).
+  observed.forEach((info, key)=>{
+    const labelUpper = key;
+    if (!labelsEmp.has(labelUpper) && !labelsInt.has(labelUpper) && !livreurGroups.includes(labelUpper)){
+      // injecter côté EMPLOYÉS
+      labelsEmp.add(labelUpper);
+      // si aucun slot observé, on met Matin/A. Midi
+      if (info.slots.size === 0) { info.slots.add("Matin"); info.slots.add("A. Midi"); }
+    }
+  });
+
   const wrap = document.createElement('div');
-  // Titre + séparation visuelle
   const magTitle = document.createElement('div'); magTitle.className='section-title'; magTitle.textContent=magasin;
-  const divider = document.createElement('div'); divider.className='mag-divider';
   wrap.appendChild(magTitle);
 
-  // Fabrique un tableau pour une section donnée
-  const makeSection = (title, rows, slotsByRow)=>{
-    if(!rows.length) return null;
+  // petite barre de séparation entre magasins
+  const divider = document.createElement('div'); divider.className='mag-divider';
 
-    // déterminer l’ordre des colonnes (union de slots rencontrés dans la section)
+  const makeSection = (title, rowLabels, slotsResolver)=>{
+    if(!rowLabels.length) return null;
+
+    // ordre des slots = union rencontrée dans la section (observé ou par défaut)
     const seen=new Set(), slotOrder=[];
-    rows.forEach(r=>{
-      const slots = slotsByRow(r);
+    rowLabels.forEach(lbl=>{
+      const key=norm(lbl);
+      const obs=observed.get(key);
+      const slots = slotsResolver(lbl, obs);
       (slots||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); slotOrder.push(s);} });
     });
-
-    // table
-    const block = document.createElement('div');
-    const subtitle = document.createElement('div'); subtitle.className='section-sub'; subtitle.textContent=title;
-    block.appendChild(subtitle);
 
     const table=document.createElement('table'); table.className='table';
     const thead=document.createElement('thead');
 
-    // Ligne A : lettres de jours (colspan)
+    // Ligne A : lettres (colspan)
     const trA=document.createElement('tr');
     const th0=document.createElement('th'); th0.className='row-label'; th0.textContent='Nom / Ligne';
     trA.appendChild(th0);
     days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=slotOrder.length; th.textContent=dowLetter(d); trA.appendChild(th); });
     thead.appendChild(trA);
 
-    // Ligne B : numéro du jour (colspan)
+    // Ligne B : numéros
     const trB=document.createElement('tr');
     const thB0=document.createElement('th'); thB0.className='sub-label'; thB0.textContent=' '; trB.appendChild(thB0);
     days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=slotOrder.length; th.textContent=String(d.getDate()); trB.appendChild(th); });
@@ -431,15 +456,15 @@ function renderOneStore(yyyymm, magasin, monthData){
     const tbody=document.createElement('tbody');
     const isWE=d=>{ const x=d.getDay(); return x===0||x===6; };
 
-    rows.forEach(row=>{
+    rowLabels.forEach(lbl=>{
       const tr=document.createElement('tr');
-      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=row.label; tr.appendChild(td0);
+      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=lbl; tr.appendChild(td0);
 
       days.forEach(d=>{
         const dk=ymd(d); const rec=file[dk];
         let values={};
         if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(row.label));
+          const found = rec.data.rows.find(r => norm(r.label) === norm(lbl));
           values = found?.values || {};
         }
         slotOrder.forEach(slot=>{
@@ -456,24 +481,30 @@ function renderOneStore(yyyymm, magasin, monthData){
     });
 
     table.appendChild(tbody);
-    block.appendChild(table);
+
+    const block=document.createElement('div');
+    const subtitle = document.createElement('div'); subtitle.className='section-sub'; subtitle.textContent=title;
+    block.appendChild(subtitle); block.appendChild(table);
     return block;
   };
 
-  // Sections
-  const empRows = (pers.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-  const empTab = makeSection("EMPLOYÉS", empRows, _=>["Matin","A. Midi"]);
-  if(empTab) wrap.appendChild(empTab);
+  // EMPLOYÉS
+  const empLabels = [...labelsEmp].map(k=> observed.get(k)?.label || (pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
+  const empSec = makeSection("EMPLOYÉS", empLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
+  if(empSec) wrap.appendChild(empSec);
 
-  const intRows = (pers.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-  const intTab = makeSection("INTÉRIM", intRows, _=>["Matin","A. Midi"]);
-  if(intTab) wrap.appendChild(intTab);
+  // INTÉRIM
+  const intLabels = [...labelsInt].map(k=> observed.get(k)?.label || (pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
+  const intSec = makeSection("INTÉRIM", intLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
+  if(intSec) wrap.appendChild(intSec);
 
-  // livreurs : un tableau par groupe
-  Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
-    const rows=[{label:g}];
-    const tab = makeSection(`LIVREURS — ${g}`, rows, _=> (slots&&slots.length)? slots : ["Matin","A. Midi"]);
-    if(tab) wrap.appendChild(tab);
+  // LIVREURS (un tableau par groupe)
+  Object.entries(pers.livreurs||{}).forEach(([g,defSlots])=>{
+    const key = norm(g);
+    // le label d’un groupe livreur est le groupe lui-même
+    const lbls = [ observed.get(key)?.label || g ];
+    const sec = makeSection(`LIVREURS — ${g}`, lbls, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : (defSlots&&defSlots.length? defSlots : ["Matin","A. Midi"]) ));
+    if(sec) wrap.appendChild(sec);
   });
 
   wrap.appendChild(divider);
