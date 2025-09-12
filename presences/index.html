@@ -26,16 +26,12 @@ button.badge[data-code="P"]{color:var(--ok)}
 button.badge[data-code="ABS"]{color:var(--abs)}
 button.badge[data-code="MAL"]{color:#946200}
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
-.mag-block{ border-top:2px solid var(--line); padding-top:8px; margin-top:18px }
-.mag-title{ color:var(--brand); font-weight:800; margin:10px 0 6px }
-.group-title{ color:#111; font-weight:800; margin:6px 0 0 }
-.table th, .table td{ font-size:12px; padding:6px }
-.table thead th.sub-label{ color:var(--muted); font-weight:600 }
+.table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
+.table thead th.sub-label{ color: var(--muted); font-weight:600 }
 .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
-
 .cell.weekend{background:#000;color:#fff}
 .cell.selected{outline:3px solid #2563eb44}
 .cell.P{background:#e8f5ec;color:var(--ok);font-weight:700}
@@ -360,21 +356,20 @@ function renderResume(yyyymm, monthData){
   const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
   const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
 
-  // fabrique un tableau mensuel pour un bloc (titre, lignes, slots)
+  // fabrique un tableau mensuel pour un "bloc" (titre, rows, slots)
   function buildMonthBlock(title, rows, slots, fileByDay){
-    const wrap = document.createElement("div");
+    const block = document.createElement("div");
     const h = document.createElement("div");
-    h.className = "group-title";
+    h.className = "section-title";
     h.textContent = title;
-    wrap.appendChild(h);
+    block.appendChild(h);
 
     const table = document.createElement("table");
     table.className = "table";
 
-    /* ---------- EN-TÊTE : 3 rangées (lettre / numéro / créneaux) ---------- */
+    // --- EN-TÊTE à 3 lignes (lettre / numéro / créneaux)
     const thead = document.createElement("thead");
 
-    // Ligne 1 : lettres de jours
     const tr1 = document.createElement("tr");
     const th0 = document.createElement("th");
     th0.className = "row-label";
@@ -388,7 +383,6 @@ function renderResume(yyyymm, monthData){
     });
     thead.appendChild(tr1);
 
-    // Ligne 1bis : numéros de jours
     const tr1b = document.createElement("tr");
     const th0b = document.createElement("th");
     th0b.className = "sub-label"; th0b.textContent = " ";
@@ -401,7 +395,6 @@ function renderResume(yyyymm, monthData){
     });
     thead.appendChild(tr1b);
 
-    // Ligne 2 : libellés de créneaux sous chaque jour
     const tr2 = document.createElement("tr");
     const th00 = document.createElement("th");
     th00.className = "sub-label"; th00.textContent = " ";
@@ -409,7 +402,6 @@ function renderResume(yyyymm, monthData){
     days.forEach(()=>{
       slots.forEach(s=>{
         const th = document.createElement("th");
-        th.className = "sub-label";
         th.textContent = s;
         tr2.appendChild(th);
       });
@@ -417,7 +409,7 @@ function renderResume(yyyymm, monthData){
     thead.appendChild(tr2);
     table.appendChild(thead);
 
-    /* ---------- CORPS ---------- */
+    // --- Corps
     const tbody = document.createElement("tbody");
 
     rows.forEach(row=>{
@@ -441,7 +433,7 @@ function renderResume(yyyymm, monthData){
           if(isWE(d)) td.classList.add("weekend");
           const v = values[slot] || "";
           td.textContent = v;
-          if(v) td.classList.add(v);   // .P, .CP, .ABS, .MAL, .R : déjà stylées en haut
+          if(v) td.classList.add(v); // .P, .CP, .ABS, .MAL, .R -> déjà stylées
           tr.appendChild(td);
         });
       });
@@ -450,48 +442,51 @@ function renderResume(yyyymm, monthData){
     });
 
     table.appendChild(tbody);
-    wrap.appendChild(table);
-    return wrap;
+    block.appendChild(table);
+    return block;
   }
 
-  /* ---------- Un bloc par magasin, puis sections comme “Saisie” ---------- */
+  // Pour chaque magasin, produire les blocs comme dans “Saisie”
   MAGASINS.forEach(mag=>{
-    const magWrap = document.createElement("div");
-    magWrap.className = "mag-block";
-
+    const wrapper = document.createElement("div");
     // Titre magasin
-    const magTitle = document.createElement("div");
-    magTitle.className = "mag-title";
-    magTitle.textContent = mag;
-    magWrap.appendChild(magTitle);
+    const t = document.createElement("div");
+    t.className = "section-title";
+    t.style.marginTop = "10px";
+    t.textContent = mag;
+    wrapper.appendChild(t);
 
     const fileByDay = monthData.files?.[mag] || {};
     const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    // EMPLOYÉS (Matin, A. Midi)
+    // EMPLOYÉS
     if(pers.employes?.length){
       const rows = pers.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-      magWrap.appendChild(buildMonthBlock("EMPLOYÉS", rows, ["Matin","A. Midi"], fileByDay));
+      const slots = ["Matin","A. Midi"];
+      wrapper.appendChild(buildMonthBlock("EMPLOYÉS", rows, slots, fileByDay));
     }
 
-    // INTÉRIM (Matin, A. Midi)
+    // INTÉRIM
     if(pers.interims?.length){
       const rows = pers.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-      magWrap.appendChild(buildMonthBlock("INTÉRIM", rows, ["Matin","A. Midi"], fileByDay));
+      const slots = ["Matin","A. Midi"];
+      wrapper.appendChild(buildMonthBlock("INTÉRIM", rows, slots, fileByDay));
     }
 
-    // LIVREURS — un bloc par groupe avec ses créneaux exacts
-    Object.entries(pers.livreurs || {}).forEach(([g, slots])=>{
-      const s = (slots && slots.length) ? slots : ["Matin","A. Midi"];
-      const rows = [{label: g}]; // comme dans la Saisie : une ligne par groupe
-      magWrap.appendChild(buildMonthBlock(`LIVREURS — ${g}`, rows, s, fileByDay));
+    // LIVREURS — un bloc par groupe, avec ses créneaux
+    const livreurs = pers.livreurs || {};
+    Object.keys(livreurs).forEach(g=>{
+      const slots = (livreurs[g] && livreurs[g].length) ? livreurs[g] : ["Matin","A. Midi"];
+      // Dans “Saisie” c’est une seule ligne par groupe
+      const rows = [{label: g}];
+      wrapper.appendChild(buildMonthBlock(`LIVREURS — ${g}`, rows, slots, fileByDay));
     });
 
-    container.appendChild(magWrap);
+    container.appendChild(wrapper);
   });
 
-  document.getElementById("resume-content").innerHTML = "";
-  document.getElementById("resume-content").appendChild(container);
+  $resumeContent.innerHTML = "";
+  $resumeContent.appendChild(container);
 }
 </script>
 </body>
