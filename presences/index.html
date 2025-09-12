@@ -12,10 +12,10 @@
       --brand:#d21f3c;
       --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb;
       --ok:#1a7f37; --info:#0b63c6; --warn:#b36b00; --abs:#b00020; --neutral:#555;
-      --sel: color-mix(in srgb, var(--brand) 20%, transparent);
+      --sel: color-mix(in srgb, var(--info) 22%, transparent);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+    html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:#f6f7f8}
     a{color:inherit}
     .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
     .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
@@ -35,12 +35,12 @@
     button:disabled{opacity:.6;cursor:not-allowed}
     .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
     .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
-    .table thead th{background:#fafafa;font-weight:800}
+    .table thead th{background:#fafafa;font-weight:800;cursor:pointer}
     .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
     .cell{min-width:28px;height:28px;display:grid;place-items:center;cursor:pointer;user-select:none}
-    .cell.selected{outline:2px solid var(--brand); outline-offset:-2px; background:var(--sel)}
+    .cell.selected{outline:2px solid var(--info); outline-offset:-2px; background:var(--sel)}
     .cell.weekend{background:#000;color:#fff}
-    .row-label{white-space:nowrap;text-align:left;font-weight:600}
+    .row-label{white-space:nowrap;text-align:left;font-weight:600; cursor:default;}
     .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
     .legend{color:var(--muted);font-size:.9rem;margin-top:6px}
     .resume .store-block{margin-bottom:32px}
@@ -111,7 +111,7 @@
 
       <div id="saisie-content" class="saisie"></div>
       <div class="legend">
-        <span>Sélection : clic pour sélectionner / Ctrl (Cmd) pour ajouter / Shift pour une plage. Choisissez un code dans la palette.</span>
+        <span>Sélection : clic pour sélectionner / Ctrl (Cmd) pour ajouter / Shift pour une plage. Clic sur l’en‑tête d’une colonne pour tout sélectionner. Puis cliquez sur un code (P, CP…) pour appliquer.</span>
       </div>
       <p id="saisie-error" class="error" style="display:none"></p>
     </section>
@@ -132,8 +132,16 @@
   </main>
 
   <script>
+    // --- API base: par défaut /presence ; sur Wix passer ?api=https://VOTRE-RENDER/presence
+    const PARAM_API = new URLSearchParams(location.search).get("api");
+    const DEFAULT_SAME_ORIGIN = "/presence";
+    const WIX_FALLBACK = (location.host.includes("wixsite.com")||location.host.includes("wix.com"))
+      ? "https://mes-formulaires.onrender.com/presence"   // <-- remplace par ton domaine Render si besoin
+      : DEFAULT_SAME_ORIGIN;
+    const API_BASE = (PARAM_API || WIX_FALLBACK).replace(/\/$/, "");
+
     const CONFIG = {
-      apiBase: "/presence",
+      apiBase: API_BASE,
       magasins: [
         "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
         "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
@@ -163,11 +171,14 @@
     const ymd = (d) => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
     const dowLetter = (d) => ["D","L","M","M","J","V","S"][d.getDay()];
 
-    const api = (path, opts={}) => fetch(CONFIG.apiBase + path, {
-      headers: {"Content-Type":"application/json"},
-      credentials: "include",
-      ...opts
-    });
+    const api = (path, opts={}) => {
+      const url = CONFIG.apiBase + path;
+      return fetch(url, {
+        headers: {"Content-Type":"application/json"},
+        credentials: "include",
+        ...opts
+      });
+    };
 
     let currentMagasin = null;
     let personnel = null;
@@ -207,15 +218,15 @@
       $btnSave.addEventListener("click", saveSaisie);
       $dateInput.addEventListener("change", loadPrefillForDay);
       $btnRefreshResume.addEventListener("click", loadResume);
+
       document.querySelectorAll(".palette .opt").forEach(opt=>{
         const v = opt.dataset.v;
+        if (opt.id === "btn-fill-all-P") return;
         if (v === undefined) return;
-        opt.addEventListener("click", ()=> {
-          if (opt.id === "btn-fill-all-P") return; // géré séparément
-          applyCodeToSelection(v);
-        });
+        opt.addEventListener("click", ()=> applyCodeToSelection(v));
       });
       $btnFillAllP.addEventListener("click", ()=> fillAll("P"));
+
       document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ clearSelection(); } });
     })();
 
@@ -283,7 +294,7 @@
         table.className = "table";
         const thead = document.createElement("thead");
         const trh = document.createElement("tr");
-        trh.innerHTML = `<th class="row-label">Nom / Ligne</th>` + section.rows[0].slots.map(s=>`<th>${s}</th>`).join("");
+        trh.innerHTML = `<th class="row-label" data-col="0" title="En-tête (non sélectionnable)">Nom / Ligne</th>` + section.rows[0].slots.map((s,i)=>`<th data-col="${i+1}" title="Cliquer pour sélectionner la colonne">${s}</th>`).join("");
         thead.appendChild(trh);
         table.appendChild(thead);
 
@@ -294,11 +305,11 @@
           td0.className = "row-label";
           td0.textContent = r.label;
           tr.appendChild(td0);
-          r.slots.forEach(slot=>{
+          r.slots.forEach((slot,i)=>{
             const td = document.createElement("td");
             td.className = "cell";
             td.dataset.slot = slot;
-            // key unique pour la sélection et la sauvegarde
+            td.dataset.col = (i+1).toString();
             td.dataset.key = btoa(unescape(encodeURIComponent(section.title+"|"+r.label+"|"+slot)));
             td.addEventListener("click", (ev)=> onCellClick(ev, td));
             tr.appendChild(td);
@@ -306,6 +317,15 @@
           tbody.appendChild(tr);
         });
         table.appendChild(tbody);
+        // Sélection de colonne via en-tête
+        trh.querySelectorAll("th[data-col]").forEach(th=>{
+          const col = th.dataset.col;
+          if(col==="0") return;
+          th.addEventListener("click", ()=>{
+            clearSelection();
+            table.querySelectorAll(`td.cell[data-col="${col}"]`).forEach(td=> selectCell(td,true));
+          });
+        });
         $saisieContent.appendChild(table);
       });
     }
@@ -322,17 +342,15 @@
           }
         }
       }else if(ev.ctrlKey || ev.metaKey){
-        // toggle
         if(selection.has(td.dataset.key)){ deselectCell(td); } else { selectCell(td); }
       }else{
-        // simple clic => sélection unique
         clearSelection();
         selectCell(td);
       }
       lastClickedCell = td;
     }
 
-    function selectCell(td, addOnly=false){
+    function selectCell(td){
       if(!td || !td.dataset.key) return;
       selection.add(td.dataset.key);
       td.classList.add("selected");
@@ -363,9 +381,7 @@
     }
 
     function setCellCode(td, code){
-      // texte
       td.textContent = code;
-      // couleurs
       td.classList.remove("code-P","code-CP","code-ABS","code-MAL","code-R");
       (CODE_CLASSES[code]||[]).forEach(c=> td.classList.add(c));
     }
@@ -382,7 +398,6 @@
     }
 
     function applyPrefill(data){
-      // data: {rows:[{label, values:{slot:value}}]}
       const map = new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
       $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
         const label = tr.querySelector(".row-label")?.textContent.trim();
@@ -416,14 +431,16 @@
       const data = collectSaisie();
       $btnSave.disabled = true;
       try{
-        const res = await api("/save", {method:"POST", body: JSON.stringify({
-          magasin: currentMagasin,
-          date: $dateInput.value,
-          data
-        })});
-        if(!res.ok) throw new Error("save failed");
+        const body = { magasin: currentMagasin, date: $dateInput.value, data };
+        console.log("[UI] POST", CONFIG.apiBase+"/save", body);
+        const res = await api("/save", {method:"POST", body: JSON.stringify(body)});
+        if(!res.ok){
+          const t = await res.text().catch(()=> "");
+          throw new Error("save failed "+res.status+" "+t);
+        }
         alert("Enregistré ✔");
       }catch(e){
+        console.error("[UI] SAVE ERROR", e);
         $saisieError.textContent = "Échec de l'enregistrement (serveur non joignable ?).";
         $saisieError.style.display = "block";
       }finally{
@@ -437,11 +454,14 @@
       if(!yyyymm) return;
       $resumeContent.innerHTML = '<div class="loader"><div class="spinner"></div><span>Chargement en cours…</span></div>';
       try{
-        const res = await api(`/month?yyyymm=${yyyymm}`);
+        const url = `/month?yyyymm=${yyyymm}`;
+        console.log("[UI] GET", CONFIG.apiBase+url);
+        const res = await api(url);
         if(!res.ok) throw new Error("HTTP "+res.status);
         const monthData = await res.json();
         renderResume(yyyymm, monthData);
       }catch(e){
+        console.error("[UI] MONTH ERROR", e);
         $resumeContent.innerHTML = "";
         $resumeError.textContent = "Impossible de charger le résumé (serveur non joignable ?).";
         $resumeError.style.display = "block";
