@@ -17,7 +17,6 @@ import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
-import presencesRouter from "./presences/index.js";
 
 dotenv.config();
 
@@ -32,7 +31,6 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
-app.use("/api/presences", presencesRouter);
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
@@ -81,104 +79,6 @@ app.get("/api/sheets/televente", async (req, res) => {
   }
 });
 
-const CONGES_ADMIN_CODE = process.env.CONGES_ADMIN_CODE || "1234";
-
-function normalizeUrl(v) {
-  if (!v) return "";
-  let s = String(v).trim();
-  s = s.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
-  return s;
-}
-
-function getAppsScriptPresencesUrl() {
-  const raw =
-    process.env.APPS_SCRIPT_PRESENCES ||
-    process.env.APPS_SCRIPT_PRESENCES_URL ||
-    "";
-  return normalizeUrl(raw);
-}
-
-app.get("/api/presences/_debug", (req, res) => {
-  const url = getAppsScriptPresencesUrl();
-  res.json({
-    ok: true,
-    has_APPS_SCRIPT_PRESENCES: Boolean(process.env.APPS_SCRIPT_PRESENCES),
-    has_APPS_SCRIPT_PRESENCES_URL: Boolean(process.env.APPS_SCRIPT_PRESENCES_URL),
-    url_preview: url ? url.slice(0, 60) + (url.length > 60 ? "…" : "") : "",
-    ends_with_exec: !!url && url.endsWith("/exec"),
-    node_env: process.env.NODE_ENV || null,
-  });
-});
-
-app.get("/api/presences", async (req, res) => {
-  try {
-    const action = String(req.query.action || "");
-
-    if (action === "leaves") {
-      const code = req.get("X-Admin-Code") || req.query.adminCode;
-      if (String(code) !== String(CONGES_ADMIN_CODE)) {
-        return res.status(401).json({ error: "unauthorized" });
-      }
-    }
-
-    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
-    if (!APPS_SCRIPT_PRESENCES) {
-      return res.status(500).json({ error: "apps_script_presences_url_missing" });
-    }
-
-    const r = await axios.get(APPS_SCRIPT_PRESENCES, {
-      params: req.query,
-      timeout: 20000,
-      headers: {
-        "X-Admin-Code": req.get("X-Admin-Code") || "",
-      },
-    });
-    res.status(200).json(r.data);
-  } catch (e) {
-    console.error("[PRESENCES][GET] proxy_failed:", e?.message || e);
-    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
-  }
-});
-
-app.post("/api/presences", async (req, res) => {
-  try {
-    const action = String(req.body?.action || "");
-
-    if (action === "leave_decide") {
-      const code = req.get("X-Admin-Code") || req.query.adminCode;
-      if (String(code) !== String(CONGES_ADMIN_CODE)) {
-        return res.status(401).json({ error: "unauthorized" });
-      }
-    }
-
-    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
-    if (!APPS_SCRIPT_PRESENCES) {
-      return res.status(500).json({ error: "apps_script_presences_url_missing" });
-    }
-
-    const r = await axios.post(APPS_SCRIPT_PRESENCES, req.body, {
-      timeout: 30000,
-      headers: {
-        "X-Admin-Code": req.get("X-Admin-Code") || "",
-      },
-    });
-    res.status(200).json(r.data);
-  } catch (e) {
-    console.error("[PRESENCES][POST] proxy_failed:", e?.message || e);
-    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
-  }
-});
-
-(() => {
-  const url = getAppsScriptPresencesUrl();
-  console.log(
-    "[BOOT][PRESENCES] vars:",
-    { APPS_SCRIPT_PRESENCES: !!process.env.APPS_SCRIPT_PRESENCES, APPS_SCRIPT_PRESENCES_URL: !!process.env.APPS_SCRIPT_PRESENCES_URL }
-  );
-  console.log("[BOOT][PRESENCES] using URL:", url ? url.slice(0, 80) + (url.length > 80 ? "…" : "") : "(none)");
-  console.log("[BOOT][PRESENCES] ends_with_/exec ?", !!url && url.endsWith("/exec"));
-})();
-
 app.get("/stats/counters", async (_req, res) => {
   try {
     const data = await stats.getCounters();
@@ -209,18 +109,6 @@ app.use(
     index: false,
   })
 );
-
-console.log("[BOOT] public/presences ?",
-  fs.existsSync(path.join(__dirname, "public", "presences"))
-);
-console.log("[BOOT] public/presences/index.html ?",
-  fs.existsSync(path.join(__dirname, "public", "presences", "index.html"))
-);
-
-app.get("/presences/ping", (_req, res) => res.status(200).send("pong"));
-app.get("/presences", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "presences", "index.html"));
-});
 
 console.log("[BOOT] public/conges ?",
   fs.existsSync(path.join(__dirname, "public", "conges"))
@@ -340,19 +228,6 @@ app.post("/conges/api", async (req, res) => {
       ],
     });
 
-    const APPS_SCRIPT_PRESENCES = getAppsScriptPresencesUrl();
-    if (APPS_SCRIPT_PRESENCES) {
-      try {
-        await axios.post(APPS_SCRIPT_PRESENCES, {
-          action: "leave_request",
-          magasin, nom: _nom, prenom: _prenom, service,
-          nbJours: n, dateDu, dateAu, email, signatureData,
-        }, { timeout: 20000 });
-      } catch (e) {
-        console.warn("[CONGES] leave_request -> Apps Script échec:", e?.message || e);
-      }
-    }
-
     console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
     res.json({ ok: true });
   } catch (e) {
@@ -368,7 +243,6 @@ app.use("/formtelevente", formtelevente);
 app.use("/formulaire-piece", formulairePiece);
 app.use("/formulaire-piecepl", formulairePiecePL);
 app.use("/formulaire-pneu", formulairePneu);
-// (suiviDossier déjà monté plus haut)
 
 const pretPublic = path.join(__dirname, "pretvehiculed", "public");
 app.use("/pret", express.static(pretPublic, { extensions: ["html", "htm"], index: false }));
@@ -377,7 +251,6 @@ app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-
 app.use("/pret/api", loansRouter);
 
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
-
 
 const PORT = process.env.PORT || 3000;
 (async () => {
