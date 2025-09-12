@@ -352,59 +352,129 @@ async function loadResume(){
 }
 $btnRefreshResume.addEventListener('click',loadResume);
 
-function renderResume(ym,monthData){
-  const days=daysOfMonth(ym);
-  const container=document.createElement('div'); container.innerHTML='';
+<script>
+/* Remplacer TOUTE la fonction renderResume par celle-ci */
+function renderResume(yyyymm, monthData){
+  const days = daysOfMonth(yyyymm);
+  const container = document.createElement("div");
+  container.innerHTML = "";
+
+  const ORDERED_SLOTS = ["Matin","A. Midi","NUIT","10H","12H","16H"];
+
+  // Normalise un libellé pour matcher entre fichier/personnel
+  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+
   MAGASINS.forEach(mag=>{
-    const block=document.createElement('div'); block.style.marginBottom='26px';
-    const title=document.createElement('div'); title.className='section-title'; title.textContent=mag; block.appendChild(title);
+    const file = monthData.files?.[mag] || {};               // {"YYYY-MM-DD": {data:{rows:[...]}}}
+    const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    const table=document.createElement('table'); table.className='table';
-    const thead=document.createElement('thead');
-    const t1=document.createElement('tr'); t1.innerHTML='<th class="row-label">Nom / Ligne</th>'+days.map(d=>`<th>${dowLetter(d)}</th>`).join('');
-    const t2=document.createElement('tr'); t2.innerHTML='<th class="sub-label">&nbsp;</th>'+days.map(d=>`<th>${d.getDate()}</th>`).join('');
-    thead.appendChild(t1); thead.appendChild(t2); table.appendChild(thead);
-    const tbody=document.createElement('tbody');
+    // 1) Construire la liste des lignes (labels) à afficher
+    const labelSet = new Map(); // normLabel -> {label, slots:Set}
+    // a) depuis Google Sheet
+    pers.employes.forEach(p=>{
+      const label = `${p.nom} ${p.prenom||""}`.trim();
+      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
+    });
+    pers.interims.forEach(p=>{
+      const label = `${p.nom} ${p.prenom||""}`.trim();
+      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
+    });
+    Object.entries(pers.livreurs||{}).forEach(([g, slots])=>{
+      const label = g;
+      labelSet.set(norm(label), {label, slots:new Set(slots && slots.length? slots : ["Matin","A. Midi"])});
+    });
 
-    const pers=monthData.personnel?.[mag] || {employes:[],interims:[],livreurs:{}};
-    const rows=[];
-    pers.employes.forEach(p=>rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-    pers.interims.forEach(p=>rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-    Object.entries(pers.livreurs||{}).forEach(([g,slots])=>rows.push({label:g, slots}));
-
-    const file=monthData.files?.[mag]||{};
-    const dayKeys=days.map(d=>ymd(d));
-
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=r.label; tr.appendChild(td0);
-      dayKeys.forEach(dk=>{
-        const td=document.createElement('td'); td.className='cell';
-        const dow=new Date(dk).getDay(); if(dow===0||dow===6) td.classList.add('weekend');
-        const rec=file[dk];
-        if(rec?.data?.rows){
-          const found=rec.data.rows.find(x=>x.label===r.label);
-          if(found){
-            // on cherche un code non vide parmi les slots de cette ligne
-            const vals=r.slots||[];
-            const v=vals.map(s=>found.values?.[s]).find(Boolean) || "";
-            td.textContent=v; if(v) td.classList.add(v);
-          }
-        }
-        tr.appendChild(td);
+    // b) enrichir depuis les fichiers (labels + créneaux réels rencontrés)
+    Object.values(file).forEach(dayRec=>{
+      const rows = dayRec?.data?.rows || [];
+      rows.forEach(r=>{
+        const key = norm(r.label);
+        if(!labelSet.has(key)) labelSet.set(key, {label:r.label, slots:new Set()});
+        Object.keys(r.values||{}).forEach(s=> labelSet.get(key).slots.add(s));
       });
+    });
+
+    // 2) Construire l’ordre des créneaux pour l’en-tête (union sur toutes les lignes)
+    const allSlots = new Set();
+    for(const {slots} of labelSet.values()) slots.forEach(s=> allSlots.add(s));
+    // ordonner: d’abord l’ordre connu, puis les restants
+    const slotOrder = [...ORDERED_SLOTS.filter(s=>allSlots.has(s)),
+                       ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))];
+
+    // 3) Construire le tableau
+    const block = document.createElement("div"); block.style.marginBottom="26px";
+    const title = document.createElement("div"); title.className="section-title"; title.textContent = mag;
+    block.appendChild(title);
+
+    const table = document.createElement("table"); table.className="table";
+    const thead = document.createElement("thead");
+
+    // Ligne 1 : "Nom / Ligne" + chaque jour avec colspan = nb slots
+    const tr1 = document.createElement("tr");
+    tr1.appendChild(Object.assign(document.createElement("th"), {className:"row-label", textContent:"Nom / Ligne"}));
+    days.forEach(d=>{
+      const th = document.createElement("th");
+      th.colSpan = slotOrder.length;
+      th.textContent = dowLetter(d);
+      thead.appendChild(tr1); tr1.appendChild(th);
+    });
+
+    // Ligne 2 : vide sous "Nom / Ligne" + 1 cellule par slot pour chaque jour
+    const tr2 = document.createElement("tr");
+    tr2.appendChild(Object.assign(document.createElement("th"), {className:"sub-label", textContent:" "}));
+    days.forEach(_=>{
+      slotOrder.forEach(s=>{
+        const th = document.createElement("th"); th.textContent = s;
+        tr2.appendChild(th);
+      });
+    });
+
+    thead.appendChild(tr1); thead.appendChild(tr2);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    // Petit helper pour couleur weekend
+    const isWE = d => { const x=d.getDay(); return x===0||x===6; };
+
+    // 4) Pour chaque ligne, écrire les valeurs exactes du jour pour chaque slot
+    const labels = [...labelSet.values()].map(o=>o.label);
+    labels.forEach(label=>{
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td"); td0.className="row-label"; td0.textContent = label; tr.appendChild(td0);
+
+      days.forEach(d=>{
+        const dk = ymd(d);
+        const rec = file[dk];
+        // valeurs du jour si présentes
+        let values = {};
+        if(rec?.data?.rows){
+          const found = rec.data.rows.find(r => norm(r.label) === norm(label));
+          values = found?.values || {};
+        }
+
+        // imprimer chaque slot
+        slotOrder.forEach(slot=>{
+          const td = document.createElement("td"); td.className="cell";
+          if(isWE(d)) td.classList.add("weekend");
+          const v = values[slot] || "";
+          td.textContent = v;
+          if(v) td.classList.add(v); // pour la couleur (classes .P, .CP, .ABS, .MAL, .R existent déjà)
+          tr.appendChild(td);
+        });
+      });
+
       tbody.appendChild(tr);
     });
 
-    table.appendChild(tbody); block.appendChild(table); container.appendChild(block);
+    table.appendChild(tbody);
+    block.appendChild(table);
+    container.appendChild(block);
   });
-  $resumeContent.innerHTML=''; $resumeContent.appendChild(container);
-}
 
-/* ---------- diag ---------- */
-$btnDiag.addEventListener('click', async ()=>{
-  try{ const r=await api('/_diag'); alert((await r.json()).ok?'API OK':'API KO'); }catch{ alert('API KO');}
-});
+  $resumeContent.innerHTML = "";
+  $resumeContent.appendChild(container);
+}
 </script>
 </body>
 </html>
