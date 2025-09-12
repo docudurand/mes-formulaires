@@ -105,7 +105,7 @@ const thisYM=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth=ym=>{ const [y,m]=ym.split('-').map(x=>+x); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter=d=>["D","L","M","M","J","V","S"][d.getDay()];
-const apiBase = (new URLSearchParams(location.search).get('api')) || '/presences';
+const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
 
 const MAGASINS = [
  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
