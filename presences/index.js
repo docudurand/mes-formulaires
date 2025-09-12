@@ -110,7 +110,7 @@ async function ftpReadJson(remotePath) {
     return JSON.parse(raw);
   } catch (e) {
 
-    if (String(e?.message || "").match(/No such file|ENOENT|not found/i)) {
+    if (String(e?.message || "").match(/No such file|ENOENT|not found|file does not exist|E?550|action not taken|^550/i)) {
       return null;
     }
     throw e;
