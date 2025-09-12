@@ -6,7 +6,7 @@
 <title>Présences DSG</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#d21f3c;--bg:#f6f7f8;--text:#111;--muted:#666;--line:#e5e7eb;--ok:#1a7f37;--warn:#b45309;--abs:#9b1c1c}
+:root{--brand:#d21f3c;--bg:#f6f7f8;--text:#111;--muted:#666;--line:#e5e7eb;--ok:#1a7f37;--abs:#9b1c1c}
 *{box-sizing:border-box} html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
 .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
@@ -29,9 +29,9 @@ button.badge[data-code="MAL"]{color:#946200}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
 .table thead th.sub-label{color:var(--muted);font-weight:600}
-.section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
+.section-title{margin:26px 0 8px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .section-sub{font-weight:800;margin:8px 0 0 2px;color:#111; font-size:.95rem}
-.mag-divider{border-top:2px solid var(--line); margin:24px 0 8px}
+.mag-divider{border-top:2px solid var(--line); margin:20px 0 8px}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
@@ -44,7 +44,10 @@ button.badge[data-code="MAL"]{color:#946200}
 .cell.R{background:#f3f3f3;color:#333;font-weight:700}
 .hint,.legend{color:var(--muted);font-size:.9rem}
 .error{color:#a40000;font-weight:700}
-.loading{padding:14px;color:var(--muted)}
+.loading{padding:14px;color:#666}
+.small{font-size:.92rem;color:var(--muted)}
+.skeleton{height:36px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(90deg,#eee,#f7f7f7,#eee);background-size:200% 100%;animation:sk 1.4s infinite}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:0 0}}
 @media (max-width:900px){ .cell{min-width:26px;height:28px} }
 </style>
 </head>
@@ -92,7 +95,7 @@ button.badge[data-code="MAL"]{color:#946200}
   <section id="tab-resume" class="tab-panel">
     <div class="toolbar">
       <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
-      <div class="spacer"></div>
+      <div class="spacer small" id="resume-hint"></div>
       <button id="btn-refresh-resume">Recharger</button>
     </div>
     <div id="resume-content"></div>
@@ -109,6 +112,8 @@ const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth=ym=>{ const [y,m]=ym.split('-').map(x=>+x); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter=d=>["D","L","M","M","J","V","S"][d.getDay()];
 const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+const nextFrame = ()=>new Promise(r=>requestAnimationFrame(r));
 
 const MAGASINS = [
  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
@@ -122,7 +127,6 @@ let currentMagasin=null;
 let personnel=null;
 let selectedCells=new Set();
 
-/* ---------- DOM ---------- */
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
 const $panels={ magasins:document.getElementById('tab-magasins'),
@@ -140,13 +144,14 @@ const $btnRefreshResume=document.getElementById('btn-refresh-resume');
 const $resumeContent=document.getElementById('resume-content');
 const $saisieError=document.getElementById('saisie-error');
 const $resumeError=document.getElementById('resume-error');
+const $resumeHint=document.getElementById('resume-hint');
 const $btnDiag=document.getElementById('btn-diag');
 
 $today.textContent=todayISO();
 $dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
 
-/* ---------- tabs ---------- */
+/* ---------- onglets ---------- */
 $tabs.forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 function switchTab(key){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
@@ -170,31 +175,39 @@ async function selectMagasin(mag,btn){
 }
 
 /* ---------- API helpers ---------- */
-const api = (path,opt={}) => fetch(apiBase+path,{headers:{'Content-Type':'application/json'},...opt});
+async function api(path,{method='GET',body,timeout=12000}={}){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), timeout);
+  try{
+    const r = await fetch(apiBase+path,{
+      method,
+      headers:{'Content-Type':'application/json'},
+      body,
+      signal: ctrl.signal
+    });
+    return r;
+  } finally { clearTimeout(t); }
+}
 
 /* ---------- personnel ---------- */
 async function loadPersonnel(){
   try{
-    const r=await api(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
+    const r=await api(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`,{timeout:10000});
     if(!r.ok) throw new Error("HTTP "+r.status);
     personnel=await r.json();
-  }catch(e){
-    // Fallback local
-    personnel={
-      employes:[],
-  interims:[],
-  livreurs:{}
-    };
+  }catch{
+    // pas d'alerte ici : on a un fallback plus bas
+    personnel={employes:[], interims:[], livreurs:{}};
   }
 }
 
-/* ---------- UI Saisie (inchangé) ---------- */
+/* ---------- UI saisie (inchangé) ---------- */
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
   if(isShift && selectedCells.size){
     const last=[...selectedCells][selectedCells.size-1];
-    const rectRange=(a,b)=>{
+    const rect=(a,b)=>{
       const ar=a.closest('tr').rowIndex, ac=a.cellIndex;
       const br=b.closest('tr').rowIndex, bc=b.cellIndex;
       const r1=Math.min(ar,br), r2=Math.max(ar,br);
@@ -204,7 +217,7 @@ function handleCellClick(ev,td){
         const cell=table.rows[r].cells[c]; if(cell && cell.classList.contains('cell')){ cell.classList.add('selected'); selectedCells.add(cell);}
       }
     };
-    rectRange(last,td);
+    rect(last,td);
   }else if(isCtrl){
     td.classList.toggle('selected'); td.classList.contains('selected')?selectedCells.add(td):selectedCells.delete(td);
   }else{
@@ -218,6 +231,7 @@ function headerSelectColumn(th){
   });
 }
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
+
 function buildSection(title, rows){
   const headerSlots = union(...rows.map(r=>r.slots||[]));
   const table=document.createElement('table'); table.className='table';
@@ -243,6 +257,7 @@ function buildSection(title, rows){
   const wrap=document.createElement('div'); wrap.appendChild(h); wrap.appendChild(table);
   return wrap;
 }
+
 function buildSaisieUI(){
   $saisieContent.innerHTML='';
   clearSelection();
@@ -263,7 +278,7 @@ async function prefillDay(){
   if(!currentMagasin) return;
   try{
     const day=$dateInput.value;
-    const r=await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+    const r=await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`,{timeout:8000});
     if(!r.ok) return;
     const payload=await r.json(); applyPrefill(payload?.data||{});
   }catch{}
@@ -293,7 +308,7 @@ $btnSave.addEventListener('click', async ()=>{
   if(!currentMagasin) return;
   const data=collectData(); $btnSave.disabled=true;
   try{
-    const r=await api('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
+    const r=await api('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data}),timeout:10000});
     if(!r.ok) throw new Error('save failed');
     alert('Enregistré ✔');
   }catch{ alert("Échec de l'enregistrement"); }
@@ -301,148 +316,216 @@ $btnSave.addEventListener('click', async ()=>{
 });
 $dateInput.addEventListener('change',prefillDay);
 
-/* ---------- résumé du mois (séparé par sections) ---------- */
-async function loadResume(){
-  $resumeError.style.display='none';
-  $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
-  try{
-    const ym=$resumeMonth.value;
-    const r=await api(`/month?yyyymm=${ym}`);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data=await r.json();
-    renderResume(ym,data);
-  }catch(e){
-    $resumeError.textContent="Impossible de charger le résumé.";
-    $resumeError.style.display='block';
-    $resumeContent.innerHTML='';
-  }
-}
+/* ---------- résumé : fiable + progressif + cache ---------- */
 $btnRefreshResume.addEventListener('click',loadResume);
 
-/* ====== RENDER RESUME ====== */
-function renderResume(yyyymm, monthData){
-  const days = daysOfMonth(yyyymm);
-  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
-  const container = document.createElement("div");
-  container.innerHTML = "";
+function cacheKey(ym){ return `pres_resume_${ym}`; }
 
-  // fabrique un tableau pour une section donnée
-  function buildResumeTable(title, rows, file){
-    if(!rows.length) return null;
+async function loadResume(){
+  const ym=$resumeMonth.value;
+  $resumeError.style.display='none';
+  $resumeContent.innerHTML='<div class="loading">Chargement…</div>';
+  $resumeHint.textContent='';
 
-    // Collecte des slots utiles (union, dans l'ordre d'apparition)
-    const seen = new Set();
-    const slotOrder = [];
-    rows.forEach(r=>{
-      (r.slots||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); slotOrder.push(s); }});
-    });
+  // 1) afficher immédiatement le cache si dispo
+  try{
+    const cached = localStorage.getItem(cacheKey(ym));
+    if(cached){
+      const data = JSON.parse(cached);
+      $resumeContent.innerHTML='';
+      await renderResumeProgressive(ym, data);
+      $resumeHint.textContent='(Affichage rapide depuis le cache — mise à jour en cours…)';
+    }
+  }catch{}
 
-    const block = document.createElement("div");
-    const subtitle = document.createElement("div");
-    subtitle.className = "section-sub";
-    subtitle.textContent = title;
-    block.appendChild(subtitle);
-
-    const table = document.createElement("table"); table.className="table";
-    const thead = document.createElement("thead");
-
-    // Ligne 1 : lettres (colspan = nb slots)
-    const tr1 = document.createElement("tr");
-    const th0 = document.createElement("th"); th0.className="row-label"; th0.textContent="Nom / Ligne";
-    tr1.appendChild(th0);
-    days.forEach(d=>{
-      const th=document.createElement("th"); th.colSpan=slotOrder.length; th.textContent=dowLetter(d);
-      tr1.appendChild(th);
-    });
-    thead.appendChild(tr1);
-
-    // Ligne 2 : numéros
-    const tr2a = document.createElement("tr");
-    const th0b = document.createElement("th"); th0b.className="sub-label"; th0b.textContent=" "; tr2a.appendChild(th0b);
-    days.forEach(d=>{
-      const th=document.createElement("th"); th.colSpan=slotOrder.length; th.textContent=String(d.getDate());
-      tr2a.appendChild(th);
-    });
-    thead.appendChild(tr2a);
-
-    // Ligne 3 : slots
-    const tr2 = document.createElement("tr");
-    const th00 = document.createElement("th"); th00.className="sub-label"; th00.textContent=" "; tr2.appendChild(th00);
-    days.forEach(()=>{ slotOrder.forEach(s=>{ const th=document.createElement("th"); th.textContent=s; tr2.appendChild(th); }); });
-    thead.appendChild(tr2);
-
-    table.appendChild(thead);
-
-    const tbody = document.createElement("tbody");
-    const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
-
-    rows.forEach(row=>{
-      const tr=document.createElement("tr");
-      const td0=document.createElement("td"); td0.className="row-label"; td0.textContent=row.label; tr.appendChild(td0);
-
-      days.forEach(d=>{
-        const dk=ymd(d);
-        const rec=file[dk];
-        let values={};
-        if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(row.label));
-          values = found?.values || {};
-        }
-        slotOrder.forEach(slot=>{
-          const td=document.createElement("td"); td.className="cell";
-          if(isWE(d)) td.classList.add("weekend");
-          const v = values[slot] || "";
-          td.textContent = v;
-          if(v) td.classList.add(v);
-          tr.appendChild(td);
-        });
-      });
-
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    block.appendChild(table);
-    return block;
+  // 2) récupérer frais avec retries
+  const maxTries=3;
+  let lastErr=null, fresh=null;
+  for(let i=0;i<maxTries;i++){
+    try{
+      const r=await api(`/month?yyyymm=${ym}`,{timeout:20000});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      fresh = await r.json();
+      break;
+    }catch(e){
+      lastErr=e;
+      await sleep(500*(i+1));
+    }
   }
 
-  MAGASINS.forEach(mag=>{
+  if(!fresh){
+    if(!$resumeContent.children.length){
+      $resumeError.textContent="Impossible de charger le résumé (réseau lent). Réessayez.";
+      $resumeError.style.display='block';
+      $resumeContent.innerHTML='';
+    }
+    return;
+  }
+
+  // 3) sauver en cache + rendre
+  try{ localStorage.setItem(cacheKey(ym), JSON.stringify(fresh)); }catch{}
+  $resumeHint.textContent='';
+  $resumeContent.innerHTML='';
+  await renderResumeProgressive(ym, fresh);
+}
+
+/* ====== RENDER PROGRESSIF ====== */
+async function renderResumeProgressive(yyyymm, monthData){
+  const container = document.createElement('div');
+  $resumeContent.appendChild(container);
+
+  // Render magasin par magasin, en laissant la main au navigateur
+  for(const mag of MAGASINS){
+    // bloc “squelette”
+    const magWrap = document.createElement('div');
+    const magTitle = document.createElement('div');
+    magTitle.className = 'section-title';
+    magTitle.textContent = mag;
+    const divider = document.createElement('div'); divider.className='mag-divider';
+    const skeleton = document.createElement('div'); skeleton.className='skeleton';
+    magWrap.appendChild(magTitle);
+    magWrap.appendChild(skeleton);
+    container.appendChild(magWrap);
+
+    await nextFrame(); // laisse peindre le squelette
+
     const file = monthData.files?.[mag] || {};
     const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    // Titre magasin + séparateur
-    const magWrap = document.createElement("div");
-    const magTitle = document.createElement("div");
-    magTitle.className="section-title";
-    magTitle.textContent = mag;
-    const divider = document.createElement("div");
-    divider.className = "mag-divider";
-    magWrap.appendChild(magTitle);
+    // Si personnel vide, on reconstruit à partir du fichier (fiabilité)
+    const inferred = inferRowsFromFile(file);
+    const employes = (pers.employes?.length? pers.employes : inferred.employes).map(p=>({
+      label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]
+    }));
+    const interims = (pers.interims?.length? pers.interims : inferred.interims).map(p=>({
+      label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]
+    }));
+    const livreurs = Object.keys(pers.livreurs||{}).length ? pers.livreurs : inferred.livreurs;
 
-    // Section EMPLOYÉS
-    const empRows = (pers.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-    const empTable = buildResumeTable("EMPLOYÉS", empRows, file);
-    if(empTable) magWrap.appendChild(empTable);
-
-    // Section INTÉRIM
-    const intRows = (pers.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-    const intTable = buildResumeTable("INTÉRIM", intRows, file);
-    if(intTable) magWrap.appendChild(intTable);
-
-    // Sections LIVREURS par groupe
-    Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
-      const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
-      const tab = buildResumeTable(`LIVREURS — ${g}`, rows, file);
-      if(tab) magWrap.appendChild(tab);
+    // Construit les 3 sections
+    const block = document.createElement('div');
+    const days = daysOfMonth(yyyymm);
+    const addTable = (title, rows) => {
+      if(!rows.length) return;
+      block.appendChild(buildResumeTable(days, title, rows, file));
+    };
+    addTable('EMPLOYÉS', employes);
+    addTable('INTÉRIM', interims);
+    Object.entries(livreurs).forEach(([g,slots])=>{
+      addTable(`LIVREURS — ${g}`, [{label:g, slots: (slots&&slots.length)?slots:["Matin","A. Midi"]}]);
     });
 
+    // remplace le squelette par le rendu
+    magWrap.replaceChild(block, skeleton);
     magWrap.appendChild(divider);
-    container.appendChild(magWrap);
+
+    // laisse respirer l’UI si beaucoup de magasins
+    await nextFrame();
+  }
+}
+
+/* ---- helpers résumé ---- */
+function buildResumeTable(days, title, rows, file){
+  // slots = union dans l’ordre de première apparition
+  const seen = new Set(); const slotOrder=[];
+  rows.forEach(r=> (r.slots||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); slotOrder.push(s); }}));
+  if(slotOrder.length===0) return document.createTextNode('');
+
+  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+  const isWE = d => { const x=d.getDay(); return x===0||x===6; };
+
+  const subtitle = document.createElement('div'); subtitle.className='section-sub'; subtitle.textContent=title;
+
+  const table=document.createElement('table'); table.className='table';
+  const thead=document.createElement('thead');
+
+  // Ligne 1 : lettres
+  const tr1=document.createElement('tr');
+  tr1.appendChild(th('Nom / Ligne','row-label'));
+  days.forEach(d=>{ const thd=th(dowLetter(d)); thd.colSpan=slotOrder.length; tr1.appendChild(thd); });
+  thead.appendChild(tr1);
+
+  // Ligne 2 : numéros
+  const tr2a=document.createElement('tr');
+  tr2a.appendChild(th(' ','sub-label'));
+  days.forEach(d=>{ const thd=th(String(d.getDate())); thd.colSpan=slotOrder.length; tr2a.appendChild(thd); });
+  thead.appendChild(tr2a);
+
+  // Ligne 3 : slots
+  const tr2=document.createElement('tr');
+  tr2.appendChild(th(' ','sub-label'));
+  days.forEach(()=> slotOrder.forEach(s=> tr2.appendChild(th(s))));
+  thead.appendChild(tr2);
+  table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.appendChild(td(row.label,'row-label'));
+    days.forEach(d=>{
+      const dk=ymd(d);
+      const rec=file[dk];
+      let values={};
+      if(rec?.data?.rows){
+        const found = rec.data.rows.find(r => norm(r.label) === norm(row.label));
+        values = found?.values || {};
+      }
+      slotOrder.forEach(slot=>{
+        const cell=td('', 'cell');
+        if(isWE(d)) cell.classList.add('weekend');
+        const v = values[slot] || '';
+        cell.textContent=v;
+        if(v) cell.classList.add(v);
+        tr.appendChild(cell);
+      });
+    });
+    tbody.appendChild(tr);
   });
 
-  $resumeContent.innerHTML="";
-  $resumeContent.appendChild(container);
+  table.appendChild(tbody);
+
+  const wrap=document.createElement('div');
+  wrap.appendChild(subtitle);
+  wrap.appendChild(table);
+  return wrap;
+
+  function th(txt,cls){ const x=document.createElement('th'); if(cls) x.className=cls; x.textContent=txt; return x; }
+  function td(txt,cls){ const x=document.createElement('td'); if(cls) x.className=cls; x.textContent=txt; return x; }
 }
+
+// Si le personnel n’arrive pas, déduire des fichiers sauvegardés
+function inferRowsFromFile(file){
+  const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+  const labels = new Map(); // norm -> {label, slots:Set}
+  Object.values(file||{}).forEach(rec=>{
+    (rec?.data?.rows||[]).forEach(r=>{
+      const k=norm(r.label);
+      if(!labels.has(k)) labels.set(k,{label:r.label, slots:new Set()});
+      Object.keys(r.values||{}).forEach(s=> labels.get(k).slots.add(s));
+    });
+  });
+  const toArray = (pred)=>[...labels.values()].filter(o=>pred(o.label)).map(o=>{
+    return {nom:o.label, prenom:''}; // on renvoie un shape “personne” minimal
+  });
+
+  // Heuristique simple : si le label contient un espace “NOM Prénom” => employé/intérim
+  // sinon, on considère que c’est un groupe livreur.
+  const out={employes:[], interims:[], livreurs:{}};
+  labels.forEach(o=>{
+    const slots=[...o.slots];
+    if(o.label.includes(' ')){
+      // impossible de savoir si employé ou intérim -> on met en employés par défaut
+      out.employes.push({nom:o.label, prenom:''});
+    }else{
+      out.livreurs[o.label]=slots.length?slots:["Matin","A. Midi"];
+    }
+  });
+  return out;
+}
+
+/* ---------- init ---------- */
+$today.textContent=todayISO();
 </script>
 </body>
 </html>
