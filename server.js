@@ -23,7 +23,6 @@ dotenv.config();
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const presences = require('./routes/presences');
 
 app.set("trust proxy", 1);
 
@@ -32,7 +31,6 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
-app.use('/presence', presences);
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
