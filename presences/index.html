@@ -105,7 +105,22 @@ const thisYM=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth=ym=>{ const [y,m]=ym.split('-').map(x=>+x); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter=d=>["D","L","M","M","J","V","S"][d.getDay()];
-const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
+let apiBase = new URLSearchParams(location.search).get('api') || ''; // permet aussi ?api=/presences
+const API_CANDIDATES = [apiBase, '/presences', '/presence'].filter(Boolean);
+
+async function detectApiBase(){
+  for (const base of API_CANDIDATES){
+    try {
+      const r = await fetch(base + '/_diag', { cache:'no-store' });
+      if (r.ok) { apiBase = base; console.log('[API] base =', apiBase); return; }
+    } catch {}
+  }
+  // dernier recours
+  apiBase = '/presences';
+  console.warn('[API] fallback sur', apiBase);
+}
+// lancer la détection au chargement
+detectApiBase();
 
 const MAGASINS = [
  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
