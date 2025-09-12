@@ -353,24 +353,20 @@ async function loadResume(){
 $btnRefreshResume.addEventListener('click',loadResume);
 
 <script>
-/* Remplacer TOUTE la fonction renderResume par celle-ci */
 function renderResume(yyyymm, monthData){
   const days = daysOfMonth(yyyymm);
   const container = document.createElement("div");
   container.innerHTML = "";
 
   const ORDERED_SLOTS = ["Matin","A. Midi","NUIT","10H","12H","16H"];
-
-  // Normalise un libellé pour matcher entre fichier/personnel
   const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 
   MAGASINS.forEach(mag=>{
-    const file = monthData.files?.[mag] || {};               // {"YYYY-MM-DD": {data:{rows:[...]}}}
+    const file = monthData.files?.[mag] || {};
     const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    // 1) Construire la liste des lignes (labels) à afficher
+    // 1) Lignes à afficher (labels + slots par défaut)
     const labelSet = new Map(); // normLabel -> {label, slots:Set}
-    // a) depuis Google Sheet
     pers.employes.forEach(p=>{
       const label = `${p.nom} ${p.prenom||""}`.trim();
       labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
@@ -381,10 +377,10 @@ function renderResume(yyyymm, monthData){
     });
     Object.entries(pers.livreurs||{}).forEach(([g, slots])=>{
       const label = g;
-      labelSet.set(norm(label), {label, slots:new Set(slots && slots.length? slots : ["Matin","A. Midi"])});
+      labelSet.set(norm(label), {label, slots:new Set(slots && slots.length ? slots : ["Matin","A. Midi"])});
     });
 
-    // b) enrichir depuis les fichiers (labels + créneaux réels rencontrés)
+    // 2) Enrichir avec ce qu’on trouve réellement dans les fichiers
     Object.values(file).forEach(dayRec=>{
       const rows = dayRec?.data?.rows || [];
       rows.forEach(r=>{
@@ -394,72 +390,78 @@ function renderResume(yyyymm, monthData){
       });
     });
 
-    // 2) Construire l’ordre des créneaux pour l’en-tête (union sur toutes les lignes)
+    // 3) Ordre des slots pour l’en-tête
     const allSlots = new Set();
-    for(const {slots} of labelSet.values()) slots.forEach(s=> allSlots.add(s));
-    // ordonner: d’abord l’ordre connu, puis les restants
-    const slotOrder = [...ORDERED_SLOTS.filter(s=>allSlots.has(s)),
-                       ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))];
+    for (const {slots} of labelSet.values()) slots.forEach(s=>allSlots.add(s));
+    const slotOrder = [
+      ...ORDERED_SLOTS.filter(s=>allSlots.has(s)),
+      ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))
+    ];
 
-    // 3) Construire le tableau
-    const block = document.createElement("div"); block.style.marginBottom="26px";
-    const title = document.createElement("div"); title.className="section-title"; title.textContent = mag;
+    // 4) Construction du tableau
+    const block = document.createElement("div"); block.style.marginBottom = "26px";
+    const title = document.createElement("div"); title.className = "section-title"; title.textContent = mag;
     block.appendChild(title);
 
-    const table = document.createElement("table"); table.className="table";
+    const table = document.createElement("table"); table.className = "table";
     const thead = document.createElement("thead");
 
-    // Ligne 1 : "Nom / Ligne" + chaque jour avec colspan = nb slots
+    // Ligne 1 : jours (colspan = nb slots)
     const tr1 = document.createElement("tr");
-    tr1.appendChild(Object.assign(document.createElement("th"), {className:"row-label", textContent:"Nom / Ligne"}));
+    const th0 = document.createElement("th");
+    th0.className = "row-label";
+    th0.textContent = "Nom / Ligne";
+    tr1.appendChild(th0);
     days.forEach(d=>{
       const th = document.createElement("th");
       th.colSpan = slotOrder.length;
       th.textContent = dowLetter(d);
-      thead.appendChild(tr1); tr1.appendChild(th);
+      tr1.appendChild(th);
     });
+    thead.appendChild(tr1);
 
-    // Ligne 2 : vide sous "Nom / Ligne" + 1 cellule par slot pour chaque jour
+    // Ligne 2 : libellés de slots sous chaque jour
     const tr2 = document.createElement("tr");
-    tr2.appendChild(Object.assign(document.createElement("th"), {className:"sub-label", textContent:" "}));
-    days.forEach(_=>{
+    const th00 = document.createElement("th");
+    th00.className = "sub-label";
+    th00.textContent = " ";
+    tr2.appendChild(th00);
+    days.forEach(()=>{
       slotOrder.forEach(s=>{
-        const th = document.createElement("th"); th.textContent = s;
+        const th = document.createElement("th");
+        th.textContent = s;
         tr2.appendChild(th);
       });
     });
-
-    thead.appendChild(tr1); thead.appendChild(tr2);
+    thead.appendChild(tr2);
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
+    const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
 
-    // Petit helper pour couleur weekend
-    const isWE = d => { const x=d.getDay(); return x===0||x===6; };
-
-    // 4) Pour chaque ligne, écrire les valeurs exactes du jour pour chaque slot
     const labels = [...labelSet.values()].map(o=>o.label);
     labels.forEach(label=>{
       const tr = document.createElement("tr");
-      const td0 = document.createElement("td"); td0.className="row-label"; td0.textContent = label; tr.appendChild(td0);
+      const td0 = document.createElement("td");
+      td0.className = "row-label";
+      td0.textContent = label;
+      tr.appendChild(td0);
 
       days.forEach(d=>{
         const dk = ymd(d);
         const rec = file[dk];
-        // valeurs du jour si présentes
         let values = {};
         if(rec?.data?.rows){
           const found = rec.data.rows.find(r => norm(r.label) === norm(label));
           values = found?.values || {};
         }
-
-        // imprimer chaque slot
         slotOrder.forEach(slot=>{
-          const td = document.createElement("td"); td.className="cell";
+          const td = document.createElement("td");
+          td.className = "cell";
           if(isWE(d)) td.classList.add("weekend");
           const v = values[slot] || "";
           td.textContent = v;
-          if(v) td.classList.add(v); // pour la couleur (classes .P, .CP, .ABS, .MAL, .R existent déjà)
+          if(v) td.classList.add(v); // .P, .CP, .ABS, .MAL, .R -> déjà stylées
           tr.appendChild(td);
         });
       });
