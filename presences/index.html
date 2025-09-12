@@ -126,8 +126,9 @@ const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+
 /* IMPORTANT: garder /presence (singulier) */
-const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
+const apiBase = '/presence';
 
 /* ====== constantes ====== */
 const MAGASINS = [
@@ -136,7 +137,6 @@ const MAGASINS = [
  "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
 ];
 const CODES=["P","CP","ABS","MAL","R"];
-const ORDERED_SLOTS=["Matin","A. Midi","NUIT","10H","12H","16H"];
 
 /* ====== état ====== */
 let currentMagasin=null;
@@ -180,7 +180,11 @@ async function fetchJSON(path, opts={}, retries=2){
   const t = setTimeout(()=>ctrl.abort(), 15000);
   try{
     const r = await fetch(apiBase+path, {headers:{'Content-Type':'application/json'}, signal:ctrl.signal, ...opts});
-    if(!r.ok) throw new Error('HTTP '+r.status);
+    if(!r.ok){
+      const txt = await r.text().catch(()=> '');
+      console.error('[HTTP]', r.status, apiBase+path, txt);
+      throw new Error(`HTTP ${r.status}`);
+    }
     return await r.json();
   }catch(e){
     if(retries>0){ await delay(300); return fetchJSON(path, opts, retries-1); }
@@ -217,6 +221,7 @@ async function loadPersonnel(){
   try{
     personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
   }catch{
+    // Pas de fallback nominatif pour éviter des noms en dur
     personnel = { employes:[], interims:[], livreurs:{} };
   }
 }
@@ -356,7 +361,7 @@ $btnSave.addEventListener('click', async ()=>{
 });
 $dateInput.addEventListener('change',prefillDay);
 
-/* ====== Résumé : charger 1 magasin à la demande ====== */
+/* ====== Résumé : charger 1 magasin à la demande (rapide) ====== */
 $btnLoadStore.addEventListener('click', loadResumeForStore);
 $btnRefreshResume.addEventListener('click', loadResumeForStore);
 
@@ -366,12 +371,19 @@ async function loadResumeForStore(){
   const ym=$resumeMonth.value;
   const mag=$resumeStore.value;
   try{
-    const monthData = await fetchJSON(`/month?yyyymm=${ym}`);
+    // Essaye d'abord la route rapide /month-store
+    const monthData = await fetchJSON(`/month-store?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`);
     renderOneStore(ym, mag, monthData);
   }catch(e){
-    $resumeError.textContent="Impossible de charger le résumé.";
-    $resumeError.style.display='block';
-    $resumeContent.innerHTML='';
+    // Repli sur /month si /month-store n’est pas dispo côté serveur
+    try{
+      const monthData = await fetchJSON(`/month?yyyymm=${ym}`);
+      renderOneStore(ym, mag, monthData);
+    }catch(e2){
+      $resumeError.textContent="Impossible de charger le résumé.";
+      $resumeError.style.display='block';
+      $resumeContent.innerHTML='';
+    }
   }
 }
 
@@ -397,15 +409,10 @@ function renderOneStore(yyyymm, magasin, monthData){
     });
   });
 
-  // 3) Déterminer à quelle section rattacher chaque label observé (si pas déjà dans Sheets)
-  //    Heuristique: si le label correspond EXACTEMENT à un groupe livreur -> section de ce groupe,
-  //    sinon par défaut EMPLOYÉS (slots par défaut Matin/A. Midi si rien observé).
+  // 3) Injecter les inconnus côté EMPLOYÉS (par défaut Matin/A. Midi)
   observed.forEach((info, key)=>{
-    const labelUpper = key;
-    if (!labelsEmp.has(labelUpper) && !labelsInt.has(labelUpper) && !livreurGroups.includes(labelUpper)){
-      // injecter côté EMPLOYÉS
-      labelsEmp.add(labelUpper);
-      // si aucun slot observé, on met Matin/A. Midi
+    if (!labelsEmp.has(key) && !labelsInt.has(key) && !livreurGroups.includes(key)){
+      labelsEmp.add(key);
       if (info.slots.size === 0) { info.slots.add("Matin"); info.slots.add("A. Midi"); }
     }
   });
@@ -414,7 +421,7 @@ function renderOneStore(yyyymm, magasin, monthData){
   const magTitle = document.createElement('div'); magTitle.className='section-title'; magTitle.textContent=magasin;
   wrap.appendChild(magTitle);
 
-  // petite barre de séparation entre magasins
+  // barre de séparation visuelle
   const divider = document.createElement('div'); divider.className='mag-divider';
 
   const makeSection = (title, rowLabels, slotsResolver)=>{
@@ -489,19 +496,20 @@ function renderOneStore(yyyymm, magasin, monthData){
   };
 
   // EMPLOYÉS
-  const empLabels = [...labelsEmp].map(k=> observed.get(k)?.label || (pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
+  const empLabels = [...labelsEmp].map(k=> observed.get(k)?.label
+    || (pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.employes.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
   const empSec = makeSection("EMPLOYÉS", empLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
   if(empSec) wrap.appendChild(empSec);
 
   // INTÉRIM
-  const intLabels = [...labelsInt].map(k=> observed.get(k)?.label || (pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
+  const intLabels = [...labelsInt].map(k=> observed.get(k)?.label
+    || (pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
   const intSec = makeSection("INTÉRIM", intLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
   if(intSec) wrap.appendChild(intSec);
 
   // LIVREURS (un tableau par groupe)
   Object.entries(pers.livreurs||{}).forEach(([g,defSlots])=>{
     const key = norm(g);
-    // le label d’un groupe livreur est le groupe lui-même
     const lbls = [ observed.get(key)?.label || g ];
     const sec = makeSection(`LIVREURS — ${g}`, lbls, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : (defSlots&&defSlots.length? defSlots : ["Matin","A. Midi"]) ));
     if(sec) wrap.appendChild(sec);
