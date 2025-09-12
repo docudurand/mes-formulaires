@@ -17,12 +17,14 @@ import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
+import presences from "./routes/presences.js";
 
 dotenv.config();
 
-const app = express();
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
+
+const app = express();
 
 app.set("trust proxy", 1);
 
@@ -31,6 +33,8 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
+app.use('/presence', presences);
+app.use("/presences", express.static(path.join(__dirname, "presences")));
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";

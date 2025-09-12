@@ -59,13 +59,11 @@
       <button class="tab" data-tab="resume">Résumé du mois</button>
     </nav>
 
-    <!-- Onglet 1 : Magasins -->
     <section id="tab-magasins" class="tab-panel active">
       <p class="hint">Choisissez un magasin :</p>
       <div id="magasin-buttons" class="grid-buttons"></div>
     </section>
 
-    <!-- Onglet 2 : Saisie du jour -->
     <section id="tab-saisie" class="tab-panel">
       <div class="toolbar">
         <div>
@@ -87,7 +85,6 @@
       <p id="saisie-error" class="error" style="display:none"></p>
     </section>
 
-    <!-- Onglet 3 : Résumé du mois -->
     <section id="tab-resume" class="tab-panel">
       <div class="toolbar">
         <div>
@@ -104,7 +101,7 @@
   </main>
 
   <script>
-    // ------- Configuration -------
+
     const CONFIG = {
       apiBase: "/presence",
       magasins: [
@@ -115,10 +112,9 @@
       presenceCodes: ["", "P", "P5", "P9", "S"]
     };
 
-    // ------- Utils dates -------
     const pad = n => (n<10? "0"+n : ""+n);
     const todayLocalISO = () => {
-      const d = new Date(); // local
+      const d = new Date();
       return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
     };
     const ymLocal = () => {
@@ -135,18 +131,15 @@
     const ymd = (d) => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
     const dowLetter = (d) => ["D","L","M","M","J","V","S"][d.getDay()];
 
-    // ------- HTTP helper -------
     const api = (path, opts={}) => fetch(CONFIG.apiBase + path, {
       headers: {"Content-Type":"application/json"},
       credentials: "include",
       ...opts
     });
 
-    // ------- State -------
     let currentMagasin = null;
     let personnel = null;
 
-    // ------- DOM refs -------
     const $today = document.getElementById("today");
     const $tabButtons = document.querySelectorAll(".tab");
     const $panels = {
@@ -165,7 +158,6 @@
     const $saisieError = document.getElementById("saisie-error");
     const $resumeError = document.getElementById("resume-error");
 
-    // ------- Init -------
     (function init(){
       $today.textContent = todayLocalISO();
       $dateInput.value = todayLocalISO();
@@ -205,7 +197,7 @@
         if(!res.ok) throw new Error("HTTP "+res.status);
         personnel = await res.json();
       }catch(e){
-        // Fallback simple si l'API n'est pas prête
+
         personnel = {
           employes:[{nom:"BARRET", prenom:"Olivier"},{nom:"PICHARD", prenom:"Damien"}],
           interims:[{nom:"PEREZ"}],
