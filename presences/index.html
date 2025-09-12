@@ -27,7 +27,7 @@ button.badge[data-code="ABS"]{color:var(--abs)}
 button.badge[data-code="MAL"]{color:#946200}
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
-.table thead th.sub-label{ color: var(--muted); font-weight:600 }
+.table thead th{background:#fafafa;font-weight:800}
 .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
@@ -105,22 +105,7 @@ const thisYM=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth=ym=>{ const [y,m]=ym.split('-').map(x=>+x); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter=d=>["D","L","M","M","J","V","S"][d.getDay()];
-let apiBase = new URLSearchParams(location.search).get('api') || ''; // permet aussi ?api=/presences
-const API_CANDIDATES = [apiBase, '/presences', '/presence'].filter(Boolean);
-
-async function detectApiBase(){
-  for (const base of API_CANDIDATES){
-    try {
-      const r = await fetch(base + '/_diag', { cache:'no-store' });
-      if (r.ok) { apiBase = base; console.log('[API] base =', apiBase); return; }
-    } catch {}
-  }
-  // dernier recours
-  apiBase = '/presences';
-  console.warn('[API] fallback sur', apiBase);
-}
-// lancer la détection au chargement
-detectApiBase();
+const apiBase = (new URLSearchParams(location.search).get('api')) || '/presence';
 
 const MAGASINS = [
  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
@@ -368,21 +353,48 @@ function renderResume(yyyymm, monthData){
   const container = document.createElement("div");
   container.innerHTML = "";
 
+  const ORDERED_SLOTS = ["Matin","A. Midi","NUIT","10H","12H","16H"];
   const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
-  const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
 
-  // fabrique un tableau mensuel pour un "bloc" (titre, rows, slots)
-  function buildMonthBlock(title, rows, slots, fileByDay){
-    const block = document.createElement("div");
-    const h = document.createElement("div");
-    h.className = "section-title";
-    h.textContent = title;
-    block.appendChild(h);
+  MAGASINS.forEach(mag=>{
+    const file = monthData.files?.[mag] || {};
+    const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
 
-    const table = document.createElement("table");
-    table.className = "table";
+    const labelSet = new Map();
+    pers.employes.forEach(p=>{
+      const label = `${p.nom} ${p.prenom||""}`.trim();
+      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
+    });
+    pers.interims.forEach(p=>{
+      const label = `${p.nom} ${p.prenom||""}`.trim();
+      labelSet.set(norm(label), {label, slots:new Set(["Matin","A. Midi"])});
+    });
+    Object.entries(pers.livreurs||{}).forEach(([g, slots])=>{
+      const label = g;
+      labelSet.set(norm(label), {label, slots:new Set(slots && slots.length ? slots : ["Matin","A. Midi"])});
+    });
 
-    // --- EN-TÊTE à 3 lignes (lettre / numéro / créneaux)
+    Object.values(file).forEach(dayRec=>{
+      const rows = dayRec?.data?.rows || [];
+      rows.forEach(r=>{
+        const key = norm(r.label);
+        if(!labelSet.has(key)) labelSet.set(key, {label:r.label, slots:new Set()});
+        Object.keys(r.values||{}).forEach(s=> labelSet.get(key).slots.add(s));
+      });
+    });
+
+    const allSlots = new Set();
+    for (const {slots} of labelSet.values()) slots.forEach(s=>allSlots.add(s));
+    const slotOrder = [
+      ...ORDERED_SLOTS.filter(s=>allSlots.has(s)),
+      ...[...allSlots].filter(s=>!ORDERED_SLOTS.includes(s))
+    ];
+
+    const block = document.createElement("div"); block.style.marginBottom = "26px";
+    const title = document.createElement("div"); title.className = "section-title"; title.textContent = mag;
+    block.appendChild(title);
+
+    const table = document.createElement("table"); table.className = "table";
     const thead = document.createElement("thead");
 
     const tr1 = document.createElement("tr");
@@ -392,30 +404,19 @@ function renderResume(yyyymm, monthData){
     tr1.appendChild(th0);
     days.forEach(d=>{
       const th = document.createElement("th");
-      th.colSpan = slots.length;
+      th.colSpan = slotOrder.length;
       th.textContent = dowLetter(d);
       tr1.appendChild(th);
     });
     thead.appendChild(tr1);
 
-    const tr1b = document.createElement("tr");
-    const th0b = document.createElement("th");
-    th0b.className = "sub-label"; th0b.textContent = " ";
-    tr1b.appendChild(th0b);
-    days.forEach(d=>{
-      const th = document.createElement("th");
-      th.colSpan = slots.length;
-      th.textContent = String(d.getDate());
-      tr1b.appendChild(th);
-    });
-    thead.appendChild(tr1b);
-
     const tr2 = document.createElement("tr");
     const th00 = document.createElement("th");
-    th00.className = "sub-label"; th00.textContent = " ";
+    th00.className = "sub-label";
+    th00.textContent = " ";
     tr2.appendChild(th00);
     days.forEach(()=>{
-      slots.forEach(s=>{
+      slotOrder.forEach(s=>{
         const th = document.createElement("th");
         th.textContent = s;
         tr2.appendChild(th);
@@ -424,31 +425,32 @@ function renderResume(yyyymm, monthData){
     thead.appendChild(tr2);
     table.appendChild(thead);
 
-    // --- Corps
     const tbody = document.createElement("tbody");
+    const isWE = d => { const x=d.getDay(); return x===0 || x===6; };
 
-    rows.forEach(row=>{
+    const labels = [...labelSet.values()].map(o=>o.label);
+    labels.forEach(label=>{
       const tr = document.createElement("tr");
-      const tdName = document.createElement("td");
-      tdName.className = "row-label";
-      tdName.textContent = row.label;
-      tr.appendChild(tdName);
+      const td0 = document.createElement("td");
+      td0.className = "row-label";
+      td0.textContent = label;
+      tr.appendChild(td0);
 
       days.forEach(d=>{
         const dk = ymd(d);
-        const rec = fileByDay[dk];
+        const rec = file[dk];
         let values = {};
         if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(row.label));
+          const found = rec.data.rows.find(r => norm(r.label) === norm(label));
           values = found?.values || {};
         }
-        slots.forEach(slot=>{
+        slotOrder.forEach(slot=>{
           const td = document.createElement("td");
           td.className = "cell";
           if(isWE(d)) td.classList.add("weekend");
           const v = values[slot] || "";
           td.textContent = v;
-          if(v) td.classList.add(v); // .P, .CP, .ABS, .MAL, .R -> déjà stylées
+          if(v) td.classList.add(v);
           tr.appendChild(td);
         });
       });
@@ -458,46 +460,7 @@ function renderResume(yyyymm, monthData){
 
     table.appendChild(tbody);
     block.appendChild(table);
-    return block;
-  }
-
-  // Pour chaque magasin, produire les blocs comme dans “Saisie”
-  MAGASINS.forEach(mag=>{
-    const wrapper = document.createElement("div");
-    // Titre magasin
-    const t = document.createElement("div");
-    t.className = "section-title";
-    t.style.marginTop = "10px";
-    t.textContent = mag;
-    wrapper.appendChild(t);
-
-    const fileByDay = monthData.files?.[mag] || {};
-    const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
-
-    // EMPLOYÉS
-    if(pers.employes?.length){
-      const rows = pers.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-      const slots = ["Matin","A. Midi"];
-      wrapper.appendChild(buildMonthBlock("EMPLOYÉS", rows, slots, fileByDay));
-    }
-
-    // INTÉRIM
-    if(pers.interims?.length){
-      const rows = pers.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim()}));
-      const slots = ["Matin","A. Midi"];
-      wrapper.appendChild(buildMonthBlock("INTÉRIM", rows, slots, fileByDay));
-    }
-
-    // LIVREURS — un bloc par groupe, avec ses créneaux
-    const livreurs = pers.livreurs || {};
-    Object.keys(livreurs).forEach(g=>{
-      const slots = (livreurs[g] && livreurs[g].length) ? livreurs[g] : ["Matin","A. Midi"];
-      // Dans “Saisie” c’est une seule ligne par groupe
-      const rows = [{label: g}];
-      wrapper.appendChild(buildMonthBlock(`LIVREURS — ${g}`, rows, slots, fileByDay));
-    });
-
-    container.appendChild(wrapper);
+    container.appendChild(block);
   });
 
   $resumeContent.innerHTML = "";
