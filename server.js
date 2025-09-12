@@ -17,6 +17,7 @@ import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
+import presencesRouter from "./presences/index.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
+app.use("/api/presences", presencesRouter);
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";

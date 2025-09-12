@@ -2,25 +2,1004 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Présences – Durand Services</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Présences DSG</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fafafa; --ink:#111; --muted:#666; --line:#e6e6e6;
+      --brand:#d21f3c; --chip:#111; --chipText:#fff;
+      --radius:14px; --pad:12px;
+      --cell:38px; --cellSm:32px;
+
+      --nameW:240px;
+      --shiftW:72px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:10}
+    h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.3px}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    select,input{height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .tabs{display:flex;gap:8px;padding:10px 20px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:64px;z-index:9}
+    .tab{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-weight:600}
+    .tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+    main{padding:16px 20px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+    button{height:38px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-weight:600}
+    button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+    button.ghost{background:#fff}
+    .legend{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+    .legend .k{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+    .swatch{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
+    .gridWrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+    .group{margin:18px 0 26px}
+    .groupTitle{margin:0 0 4px 4px;font-size:16px;font-weight:700;color:#333}
+    table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+    th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
+    thead th{position:sticky;top:0;background:#fff;font-weight:700}
+    tbody th.sticky{position:sticky;left:0;background:#fff;font-weight:600;z-index:2}
+    td,th{height:var(--cell);min-width:42px;padding:0}
+
+    table .col-name{ padding:0 14px; text-align:left; }
+	table .col-shift{ padding:0 6px; }
+	#saisie table .col-name{
+  min-width: auto; width: auto; padding:0 8px;
+}
+#saisie table .col-shift{
+
+  min-width: 42px; width: auto;
+}
+
+#resume table .col-name{
+  min-width: var(--nameW);
+}
+#resume table .col-shift{
+  min-width: var(--shiftW);
+  width: var(--shiftW);
+}
+    td.cell{cursor:text}
+    td.cell[contenteditable="true"]:focus{outline:2px solid #2684ff;outline-offset:-2px}
+    td.cell.selected{outline:2px solid #2684ff;outline-offset:-2px}
+    td.cell[data-code=""]{background:#fff}
+    td.cell[data-code]{color:#fff;font-weight:700}
+    td.cell[data-code="P"]{background:#2e7d32}
+    td.cell[data-code="CP"]{background:#7e57c2}
+    td.cell[data-code="SS"]{background:#c62828}
+    td.cell[data-code="F"]{background:#455a64}
+    .sub{font-size:11px;color:var(--muted)}
+    td.cell.weekend{background:#000 !important;color:#fff !important;cursor:not-allowed}
+    th.weekend{background:#111 !important;color:#fff !important}
+    td.cell.off{background:#000 !important;color:#fff !important;cursor:not-allowed}
+    .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:auto}
+    .summary table td,.summary table th{padding:10px}
+    .hint{color:var(--muted);font-size:12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
+    .dayHeader{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px}
+    .dayTitle{font-weight:700}
+    .navBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;height:28px;cursor:pointer;font-weight:700}
+    .navBtn:active{transform:translateY(1px)}
+    .spinner{width:16px;height:16px;border:2px solid #ddd;border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+    .sectionLoading{padding:16px;display:flex;align-items:center;gap:10px;color:var(--muted)}
+    .adminBox{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
+    .card h3{margin:0 0 6px 0;font-size:16px}
+    .rowmeta{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .actions{display:flex;gap:8px}
+    .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+    .no{background:#c62828;color:#fff;border-color:#c62828}
+
+    .storeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:6px}
+    .storeBtn{display:flex;align-items:center;justify-content:center;height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
+    .storeBtn:hover{border-color:#ccc}
+    .currentStore{margin-left:8px}
+
+    @media (max-width:900px){
+      :root{--cell:32px; --nameW:180px; --shiftW:56px}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+      .tabs{top:unset;position:static}
+    }
+  
+/* Bouton secret de rechargement: quasi invisible, visible au survol du header */
+header:hover #secretReload{ opacity:.35 }
+#secretReload:focus, #secretReload:active{ opacity:.9 }
+
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h1>Présences – Durand Services</h1>
-  <button id="loadResume">Charger tous les magasins</button>
-  <div id="summaryGrid"></div>
-  <script>
-    const API = '/api/presences';
-    document.getElementById('loadResume').onclick = async ()=>{
-      try{
-        const r = await fetch(API+'?action=initMonthAll&month=2025-09');
-        const j = await r.json();
-        if(j.error) throw new Error(j.error);
-        const grid = document.getElementById('summaryGrid');
-        grid.innerHTML = JSON.stringify(j,null,2);
-      }catch(e){
-        alert('Erreur chargement résumé : '+e.message);
+  <header>
+    <h1>Présences – Durand Services</h1>
+    <div class="filters">
+      <input type="date" id="day" />
+      <input type="month" id="month" />
+      <button id="load" class="primary">Charger</button>
+      <span id="currentStoreChip" class="chip currentStore" style="display:none"></span>
+      <button id="secretReload" title="Recharger toutes les données" style="opacity:0; transition:.2s; margin-left:6px; width:28px; height:28px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer">↻</button>
+
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <div class="tab active" data-tab="magasins">Magasins</div>
+    <div class="tab" data-tab="saisie">Saisie</div>
+    <div class="tab" data-tab="resume">Résumé</div>
+    <div class="tab" data-tab="conges">Congés</div>
+  </nav>
+
+  <main>
+    <section id="magasins" class="page">
+      <div class="storeGrid" id="storesList"></div>
+      <p class="hint" style="margin-top:8px">Clique un magasin pour ouvrir la saisie correspondante.</p>
+    </section>
+
+    <section id="saisie" class="page" style="display:none">
+      <div class="toolbar">
+        <button id="fillP">Remplir toutes les cases avec P</button>
+        <button id="fillEmpty">Vider sélection</button>
+        <button id="save" class="primary">Enregistrer</button>
+        <span class="hint">Astuce : clique une cellule (Ctrl = multi)</span>
+      </div>
+      <div id="gridDay"></div>
+    </section>
+
+    <section id="resume" class="page" style="display:none">
+      <div class="toolbar">
+        <select id="resumeStore" style="min-width:220px"></select>
+        <button id="loadResume" class="primary">Charger résumé</button>
+        <button id="exportCsv" class="ghost">Exporter CSV</button>
+        <span id="exportMsg" class="hint" role="status" aria-live="polite"></span>
+      </div>
+      <div id="summaryGrid" style="margin-bottom:12px;"></div>
+      <div id="summaryTotals" class="summary"></div>
+    </section>
+
+    <section id="conges" class="page" style="display:none">
+      <div class="adminBox">
+        <label for="adminCode"><b>Code d’accès :</b></label>
+        <input id="adminCode" type="password" placeholder="••••" style="height:32px;padding:0 8px;width:140px">
+        <button id="saveAdminCode">OK</button>
+        <span class="hint">Saisis le code une fois pour déverrouiller.</span>
+      </div>
+      <div class="toolbar">
+        <select id="filterStore"></select>
+        <input type="month" id="filterMonth" />
+        <button id="refreshLeaves" class="ghost">Rafraîchir</button>
+      </div>
+      <div id="leavesList" class="cards"></div>
+    </section>
+  </main>
+
+<script>
+let forceReload = false;
+const API = '/api/presences';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+const STORES = [
+  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
+  "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
+  "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+];
+
+const TYPES = ['EMPLOYE','INTERIM','LIVREUR'];
+const TYPE_LABELS = {EMPLOYE:'Employés', INTERIM:'Intérim', LIVREUR:'Livreurs'};
+
+const state = { store:null, resumeStore:null, day:null, month:null, dayByType:{}, monthByType:{}, codesUnion:[] };
+let dayAbortCtrl = null; let monthAbortCtrl = null;
+
+const selectedCells = new Set(); let lastCell = null;
+
+function cssVarInt(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  const n = parseInt(v,10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function clearSelection(){ selectedCells.forEach(td=> td.classList.remove('selected')); selectedCells.clear(); lastCell=null; }
+function selectCell(td, additive=false){
+  if(td.classList.contains('weekend') || td.classList.contains('off')) return;
+  if(!additive){ clearSelection(); }
+  selectedCells.add(td); td.classList.add('selected'); lastCell=td;
+}
+function getTargetCells(){ return selectedCells.size ? Array.from(selectedCells) : (lastCell ? [lastCell] : []); }
+
+function findColor(code, type){
+  const arr = (state.dayByType?.[type]?.codes) || [];
+  const found = arr.find(c=>c.code===code) || state.codesUnion.find(c=>c.code===code);
+  return found?.couleur_hex || '';
+}
+function setCellCodeColor(td, code, type){
+  if(td.classList.contains('weekend') || td.classList.contains('off')) return;
+  const color = findColor(code, type);
+  td.style.backgroundColor = color || '';
+  td.style.color = color ? '#fff' : '';
+}
+function setCodesOnTargets(code){
+  const targets = getTargetCells();
+  if(!targets.length){ alert('Clique d’abord une cellule (Ctrl/Cmd pour multi-sélection), puis sur la puce.'); return; }
+  targets.forEach(td=>{
+    if(td.classList.contains('weekend') || td.classList.contains('off')) return;
+    const pid = td.dataset.pid, s = td.dataset.shift, t = td.dataset.type;
+    const bucket = state.dayByType?.[t]; if(!bucket) return;
+    bucket.matrix[pid][s] = code || '';
+    td.textContent = code || '';
+    setCellCodeColor(td, code || '', t);
+  });
+}
+
+function setActiveTab(id){
+  $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+  $$('.page').forEach(p=>p.style.display = (p.id===id)?'block':'none');
+}
+function currentTab(){ return document.querySelector('.tab.active')?.dataset.tab || 'magasins'; }
+function dayLabel(d){
+  const dt = new Date(d);
+  const J=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  return `${J[dt.getDay()]}<br><span class="sub">${dt.getDate()}</span>`;
+}
+function th(html){ const e=document.createElement('th'); e.innerHTML=html; return e; }
+function sShort(s){ const map={"MATIN":"Matin","APRÈS-MIDI":"Après-midi","AM":"Après-midi","NUIT":"Nuit","10H":"10 h","12H":"12 h","16H":"16 h"}; return map[s]||s; }
+function formatDateLongFR(iso){
+  const d=new Date(iso);
+  const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.']; const M=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  return `${J[d.getDay()]} ${String(d.getDate()).padStart(2,'0')} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+function formatDateHeader(iso){
+  const d=new Date(iso); const J=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][d.getDay()];
+  return `${J} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function setMonthFromDay(){
+  if(!state.day) return;
+  const d=new Date(state.day);
+  const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  $('#month').value=ym; state.month=ym;
+}
+const isWeekendISO = iso => { const g=new Date(iso).getDay(); return g===0||g===6; };
+
+function setCurrentStoreChip(){
+  const chip = $('#currentStoreChip');
+  if(state.store){
+    chip.style.display = 'inline-flex';
+    chip.textContent = `Magasin: ${state.store}`;
+  }else{
+    chip.style.display = 'none';
+    chip.textContent = '';
+  }
+}
+
+function showLoading(){ const btn=$('#load'); if(btn){ btn.disabled=true; if(!btn.dataset.oldLabel) btn.dataset.oldLabel=btn.textContent; btn.textContent='Chargement…'; } }
+function hideLoading(){ const btn=$('#load'); if(btn){ btn.disabled=false; btn.textContent=btn.dataset.oldLabel||'Charger'; } }
+function setSectionLoading(sel,msg='Chargement…'){ const el=$(sel); if(!el) return; el.innerHTML=`<div class="sectionLoading"><span class="spinner" aria-hidden="true"></span> ${msg}</div>`; }
+
+async function apiGet(params, headers = {}, signal){
+  const p = { ...params };
+  if (forceReload) p.force = '1';
+  const url = API + '?' + new URLSearchParams(p);
+  const extra = forceReload ? {'X-Force-Reload': '1'} : {};
+  const r = await fetch(url, { headers: { ...extra, ...headers }, signal });
+  const txt = await r.text();
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: ' + txt.slice(0,120)); }
+  if(j && j.error){ throw new Error(j.error); }
+  return j;
+}
+
+
+async function apiPost(body, headers = {}, signal){
+  const b = { ...body };
+  if (forceReload) b.force = '1';
+  const extra = forceReload ? {'X-Force-Reload': '1'} : {};
+  const r = await fetch(API, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...extra, ...headers },
+    body: JSON.stringify(b),
+    signal
+  });
+  const txt = await r.text();
+  let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error('Réponse non JSON: ' + txt.slice(0,120)); }
+  if(j && j.error){ throw new Error(j.error); }
+  return j;
+}
+
+
+function buildSparseMatrix(bucket){
+  const out = {};
+  for(const pid in (bucket?.matrix||{})){
+    const row = bucket.matrix[pid] || {};
+    const filtered = {};
+    for(const sh in row){
+      const v = String(row[sh]||'').trim();
+      if(v) filtered[sh] = v;
+    }
+    if(Object.keys(filtered).length) out[pid] = filtered;
+  }
+  return out;
+}
+async function apiPostWithRetry(body, headers={}, tries=2){
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{ return await apiPost(body, headers); }
+    catch(e){
+      lastErr = e;
+      if(!/timeout|proxy_failed|network/i.test(String(e))) break;
+      await new Promise(r=> setTimeout(r, 800*(i+1)));
+    }
+  }
+  throw lastErr;
+}
+
+function rebuildCodesUnion(){
+  const map=new Map();
+  TYPES.forEach(t=> (state.dayByType?.[t]?.codes||[]).forEach(c=>{ if(!map.has(c.code)) map.set(c.code,c); }));
+  state.codesUnion = Array.from(map.values());
+}
+function renderLegendInline(container, type){
+  container.innerHTML='';
+  (state.codesUnion||[]).forEach(c=>{
+    const div=document.createElement('div');
+    div.className='k';
+    div.innerHTML=`<span class="swatch" style="background:${c.couleur_hex}"></span><b>${c.code}</b> <span class="sub">${c.libelle||''}</span>`;
+    div.addEventListener('click',(e)=>{
+      if(e.altKey){ applyAllDay(c.code, type); } else { setCodesOnTargets(c.code); }
+    });
+    container.appendChild(div);
+  });
+}
+
+function applyAllDay(code, onlyType=null){
+  if(isWeekendISO(state.day)){ renderGridDayAll(); return; }
+  const types = onlyType ? [onlyType] : TYPES;
+
+  types.forEach(t=>{
+    const b=state.dayByType?.[t]; if(!b) return;
+    for(const pid in b.matrix){
+      for(const s of (b.shifts||[])){
+        if(t==='LIVREUR'){
+          const person = (b.people||[]).find(p=> String(p.id)===String(pid));
+          const allowed = Array.isArray(person?.allowed) ? person.allowed.map(x=>String(x).toUpperCase()) : [];
+          if(allowed.length && !allowed.includes(String(s).toUpperCase())) continue;
+        }
+        b.matrix[pid][s]=code||'';
       }
+    }
+  });
+
+  $$('#gridDay td.cell').forEach(td=>{
+    if(td.classList.contains('weekend') || td.classList.contains('off')) return;
+    if(onlyType && td.dataset.type !== onlyType) return;
+    const t=td.dataset.type, pid=td.dataset.pid, sh=td.dataset.shift;
+    const v=state.dayByType?.[t]?.matrix?.[pid]?.[sh]||'';
+    td.textContent=v; setCellCodeColor(td,v,t);
+  });
+}
+
+function attachCellHandlers(td){
+  td.addEventListener('mousedown',(e)=> selectCell(td, e.ctrlKey||e.metaKey||e.shiftKey));
+  td.addEventListener('input', e=>{
+    const v=e.target.textContent.trim().toUpperCase();
+    const t=td.dataset.type;
+    const allowed=new Set(((state.dayByType?.[t]?.codes)||[]).map(c=>c.code).concat(state.codesUnion.map(c=>c.code)));
+    const code=allowed.has(v)?v:'';
+    const pid=td.dataset.pid, s=td.dataset.shift;
+    state.dayByType[t].matrix[pid][s]=code;
+    td.textContent=code; setCellCodeColor(td,code,t); selectCell(td,true);
+  });
+}
+
+function renderGridDayOne(type){
+  const bucket = state.dayByType?.[type]||{};
+  const people = bucket.people||[];
+  const shifts = bucket.shifts||[];
+
+  const gridSection=document.createElement('div'); gridSection.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
+  gridSection.appendChild(title);
+
+  const legendInline = document.createElement('div');
+  legendInline.className = 'legend';
+  renderLegendInline(legendInline, type);
+  gridSection.appendChild(legendInline);
+
+  const wrap=document.createElement('div'); wrap.className='gridWrap';
+  const table=document.createElement('table'); const thead=document.createElement('thead');
+
+  if(type==='EMPLOYE'){
+    const tr0=document.createElement('tr'); const th0=document.createElement('th');
+    th0.colSpan = 1 + (shifts.length||0);
+    th0.innerHTML = `
+      <div class="dayHeader">
+        <button class="navBtn" aria-label="Jour précédent" id="prevDayBtn">◀</button>
+        <span class="dayTitle">${formatDateLongFR(state.day)}</span>
+        <button class="navBtn" aria-label="Jour suivant" id="nextDayBtn">▶</button>
+      </div>`;
+    tr0.appendChild(th0); thead.appendChild(tr0);
+  }
+
+  const trh=document.createElement('tr');
+  const nameHead = th('Nom'); nameHead.className='col-name';
+  trh.appendChild(nameHead);
+  (shifts||[]).forEach(s=>{
+    const h = th(sShort(s)); h.className='col-shift'; trh.appendChild(h);
+  });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const weekendDay=isWeekendISO(state.day);
+  const tbody=document.createElement('tbody');
+
+  (people||[]).forEach(p=>{
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`);
+    thn.className='sticky col-name';
+    tr.appendChild(thn);
+
+    const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
+
+    (shifts||[]).forEach(s=>{
+      const sU = String(s).toUpperCase();
+      const td=document.createElement('td'); td.className='cell col-shift';
+      td.dataset.pid=p.id; td.dataset.shift=s; td.dataset.type=type;
+
+      const val=bucket?.matrix?.[p.id]?.[s]||''; td.textContent=val;
+
+      const notAllowed = (type==='LIVREUR' && allowed.length && !allowed.includes(sU));
+
+      if(weekendDay || notAllowed){
+        td.classList.add(notAllowed ? 'off' : 'weekend');
+      }else{
+        td.setAttribute('contenteditable','true'); setCellCodeColor(td,val,type); attachCellHandlers(td);
+      }
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody); wrap.appendChild(table); gridSection.appendChild(wrap);
+
+  if(type==='EMPLOYE'){
+    const prev = wrap.querySelector('#prevDayBtn');
+    const next = wrap.querySelector('#nextDayBtn');
+    if(prev) prev.addEventListener('click', ()=> changeDay(-1));
+    if(next) next.addEventListener('click', ()=> changeDay(1));
+  }
+
+  return gridSection;
+}
+function renderGridDayAll(){
+  clearSelection();
+  const grid=$('#gridDay'); grid.innerHTML='';
+  TYPES.forEach(t=> grid.appendChild( renderGridDayOne(t) ));
+}
+
+function renderMonthlyGridOne(type){
+  const bucket = state.monthByType?.[type]||{};
+  const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
+  const group=document.createElement('div'); group.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
+  group.appendChild(title);
+
+  const container=document.createElement('div'); container.className='gridWrap';
+  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
+
+  const table=document.createElement('table'); const thead=document.createElement('thead');
+  const tr1=document.createElement('tr'); 
+  const blankHead = document.createElement('th'); blankHead.className='col-name'; tr1.appendChild(blankHead);
+  const weekendFlags=[];
+  const shiftW = cssVarInt('--shiftW', 72);
+
+  (days||[]).forEach(d=>{
+    const th1=document.createElement('th');
+    th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length;
+    th1.style.minWidth = ((shifts||[]).length * shiftW) + 'px';
+    const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
+  });
+  thead.appendChild(tr1);
+
+  const tr2=document.createElement('tr'); 
+  const nameSpacer = th(''); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
+  (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{
+    const th2=th(sShort(s)); th2.className='col-shift'; if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
+  }));
+  thead.appendChild(tr2); table.appendChild(thead);
+
+  const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+
+  const tbody=document.createElement('tbody');
+  (people||[]).forEach(p=>{
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky col-name'; tr.appendChild(thn);
+
+    const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
+
+    (days||[]).forEach((d,idx)=>{
+      const isW=weekendFlags[idx];
+      (shifts||[]).forEach(s=>{
+        const sU=String(s).toUpperCase();
+        const td=document.createElement('td'); td.className='cell col-shift';
+        if(isW){
+          td.classList.add('weekend'); td.textContent='';
+        }else if(type==='LIVREUR' && allowed.length && !allowed.includes(sU)){
+          td.classList.add('off'); td.textContent='';
+        }else{
+          const code=recMap.get(`${p.id}|${d}|${s}`)||''; td.dataset.code=code; td.textContent=code;
+          const color=(codes||[]).find(c=>c.code===code)?.couleur_hex || findColor(code, type);
+          td.style.backgroundColor=color||''; td.style.color=color?'#fff':'';
+        }
+        tr.appendChild(td);
+      });
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); container.appendChild(table); group.appendChild(container);
+  return group;
+}
+function renderMonthlyGridAll(){
+  const container=$('#summaryGrid'); container.innerHTML='';
+  TYPES.forEach(t=> container.appendChild( renderMonthlyGridOne(t) ));
+}
+
+// Helpers pour rendre un tableau mensuel à partir d'un objet monthByType SANS modifier l'état global
+function renderMonthlyGridOneFrom(type, monthByType){
+  const bucket = (monthByType && monthByType[type]) || {};
+  const people=bucket.people||[], days=bucket.days||[], shifts=bucket.shifts||[], codes=bucket.codes||[], records=bucket.records||[];
+  const group=document.createElement('div'); group.className='group';
+  const title=document.createElement('h2'); title.className='groupTitle'; title.textContent=TYPE_LABELS[type]||type;
+  group.appendChild(title);
+  const container=document.createElement('div'); container.className='gridWrap';
+  if(!people.length){ container.innerHTML=`<div style="padding:12px;color:#666">Aucune donnée à afficher.</div>`; group.appendChild(container); return group; }
+  const table=document.createElement('table'); const thead=document.createElement('thead');
+  const tr1=document.createElement('tr');
+  const blankHead = document.createElement('th'); blankHead.className='col-name'; tr1.appendChild(blankHead);
+  const weekendFlags=[]; const shiftW = cssVarInt('--shiftW', 72);
+  (days||[]).forEach(d=>{
+    const th1=document.createElement('th');
+    th1.innerHTML=dayLabel(d); th1.colSpan=(shifts||[]).length;
+    th1.style.minWidth = ((shifts||[]).length * shiftW) + 'px';
+    const isW=isWeekendISO(d); weekendFlags.push(isW); if(isW) th1.classList.add('weekend'); tr1.appendChild(th1);
+  });
+  thead.appendChild(tr1);
+  const tr2=document.createElement('tr');
+  const nameSpacer = th(''); nameSpacer.className='col-name'; tr2.appendChild(nameSpacer);
+  (days||[]).forEach((d,idx)=> (shifts||[]).forEach(s=>{
+    const th2=th(sShort(s)); th2.className='col-shift'; if(weekendFlags[idx]) th2.classList.add('weekend'); tr2.appendChild(th2);
+  }));
+  thead.appendChild(tr2); table.appendChild(thead);
+  const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+  const tbody=document.createElement('tbody');
+  (people||[]).forEach(p=>{
+    const tr=document.createElement('tr');
+    const thn=th(`${(p.nom||'').toUpperCase()}<br><span class="sub">${p.prenom||''}</span>`); thn.className='sticky col-name'; tr.appendChild(thn);
+    const allowed = Array.isArray(p.allowed) ? p.allowed.map(x=>String(x).toUpperCase()) : [];
+    (days||[]).forEach((d,idx)=>{
+      const isW=weekendFlags[idx];
+      (shifts||[]).forEach(s=>{
+        const sU=String(s).toUpperCase();
+        const td=document.createElement('td'); td.className='cell col-shift';
+        if(isW){
+          td.classList.add('weekend'); td.textContent='';
+        }else if((TYPE_LABELS.LIVREUR==='Livreurs' ? 'LIVREUR' : 'LIVREUR')==='LIVREUR' && allowed.length && !allowed.includes(sU)){
+          td.classList.add('off'); td.textContent='';
+        }else{
+          const code=recMap.get(`${p.id}|${d}|${s}`)||''; td.dataset.code=code; td.textContent=code;
+          const color=(codes||[]).find(c=>c.code===code)?.couleur_hex || '';
+          td.style.backgroundColor=color||''; td.style.color=color?'#fff':'';
+        }
+        tr.appendChild(td);
+      });
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); container.appendChild(table); group.appendChild(container);
+  return group;
+}
+function renderMonthlyGridAllFrom(monthByType, target){
+  TYPES.forEach(t=> target.appendChild( renderMonthlyGridOneFrom(t, monthByType) ));
+}
+function renderTotalsChips(rows){
+  const wrap=$('#summaryTotals'); wrap.innerHTML='';
+  if(!rows||!rows.length){ wrap.innerHTML=`<div style="padding:12px;color:#666">Aucun total.</div>`; return; }
+  const container=document.createElement('div'); container.className='summary';
+  rows.forEach(r=>{
+    const chips=[]; if((r.P||0)>0)chips.push(`<span class="chip">P: ${r.P}</span>`); if((r.CP||0)>0)chips.push(`<span class="chip">CP: ${r.CP}</span>`); if((r.SS||0)>0)chips.push(`<span class="chip">SS: ${r.SS}</span>`); if((r.F||0)>0)chips.push(`<span class="chip">F: ${r.F}</span>`);
+    const line=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)">
+      <div style="min-width:260px;"><b>${(r.nom||'').toUpperCase()}</b> <span class="sub">${r.prenom||''}</span> — <span class="sub">${r.magasin||''} · ${r.type||''}</span></div>
+      <div class="chips">${chips.join(' ') || '<span class="sub">Aucun code utilisé ce mois</span>'}</div>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', line);
+  });
+  wrap.appendChild(container);
+}
+
+async function loadDayAll(){
+  if(dayAbortCtrl) dayAbortCtrl.abort();
+  dayAbortCtrl = new AbortController();
+  const {store} = state; const day = state.day; const signal=dayAbortCtrl.signal;
+
+  try{
+    const payload = await apiGet({action:'initDayAll', store, day}, {}, signal);
+    const res = {};
+    TYPES.forEach(t=>{
+      const pl = payload?.[t]||{};
+      const {people=[],shifts=[],codes=[],records=[]}=pl;
+      const matrix={};
+      (people||[]).forEach(p=>{ matrix[p.id]={}; (shifts||[]).forEach(s=> matrix[p.id][s]=''); });
+      (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
+      res[t]={people,shifts,codes,matrix};
+    });
+    state.dayByType = res;
+  }catch(e){
+    const res = {};
+    for(const t of TYPES){
+      const pl = await apiGet({action:'initDay', store, type:t, day}, {}, signal);
+      const {people=[],shifts=[],codes=[],records=[]} = pl || {};
+      const matrix={};
+      (people||[]).forEach(p=>{ matrix[p.id]={}; (shifts||[]).forEach(s=> matrix[p.id][s]=''); });
+      (records||[]).forEach(r=>{ if(matrix[r.person_id]&&matrix[r.person_id][r.shift]!==undefined){ matrix[r.person_id][r.shift]=r.code||''; }});
+      res[t]={people,shifts,codes,matrix};
+    }
+    state.dayByType=res;
+  }
+
+  rebuildCodesUnion();
+  renderGridDayAll();
+}
+
+async function loadMonthlyAll(storeOverride=null){
+  if(monthAbortCtrl) monthAbortCtrl.abort();
+  monthAbortCtrl = new AbortController();
+
+  const store = storeOverride || state.store;
+  const month = state.month;
+  const signal = monthAbortCtrl.signal;
+
+  const monthByType={};
+  for(const t of TYPES){
+    const payload = await apiGet({action:'init', store, type:t, month}, {}, signal);
+    const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
+    monthByType[t]={people,days,shifts,codes,records};
+  }
+  state.monthByType=monthByType;
+  renderMonthlyGridAll();
+
+  const totalsAll = [];
+  for(const t of TYPES){
+    const r = await apiGet({action:'summary', store, type:t, month}, {}, signal);
+    totalsAll.push(...(r.rows||[]));
+  }
+  renderTotalsChips(totalsAll);
+}
+
+async function changeDay(delta){
+  if(!state.day) return;
+  const d=new Date(state.day); d.setDate(d.getDate()+delta);
+  const iso=d.toISOString().slice(0,10);
+  state.day=iso; $('#day').value=iso; setMonthFromDay();
+  setSectionLoading('#gridDay','Chargement du jour…'); showLoading();
+  try{
+    await loadDayAll();
+    if(currentTab()==='resume'){ await loadMonthlyAll(state.resumeStore || state.store); }
+  } finally { hideLoading(); }
+}
+
+function getAdminCode(){ return localStorage.getItem('pres_admin_code') || ''; }
+function setAdminCode(code){ localStorage.setItem('pres_admin_code', code||''); }
+async function loadLeaves(){
+  const code=getAdminCode();
+  if(!code){ $('#leavesList').innerHTML=`<div class="sectionLoading">Saisis le code pour afficher les demandes.</div>`; return; }
+  $('#leavesList').innerHTML=`<div class="sectionLoading"><span class="spinner"></span> Chargement des demandes…</div>`;
+  const store=$('#filterStore').value||''; const month=$('#filterMonth').value||'';
+  try{
+    const data=await apiGet({action:'leaves', status:'EN_ATTENTE', store:store||'ALL', month:month||''}, {'X-Admin-Code': code});
+    const rows=data.rows||[];
+    if(!rows.length){ $('#leavesList').innerHTML=`<div class="sectionLoading">Aucune demande en attente.</div>`; return; }
+    const wrap=document.createElement('div'); wrap.className='cards';
+    rows.forEach(r=>{
+      const div=document.createElement('div'); div.className='card';
+      div.innerHTML=`<h3>${(r.nom||'').toUpperCase()} ${r.prenom||''}</h3>
+        <div class="rowmeta">${r.magasin||''} · ${r.service||''} · ${r.email||''}</div>
+        <div>Du <b>${r.date_du}</b> au <b>${r.date_au}</b> – ${r.nb_jours||0} jour(s)</div>
+        <div class="actions" style="margin-top:10px">
+          <button class="ok" data-id="${r.id}">Accepter</button>
+          <button class="no" data-id="${r.id}">Refuser</button>
+        </div>`;
+      wrap.appendChild(div);
+    });
+    const box=$('#leavesList'); box.innerHTML=''; box.appendChild(wrap);
+    $$('#leavesList .ok').forEach(b=> b.onclick=()=> decideLeave(b.dataset.id,'ACCEPTE'));
+    $$('#leavesList .no').forEach(b=> b.onclick=()=> decideLeave(b.dataset.id,'REFUSE'));
+  }catch(e){ $('#leavesList').innerHTML=`<div class="sectionLoading">Erreur: ${e.message}</div>`; }
+}
+async function decideLeave(id, decision){
+  const code=getAdminCode(); if(!code) return alert('Code manquant.');
+  try{
+    showLoading();
+    const res=await apiPost({action:'leave_decide', id, decision}, {'X-Admin-Code': code});
+    if(res?.accepted){ await loadLeaves(); await loadDayAll(); alert('Congé accepté et ajouté aux présences (CP).'); }
+    else if(res?.refused){ await loadLeaves(); alert('Demande refusée.'); }
+    else{ alert('Action non appliquée: ' + (res?.error||'')); }
+  }catch(e){ alert('Échec: ' + e.message); }
+  finally{ hideLoading(); }
+}
+
+$('.tab[data-tab="magasins"]').onclick = ()=> setActiveTab('magasins');
+$('.tab[data-tab="saisie"]').onclick = ()=> setActiveTab('saisie');
+
+$('.tab[data-tab="resume"]').onclick = async ()=>{
+  setActiveTab('resume');
+
+  if(!$('#resumeStore').dataset.ready){
+    $('#resumeStore').innerHTML = '';
+    try{
+      const r = await apiGet({action:'stores'});
+      let stores = (r.stores && r.stores.length) ? r.stores : STORES;
+      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
+    }catch(e){
+      let stores = STORES.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      $('#resumeStore').innerHTML = ['<option value="ALL">Tous les magasins</option>'].concat(stores.map(s=>`<option>${s}</option>`)).join('');
+    }
+    const def = state.resumeStore || state.store || $('#resumeStore').querySelector('option')?.value || '';
+    if(def) $('#resumeStore').value = def;
+    $('#resumeStore').dataset.ready = '1';
+  }
+
+  if(!(state.resumeStore || $('#resumeStore').value) || !state.month){
+    $('#summaryGrid').innerHTML = `<div style="padding:12px;color:#666">Choisis un <b>magasin</b> et un <b>mois</b>, puis clique <b>Charger résumé</b>.</div>`;
+    $('#summaryTotals').innerHTML = '';
+  }
+};
+
+$('#loadResume').onclick = async ()=>{
+  state.resumeStore = $('#resumeStore').value || null;
+  if(!state.resumeStore){ alert('Choisis un magasin.'); return; }
+  if(!$('#month').value){
+    const now=new Date(); $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
+  state.month = $('#month').value;
+
+  setSectionLoading('#summaryGrid','Chargement du résumé…'); showLoading();
+  forceReload = true;
+  try{
+    if(state.resumeStore==='ALL'){
+      const grid=$('#summaryGrid'); grid.innerHTML='';
+      $('#summaryTotals').innerHTML='';
+      let stores=[];
+      try{ const r=await apiGet({action:'stores'}); stores=(r.stores&&r.stores.length)?r.stores:STORES; }catch(_){ stores=STORES; }
+      stores = stores.slice().sort((a,b)=> String(a).localeCompare(String(b),'fr',{sensitivity:'base'}));
+      const month=state.month;
+      for(const store of stores){
+        const monthByType={};
+        for(const t of TYPES){
+          const payload = await apiGet({action:'init', store, type:t, month});
+          const {people=[],days=[],shifts=[],codes=[],records=[]}=payload||{};
+          monthByType[t]={people,days,shifts,codes,records};
+        }
+        const h=document.createElement('h2'); h.className='groupTitle'; h.textContent=store;
+        grid.appendChild(h);
+        renderMonthlyGridAllFrom(monthByType, grid);
+      }
+    }else{
+      await loadMonthlyAll(state.resumeStore);
+    }
+  } catch(e){
+    console.error(e); alert('Erreur chargement résumé : '+(e && e.message ? e.message : e));
+  } finally {
+    forceReload = false;
+    hideLoading();
+  }
+};
+
+$('.tab[data-tab="conges"]').onclick = async ()=>{
+  setActiveTab('conges');
+  if(!$('#filterStore').innerHTML.trim()){
+    let stores = [];
+    try{ stores = (await apiGet({action:'stores'})).stores || []; } catch(e){ stores = []; }
+    if(!stores.length) stores = ['ALL', ...STORES];
+    else stores = ['ALL', ...stores];
+    $('#filterStore').innerHTML=stores.map(s=>`<option>${s}</option>`).join('');
+    const now=new Date(); $('#filterMonth').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
+  await loadLeaves();
+};
+
+$('#saveAdminCode').onclick = ()=>{ setAdminCode($('#adminCode').value.trim()); loadLeaves(); };
+$('#refreshLeaves').onclick = ()=> loadLeaves();
+$('#fillP').onclick = ()=> applyAllDay('P');
+$('#fillEmpty').onclick = ()=>{ if(selectedCells.size){ setCodesOnTargets(''); } else { applyAllDay(''); } };
+
+$('#save').onclick = async ()=>{
+  if(!state.store || !state.day){ alert('Choisis un magasin (onglet Magasins) et une date.'); return; }
+  showLoading();
+  try{
+    const mats={};
+    TYPES.forEach(t=>{
+      const b=state.dayByType?.[t];
+      if(!b) return;
+      const sp=buildSparseMatrix(b);
+      if(Object.keys(sp).length) mats[t]=sp;
+    });
+
+    if(Object.keys(mats).length===0){ alert('Rien à enregistrer 🙂'); return; }
+
+    try{
+      await apiPostWithRetry({action:'saveDayAll', store:state.store, day:state.day, matrices:mats}, {}, 2);
+    }catch(e){
+      for(const t of Object.keys(mats)){
+        await apiPostWithRetry({action:'saveDay', store:state.store, type:t, day:state.day, matrix:mats[t]}, {}, 2);
+      }
+    }
+    alert('Présences enregistrées ✔');
+  }catch(e){
+    console.error(e); alert("Échec de l'enregistrement : "+e.message);
+  }finally{ hideLoading(); }
+};
+
+$('#exportCsv').onclick = async ()=>{
+  const btn=$('#exportCsv'), msg=$('#exportMsg');
+  const setMsg=t=> msg.textContent=t||''; const finishOk=()=>{ btn.disabled=false; setMsg('Export terminé ✔'); setTimeout(()=> setMsg(''),2000); };
+  const finishKo=()=>{ btn.disabled=false; setMsg('Échec export'); setTimeout(()=> setMsg(''),3000); };
+
+  try{
+    btn.disabled=true; setMsg('Export en cours…');
+    const month=$('#month').value;
+    let stores=[];
+    try{ const r=await apiGet({action:'stores'}); stores = (r.stores&&r.stores.length)? r.stores : []; } catch(e){ stores=[]; }
+    if(!stores.length) stores = state.resumeStore ? [state.resumeStore] : (state.store ? [state.store] : STORES);
+
+    const wb=XLSX.utils.book_new();
+
+    for(const store of stores){
+      let header=['Magasin','Type','Nom','Prénom'];
+      let daysRef=null,shiftsRef=null;
+
+      for(const t of TYPES){
+        const p = await apiGet({action:'init', store, type:t, month});
+        if((p.days||[]).length && (p.shifts||[]).length){ daysRef=p.days; shiftsRef=p.shifts; break; }
+      }
+      const days=daysRef||[]; const shifts=shiftsRef||[];
+      days.forEach(d=> header.push(formatDateHeader(d)));
+      header.push('P','CP','SS','F','Total P');
+      const data=[header];
+
+      const inits = {};
+      for(const t of TYPES){ inits[t]=await apiGet({action:'init', store, type:t, month}); }
+      for(const t of TYPES){
+        const {people=[],records=[]}=inits[t];
+        const recMap=new Map(); (records||[]).forEach(r=> recMap.set(`${r.person_id}|${r.date}|${r.shift}`, r.code||''));
+        const rowsPeople=people.slice().sort((a,b)=>{
+          const na=(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'});
+          return na!==0?na:(a.prenom||'').localeCompare(b.prenom||'','fr',{sensitivity:'base'});
+        });
+        for(const p of rowsPeople){
+          const row=[store,(TYPE_LABELS[t]||t),(p.nom||'').toUpperCase(),p.prenom||''];
+          const counts={P:0,CP:0,SS:0,F:0};
+          for(const d of days){
+            const codes=(shifts||[]).map(s=> recMap.get(`${p.id}|${d}|${s}`)||'').filter(Boolean);
+            row.push(codes.join('/')); codes.forEach(c=>{ if(counts[c]!==undefined) counts[c]+=1; });
+          }
+          row.push(counts.P||0,counts.CP||0,counts.SS||0,counts.F||0,counts.P||0);
+          data.push(row);
+        }
+      }
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=header.map(h=>{
+        if(['Magasin','Type'].includes(h)) return {wch:12};
+        if(['Nom','Prénom'].includes(h)) return {wch:16};
+        if(['P','CP','SS','F','Total P'].includes(h)) return {wch:8};
+        return {wch:10};
+      });
+      XLSX.utils.book_append_sheet(wb, ws, String(store).slice(0,31) || 'Feuille');
+    }
+
+    const fname=`presences_${state.month || 'mois'}_${(state.resumeStore || state.store || 'ALL')}.xlsx`;
+    try{
+      const wbArray=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+      const blob=new Blob([wbArray],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fname; a.rel='noopener';
+      document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0);
+    }catch(_){}
+    try{
+      const base64=XLSX.write(wb,{bookType:'xlsx',type:'base64'});
+      window.parent?.postMessage({type:'DOWNLOAD_FILE', filename:fname, mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', base64}, '*');
+    }catch(_){}
+    finishOk();
+  }catch(e){ console.error(e); alert('Export Excel impossible : '+e.message); finishKo(); }
+};
+
+function buildStoreButtons(stores){
+  const box = $('#storesList'); box.innerHTML='';
+  stores.forEach(s=>{
+    const btn=document.createElement('button');
+    btn.className='storeBtn';
+    btn.textContent=s;
+    btn.onclick=()=> {
+      state.store = s;
+      setCurrentStoreChip();
+      if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
+      if(!state.month){ setMonthFromDay(); }
+      setActiveTab('saisie');
+      triggerLoad();
     };
-  </script>
+    box.appendChild(btn);
+  });
+}
+
+async function loadStoresForButtons(){
+  setSectionLoading('#storesList','Chargement des magasins…');
+  try{
+    const r = await apiGet({action:'stores'});
+    const stores = (r.stores && r.stores.length) ? r.stores : STORES;
+    buildStoreButtons(stores);
+  }catch(e){
+    buildStoreButtons(STORES);
+  }
+}
+
+async function triggerLoad(){
+  if(!state.store){ setActiveTab('magasins'); alert('Choisis un magasin dans l’onglet Magasins.'); return; }
+  state.day=$('#day').value || state.day;
+  state.month=$('#month').value || state.month;
+  if(!state.day){ const today=new Date().toISOString().slice(0,10); state.day=today; $('#day').value=today; }
+  if(!state.month){ setMonthFromDay(); }
+  setSectionLoading('#gridDay','Chargement des présences…');
+  if(currentTab()==='resume'){ setSectionLoading('#summaryGrid','Chargement du résumé…'); }
+  showLoading();
+  try{
+    await loadDayAll();
+    if(currentTab()==='resume'){ await loadMonthlyAll(state.resumeStore || state.store); }
+  }catch(e){ console.error('Init error',e); alert("Échec du chargement (réseau/API). Vérifie l’URL API."); }
+  finally{ hideLoading(); }
+}
+$('#load').onclick = async ()=>{
+  forceReload = true;
+  try{
+    await triggerLoad();
+  } finally {
+    forceReload = false;
+  }
+};
+
+
+// Raccourci clavier : Ctrl/Cmd + Alt + R  => purge cache + reload
+window.addEventListener('keydown', async (e)=>{
+  if ((e.ctrlKey||e.metaKey) && e.altKey && (e.key==='r' || e.key==='R')){
+    e.preventDefault();
+    await purgeAndReload();
+  }
+});
+
+// Bouton discret (Alt+clic pour éviter un clic accidentel)
+$('#secretReload')?.addEventListener('click', async (e)=>{
+  if (!e.altKey) return;
+  await purgeAndReload();
+});
+
+async function purgeAndReload(){
+  const code = getAdminCode && getAdminCode();
+  if(!code){ alert('Entre d\u2019abord le code d\u2019accès (onglet Congés).'); return; }
+  try{
+    showLoading();
+    await apiGet({action:'purge_cache', code});
+    forceReload = true;
+    await triggerLoad();
+  }catch(e){
+    alert('Échec purge/rechargement : ' + e.message);
+  }finally{
+    forceReload = false;
+    hideLoading();
+  }
+}
+(async function(){
+  const now=new Date(); const todayISO=now.toISOString().slice(0,10);
+  $('#day').value=todayISO; $('#month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  setCurrentStoreChip();
+  await loadStoresForButtons();
+})();
+</script>
 </body>
 </html>
