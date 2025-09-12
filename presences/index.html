@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Présences DSG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#d21f3c;
+      --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+    a{color:inherit}
+    .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
+    .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
+    .app-header .today{color:var(--muted)}
+    .tabs{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+    .tab{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .tab.active{border-color:var(--brand);color:#fff;background:var(--brand)}
+    .tab-panel{display:none;padding:16px}
+    .tab-panel.active{display:block}
+    .hint{color:var(--muted)}
+    .grid-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+    .grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
+    .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
+    .toolbar{display:flex;align-items:center;gap:14px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px}
+    .toolbar .spacer{flex:1}
+    button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
+    .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
+    .table thead th{background:#fafafa;font-weight:800}
+    .section-title{margin-top:26px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
+    .cell{min-width:28px;height:28px;display:grid;place-items:center;cursor:pointer}
+    .cell.weekend{background:#000;color:#fff}
+    .row-label{white-space:nowrap;text-align:left;font-weight:600}
+    .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
+    .legend{color:var(--muted);font-size:.9rem;margin-top:6px}
+    .resume .store-block{margin-bottom:32px}
+    .resume .store-title{font-weight:800;font-size:1.25rem;margin:10px 0}
+    .error{color:#a40000;font-weight:700}
+    @media (max-width:900px){ .cell{min-width:24px} }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Présences DSG</h1>
+    <div class="today">Aujourd’hui : <span id="today"></span></div>
+  </header>
+
+  <main>
+    <nav class="tabs">
+      <button class="tab active" data-tab="magasins">Magasins</button>
+      <button class="tab" data-tab="saisie">Saisie du jour</button>
+      <button class="tab" data-tab="resume">Résumé du mois</button>
+    </nav>
+
+    <!-- Onglet 1 : Magasins -->
+    <section id="tab-magasins" class="tab-panel active">
+      <p class="hint">Choisissez un magasin :</p>
+      <div id="magasin-buttons" class="grid-buttons"></div>
+    </section>
+
+    <!-- Onglet 2 : Saisie du jour -->
+    <section id="tab-saisie" class="tab-panel">
+      <div class="toolbar">
+        <div>
+          <label>Magasin :</label>
+          <strong id="current-magasin">—</strong>
+        </div>
+        <div>
+          <label>Date :</label>
+          <input id="saisie-date" type="date" />
+        </div>
+        <div class="spacer"></div>
+        <button id="btn-save" class="primary">Enregistrer</button>
+      </div>
+
+      <div id="saisie-content" class="saisie"></div>
+      <div class="legend">
+        <span>Légende : cliquer pour faire défiler → ␀ (vide) → P → P5 → P9 → S</span>
+      </div>
+      <p id="saisie-error" class="error" style="display:none"></p>
+    </section>
+
+    <!-- Onglet 3 : Résumé du mois -->
+    <section id="tab-resume" class="tab-panel">
+      <div class="toolbar">
+        <div>
+          <label>Mois :</label>
+          <input id="resume-month" type="month" />
+        </div>
+        <div class="spacer"></div>
+        <button id="btn-refresh-resume">Recharger</button>
+      </div>
+
+      <div id="resume-content" class="resume"></div>
+      <p id="resume-error" class="error" style="display:none"></p>
+    </section>
+  </main>
+
+  <script>
+    // ------- Configuration -------
+    const CONFIG = {
+      apiBase: "/presence",
+      magasins: [
+        "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
+        "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
+        "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+      ],
+      presenceCodes: ["", "P", "P5", "P9", "S"]
+    };
+
+    // ------- Utils dates -------
+    const pad = n => (n<10? "0"+n : ""+n);
+    const todayLocalISO = () => {
+      const d = new Date(); // local
+      return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    };
+    const ymLocal = () => {
+      const d = new Date();
+      return d.getFullYear()+"-"+pad(d.getMonth()+1);
+    };
+    const daysOfMonthLocal = (yyyymm) => {
+      const [y, m] = yyyymm.split("-").map(n=>parseInt(n,10));
+      const res = [];
+      const days = new Date(y, m, 0).getDate();
+      for(let d=1; d<=days; d++) res.push(new Date(y, m-1, d));
+      return res;
+    };
+    const ymd = (d) => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    const dowLetter = (d) => ["D","L","M","M","J","V","S"][d.getDay()];
+
+    // ------- HTTP helper -------
+    const api = (path, opts={}) => fetch(CONFIG.apiBase + path, {
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      ...opts
+    });
+
+    // ------- State -------
+    let currentMagasin = null;
+    let personnel = null;
+
+    // ------- DOM refs -------
+    const $today = document.getElementById("today");
+    const $tabButtons = document.querySelectorAll(".tab");
+    const $panels = {
+      magasins: document.getElementById("tab-magasins"),
+      saisie: document.getElementById("tab-saisie"),
+      resume: document.getElementById("tab-resume")
+    };
+    const $magBtnsWrap = document.getElementById("magasin-buttons");
+    const $currMag = document.getElementById("current-magasin");
+    const $dateInput = document.getElementById("saisie-date");
+    const $saisieContent = document.getElementById("saisie-content");
+    const $btnSave = document.getElementById("btn-save");
+    const $resumeMonth = document.getElementById("resume-month");
+    const $btnRefreshResume = document.getElementById("btn-refresh-resume");
+    const $resumeContent = document.getElementById("resume-content");
+    const $saisieError = document.getElementById("saisie-error");
+    const $resumeError = document.getElementById("resume-error");
+
+    // ------- Init -------
+    (function init(){
+      $today.textContent = todayLocalISO();
+      $dateInput.value = todayLocalISO();
+      $resumeMonth.value = ymLocal();
+      $tabButtons.forEach(btn => btn.addEventListener("click", ()=> switchTab(btn.dataset.tab)));
+      CONFIG.magasins.forEach(m=>{
+        const b = document.createElement("button");
+        b.textContent = m;
+        b.addEventListener("click", ()=> selectMagasin(m,b));
+        $magBtnsWrap.appendChild(b);
+      });
+      $btnSave.addEventListener("click", saveSaisie);
+      $dateInput.addEventListener("change", loadPrefillForDay);
+      $btnRefreshResume.addEventListener("click", loadResume);
+    })();
+
+    function switchTab(key){
+      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===key));
+      Object.entries($panels).forEach(([k,el])=> el.classList.toggle("active", k===key));
+      if(key==="resume") loadResume();
+    }
+
+    async function selectMagasin(magasin, button){
+      currentMagasin = magasin;
+      document.querySelectorAll("#magasin-buttons button").forEach(b=>b.classList.remove("active"));
+      button.classList.add("active");
+      $currMag.textContent = magasin;
+      await loadPersonnel();
+      buildSaisieUI();
+      await loadPrefillForDay();
+      switchTab("saisie");
+    }
+
+    async function loadPersonnel(){
+      try{
+        const res = await api(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        personnel = await res.json();
+      }catch(e){
+        // Fallback simple si l'API n'est pas prête
+        personnel = {
+          employes:[{nom:"BARRET", prenom:"Olivier"},{nom:"PICHARD", prenom:"Damien"}],
+          interims:[{nom:"PEREZ"}],
+          livreurs:{
+            "WARNING": ["Matin","A. Midi"],
+            "NAVETTE NUIT ALL COURS": ["NUIT"],
+            "C CHEZ VOUS": ["10H","12H","16H"]
+          }
+        };
+      }
+    }
+
+    function buildSaisieUI(){
+      $saisieContent.innerHTML = "";
+      $saisieError.style.display = "none";
+
+      const sections = [];
+
+      if(personnel?.employes?.length){
+        sections.push({title:"Employés", rows: personnel.employes.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
+      }
+      if(personnel?.interims?.length){
+        sections.push({title:"Intérim", rows: personnel.interims.map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}))});
+      }
+      if(personnel?.livreurs){
+        Object.entries(personnel.livreurs).forEach(([gLabel, slots])=>{
+          sections.push({title:`Livreurs — ${gLabel}`, rows:[{label:gLabel, slots}]});
+        });
+      }
+
+      sections.forEach(section=>{
+        const h = document.createElement("div");
+        h.className = "section-title";
+        h.textContent = section.title;
+        $saisieContent.appendChild(h);
+
+        const table = document.createElement("table");
+        table.className = "table";
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+        trh.innerHTML = `<th class="row-label">Nom / Ligne</th>` + section.rows[0].slots.map(s=>`<th>${s}</th>`).join("");
+        thead.appendChild(trh);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        section.rows.forEach(r=>{
+          const tr = document.createElement("tr");
+          const td0 = document.createElement("td");
+          td0.className = "row-label";
+          td0.textContent = r.label;
+          tr.appendChild(td0);
+          r.slots.forEach(slot=>{
+            const td = document.createElement("td");
+            td.className = "cell";
+            td.dataset.slot = slot;
+            td.addEventListener("click", ()=> cycleCell(td));
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        $saisieContent.appendChild(table);
+      });
+    }
+
+    function cycleCell(td){
+      const curr = td.textContent.trim();
+      const idx = CONFIG.presenceCodes.indexOf(curr);
+      const next = CONFIG.presenceCodes[(idx+1) % CONFIG.presenceCodes.length];
+      td.textContent = next;
+    }
+
+    async function loadPrefillForDay(){
+      if(!currentMagasin) return;
+      try{
+        const day = $dateInput.value;
+        const res = await api(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+        if(!res.ok) return;
+        const payload = await res.json();
+        applyPrefill(payload?.data||{});
+      }catch(_){/*ignore*/}
+    }
+
+    function applyPrefill(data){
+      const map = new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
+      $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
+        const label = tr.querySelector(".row-label")?.textContent.trim();
+        const values = map.get(label)||{};
+        tr.querySelectorAll("td.cell").forEach(td=>{
+          const slot = td.dataset.slot;
+          td.textContent = values[slot] || "";
+        });
+      });
+    }
+
+    function collectSaisie(){
+      const rows=[];
+      $saisieContent.querySelectorAll("tbody tr").forEach(tr=>{
+        const label = tr.querySelector(".row-label")?.textContent.trim();
+        const values={};
+        tr.querySelectorAll("td.cell").forEach(td=>{ values[td.dataset.slot] = td.textContent.trim(); });
+        rows.push({label, values});
+      });
+      return { rows };
+    }
+
+    async function saveSaisie(){
+      $saisieError.style.display = "none";
+      if(!$dateInput.value || !currentMagasin){
+        $saisieError.textContent = "Sélectionnez un magasin et une date.";
+        $saisieError.style.display = "block";
+        return;
+      }
+      const data = collectSaisie();
+      $btnSave.disabled = true;
+      try{
+        const res = await api("/save", {method:"POST", body: JSON.stringify({
+          magasin: currentMagasin,
+          date: $dateInput.value,
+          data
+        })});
+        if(!res.ok) throw new Error("save failed");
+        alert("Enregistré ✔");
+      }catch(e){
+        $saisieError.textContent = "Échec de l'enregistrement (serveur non joignable ?).";
+        $saisieError.style.display = "block";
+      }finally{
+        $btnSave.disabled = false;
+      }
+    }
+
+    async function loadResume(){
+      $resumeError.style.display = "none";
+      const yyyymm = $resumeMonth.value;
+      if(!yyyymm) return;
+      $resumeContent.innerHTML = "";
+      try{
+        const res = await api(`/month?yyyymm=${yyyymm}`);
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        const monthData = await res.json();
+        renderResume(yyyymm, monthData);
+      }catch(e){
+        $resumeError.textContent = "Impossible de charger le résumé (serveur non joignable ?).";
+        $resumeError.style.display = "block";
+      }
+    }
+
+    function renderResume(yyyymm, monthData){
+      const days = daysOfMonthLocal(yyyymm);
+      CONFIG.magasins.forEach(mag=>{
+        const block = document.createElement("div"); block.className="store-block";
+        const title = document.createElement("div"); title.className="store-title"; title.textContent = mag; block.appendChild(title);
+
+        const table = document.createElement("table"); table.className="table";
+        const thead = document.createElement("thead");
+        const tr1 = document.createElement("tr");
+        tr1.innerHTML = '<th class="row-label">Nom / Ligne</th>' + days.map(d=>`<th>${dowLetter(d)}</th>`).join("");
+        const tr2 = document.createElement("tr");
+        tr2.innerHTML = '<th class="sub-label">&nbsp;</th>' + days.map(d=>`<th>${d.getDate()}</th>`).join("");
+        thead.appendChild(tr1); thead.appendChild(tr2); table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        const pers = monthData.personnel?.[mag] || {employes:[], interims:[], livreurs:{}};
+        const rows = [];
+        pers.employes.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+        pers.interims.forEach(p=> rows.push({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+        Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{ rows.push({label:g, slots}); });
+
+        const file = monthData.files?.[mag] || {}; // {"YYYY-MM-DD": {data:{rows:[...]}}}
+        const daysKey = days.map(d=> ymd(d));
+
+        rows.forEach(r=>{
+          const tr = document.createElement("tr");
+          const td0 = document.createElement("td"); td0.className="row-label"; td0.textContent=r.label; tr.appendChild(td0);
+          daysKey.forEach(dayStr=>{
+            const td = document.createElement("td"); td.className="cell";
+            const dow = (new Date(dayStr)).getDay();
+            if(dow===0 || dow===6) td.classList.add("weekend");
+            const rec = file[dayStr];
+            if(rec?.data?.rows){
+              const found = rec.data.rows.find(x=> x.label===r.label);
+              if(found){
+                const vals = Object.values(found.values||{}).filter(Boolean);
+                td.textContent = vals[0] || "";
+              }
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        block.appendChild(table);
+        $resumeContent.appendChild(block);
+      });
+    }
+  </script>
+</body>
+</html>
