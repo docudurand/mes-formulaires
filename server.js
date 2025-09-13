@@ -112,8 +112,10 @@ function fmtFR(dateStr = "") {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
 }
 
-const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
-const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
+const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
+const PRES_ROOT = `${FTP_ROOT}/presences`;
+const LEAVES_FILE = `${PRES_ROOT}/leaves.json`;
+const LEAVE_DIR   = `${FTP_ROOT}/presence/leave`;
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 
 function tlsOptions(){
@@ -149,11 +151,21 @@ async function upJSON(client, remote, obj){
   await client.uploadFrom(out, remote);
   try{ fs.unlinkSync(out) }catch{}
 }
+async function upText(client, remote, buf){
+  const dir = path.posix.dirname(remote);
+  await client.ensureDir(dir);
+  const out = tmpFile("lv_file_"+Date.now());
+  fs.writeFileSync(out, buf);
+  await client.uploadFrom(out, remote);
+  try{ fs.unlinkSync(out) }catch{}
+}
+
 async function appendLeave(payload){
   await (async ()=>{
     let client;
     try{
       client = await ftpClient();
+
       const arr = (await dlJSON(client, LEAVES_FILE)) || [];
       const item = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
@@ -163,7 +175,13 @@ async function appendLeave(payload){
       };
       arr.push(item);
       await upJSON(client, LEAVES_FILE, arr);
-      console.log("[LEAVES] appended:", { id:item.id, magasin:item.magasin, du:item.dateDu, au:item.dateAu });
+
+      const safe = (s)=> String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
+      const base = `${item.createdAt.slice(0,10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
+      const remoteUnit = `${LEAVE_DIR}/${base}`;
+      await upText(client, remoteUnit, JSON.stringify(item, null, 2));
+
+      console.log("[LEAVES] appended:", { id:item.id, magasin:item.magasin, du:item.dateDu, au:item.dateAu, unit:remoteUnit });
     }catch(e){
       console.error("[LEAVES] append error:", e?.message||e);
     }finally{
@@ -213,55 +231,58 @@ app.post("/conges/api", async (req, res) => {
       return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
     }
 
-    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-    if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
-      console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
-      return res.status(500).json({ ok: false, error: "smtp_not_configured" });
-    }
-
-    const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
-    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: cleanedPass } });
-
     const duFR = fmtFR(dateDu);
     const auFR = fmtFR(dateAu);
     const nomPrenomStr = `${_nom.toUpperCase()} ${_prenom}`;
-
-    const pdfBuffer = await makeLeavePdf({
-      logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
-      magasin, nomPrenom: nomPrenomStr, service, nbJours: n, du: duFR, au: auFR, signatureData,
-    });
-
-    const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
-    const subject = `Demande - ${nomPrenomStr}`;
-    const html = `
-      <h2>Demande de Jours de Congés</h2>
-      <p><b>Magasin :</b> ${esc(magasin)}</p>
-      <p><b>Nom :</b> ${esc(_nom)}</p>
-      <p><b>Prénom :</b> ${esc(_prenom)}</p>
-      <p><b>Service :</b> ${esc(service)}</p>
-      <p><b>Demande :</b> ${n} jour(s) de congés</p>
-      <p><b>Période :</b> du ${esc(duFR)} au ${esc(auFR)}</p>
-      <p><b>Email du demandeur :</b> ${esc(email)}</p>
-    `;
-
-    await transporter.sendMail({
-      to: toRecipients || MAIL_CG,
-      from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
-      replyTo: email,
-      subject,
-      html,
-      attachments: [{ filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
-    });
-
-    console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
-
     await appendLeave({
       magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email
     });
 
-    res.json({ ok: true });
+    let emailSent = false;
+    try {
+      const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+      if (!MAIL_CG || !GMAIL_USER || !GMAIL_PASS) {
+        console.warn("[CONGES] smtp_not_configured:", { MAIL_CG: !!MAIL_CG, GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
+      } else {
+        const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
+        const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: cleanedPass } });
+
+        const pdfBuffer = await makeLeavePdf({
+          logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
+          magasin, nomPrenom: nomPrenomStr, service, nbJours: n, du: duFR, au: auFR, signatureData,
+        });
+
+        const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
+        const subject = `Demande - ${nomPrenomStr}`;
+        const html = `
+          <h2>Demande de Jours de Congés</h2>
+          <p><b>Magasin :</b> ${esc(magasin)}</p>
+          <p><b>Nom :</b> ${esc(_nom)}</p>
+          <p><b>Prénom :</b> ${esc(_prenom)}</p>
+          <p><b>Service :</b> ${esc(service)}</p>
+          <p><b>Demande :</b> ${n} jour(s) de congés</p>
+          <p><b>Période :</b> du ${esc(duFR)} au ${esc(auFR)}</p>
+          <p><b>Email du demandeur :</b> ${esc(email)}</p>
+        `;
+
+        await transporter.sendMail({
+          to: toRecipients || MAIL_CG,
+          from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER || "no-reply@localhost"}>`,
+          replyTo: email,
+          subject,
+          html,
+          attachments: [{ filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
+        });
+
+        emailSent = true;
+      }
+    } catch (mailErr) {
+      console.error("[CONGES][MAIL] Erreur:", mailErr?.message || mailErr);
+    }
+
+    res.json({ ok: true, emailSent });
   } catch (e) {
-    console.error("[CONGES][MAIL] Erreur:", e);
+    console.error("[CONGES] Erreur inattendue:", e);
     res.status(500).json({ ok: false, error: "send_failed" });
   }
 });

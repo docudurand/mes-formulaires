@@ -177,16 +177,18 @@ async function fetchJSON(path, opts={}, retries=1){
     if(!r.ok){
       const txt = await r.text().catch(()=> '');
       console.error('[HTTP]', r.status, path, txt);
+      if (r.status === 401 && path.startsWith('/leaves')) {
+        throw new Error('401');
+      }
       throw new Error(txt || ('HTTP '+r.status));
     }
     return await r.json();
   }catch(e){
-    if(retries>0){ await delay(300); return fetchJSON(path, opts, retries-1); }
+    if(retries>0){ await new Promise(r=>setTimeout(r,300)); return fetchJSON(path, opts, retries-1); }
     throw e;
   }finally{ clearTimeout(t); }
 }
 
-$tabs.forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 function switchTab(key){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
   Object.entries($panels).forEach(([k,el])=>el.classList.toggle('active',k===key));
@@ -461,7 +463,10 @@ async function loadLeaves(){
     if(!arr.length){ $leavesContent.innerHTML = '<div class="loading">Aucune demande trouvée.</div>'; return; }
     renderLeaves(arr);
   }catch(e){
-    $leavesError.textContent = "Impossible de charger les demandes (mot de passe ou réseau).";
+    const msg = (String(e?.message||'').includes('401'))
+      ? "Mot de passe invalide (401)."
+      : "Impossible de charger les demandes (mot de passe ou réseau).";
+    $leavesError.textContent = msg;
     $leavesError.style.display='block';
     $leavesContent.innerHTML = '';
   }

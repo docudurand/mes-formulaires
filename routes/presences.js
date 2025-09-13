@@ -12,7 +12,7 @@ const MAGASINS = [
   "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
   "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
 ];
-const LEAVES_FILE = `${FTP_ROOT}/leaves.json`; // toutes les demandes, tous mois confondus
+const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
 
 const yyyymm = (dateStr="") => String(dateStr).slice(0,7);
@@ -22,7 +22,6 @@ const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 const isWE = (d) => { const x=d.getDay(); return x===0 || x===6; };
 
 function tlsOptions(){
-  // 0 => accepter certificat auto-signé (Freebox)
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
   const servername = process.env.FTP_HOST || undefined;
   return { rejectUnauthorized, servername };
@@ -247,7 +246,7 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
       await writeJSON(client, LEAVES_FILE, leaves);
     });
 
-    res.json({ ok:true });
+  res.json({ ok:true });
   }catch(e){
     console.error("[LEAVES] decision error:", e?.message||e);
     res.status(500).json({ ok:false, error: e?.message||"decision_failed" });
