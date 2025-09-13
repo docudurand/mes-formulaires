@@ -36,6 +36,7 @@
     .sig-actions{display:flex;justify-content:center;margin-top:8px;}
     .sig-actions button{width:auto;min-width:120px;padding:10px 20px;}
     .sig-wrap.invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);}
+    .muted{ color:var(--muted); font-size:.9rem; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -105,8 +106,9 @@
   </div>
 
   <div class="field">
-    <label for="nbJours">Nombre de jours souhaités *</label>
-    <input id="nbJours" type="number" inputmode="numeric" min="1" step="1" placeholder="Nombre de jours" required />
+    <label for="nbJours">Nombre de jours (calcul automatique) *</label>
+    <input id="nbJours" type="number" inputmode="numeric" min="1" step="1" placeholder="Calculé à partir des dates" required readonly />
+    <div id="nbHint" class="muted">Les samedis et dimanches ne sont pas comptés.</div>
   </div>
 
   <div class="field">
@@ -151,7 +153,6 @@
 const canvas = document.getElementById('signaturePad');
 const ctx = canvas.getContext('2d');
 let drawing = false, strokes = [], currentStroke = [];
-
 function resizeCanvas(){
   const data = canvas.toDataURL();
   const img = new Image();
@@ -169,13 +170,9 @@ canvas.height = canvas.clientHeight;
 ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111'; ctx.fillStyle = '#fff';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 window.addEventListener('resize', resizeCanvas);
-
-function pos(e){
-  const r = canvas.getBoundingClientRect();
-  if (e.touches && e.touches[0]) return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
-  return { x: e.clientX - r.left, y: e.clientY - r.top };
-}
-function start(e){ e.preventDefault(); drawing = true; currentStroke = [pos(e)]; }
+function pos(e){ const r=canvas.getBoundingClientRect(); const t=e.touches&&e.touches[0];
+  return { x:(t?t.clientX:e.clientX)-r.left, y:(t?t.clientY:e.clientY)-r.top }; }
+function start(e){ e.preventDefault(); drawing=true; currentStroke=[pos(e)]; }
 function move(e){ if(!drawing) return; const p=pos(e); const lp=currentStroke[currentStroke.length-1];
   ctx.beginPath(); ctx.moveTo(lp.x, lp.y); ctx.lineTo(p.x, p.y); ctx.stroke(); currentStroke.push(p); }
 function end(){ if(!drawing) return; drawing=false; if(currentStroke.length>0) strokes.push(currentStroke); }
@@ -185,6 +182,32 @@ canvas.addEventListener('touchstart', start, { passive:false }); canvas.addEvent
 canvas.addEventListener('touchend', end);
 document.getElementById('clearSig').onclick = () => { strokes=[]; ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); };
 
+const $dateDu = document.getElementById('dateDu');
+const $dateAu = document.getElementById('dateAu');
+const $nb     = document.getElementById('nbJours');
+const $nbHint = document.getElementById('nbHint');
+
+function businessDaysInclusive(duStr, auStr){
+  if(!duStr || !auStr) return 0;
+  const du = new Date(duStr+"T00:00:00");
+  const au = new Date(auStr+"T00:00:00");
+  if(isNaN(du) || isNaN(au) || au < du) return 0;
+  let n = 0, d = new Date(du);
+  while(d <= au){
+    const day = d.getDay();
+    if(day !== 0 && day !== 6) n++;
+    d.setDate(d.getDate()+1);
+  }
+  return n;
+}
+function updateNb(){
+  const n = businessDaysInclusive($dateDu.value, $dateAu.value);
+  $nb.value = n ? String(n) : "";
+  $nbHint.textContent = n ? `Les samedis et dimanches ne sont pas comptés. → ${n} jour(s)` : `Les samedis et dimanches ne sont pas comptés.`;
+}
+$dateDu.addEventListener('change', updateNb);
+$dateAu.addEventListener('change', updateNb);
+
 const form = document.getElementById("formConges");
 const btn  = document.getElementById("submitBtn");
 const ok   = document.getElementById("ok");
@@ -192,6 +215,8 @@ const err  = document.getElementById("err");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault(); ok.style.display="none"; err.style.display="none";
+
+  updateNb();
 
   const magasin = document.getElementById("magasin").value.trim();
   const nom     = document.getElementById("nom").value.trim();
@@ -206,7 +231,7 @@ form.addEventListener("submit", async (e) => {
     return showErr("Merci de remplir tous les champs obligatoires.");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr("Adresse e-mail invalide.");
-  const n = Number(nbJours); if (!Number.isFinite(n) || n <= 0) return showErr("Le nombre de jours doit être > 0.");
+  const n = Number(nbJours); if (!Number.isFinite(n) || n <= 0) return showErr("La période choisie ne contient aucun jour ouvré.");
   if (new Date(dateAu) < new Date(dateDu)) return showErr("La date 'Au' doit être ≥ 'Du'.");
   if (strokes.length === 0) {
     const sig = document.querySelector('.sig-wrap'); sig.classList.add('invalid'); sig.setAttribute('aria-invalid','true');
@@ -226,7 +251,7 @@ form.addEventListener("submit", async (e) => {
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok) {
       ok.style.display = "block"; err.style.display = "none";
-      form.reset(); document.getElementById('clearSig').click();
+      form.reset(); document.getElementById('clearSig').click(); updateNb();
     } else {
       showErr("Envoi impossible. Vérifiez vos infos et réessayez.");
     }
