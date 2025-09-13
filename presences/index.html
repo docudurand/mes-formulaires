@@ -23,7 +23,7 @@ html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Seg
 .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
 
 .toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
-.toolbar .spacer{flex:1}
+.toolbar .row-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
 button.badge.code{border-radius:8px}
@@ -70,12 +70,13 @@ button.badge.code{border-radius:8px}
 
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
 
-.section-toolbar{ display:flex; flex-direction:column; gap:8px; padding:8px 10px; margin:6px 0 4px; background:#fff; border:1px solid var(--line); border-radius:10px; }
-.section-toolbar .row-top{ display:flex; align-items:center; gap:8px; }
-.section-toolbar .title{ font-weight:800; text-transform:uppercase; color:var(--brand); margin-right:6px; }
-
-.section-toolbar .codes{ display:grid; gap:8px 8px; grid-template-columns: repeat(12, max-content); align-items:stretch; }
-.section-toolbar .psite-row{ grid-column: 1 / -1; }
+.section-toolbar{
+  display:grid; grid-template-columns:max-content 1fr; gap:8px 12px;
+  padding:8px 10px; margin:6px 0 4px; background:#fff; border:1px solid var(--line); border-radius:10px;
+}
+.section-toolbar .title{ grid-column:1; grid-row:1; font-weight:800; text-transform:uppercase; color:var(--brand); }
+.section-toolbar .controls{ grid-column:2; grid-row:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.section-toolbar .psite-row{ grid-column:2; grid-row:2; }
 .psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
 .psite-strip .badge{ flex:0 0 auto; }
 .psite-strip::-webkit-scrollbar{ height:6px; }
@@ -87,6 +88,14 @@ input[type="date"], input[type="month"], select{
 input[type="date"]:focus, input[type="month"]:focus, select:focus{
   outline:2px solid color-mix(in srgb,var(--brand),transparent 70%); border-color: var(--brand);
 }
+.input-nice{
+  border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:1rem; background:#fff;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+}
+.input-nice:focus{
+  outline:2px solid color-mix(in srgb,var(--brand),transparent 70%); border-color: var(--brand);
+}
+
 .hint,.legend{color:var(--muted);font-size:.9rem}
 .error{color:#a40000;font-weight:700}
 .loading{padding:14px;color:var(--muted)}
@@ -122,7 +131,6 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
       <div class="row-top" style="width:100%">
         <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
         <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
-        <div class="spacer"></div>
         <button id="btn-save" class="primary">Enregistrer</button>
         <button id="btn-fill-all" class="badge">Tout mettre P</button>
       </div>
@@ -144,14 +152,12 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
 
   <section id="tab-leaves" class="tab-panel">
     <div class="toolbar">
-      <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input id="leaves-user" name="username" type="text" value="admin" autocomplete="username" style="display:none">
-        <input id="leaves-pass" name="password" type="password" placeholder="Mot de passe admin" autocomplete="current-password"/>
+        <input id="leaves-pass" name="password" type="password" class="input-nice" placeholder="Mot de passe admin" autocomplete="current-password"/>
         <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="remember-pw"> Mémoriser</label>
         <button type="submit" id="btn-login" class="primary">Se connecter</button>
       </form>
-      <div class="spacer"></div>
-      <button id="btn-reload-leaves">Recharger</button>
     </div>
     <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
@@ -201,7 +207,6 @@ const $resumeError=document.getElementById('resume-error');
 const $loginForm=document.getElementById('leaves-login-form');
 const $leavesPass=document.getElementById('leaves-pass');
 const $rememberPw=document.getElementById('remember-pw');
-const $btnReloadLeaves=document.getElementById('btn-reload-leaves');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 
@@ -316,8 +321,10 @@ function buildSection(title, rows){
   table.appendChild(tbody);
 
   const bar=document.createElement('div'); bar.className='section-toolbar';
-  const top=document.createElement('div'); top.className='row-top';
-  const titleEl=document.createElement('div'); titleEl.className='title'; titleEl.textContent=title; top.appendChild(titleEl);
+  const titleEl=document.createElement('div'); titleEl.className='title'; titleEl.textContent=title;
+  bar.appendChild(titleEl);
+
+  const controls=document.createElement('div'); controls.className='controls';
 
   const clearBtn=document.createElement('button');
   clearBtn.className='badge'; clearBtn.textContent='Vider';
@@ -327,10 +334,8 @@ function buildSection(title, rows){
     if(!scope.length) return;
     scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE'); td.textContent=''; });
   });
-  top.appendChild(clearBtn);
-  bar.appendChild(top);
+  controls.appendChild(clearBtn);
 
-  const codes = document.createElement('div'); codes.className='codes';
   const addBtn=(code,label)=>{
     const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
     b.addEventListener('click',()=>{
@@ -343,14 +348,13 @@ function buildSection(title, rows){
     });
     return b;
   };
-  MAIN_CODES.forEach(c=> codes.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
+  MAIN_CODES.forEach(c=> controls.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
+  bar.appendChild(controls);
 
   const pRow = document.createElement('div'); pRow.className='psite-row';
   const strip = document.createElement('div'); strip.className='psite-strip';
   PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
-  pRow.appendChild(strip); codes.appendChild(pRow);
-
-  bar.appendChild(codes);
+  pRow.appendChild(strip); bar.appendChild(pRow);
 
   const wrap=document.createElement('div'); wrap.appendChild(bar); wrap.appendChild(table); return wrap;
 }
@@ -528,7 +532,6 @@ $loginForm.addEventListener('submit', (ev)=>{
   $leavesError.style.display='none';
   loadLeaves();
 });
-$btnReloadLeaves.addEventListener('click', loadLeaves);
 
 async function loadLeaves(){
   const token = sessionStorage.getItem('leavesToken');
@@ -553,11 +556,9 @@ async function loadLeaves(){
 function renderLeaves(items){
   items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
   const wrap=document.createElement('div');
-
   const makeBtn = (label, fn, cls) => {
     const b=document.createElement('button'); b.className='badge action '+(cls||''); b.textContent=label; b.addEventListener('click', fn); return b;
   };
-
   items.forEach(it=>{
     const card=document.createElement('div');
     card.style.border='1px solid var(--line)'; card.style.borderRadius='10px'; card.style.background='#fff';
@@ -587,7 +588,6 @@ function renderLeaves(items){
     if(actions.childElementCount) card.appendChild(actions);
     wrap.appendChild(card);
   });
-
   $leavesContent.innerHTML=''; $leavesContent.appendChild(wrap);
 }
 async function decideLeave(id, decision, reason=""){
