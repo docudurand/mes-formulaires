@@ -25,7 +25,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const app = express();
-
 app.set("trust proxy", 1);
 
 app.use(cors());
@@ -33,7 +32,9 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
+
 app.use('/presence', presences);
+
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 
 app.use((req, res, next) => {
@@ -69,12 +70,9 @@ app.get("/api/sheets/televente", async (req, res) => {
 
   try {
     let r;
-    try {
-      r = await tryOnce();
-    } catch {
-      await new Promise((t) => setTimeout(t, 400));
-      r = await tryOnce();
-    }
+    try { r = await tryOnce(); }
+    catch { await new Promise(t=>setTimeout(t,400)); r = await tryOnce(); }
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json(r.data);
@@ -233,6 +231,19 @@ app.post("/conges/api", async (req, res) => {
     });
 
     console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
+
+    try{
+      const base = `${req.protocol}://${req.get("host")}`;
+      await fetch(`${base}/presence/leaves/record`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({
+          magasin, nom: _nom, prenom: _prenom, service, nbJours: n,
+          dateDu, dateAu, email
+        })
+      });
+    }catch(e){ console.warn("[CONGES] leave recording failed:", e?.message||e); }
+
     res.json({ ok: true });
   } catch (e) {
     console.error("[CONGES][MAIL] Erreur:", e);

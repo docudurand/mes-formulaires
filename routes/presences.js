@@ -6,28 +6,21 @@ import os from "os";
 
 const router = express.Router();
 
-const FTP_ROOT  = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
-const LEAVES_DIR = `${FTP_ROOT}/leaves`;
+const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
+const LEAVES_DIR = `${FTP_ROOT}/leaves`;               // stockage des demandes
 const MAGASINS = [
   "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
   "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
   "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
 ];
 
-const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
-
 const yyyymm = (dateStr) => String(dateStr).slice(0,7);
-const pad = n => n<10? "0"+n : ""+n;
+const yyyy   = (dateStr) => String(dateStr).slice(0,4);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
 const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
-const norm = s => String(s||"").normalize("NFD").replace(/\p{Diacritic}/gu,"").trim().replace(/\s+/g," ").toUpperCase();
-const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 
-function* eachDayInclusive(d1Str, d2Str){
-  let d = new Date(d1Str), end = new Date(d2Str);
-  for(; d<=end; d = addDays(d,1)) yield new Date(d);
-}
+const NORM = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 
 function tlsOptions(){
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
@@ -44,15 +37,13 @@ async function openFtp(){
     password: process.env.FTP_PASSWORD,
     port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
     secure: String(process.env.FTP_SECURE||"false") === "true",
-    secureOptions: tlsOptions(),
+    secureOptions: tlsOptions()
   });
   try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
   return client;
 }
 
-async function ensureDir(client, remoteDir){
-  await client.ensureDir(remoteDir);
-}
+async function ensureDir(client, remoteDir){ await client.ensureDir(remoteDir); }
 
 async function tryDownloadJSON(client, remotePath){
   const out = tmpFile("pres_"+Date.now()+".json");
@@ -77,7 +68,7 @@ async function writeJSON(client, remotePath, obj){
   try{ fs.unlinkSync(out); }catch{}
 }
 
-async function withFtp(label, fn, retries=2){
+async function withFtp(actionLabel, fn, retries=2){
   let lastErr;
   for (let attempt=0; attempt<=retries; attempt++){
     let client;
@@ -90,13 +81,53 @@ async function withFtp(label, fn, retries=2){
       lastErr = e;
       try{ client?.close(); }catch{}
       if (attempt < retries){
-        console.warn(`[PRES/FTP] ${label} tentative ${attempt+1} échouée:`, e?.message||e);
+        console.warn(`[PRES/FTP] ${actionLabel} tentative ${attempt+1} échouée:`, e?.message||e);
         await sleep(300 + attempt*500);
         continue;
       }
     }
   }
   throw lastErr;
+}
+
+function* iterDates(fromISO, toISO){
+  const a = new Date(fromISO), b = new Date(toISO);
+  for (let d = new Date(a); d <= b; d.setDate(d.getDate()+1)){
+    yield d.toISOString().slice(0,10);
+  }
+}
+
+async function upsertCPForRange({ magasin, label, fromISO, toISO }){
+
+  const normLabel = NORM(label);
+  await withFtp("apply_cp", async (client)=>{
+
+    const byMonth = {};
+    for (const day of iterDates(fromISO, toISO)){
+      const m = yyyymm(day);
+      (byMonth[m] ||= []).push(day);
+    }
+    for (const m of Object.keys(byMonth)){
+      const remoteFile = `${FTP_ROOT}/${m}/${magasin}.json`;
+      const monthObj = await tryDownloadJSON(client, remoteFile) || {};
+      for (const day of byMonth[m]){
+        const rec = monthObj[day] || { data:{rows:[]}, savedAt:null };
+        const rows = Array.isArray(rec.data?.rows) ? rec.data.rows : [];
+        let row = rows.find(r => NORM(r.label) === normLabel);
+        if (!row){
+          row = { label, values:{} };
+          rows.push(row);
+        }
+        row.values = row.values || {};
+        row.values["Matin"]  = "CP";
+        row.values["A. Midi"] = "CP";
+        rec.data = { rows };
+        rec.savedAt = new Date().toISOString();
+        monthObj[day] = rec;
+      }
+      await writeJSON(client, remoteFile, monthObj);
+    }
+  });
 }
 
 router.get("/personnel", async (req, res) => {
@@ -180,7 +211,7 @@ router.get("/month", async (req, res) => {
           const resp = await fetch(`${process.env.GS_PRESENCES_URL}?action=personnel&magasin=${encodeURIComponent(m)}`);
           personnel[m] = resp.ok ? await resp.json() : {employes:[], interims:[], livreurs:{}};
         }else{
-          personnel[m] = {employes:[], interims:[], livreeurs:{}};
+          personnel[m] = {employes:[], interims:[], livreours:{}};
         }
       }catch{
         personnel[m] = {employes:[], interims:[], livreurs:{}};
@@ -194,170 +225,110 @@ router.get("/month", async (req, res) => {
   }
 });
 
-router.get("/month-store", async (req, res) => {
-  const month = String(req.query.yyyymm || "");
-  const magasin = String(req.query.magasin || "");
-  if(!month || !magasin) return res.status(400).json({ok:false, error:"missing params"});
-  console.log("[PRES] MONTH-STORE", { month, magasin });
+router.post("/leaves/record", express.json({limit:"1mb"}), async (req, res)=>{
   try{
-    const files = {};
-    await withFtp("month-store", async (client)=>{
-      const json = await tryDownloadJSON(client, `${FTP_ROOT}/${month}/${magasin}.json`);
-      files[magasin] = json || {};
+    const { magasin, nom, prenom, service, nbJours, dateDu, dateAu, email } = req.body||{};
+    if(!magasin || !nom || !prenom || !service || !dateDu || !dateAu) {
+      return res.status(400).json({ok:false, error:"missing fields"});
+    }
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+    const year = yyyy(dateDu);
+    const rec = {
+      id, magasin, nom, prenom, service, email: email||"",
+      du: dateDu, au: dateAu, nbJours: Number(nbJours)||null,
+      status: "pending", createdAt: new Date().toISOString(), decidedAt: null
+    };
+
+    await withFtp("leaves_record", async (client)=>{
+      const file = `${LEAVES_DIR}/${year}.json`;
+      const json = await tryDownloadJSON(client, file) || {};
+      json[id] = rec;
+      await writeJSON(client, file, json);
     });
 
-    const personnel = {};
-    try{
-      if(process.env.GS_PRESENCES_URL){
-        const resp = await fetch(`${process.env.GS_PRESENCES_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
-        personnel[magasin] = resp.ok ? await resp.json() : {employes:[], interims:[], livreurs:{}};
-      }else{
-        personnel[magasin] = {employes:[], interims:[], livreurs:{}};
-      }
-    }catch{
-      personnel[magasin] = {employes:[], interims:[], livreurs:{}};
-    }
-
-    res.json({ yyyymm: month, files, personnel });
+    console.log("[LEAVES] recorded", { id, magasin, nom, prenom, du:dateDu, au:dateAu });
+    res.json({ ok:true, id });
   }catch(e){
-    console.error("[PRES] month-store error", e?.message||e);
-    res.status(500).json({ok:false, error:"month_store_failed"});
+    console.error("[LEAVES] record error", e?.message||e);
+    res.status(500).json({ ok:false, error:"record_failed" });
   }
 });
 
-function checkPass(req){
-  const header = req.get("x-pass");
-  const q = req.query.pass;
-  const expected = process.env.LEAVES_PASS || "";
-  return expected && (header === expected || q === expected);
-}
-
-router.get("/leaves", async (req, res) => {
-  const wantAll = String(req.query.all||"") === "1";
-  const month = String(req.query.yyyymm || "");
-  if(!checkPass(req)) return res.status(401).json({ok:false, error:"unauthorized"});
-
+router.get("/leaves", async (req, res)=>{
+  const pwd = String(req.query.pwd||"");
+  const wantAll = String(req.query.all||"0")==="1";
+  if (!process.env.LEAVES_PASS || pwd !== process.env.LEAVES_PASS){
+    return res.status(401).json({ ok:false, error:"auth_required" });
+  }
   try{
-    const list = await withFtp("leaves-get", async (client)=>{
-      if(wantAll){
-        await ensureDir(client, LEAVES_DIR);
-        const entries = await client.list(LEAVES_DIR).catch(()=>[]);
-        const all = [];
-        for(const e of entries){
-          if(!e.isFile) continue;
-          if(!/\.json$/i.test(e.name)) continue;
-          const m = e.name.replace(/\.json$/i,"");
-          const arr = await tryDownloadJSON(client, `${LEAVES_DIR}/${e.name}`);
-          const listForMonth = Array.isArray(arr) ? arr : (arr?.list || []);
-          listForMonth.forEach(x=>{
-            if(!x.month) x.month = m;
-            all.push(x);
-          });
-        }
-        all.sort((a,b)=> String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
-        return all;
-      }else{
-        if(!month) return [];
-        const json = await tryDownloadJSON(client, `${LEAVES_DIR}/${month}.json`);
-        const arr = Array.isArray(json) ? json : (json?.list || []);
-        return arr.map(x=> x.month ? x : {...x, month});
+    const out = [];
+    await withFtp("leaves_list", async (client)=>{
+      await ensureDir(client, LEAVES_DIR);
+      let entries=[];
+      try{ entries = await client.list(LEAVES_DIR); }catch{}
+      const files = entries.filter(e=>e.isFile && /^\d{4}\.json$/.test(e.name)).map(e=>`${LEAVES_DIR}/${e.name}`);
+      if(files.length===0){
+        const Y = new Date().getFullYear();
+        for (let y=Y-2; y<=Y+1; y++){ files.push(`${LEAVES_DIR}/${y}.json`); }
+      }
+      for(const f of files){
+        const json = await tryDownloadJSON(client, f);
+        if(json) out.push(...Object.values(json));
       }
     });
-
-    res.json({ ok:true, list: list || [] });
+    out.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
+    res.json({ ok:true, items: wantAll ? out : out });
   }catch(e){
-    console.error("[LEAVES] get error", e?.message||e);
-    res.status(500).json({ ok:false, error:"leaves_get_failed" });
+    console.error("[LEAVES] list error", e?.message||e);
+    res.status(500).json({ ok:false, error:"list_failed" });
   }
 });
 
-router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) => {
+router.post("/leaves/:id/decision", express.json({limit:"1mb"}), async (req, res)=>{
+  const { id } = req.params;
+  const { decision, pwd } = req.body||{};
+  if (!process.env.LEAVES_PASS || pwd !== process.env.LEAVES_PASS){
+    return res.status(401).json({ ok:false, error:"auth_required" });
+  }
+  if(!id || !["accept","refuse"].includes(String(decision))){
+    return res.status(400).json({ ok:false, error:"bad_params" });
+  }
   try{
-    if(!checkPass(req)) return res.status(401).json({ok:false, error:"unauthorized"});
-    const { yyyymm: month, id, decision } = req.body||{};
-    if(!month || !id || !["accept","refuse"].includes(decision)) {
-      return res.status(400).json({ok:false, error:"missing params"});
-    }
-    const file = `${LEAVES_DIR}/${month}.json`;
+    let found=null, yearHit=null, fileHit=null, storeObj=null;
+    await withFtp("leaves_decision_read", async (client)=>{
+      const Y = new Date().getFullYear();
+      const years = [Y-2, Y-1, Y, Y+1];
+      for (const y of years){
+        const f = `${LEAVES_DIR}/${y}.json`;
+        const j = await tryDownloadJSON(client, f);
+        if(j && j[id]){ found=j[id]; yearHit = y; fileHit=f; storeObj=j; break; }
+      }
+    });
+    if(!found) return res.status(404).json({ ok:false, error:"not_found" });
 
-    let target;
-    await withFtp("leaves-decision", async (client)=>{
-      const list = await tryDownloadJSON(client, file) || [];
-      const idx = list.findIndex(x=> String(x.id)===String(id));
-      if(idx<0) throw new Error("leave_not_found");
-      list[idx].status = (decision==="accept" ? "accepted" : "refused");
-      target = list[idx];
-      await writeJSON(client, file, list);
+    found.status = (decision==="accept" ? "accepted" : "rejected");
+    found.decidedAt = new Date().toISOString();
+
+    await withFtp("leaves_decision_write", async (client)=>{
+      storeObj[id] = found;
+      await writeJSON(client, fileHit, storeObj);
     });
 
-    if(decision==="accept" && target){
-      try{
-        await applyCPForLeave(target);
-      }catch(e){
-        console.warn("[LEAVES] apply CP failed:", e?.message||e);
-      }
+    if(found.status === "accepted"){
+      const label = `${found.nom} ${found.prenom||""}`.trim();
+      await upsertCPForRange({ magasin: found.magasin, label, fromISO: found.du, toISO: found.au });
     }
 
-    res.json({ ok:true });
+    res.json({ ok:true, item: found });
   }catch(e){
     console.error("[LEAVES] decision error", e?.message||e);
-    res.status(500).json({ ok:false, error: e?.message || "decision_failed" });
+    res.status(500).json({ ok:false, error:"decision_failed" });
   }
 });
-
-async function applyCPForLeave(leave){
-  const magasin = String(leave.magasin||"").trim();
-  if(!magasin) throw new Error("missing magasin");
-  const d1 = String(leave.dateDu||"").slice(0,10);
-  const d2 = String(leave.dateAu||"").slice(0,10);
-  if(!d1 || !d2) throw new Error("missing dates");
-
-  const month = yyyymm(d1);
-  const remoteFile = `${FTP_ROOT}/${month}/${magasin}.json`;
-  const labelWanted = `${(leave.nom||"").trim()} ${(leave.prenom||"").trim()}`.trim();
-  const keyWanted = norm(labelWanted);
-
-  await withFtp("apply-cp", async (client)=>{
-    const json = (await tryDownloadJSON(client, remoteFile)) || {};
-    for(const d of eachDayInclusive(d1,d2)){
-      const day = d.getDay();
-      if(day===0 || day===6) continue;
-      const dk = iso(d);
-      const dayRec = json[dk] || { data: { rows: [] }, savedAt: new Date().toISOString() };
-      const rows = dayRec.data.rows || [];
-
-      let rowIndex = rows.findIndex(r => norm(r.label) === keyWanted);
-
-      if(rowIndex < 0){
-        const fallbackKey = norm(`(À rapprocher) ${labelWanted}`);
-        rowIndex = rows.findIndex(r => norm(r.label) === fallbackKey);
-      }
-
-      if(rowIndex < 0){
-        rows.push({ label: `(À rapprocher) ${labelWanted}`, values: {} });
-        rowIndex = rows.length - 1;
-      }
-
-      const values = rows[rowIndex].values || {};
-      if(values["Matin"]==null) values["Matin"] = "";
-      if(values["A. Midi"]==null) values["A. Midi"] = "";
-      values["Matin"]   = "CP";
-      values["A. Midi"] = "CP";
-
-      rows[rowIndex].values = values;
-      dayRec.data.rows = rows;
-      json[dk] = dayRec;
-    }
-    await writeJSON(client, remoteFile, json);
-  });
-}
 
 router.get("/_diag", async (_req, res) => {
   try{
-    const ok = await withFtp("diag", async (client)=>{
-      await client.cd("/");
-      return true;
-    });
+    const ok = await withFtp("diag", async (client)=>{ await client.cd("/"); return true; });
     res.json({ ok });
   }catch(e){
     res.status(500).json({ ok:false, error: e?.message||String(e) });
