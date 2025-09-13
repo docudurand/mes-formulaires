@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!doctype html>
 <html lang="fr">
 <head>
@@ -553,6 +554,15 @@ async function loadLeaves(){
     $leavesError.textContent = msg; $leavesError.style.display='block'; $leavesContent.innerHTML = '';
   }
 }
+function statusLabelFR(s){
+  switch(String(s||"").toLowerCase()){
+    case "pending":   return "en attente";
+    case "accepted":  return "validée";
+    case "rejected":  return "refusée";
+    case "cancelled": return "annulée";
+    default:          return String(s||"");
+  }
+}
 function renderLeaves(items){
   items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
   const wrap=document.createElement('div');
@@ -575,7 +585,8 @@ function renderLeaves(items){
 
     const status = document.createElement('div');
     status.style.marginTop='6px';
-    status.innerHTML = `Statut: <b>${it.status}</b>` + (it.reason? ` — ${it.reason}`:'');
+    const lib = it.statusFr || statusLabelFR(it.status);
+    status.innerHTML = `Statut: <b>${lib}</b>` + (it.reason? ` — ${it.reason}`:'');
     card.appendChild(status);
 
     const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.gap='8px';

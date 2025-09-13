@@ -192,6 +192,7 @@ async function appendLeave(payload) {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       createdAt: new Date().toISOString(),
       status: "pending",
+      statusFr: "en attente",
       ...payload,
     };
     arr.push(item);
@@ -315,117 +316,4 @@ app.use("/formulaire-pneu", formulairePneu);
 const pretPublic = path.join(__dirname, "pretvehiculed", "public");
 app.use("/pret", express.static(pretPublic, { extensions: ["html", "htm"], index: false }));
 app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-pret.html")));
-app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-parc.html")));
-app.use("/pret/api", loansRouter);
-
-app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
-
-const PORT = process.env.PORT || 3000;
-(async () => {
-  try { await stats.initCounters(); }
-  catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-})();
-
-async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
-  const chunks = [];
-  doc.on("data", (c) => chunks.push(c));
-  const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
-
-  const pageLeft = 50;
-  const pageRight = 545;
-  const logoX = pageLeft;
-  const logoY = 40;
-  const logoW = 120;
-
-  try {
-    const resp = await fetch(logoUrl);
-    const buf = Buffer.from(await resp.arrayBuffer());
-    doc.image(buf, logoX, logoY, { width: logoW });
-  } catch (e) { }
-
-  doc.fontSize(18).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", logoX + logoW + 20, logoY + 45);
-
-  let y = 180;
-  const bodySize = 13;
-  const labelGap = 32;
-  const rowGap = 38;
-  const afterServicesGap = 38;
-  const afterDemandGap = 26;
-  const afterPeriodGap = 36;
-
-  doc.fontSize(bodySize).font("Helvetica-Bold").text("SITE :", pageLeft, y);
-  doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
-  y += labelGap;
-
-  const parts = String(nomPrenom || "").trim().split(/\s+/);
-  const _nom = parts[0] || "";
-  const _prenom = parts.slice(1).join(" ");
-
-  doc.font("Helvetica").fontSize(bodySize);
-  doc.text("NOM :", pageLeft, y);
-  doc.text(_nom, pageLeft + 55, y, { width: 250 });
-  y += rowGap;
-
-  doc.text("PRENOM :", pageLeft, y);
-  doc.text(_prenom, pageLeft + 85, y, { width: 300 });
-  y += rowGap;
-
-  const services = [
-    "Magasin V.L", "Magasin P.L", "Industrie",
-    "Atelier V.L", "Atelier P.L", "Rectification",
-    "Administratif", "Commercial", "Matériel"
-  ];
-  const cols = 3, colW = (pageRight - pageLeft) / cols, box = 11, lh = 28;
-
-  doc.fontSize(12);
-  services.forEach((s, i) => {
-    const r  = Math.floor(i / cols), c = i % cols;
-    const x  = pageLeft + c * colW;
-    const yy = y + r * lh;
-
-    doc.rect(x, yy, box, box).stroke();
-    if (service && s.toLowerCase() === String(service).toLowerCase()) {
-      const pad = Math.max(2, Math.round(box * 0.2));
-      doc.moveTo(x + pad, yy + pad).lineTo(x + box - pad, yy + box - pad).stroke();
-      doc.moveTo(x + box - pad, yy + pad).lineTo(x + pad, yy + box - pad).stroke();
-    }
-    doc.font("Helvetica").text(s, x + box + 6, yy - 2);
-  });
-
-  y += Math.ceil(services.length / cols) * lh + afterServicesGap;
-
-  doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
-  y += afterDemandGap;
-
-  doc.text(`du ${du}`, pageLeft, y);
-  y += 20;
-  doc.text(`au ${au} inclus.`, pageLeft, y);
-  y += afterPeriodGap;
-
-  doc.text("Signature de l’employé,", 370, y);
-  if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
-    try {
-      const b64 = signatureData.split(",")[1];
-      const sigBuf = Buffer.from(b64, "base64");
-      const sigY = y + 14;
-      doc.image(sigBuf, 370, sigY, { width: 150 });
-      y = Math.max(y + 90, sigY + 90);
-    } catch { y += 70; }
-  } else { y += 70; }
-
-  const colLeft = pageLeft;
-  const colRight = 330;
-  doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
-  doc.text("RESPONSABLE DE SITE :", colRight, y);
-  y += 22; doc.font("Helvetica").fontSize(bodySize);
-  doc.text("NOM :", colLeft, y);
-  doc.text("NOM :", colRight, y);
-  y += 22;
-  doc.text("SIGNATURE :", colLeft, y);
-  doc.text("SIGNATURE :", colRight, y);
-
-  doc.end();
-  return done;
-}
+app.get("/pret/admin", (_req, res)

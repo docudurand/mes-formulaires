@@ -86,6 +86,16 @@ function authOk(req){
   return LEAVES_ADMIN_TOKEN && token && token === LEAVES_ADMIN_TOKEN;
 }
 
+function frStatus(s){
+  switch(String(s||"").toLowerCase()){
+    case "pending":   return "en attente";
+    case "accepted":  return "validée";
+    case "rejected":  return "refusée";
+    case "cancelled": return "annulée";
+    default:          return String(s||"");
+  }
+}
+
 router.get("/personnel", async (req, res) => {
   const magasin = String(req.query.magasin || "");
   const url = process.env.GS_PRESENCES_URL;
@@ -164,7 +174,8 @@ router.get("/month-store", async (req, res) => {
 router.get("/leaves", async (req, res) => {
   if(!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
   try{
-    const leaves = await withFtp("leaves-get", async (client)=> (await tryDownloadJSON(client, LEAVES_FILE)) || [] );
+    const raw = await withFtp("leaves-get", async (client)=> (await tryDownloadJSON(client, LEAVES_FILE)) || [] );
+    const leaves = raw.map(l => ({ ...l, statusFr: l.statusFr || frStatus(l.status) }));
     res.json({ ok:true, leaves });
   }catch(e){
     console.error("[LEAVES] get error:", e?.message||e);
@@ -192,7 +203,10 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
       const act = decision.toLowerCase();
       if(act === "accept"){
         if(item.status !== "pending") throw new Error("already_decided");
-        item.status = "accepted"; item.reason = reason || ""; item.decidedAt = new Date().toISOString();
+        item.status = "accepted";
+        item.statusFr = frStatus(item.status);
+        item.reason = reason || "";
+        item.decidedAt = new Date().toISOString();
 
         for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
           if(isWE(d)) continue;
@@ -209,45 +223,43 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
         }
       }else if(act==="reject"){
         if(item.status !== "pending") throw new Error("already_decided");
-        item.status = "rejected"; item.reason = reason || ""; item.decidedAt = new Date().toISOString();
-} else {
-  if(item.status !== "accepted") throw new Error("not_accepted");
-  item.status = "cancelled";
-  item.cancelledAt = new Date().toISOString();
-  item.reason = reason || item.reason || "";
+        item.status = "rejected";
+        item.statusFr = frStatus(item.status);
+        item.reason = reason || "";
+        item.decidedAt = new Date().toISOString();
+      } else {
+        if(item.status !== "accepted") throw new Error("not_accepted");
+        item.status = "cancelled";
+        item.statusFr = frStatus(item.status);
+        item.cancelledAt = new Date().toISOString();
+        item.reason = reason || item.reason || "";
 
-  const normalize = (s) => String(s||"").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
+        const normalize = (s) => String(s||"").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dkUTC = new Date(d).toISOString().slice(0, 10);
+          const dkLOC = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          for (const dk of new Set([dkUTC, dkLOC])) {
+            const month = dk.slice(0,7);
+            const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
+            const file = (await tryDownloadJSON(client, remote)) || {};
+            const dayBlock = file[dk]?.data || { rows: [] };
 
-    const dkUTC = new Date(d).toISOString().slice(0, 10);
-    const dkLOC = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const row = (dayBlock.rows || []).find(r => normalize(r.label) === normalize(`${(item.nom||"")} ${item.prenom||""}`));
+            if (!row) continue;
 
-    for (const dk of new Set([dkUTC, dkLOC])) {
-      const month = dk.slice(0,7);
-      const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
-      const file = (await tryDownloadJSON(client, remote)) || {};
-      const dayBlock = file[dk]?.data || { rows: [] };
-
-      const row = (dayBlock.rows || []).find(r => normalize(r.label) === normalize(`${(item.nom||"")} ${item.prenom||""}`));
-      if (!row) continue;
-
-      let changed = false;
-      for (const slot of Object.keys(row.values || {})) {
-        const cur = String(row.values[slot] ?? "").trim();
-        if (cur === "CP") {
-          row.values[slot] = "";
-          changed = true;
+            let changed = false;
+            for (const slot of Object.keys(row.values || {})) {
+              const cur = String(row.values[slot] ?? "").trim();
+              if (cur === "CP") { row.values[slot] = ""; changed = true; }
+            }
+            if (changed) {
+              file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
+              await writeJSON(client, remote, file);
+            }
+          }
         }
       }
-
-      if (changed) {
-        file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
-        await writeJSON(client, remote, file);
-      }
-    }
-  }
-}
 
       await writeJSON(client, LEAVES_FILE, leaves);
     });
