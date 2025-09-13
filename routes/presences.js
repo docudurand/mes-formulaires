@@ -221,11 +221,21 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
           const file = (await tryDownloadJSON(client, remote)) || {};
           const dayBlock = file[dk]?.data || { rows:[] };
           const row = (dayBlock.rows||[]).find(r => String(r.label).trim().toUpperCase() === label);
-          if(row){
-            let changed=false;
-            DEF_SLOTS.forEach(s=>{ if(row.values?.[s]==="CP"){ row.values[s] = ""; changed=true; }});
-            if(changed){ file[dk] = { data: dayBlock, savedAt: new Date().toISOString() }; await writeJSON(client, remote, file); }
-          }
+		if(row){
+			let changed=false;
+			DEF_SLOTS.forEach(s=>{
+			const cur = String(row.values?.[s] ?? '').trim();
+			if(cur === "CP"){
+			row.values[s] = "";
+			changed = true;
+			}
+		});
+			if(changed){
+		file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
+			await writeJSON(client, remote, file);
+		}
+	}
+
         }
       }
 
