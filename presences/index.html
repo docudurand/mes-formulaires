@@ -43,12 +43,24 @@ button.badge[data-code="MAL"]{color:#946200}
 .cell.weekend{background:#000;color:#fff}
 .cell.selected{outline:3px solid #2563eb44}
 .cell.P{background:#e8f5ec;color:#1a7f37;font-weight:700}
-.cell.CP{background:#e8f0fe;color:#1f3aa8;font-weight:700}
+.cell.CP{background:#efe6ff;color:#6b21a8;font-weight:700}
 .cell.ABS{background:#fdecec;color:#a20000;font-weight:700}
 .cell.MAL{background:#fff6e5;color:#946200;font-weight:700}
-.cell.R{background:#f3f3f3;color:#333;font-weight:700}
+
+.cell.AM{background:#fee2e2;color:#b91c1c;font-weight:700}
+.cell.AT{background:#dcfce7;color:#15803d;font-weight:700}
+.cell.F{background:#ccfbf1;color:#0f766e;font-weight:700}
+.cell.Cep{background:#ffedd5;color:#b45309;font-weight:700}
+.cell.Ann{background:#fce7f3;color:#be185d;font-weight:700}
+.cell.SS{background:#ffe4e6;color:#be123c;font-weight:700}
+.cell.E{background:#ecfccb;color:#65a30d;font-weight:700}
+.cell.R{background:#dcfce7;color:#15803d;font-weight:700}
+.cell.D{background:#dbeafe;color:#1d4ed8;font-weight:700}
+.cell.RI{background:#fef9c3;color:#a16207;font-weight:700}
+
 .hint,.legend{color:var(--muted);font-size:.9rem}
 .error{color:#a40000;font-weight:700}
+
 .section-toolbar{
   display:flex; gap:8px; align-items:center;
   padding:8px 10px; margin:6px 0 4px;
@@ -57,6 +69,15 @@ button.badge[data-code="MAL"]{color:#946200}
 .section-toolbar .spacer{ flex:1; }
 .section-toolbar .title{
   font-weight:800; text-transform:uppercase; color:var(--brand); margin-right:6px;
+}
+
+input[type="date"], input[type="month"], select{
+  border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:#fff;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+}
+input[type="date"]:focus, input[type="month"]:focus, select:focus{
+  outline:2px solid color-mix(in srgb,var(--brand),transparent 70%);
+  border-color: var(--brand);
 }
 
 .loading{padding:14px;color:var(--muted)}
@@ -90,7 +111,6 @@ button.badge[data-code="MAL"]{color:#946200}
       <div class="spacer"></div>
       <button id="btn-save" class="primary">Enregistrer</button>
       <button id="btn-fill-all" class="badge">Tout mettre P</button>
-      <button class="badge" id="btn-diag">Diag API</button>
     </div>
     <div id="saisie-content"></div>
     <div class="legend">Sélection : clic (cellule), Ctrl/Cmd (ajouts), Shift (plage), clic sur l’entête = toute la colonne.</div>
@@ -134,7 +154,22 @@ const MAGASINS = [
  "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
  "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
 ];
-const CODES=["P","CP","ABS","MAL","R"];
+
+const CODE_DEFS = [
+  {code:'P',   label:'Présent'},
+  {code:'CP',  label:'Congé payé'},
+  {code:'AM',  label:'Arrêt maladie'},
+  {code:'AT',  label:'Accident travail'},
+  {code:'F',   label:'Formation'},
+  {code:'Cep', label:'Congé exceptionnel'},
+  {code:'Ann', label:'Absence non motivée'},
+  {code:'SS',  label:'Sans solde'},
+  {code:'E',   label:'École'},
+  {code:'R',   label:'Récup'},
+  {code:'D',   label:'Déplacement'},
+  {code:'RI',  label:'Récup inventaire'}
+];
+const ALL_CODES = CODE_DEFS.map(d=>d.code);
 
 let currentMagasin=null, personnel=null, selectedCells=new Set();
 
@@ -150,22 +185,21 @@ const $currMag=document.getElementById('current-magasin');
 const $dateInput=document.getElementById('saisie-date');
 const $saisieContent=document.getElementById('saisie-content');
 const $btnSave=document.getElementById('btn-save');
-const $btnFillAll=document.getElementById('btn-fill-all'); /* ← existe maintenant dans le HTML */
-const $btnClear=document.getElementById('btn-clear'); /* peut rester null, non utilisé */
+const $btnFillAll=document.getElementById('btn-fill-all');
 const $resumeMonth=document.getElementById('resume-month');
 const $resumeStore=document.getElementById('resume-store');
 const $btnLoadStore=document.getElementById('btn-load-store');
 const $resumeContent=document.getElementById('resume-content');
-const $saisieError=document.getElementById('saisie-error');
 const $resumeError=document.getElementById('resume-error');
-const $btnDiag=document.getElementById('btn-diag');
 const $leavesPass=document.getElementById('leaves-pass');
 const $btnLogin=document.getElementById('btn-login');
 const $btnReloadLeaves=document.getElementById('btn-reload-leaves');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 
-$today.textContent=todayISO(); $dateInput.value=todayISO(); $resumeMonth.value=thisYM();
+$today.textContent=todayISO(); 
+$dateInput.value=todayISO(); 
+$resumeMonth.value=thisYM();
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
 
@@ -173,7 +207,6 @@ sessionStorage.removeItem('leavesToken');
 
 $tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 
-function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=1){
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), 15000);
@@ -184,10 +217,7 @@ async function fetchJSON(path, opts={}, retries=1){
     const r = await fetch(apiBase+path, { ...opts, headers, signal: ctrl.signal });
     if(!r.ok){
       const txt = await r.text().catch(()=> '');
-      console.error('[HTTP]', r.status, path, txt);
-      if (r.status === 401 && path.startsWith('/leaves')) {
-        throw new Error('401');
-      }
+      if (r.status === 401 && path.startsWith('/leaves')) throw new Error('401');
       throw new Error(txt || ('HTTP '+r.status));
     }
     return await r.json();
@@ -217,8 +247,7 @@ async function selectMagasin(mag,btn){
   document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
   btn.classList.add('active'); $currMag.textContent=mag;
   $magLoading.style.display='block';
-  await loadPersonnel();
-  $magLoading.style.display='none';
+  try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
   buildSaisieUI();
   await prefillDay();
   switchTab('saisie');
@@ -283,33 +312,32 @@ function buildSection(title, rows){
   const bar=document.createElement('div'); bar.className='section-toolbar';
   const titleEl=document.createElement('div'); titleEl.className='title'; titleEl.textContent=title; bar.appendChild(titleEl);
 
-  const makeBtn=(label, code=null, {allP=false, clear=false}={})=>{
-    const b=document.createElement('button'); b.className='badge'; b.textContent=label;
-    if(code) b.dataset.code = code;
+  const makeBtn=(def)=>{
+    const b=document.createElement('button'); b.className='badge'; b.dataset.code=def.code; b.textContent=def.code; b.title = `${def.code} ${def.label}`;
     b.addEventListener('click',()=>{
-      const cells = table.querySelectorAll('td.cell');
-      cells.forEach(td=>{
-        if(clear){ ["P","CP","ABS","MAL","R"].forEach(c=>td.classList.remove(c)); td.textContent=''; return; }
-        if(allP){
-          ["P","CP","ABS","MAL","R"].forEach(c=>td.classList.remove(c));
-          td.textContent='P'; td.classList.add('P'); return;
-        }
-        if(code){
-          ["P","CP","ABS","MAL","R"].forEach(c=>td.classList.remove(c));
-          td.textContent=code; td.classList.add(code);
-        }
+
+      const scope=[...selectedCells].filter(td=>td.closest('table')===table);
+      if(!scope.length) return;
+      scope.forEach(td=>{
+        ALL_CODES.forEach(c=>td.classList.remove(c));
+        td.textContent=def.code;
+        td.classList.add(def.code);
       });
     });
     return b;
   };
 
-  bar.appendChild(makeBtn("Vider", null, {clear:true}));
-  bar.appendChild(makeBtn("P","P"));
-  bar.appendChild(makeBtn("CP","CP"));
-  bar.appendChild(makeBtn("ABS","ABS"));
-  bar.appendChild(makeBtn("MAL","MAL"));
-  bar.appendChild(makeBtn("R","R"));
-  bar.appendChild(makeBtn("Tout mettre P", null, {allP:true}));
+  const clearBtn=document.createElement('button');
+  clearBtn.className='badge'; clearBtn.textContent='Vider';
+  clearBtn.title='Effacer les cellules sélectionnées';
+  clearBtn.addEventListener('click',()=>{
+    const scope=[...selectedCells].filter(td=>td.closest('table')===table);
+    if(!scope.length) return;
+    scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
+  });
+  bar.appendChild(clearBtn);
+
+  CODE_DEFS.forEach(def=> bar.appendChild(makeBtn(def)));
 
   const wrap=document.createElement('div');
   wrap.appendChild(bar);
@@ -334,7 +362,7 @@ function buildSaisieUI(){
 
 $btnFillAll.addEventListener('click', ()=>{
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    ["P","CP","ABS","MAL","R"].forEach(c=>td.classList.remove(c));
+    ALL_CODES.forEach(c=>td.classList.remove(c));
     td.textContent='P';
     td.classList.add('P');
   });
@@ -354,7 +382,8 @@ function applyPrefill(data){
     const label=tr.querySelector('.row-label').textContent.trim();
     const vals=map.get(label)||{};
     tr.querySelectorAll('td.cell').forEach(td=>{
-      const v=vals[td.dataset.slot]||''; CODES.forEach(c=>td.classList.remove(c));
+      const v=vals[td.dataset.slot]||'';
+      ALL_CODES.forEach(c=>td.classList.remove(c));
       td.textContent=v; if(v) td.classList.add(v);
     });
   });
@@ -379,10 +408,6 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   finally{ $btnSave.disabled=false; }
 });
 $dateInput.addEventListener('change',prefillDay);
-$btnDiag.addEventListener('click', async ()=>{
-  try{ const r = await fetchJSON('/_diag'); alert('Diag: '+(r?.ok?'OK':'KO')); }
-  catch{ alert('Diag KO'); }
-});
 
 $btnLoadStore.addEventListener('click', loadResumeForStore);
 async function loadResumeForStore(){
@@ -466,7 +491,8 @@ function renderOneStore(yyyymm, magasin, data){
     });
 
     table.appendChild(tbody);
-    const block=document.createElement('div'); const sub=document.createElement('div'); sub.className='section-sub'; sub.textContent=title;
+    const block=document.createElement('div'); 
+    const sub=document.createElement('div'); sub.className='section-sub'; sub.textContent=title;
     block.appendChild(sub); block.appendChild(table);
     return block;
   }
