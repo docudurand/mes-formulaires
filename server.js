@@ -160,34 +160,51 @@ async function upText(client, remote, buf){
   try{ fs.unlinkSync(out) }catch{}
 }
 
-async function appendLeave(payload){
-  await (async ()=>{
+async function withFtpLeave(label, fn, retries = 2) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
     let client;
-    try{
+    try {
       client = await ftpClient();
-
-      const arr = (await dlJSON(client, LEAVES_FILE)) || [];
-      const item = {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-        createdAt: new Date().toISOString(),
-        status: "pending",
-        ...payload
-      };
-      arr.push(item);
-      await upJSON(client, LEAVES_FILE, arr);
-
-      const safe = (s)=> String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
-      const base = `${item.createdAt.slice(0,10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
-      const remoteUnit = `${LEAVE_DIR}/${base}`;
-      await upText(client, remoteUnit, JSON.stringify(item, null, 2));
-
-      console.log("[LEAVES] appended:", { id:item.id, magasin:item.magasin, du:item.dateDu, au:item.dateAu, unit:remoteUnit });
-    }catch(e){
-      console.error("[LEAVES] append error:", e?.message||e);
-    }finally{
-      try{ client?.close() }catch{}
+      const res = await fn(client);
+      try { client.close(); } catch {}
+      return res;
+    } catch (e) {
+      lastErr = e;
+      try { client?.close(); } catch {}
+      if (i < retries) {
+        console.warn(`[LEAVES][FTP] ${label} retry ${i + 1}:`, e?.message || e);
+        await new Promise(t => setTimeout(t, 400 * (i + 1)));
+      }
     }
-  })();
+  }
+  throw lastErr;
+}
+
+async function appendLeave(payload) {
+  return withFtpLeave("append", async (client) => {
+
+    await client.ensureDir(PRES_ROOT);
+    await client.ensureDir(LEAVE_DIR);
+
+    const arr = (await dlJSON(client, LEAVES_FILE)) || [];
+    const item = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      status: "pending",
+      ...payload,
+    };
+    arr.push(item);
+    await upJSON(client, LEAVES_FILE, arr);
+
+    const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+    const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
+    const remoteUnit = `${LEAVE_DIR}/${base}`;
+    await upText(client, remoteUnit, JSON.stringify(item, null, 2));
+
+    console.log("[LEAVES] appended:", { id: item.id, magasin: item.magasin, du: item.dateDu, au: item.dateAu, unit: remoteUnit });
+    return item.id;
+  });
 }
 
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
