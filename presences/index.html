@@ -8,7 +8,7 @@
 <style>
 :root{
   --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb;
-  --ok:#1a7f37; --abs:#9b1c1c
+  --ok:#1a7f37;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
@@ -20,33 +20,31 @@ html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,Blin
 .tab.active{border-color:var(--brand);color:#fff;background:var(--brand)}
 .tab-panel{display:none;padding:16px}
 .tab-panel.active{display:block}
+
 .grid-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
 .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
+
 .toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .toolbar .spacer{flex:1}
 button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
-button.badge[data-code="P"]{color:var(--ok)}
-button.badge[data-code="ABS"]{color:var(--abs)}
-button.badge[data-code="MAL"]{color:#946200}
+button.badge.code{border-radius:8px}
+
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
-.table thead th.sub-label{color:var(--muted);font-weight:600}
+.row-label{white-space:nowrap;text-align:left;font-weight:600}
+.sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
 .section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .section-sub{font-weight:800;margin:6px 0 0 2px;color:#111;font-size:.95rem}
 .mag-divider{border-top:2px solid var(--line); margin:18px 0 8px}
-.row-label{white-space:nowrap;text-align:left;font-weight:600}
-.sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
-.cell.weekend{background:#000;color:#fff}
 .cell.selected{outline:3px solid #2563eb44}
+.cell.weekend{background:#000;color:#fff}
+
 .cell.P{background:#e8f5ec;color:#1a7f37;font-weight:700}
 .cell.CP{background:#efe6ff;color:#6b21a8;font-weight:700}
-.cell.ABS{background:#fdecec;color:#a20000;font-weight:700}
-.cell.MAL{background:#fff6e5;color:#946200;font-weight:700}
-
 .cell.AM{background:#fee2e2;color:#b91c1c;font-weight:700}
 .cell.AT{background:#dcfce7;color:#15803d;font-weight:700}
 .cell.F{background:#ccfbf1;color:#0f766e;font-weight:700}
@@ -58,6 +56,24 @@ button.badge[data-code="MAL"]{color:#946200}
 .cell.D{background:#dbeafe;color:#1d4ed8;font-weight:700}
 .cell.RI{background:#fef9c3;color:#a16207;font-weight:700}
 
+.cell.PSITE{background:#f5d0aa;color:#6b3e00;font-weight:700}
+
+
+.badge.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
+.badge.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
+.badge.code[data-code="AM"] {background:#fee2e2;color:#b91c1c}
+.badge.code[data-code="AT"] {background:#dcfce7;color:#15803d}
+.badge.code[data-code="F"]  {background:#ccfbf1;color:#0f766e}
+.badge.code[data-code="Cep"]{background:#ffedd5;color:#b45309}
+.badge.code[data-code="Ann"]{background:#fce7f3;color:#be185d}
+.badge.code[data-code="SS"] {background:#ffe4e6;color:#be123c}
+.badge.code[data-code="E"]  {background:#ecfccb;color:#65a30d}
+.badge.code[data-code="R"]  {background:#dcfce7;color:#15803d}
+.badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
+.badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
+
+.badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
+
 .hint,.legend{color:var(--muted);font-size:.9rem}
 .error{color:#a40000;font-weight:700}
 
@@ -66,10 +82,8 @@ button.badge[data-code="MAL"]{color:#946200}
   padding:8px 10px; margin:6px 0 4px;
   background:#fff; border:1px solid var(--line); border-radius:10px; flex-wrap:wrap;
 }
+.section-toolbar .title{ font-weight:800; text-transform:uppercase; color:var(--brand); margin-right:6px; }
 .section-toolbar .spacer{ flex:1; }
-.section-toolbar .title{
-  font-weight:800; text-transform:uppercase; color:var(--brand); margin-right:6px;
-}
 
 input[type="date"], input[type="month"], select{
   border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:#fff;
@@ -79,7 +93,6 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
   outline:2px solid color-mix(in srgb,var(--brand),transparent 70%);
   border-color: var(--brand);
 }
-
 .loading{padding:14px;color:var(--muted)}
 @media (max-width:900px){ .cell{min-width:26px;height:28px} }
 </style>
@@ -129,8 +142,12 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
 
   <section id="tab-leaves" class="tab-panel">
     <div class="toolbar">
-      <input id="leaves-pass" type="password" placeholder="Mot de passe admin" />
-      <button id="btn-login" class="primary">Se connecter</button>
+      <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="leaves-user" name="username" type="text" value="admin" autocomplete="username" style="display:none">
+        <input id="leaves-pass" name="password" type="password" placeholder="Mot de passe admin" autocomplete="current-password"/>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="remember-pw"> Mémoriser</label>
+        <button type="submit" id="btn-login" class="primary">Se connecter</button>
+      </form>
       <div class="spacer"></div>
       <button id="btn-reload-leaves">Recharger</button>
     </div>
@@ -167,7 +184,9 @@ const CODE_DEFS = [
   {code:'E',   label:'École'},
   {code:'R',   label:'Récup'},
   {code:'D',   label:'Déplacement'},
-  {code:'RI',  label:'Récup inventaire'}
+  {code:'RI',  label:'Récup inventaire'},
+
+  ...Array.from({length:20}, (_,i)=>({code:`P${i+1}`, label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
 
@@ -191,22 +210,28 @@ const $resumeStore=document.getElementById('resume-store');
 const $btnLoadStore=document.getElementById('btn-load-store');
 const $resumeContent=document.getElementById('resume-content');
 const $resumeError=document.getElementById('resume-error');
+const $loginForm=document.getElementById('leaves-login-form');
 const $leavesPass=document.getElementById('leaves-pass');
-const $btnLogin=document.getElementById('btn-login');
+const $rememberPw=document.getElementById('remember-pw');
 const $btnReloadLeaves=document.getElementById('btn-reload-leaves');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 
-$today.textContent=todayISO(); 
-$dateInput.value=todayISO(); 
+$today.textContent=todayISO();
+$dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
+
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
 
-sessionStorage.removeItem('leavesToken');
+try{
+  const saved = localStorage.getItem('leavesToken');
+  if(saved){ $leavesPass.value = saved; }
+}catch{}
 
 $tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=1){
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), 15000);
@@ -222,7 +247,7 @@ async function fetchJSON(path, opts={}, retries=1){
     }
     return await r.json();
   }catch(e){
-    if(retries>0){ await new Promise(r=>setTimeout(r,300)); return fetchJSON(path, opts, retries-1); }
+    if(retries>0){ await delay(300); return fetchJSON(path, opts, retries-1); }
     throw e;
   }finally{ clearTimeout(t); }
 }
@@ -261,18 +286,14 @@ function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
   if(isShift && selectedCells.size){
     const last=[...selectedCells][selectedCells.size-1];
-    const rectRange=(a,b)=>{
-      const ar=a.closest('tr').rowIndex, ac=a.cellIndex;
-      const br=b.closest('tr').rowIndex, bc=b.cellIndex;
-      const r1=Math.min(ar,br), r2=Math.max(ar,br);
-      const c1=Math.min(ac,bc), c2=Math.max(ac,bc);
+    const rect=(a,b)=>{const ar=a.closest('tr').rowIndex, ac=a.cellIndex; const br=b.closest('tr').rowIndex, bc=b.cellIndex;
+      const r1=Math.min(ar,br), r2=Math.max(ar,br); const c1=Math.min(ac,bc), c2=Math.max(ac,bc);
       const table=a.closest('table');
-      for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){
-        const cell=table.rows[r].cells[c];
+      for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){ const cell=table.rows[r].cells[c];
         if(cell && cell.classList.contains('cell')){ cell.classList.add('selected'); selectedCells.add(cell); }
       }
     };
-    rectRange(last,td);
+    rect(last,td);
   }else if(isCtrl){
     td.classList.toggle('selected'); td.classList.contains('selected')?selectedCells.add(td):selectedCells.delete(td);
   }else{
@@ -313,15 +334,16 @@ function buildSection(title, rows){
   const titleEl=document.createElement('div'); titleEl.className='title'; titleEl.textContent=title; bar.appendChild(titleEl);
 
   const makeBtn=(def)=>{
-    const b=document.createElement('button'); b.className='badge'; b.dataset.code=def.code; b.textContent=def.code; b.title = `${def.code} ${def.label}`;
+    const b=document.createElement('button'); b.className='badge code'; b.dataset.code=def.code; b.textContent=def.code; b.title = `${def.code} ${def.label}`;
     b.addEventListener('click',()=>{
-
       const scope=[...selectedCells].filter(td=>td.closest('table')===table);
       if(!scope.length) return;
       scope.forEach(td=>{
         ALL_CODES.forEach(c=>td.classList.remove(c));
+        td.classList.remove('PSITE');
         td.textContent=def.code;
         td.classList.add(def.code);
+        if(/^P\d+$/.test(def.code)) td.classList.add('PSITE');
       });
     });
     return b;
@@ -333,7 +355,7 @@ function buildSection(title, rows){
   clearBtn.addEventListener('click',()=>{
     const scope=[...selectedCells].filter(td=>td.closest('table')===table);
     if(!scope.length) return;
-    scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
+    scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE'); td.textContent=''; });
   });
   bar.appendChild(clearBtn);
 
@@ -362,9 +384,8 @@ function buildSaisieUI(){
 
 $btnFillAll.addEventListener('click', ()=>{
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    ALL_CODES.forEach(c=>td.classList.remove(c));
-    td.textContent='P';
-    td.classList.add('P');
+    ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE');
+    td.textContent='P'; td.classList.add('P');
   });
 });
 
@@ -383,8 +404,8 @@ function applyPrefill(data){
     const vals=map.get(label)||{};
     tr.querySelectorAll('td.cell').forEach(td=>{
       const v=vals[td.dataset.slot]||'';
-      ALL_CODES.forEach(c=>td.classList.remove(c));
-      td.textContent=v; if(v) td.classList.add(v);
+      ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE');
+      td.textContent=v; if(v){ td.classList.add(v); if(/^P\d+$/.test(v)) td.classList.add('PSITE'); }
     });
   });
 }
@@ -483,7 +504,7 @@ function renderOneStore(yyyymm, magasin, data){
           if(isWE(d)) td.classList.add('weekend');
           const v = values[slot] || '';
           td.textContent = v;
-          if(v) td.classList.add(v);
+          if(v){ td.classList.add(v); if(/^P\d+$/.test(v)) td.classList.add('PSITE'); }
           tr.appendChild(td);
         });
       });
@@ -491,8 +512,7 @@ function renderOneStore(yyyymm, magasin, data){
     });
 
     table.appendChild(tbody);
-    const block=document.createElement('div'); 
-    const sub=document.createElement('div'); sub.className='section-sub'; sub.textContent=title;
+    const block=document.createElement('div'); const sub=document.createElement('div'); sub.className='section-sub'; sub.textContent=title;
     block.appendChild(sub); block.appendChild(table);
     return block;
   }
@@ -515,10 +535,12 @@ function renderOneStore(yyyymm, magasin, data){
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
 }
 
-$btnLogin.addEventListener('click', ()=>{
+$loginForm.addEventListener('submit', (ev)=>{
+  ev.preventDefault();
   const pw = $leavesPass.value.trim();
   if(!pw){ alert('Mot de passe requis'); return; }
   sessionStorage.setItem('leavesToken', pw);
+  if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
   $leavesError.style.display='none';
   loadLeaves();
 });
@@ -573,14 +595,16 @@ function renderLeaves(items){
     status.innerHTML = `Statut: <b>${it.status}</b>` + (it.reason? ` — ${it.reason}`:'');
     card.appendChild(status);
 
+    const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.gap='8px';
+
     if(String(it.status)==="pending"){
-      const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.gap='8px';
-      const ok = makeBtn('Accepter', ()=> decideLeave(it.id,'accept'));
-      const ko = makeBtn('Refuser', ()=> { const r=prompt("Motif du refus ? (optionnel)",""); decideLeave(it.id,'reject', r||""); });
-      actions.appendChild(ok); actions.appendChild(ko);
-      card.appendChild(actions);
+      actions.appendChild(makeBtn('Accepter', ()=> decideLeave(it.id,'accept')));
+      actions.appendChild(makeBtn('Refuser', ()=> { const r=prompt("Motif du refus ? (optionnel)",""); decideLeave(it.id,'reject', r||""); }));
+    } else if (String(it.status)==="accepted"){
+      actions.appendChild(makeBtn('Annuler', ()=> cancelLeave(it.id)));
     }
 
+    if(actions.childElementCount) card.appendChild(actions);
     wrap.appendChild(card);
   });
 
@@ -593,6 +617,16 @@ async function decideLeave(id, decision, reason=""){
     loadLeaves();
   }catch(e){
     alert('Échec de la décision: ' + (e?.message||''));
+  }
+}
+async function cancelLeave(id){
+  if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return;
+  try{
+    await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision:'cancel' }) });
+    alert('Validation annulée et jours supprimés.');
+    loadLeaves();
+  }catch(e){
+    alert('Échec de l’annulation: ' + (e?.message||''));
   }
 }
 
