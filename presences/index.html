@@ -11,21 +11,18 @@
   --ok:#1a7f37; --abs:#9b1c1c
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
 .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
 .app-header .today{color:var(--muted)}
-
 .tabs{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
 .tab{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
 .tab.active{border-color:var(--brand);color:#fff;background:var(--brand)}
 .tab-panel{display:none;padding:16px}
 .tab-panel.active{display:block}
-
 .grid-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
 .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
-
 .toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .toolbar .spacer{flex:1}
 button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
@@ -33,19 +30,15 @@ button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;pa
 button.badge[data-code="P"]{color:var(--ok)}
 button.badge[data-code="ABS"]{color:var(--abs)}
 button.badge[data-code="MAL"]{color:#946200}
-
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
 .table thead th.sub-label{color:var(--muted);font-weight:600}
-
 .section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .section-sub{font-weight:800;margin:6px 0 0 2px;color:#111;font-size:.95rem}
 .mag-divider{border-top:2px solid var(--line); margin:18px 0 8px}
-
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
-
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
 .cell.weekend{background:#000;color:#fff}
 .cell.selected{outline:3px solid #2563eb44}
@@ -54,28 +47,14 @@ button.badge[data-code="MAL"]{color:#946200}
 .cell.ABS{background:#fdecec;color:#a20000;font-weight:700}
 .cell.MAL{background:#fff6e5;color:#946200;font-weight:700}
 .cell.R{background:#f3f3f3;color:#333;font-weight:700}
-
 .hint,.legend{color:var(--muted);font-size:.9rem}
 .error{color:#a40000;font-weight:700}
 .loading{padding:14px;color:var(--muted)}
-.info{padding:8px 12px;border:1px dashed var(--line);border-radius:10px;background:#fff}
-.small{font-size:.9rem;color:var(--muted)}
-
-.leaves-wrap{display:grid;gap:10px}
-.leave-row{display:grid;grid-template-columns:1.2fr 1fr 1.6fr .6fr .7fr .9fr;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
-.badge-mini{padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.85rem}
-.badge-accepted{background:#e8f5ec;color:var(--ok)}
-.badge-refused{background:#fdecec;color:#a20000}
-.badge-pending{background:#f3f3f3;color:#333}
-
-#magasin-loading{display:none;margin-top:10px}
-#magasin-loading.active{display:block}
-@media (max-width:1100px){
-  .leave-row{grid-template-columns:1fr 1fr 1fr .5fr .5fr .8fr}
-}
-@media (max-width:700px){
-  .leave-row{grid-template-columns:1fr}
-}
+.leaves-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;margin-bottom:10px}
+.leaves-title{font-weight:800;margin:0 0 4px}
+.leaves-meta{color:var(--muted);font-size:.9rem}
+.leaves-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+@media (max-width:900px){ .cell{min-width:26px;height:28px} }
 </style>
 </head>
 <body>
@@ -92,14 +71,12 @@ button.badge[data-code="MAL"]{color:#946200}
     <button class="tab" data-tab="leaves">Demandes de congés</button>
   </nav>
 
-  <!-- Onglet 1 : sélection magasin -->
   <section id="tab-magasins" class="tab-panel active">
     <p class="hint">Choisissez un magasin :</p>
     <div id="magasin-buttons" class="grid-buttons"></div>
-    <div id="magasin-loading" class="info">Chargement en cours…</div>
+    <div id="magasin-loading" class="loading" style="display:none">Chargement…</div>
   </section>
 
-  <!-- Onglet 2 : saisie -->
   <section id="tab-saisie" class="tab-panel">
     <div class="toolbar">
       <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
@@ -120,7 +97,6 @@ button.badge[data-code="MAL"]{color:#946200}
     <p id="saisie-error" class="error" style="display:none"></p>
   </section>
 
-  <!-- Onglet 3 : résumé (magasin au choix) -->
   <section id="tab-resume" class="tab-panel">
     <div class="toolbar">
       <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
@@ -135,22 +111,22 @@ button.badge[data-code="MAL"]{color:#946200}
     <p id="resume-error" class="error" style="display:none"></p>
   </section>
 
-  <!-- Onglet 4 : Demandes de congés -->
   <section id="tab-leaves" class="tab-panel">
     <div class="toolbar">
-      <div><b>Mois :</b> <input id="leaves-month" type="month"/></div>
-      <div><b>Mot de passe :</b> <input id="leaves-pass" type="password" placeholder="••••••••" style="min-width:180px"/></div>
-      <button id="btn-load-leaves" class="primary">Charger</button>
+      <div>
+        <b>Mot de passe :</b>
+        <input id="leaves-pass" type="password" placeholder="Mot de passe demandes" />
+      </div>
+      <button id="btn-load-leaves" class="primary">Charger toutes les demandes</button>
       <div class="spacer"></div>
-      <span class="small">Toutes les demandes (tous magasins) s’affichent ici.</span>
+      <span class="hint">Affiche toutes les demandes (tous mois / tous magasins).</span>
     </div>
-    <div id="leaves-content" class="leaves-wrap"></div>
+    <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
   </section>
 </main>
 
 <script>
-/* ====== utils ====== */
 const pad=n=>n<10?`0${n}`:`${n}`;
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 const thisYM = ()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;}
@@ -158,10 +134,8 @@ const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
-/* IMPORTANT: garder /presence (singulier) */
 const apiBase = '/presence';
 
-/* ====== constantes ====== */
 const MAGASINS = [
  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
  "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
@@ -169,19 +143,16 @@ const MAGASINS = [
 ];
 const CODES=["P","CP","ABS","MAL","R"];
 
-/* ====== état ====== */
 let currentMagasin=null;
 let personnel=null;
 let selectedCells=new Set();
 
-/* ====== DOM ====== */
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
 const $panels={ magasins:document.getElementById('tab-magasins'),
                 saisie:document.getElementById('tab-saisie'),
                 resume:document.getElementById('tab-resume'),
                 leaves:document.getElementById('tab-leaves') };
-
 const $magBtnsWrap=document.getElementById('magasin-buttons');
 const $magLoading=document.getElementById('magasin-loading');
 const $currMag=document.getElementById('current-magasin');
@@ -198,8 +169,6 @@ const $resumeContent=document.getElementById('resume-content');
 const $saisieError=document.getElementById('saisie-error');
 const $resumeError=document.getElementById('resume-error');
 const $btnDiag=document.getElementById('btn-diag');
-
-const $leavesMonth=document.getElementById('leaves-month');
 const $leavesPass=document.getElementById('leaves-pass');
 const $btnLoadLeaves=document.getElementById('btn-load-leaves');
 const $leavesContent=document.getElementById('leaves-content');
@@ -208,15 +177,12 @@ const $leavesError=document.getElementById('leaves-error');
 $today.textContent=todayISO();
 $dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
-$leavesMonth.value=thisYM();
 MAGASINS.forEach(m=>{
   const opt=document.createElement('option'); opt.value=m; opt.textContent=m;
   $resumeStore.appendChild(opt);
 });
-// pré-remplir pass demandé pour les congés
-try{ const saved = localStorage.getItem('leaves_pass'); if(saved) $leavesPass.value = saved; }catch{}
 
-/* ====== helpers réseau (retry + timeout) ====== */
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=2){
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), 15000);
@@ -229,41 +195,38 @@ async function fetchJSON(path, opts={}, retries=2){
     }
     return await r.json();
   }catch(e){
-    if(retries>0){ await new Promise(s=>setTimeout(s,300)); return fetchJSON(path, opts, retries-1); }
+    if(retries>0){ await delay(300); return fetchJSON(path, opts, retries-1); }
     throw e;
   }finally{ clearTimeout(t); }
 }
 
-/* ====== tabs ====== */
 $tabs.forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 function switchTab(key){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
   Object.entries($panels).forEach(([k,el])=>el.classList.toggle('active',k===key));
 }
 
-/* ====== page Magasins ====== */
 MAGASINS.forEach(m=>{
   const b=document.createElement('button'); b.textContent=m;
   b.addEventListener('click',()=>selectMagasin(m,b));
   $magBtnsWrap.appendChild(b);
 });
 async function selectMagasin(mag,btn){
-  $magLoading.classList.add('active');
   currentMagasin=mag;
   document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
   btn.classList.add('active');
   $currMag.textContent=mag;
+  $magLoading.style.display="block";
   try{
     await loadPersonnel();
     buildSaisieUI();
     await prefillDay();
     switchTab('saisie');
   }finally{
-    $magLoading.classList.remove('active');
+    $magLoading.style.display="none";
   }
 }
 
-/* ====== API perso ====== */
 async function loadPersonnel(){
   try{
     personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`);
@@ -272,7 +235,6 @@ async function loadPersonnel(){
   }
 }
 
-/* ====== Saisie (sélection & palette) ====== */
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
@@ -345,7 +307,7 @@ function buildSaisieUI(){
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
 }
 
-/* palette de codes */
+/* palette */
 document.querySelectorAll('button.badge[data-code]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const code=btn.dataset.code; if(!selectedCells.size) return;
@@ -366,7 +328,6 @@ $btnClear.addEventListener('click',()=>{
   selectedCells.forEach(td=>{ CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
 });
 
-/* prefill / save */
 async function prefillDay(){
   if(!currentMagasin) return;
   try{
@@ -396,20 +357,19 @@ function collectData(){
   });
   return {rows};
 }
-$btnSave.addEventListener('click', async ()=>{
+document.getElementById('btn-save').addEventListener('click', async ()=>{
   if(!currentMagasin) return;
-  const data=collectData(); $btnSave.disabled=true;
+  const data=collectData(); document.getElementById('btn-save').disabled=true;
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     alert('Enregistré ✔');
   }catch{ alert("Échec de l'enregistrement"); }
-  finally{ $btnSave.disabled=false; }
+  finally{ document.getElementById('btn-save').disabled=false; }
 });
 $dateInput.addEventListener('change',prefillDay);
 
-/* ====== Résumé : charger 1 magasin à la demande ====== */
-$btnLoadStore.addEventListener('click', loadResumeForStore);
-$btnRefreshResume.addEventListener('click', loadResumeForStore);
+document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
+document.getElementById('btn-refresh-resume').addEventListener('click', loadResumeForStore);
 
 async function loadResumeForStore(){
   $resumeError.style.display='none';
@@ -417,7 +377,6 @@ async function loadResumeForStore(){
   const ym=$resumeMonth.value;
   const mag=$resumeStore.value;
   try{
-    // endpoint optimisé pour 1 magasin
     const monthData = await fetchJSON(`/month-store?yyyymm=${encodeURIComponent(ym)}&magasin=${encodeURIComponent(mag)}`);
     renderOneStore(ym, mag, monthData);
   }catch(e){
@@ -427,218 +386,166 @@ async function loadResumeForStore(){
   }
 }
 
-/* rendu d’un seul magasin (sections) – fusion Sheets + fichiers */
 function renderOneStore(yyyymm, magasin, monthData){
   const days = daysOfMonth(yyyymm);
   const file = monthData.files?.[magasin] || {};
   const pers = monthData.personnel?.[magasin] || {employes:[], interims:[], livreurs:{}};
 
-  const labelsEmp = new Set((pers.employes||[]).map(p=>norm(`${p.nom} ${p.prenom||""}`.trim())));
-  const labelsInt = new Set((pers.interims||[]).map(p=>norm(`${p.nom} ${p.prenom||""}`.trim())));
-  const livreurGroups = Object.keys(pers.livreurs||{}).map(norm);
-
-  const observed = new Map(); // normLabel -> { label, slots:Set }
-  Object.values(file).forEach(rec=>{
-    const rows = rec?.data?.rows || [];
-    rows.forEach(r=>{
-      const key = norm(r.label);
-      if(!observed.has(key)) observed.set(key, {label:r.label, slots:new Set()});
-      Object.keys(r.values||{}).forEach(s=> observed.get(key).slots.add(s));
-    });
-  });
-
-  observed.forEach((info, key)=>{
-    if (!labelsEmp.has(key) && !labelsInt.has(key) && !livreurGroups.includes(key)){
-      labelsEmp.add(key);
-      if (info.slots.size === 0) { info.slots.add("Matin"); info.slots.add("A. Midi"); }
-    }
-  });
-
-  const $wrap = document.createElement('div');
-  const magTitle = document.createElement('div'); magTitle.className='section-title'; magTitle.textContent=magasin;
-  $wrap.appendChild(magTitle);
-
-  const divider = document.createElement('div'); divider.className='mag-divider';
-
-  const makeSection = (title, rowLabels, slotsResolver)=>{
+  const makeSection = (title, rowLabels, slotsFor)=>{
     if(!rowLabels.length) return null;
-
-    const seen=new Set(), slotOrder=[];
-    rowLabels.forEach(lbl=>{
-      const key=norm(lbl);
-      const obs=observed.get(key);
-      const slots = slotsResolver(lbl, obs);
-      (slots||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); slotOrder.push(s);} });
-    });
-
     const table=document.createElement('table'); table.className='table';
     const thead=document.createElement('thead');
 
-    const trA=document.createElement('tr');
+    const tr1=document.createElement('tr');
     const th0=document.createElement('th'); th0.className='row-label'; th0.textContent='Nom / Ligne';
-    trA.appendChild(th0);
-    days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=slotOrder.length; th.textContent=dowLetter(d); trA.appendChild(th); });
-    thead.appendChild(trA);
+    tr1.appendChild(th0);
+    days.forEach(d=>{ const th=document.createElement('th'); th.textContent=dowLetter(d); tr1.appendChild(th); });
+    thead.appendChild(tr1);
 
-    const trB=document.createElement('tr');
-    const thB0=document.createElement('th'); thB0.className='sub-label'; thB0.textContent=' '; trB.appendChild(thB0);
-    days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=slotOrder.length; th.textContent=String(d.getDate()); trB.appendChild(th); });
-    thead.appendChild(trB);
+    const tr2=document.createElement('tr');
+    const th00=document.createElement('th'); th00.className='sub-label'; th00.textContent=' '; tr2.appendChild(th00);
+    days.forEach(d=>{ const th=document.createElement('th'); th.textContent=String(d.getDate()); tr2.appendChild(th); });
+    thead.appendChild(tr2);
 
-    const trC=document.createElement('tr');
-    const thC0=document.createElement('th'); thC0.className='sub-label'; thC0.textContent=' '; trC.appendChild(thC0);
-    days.forEach(()=>{ slotOrder.forEach(s=>{ const th=document.createElement('th'); th.textContent=s; trC.appendChild(th); }); });
-    thead.appendChild(trC);
     table.appendChild(thead);
 
     const tbody=document.createElement('tbody');
-    const isWE=d=>{ const x=d.getDay(); return x===0||x===6; };
+    const isWE = d => { const x=d.getDay(); return x===0||x===6; };
 
-    rowLabels.forEach(lbl=>{
+    rowLabels.forEach(label=>{
+      const slots = slotsFor(label);
       const tr=document.createElement('tr');
-      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=lbl; tr.appendChild(td0);
+      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=label; tr.appendChild(td0);
 
       days.forEach(d=>{
-        const dk=ymd(d); const rec=file[dk];
+        const dk = ymd(d);
+        const rec = file[dk];
         let values={};
         if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(lbl));
+          const found = rec.data.rows.find(r => norm(r.label) === norm(label));
           values = found?.values || {};
         }
-        slotOrder.forEach(slot=>{
-          const td=document.createElement('td'); td.className='cell';
-          if(isWE(d)) td.classList.add('weekend');
-          const v = values[slot] || '';
-          td.textContent = v;
-          if(v) td.classList.add(v);
-          tr.appendChild(td);
-        });
+        const td=document.createElement('td');
+        if(isWE(d)) td.classList.add('weekend');
+
+        let code = '';
+        for(const s of slots){ if(values[s]){ code = values[s]; break; } }
+        td.textContent = code;
+        if(code) td.classList.add(code);
+        tr.appendChild(td);
       });
 
       tbody.appendChild(tr);
     });
 
     table.appendChild(tbody);
-
     const block=document.createElement('div');
-    const subtitle = document.createElement('div'); subtitle.className='section-sub'; subtitle.textContent=title;
+    const subtitle=document.createElement('div'); subtitle.className='section-sub'; subtitle.textContent=title;
     block.appendChild(subtitle); block.appendChild(table);
     return block;
   };
 
-  // Labels finaux affichés (texte lisible)
-  const toDisplay=(setArr, fromList)=>[...setArr].map(k=>{
-    const obs=observed.get(k)?.label;
-    if(obs) return obs;
-    const hit = (fromList||[]).find(p=>norm(`${p.nom} ${p.prenom||""}`)===k);
-    return hit ? `${hit.nom} ${hit.prenom||""}`.trim() : k;
+  const wrap=document.createElement('div');
+  const title=document.createElement('div'); title.className='section-title'; title.textContent=magasin; wrap.appendChild(title);
+
+  const empLabels=(pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const empSec = makeSection("EMPLOYÉS", empLabels, _=>["Matin","A. Midi"]);
+  if(empSec) wrap.appendChild(empSec);
+
+  const intLabels=(pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const intSec = makeSection("INTÉRIM", intLabels, _=>["Matin","A. Midi"]);
+  if(intSec) wrap.appendChild(intSec);
+
+  Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
+    const lbls=[g];
+    const sec = makeSection(`LIVREURS — ${g}`, lbls, _=> (slots && slots.length? slots: ["Matin","A. Midi"]));
+    if(sec) wrap.appendChild(sec);
   });
 
-  const empLabels = toDisplay(labelsEmp, pers.employes);
-  const empSec = makeSection("EMPLOYÉS", empLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
-  if(empSec) $wrap.appendChild(empSec);
+  const divider=document.createElement('div'); divider.className='mag-divider'; wrap.appendChild(divider);
 
-  const intLabels = toDisplay(labelsInt, pers.interims);
-  const intSec = makeSection("INTÉRIM", intLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
-  if(intSec) $wrap.appendChild(intSec);
-
-  Object.entries(pers.livreurs||{}).forEach(([g,defSlots])=>{
-    const key = norm(g);
-    const lbls = [ observed.get(key)?.label || g ];
-    const sec = makeSection(`LIVREURS — ${g}`, lbls, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : (defSlots&&defSlots.length? defSlots : ["Matin","A. Midi"]) ));
-    if(sec) $wrap.appendChild(sec);
-  });
-
-  $wrap.appendChild(divider);
   $resumeContent.innerHTML='';
-  $resumeContent.appendChild($wrap);
+  $resumeContent.appendChild(wrap);
 }
 
-/* ====== Demandes de congés ====== */
 $btnLoadLeaves.addEventListener('click', loadLeaves);
 
 async function loadLeaves(){
   $leavesError.style.display='none';
-  $leavesContent.innerHTML = '<div class="loading">Chargement en cours…</div>';
-
-  const ym = $leavesMonth.value;
+  $leavesContent.innerHTML='<div class="loading">Chargement des demandes…</div>';
   const pass = $leavesPass.value.trim();
+  if(!pass){ $leavesError.textContent="Mot de passe requis."; $leavesError.style.display='block'; $leavesContent.innerHTML=''; return; }
   try{
-    const data = await fetchJSON(`/leaves?yyyymm=${encodeURIComponent(ym)}&all=1`, {
-      headers: { 'x-pass': pass }
-    });
-    try{ localStorage.setItem('leaves_pass', pass); }catch{}
-    renderLeavesList(data.list || []);
+    const data = await fetchJSON(`/leaves?all=1`, { headers: { 'x-pass': pass } });
+    renderLeaves(data.list||[], pass);
   }catch(e){
-    $leavesError.textContent = "Impossible de charger les demandes (mot de passe ou réseau).";
+    $leavesError.textContent="Impossible de charger les demandes (mot de passe ou réseau).";
     $leavesError.style.display='block';
-    $leavesContent.innerHTML = '';
+    $leavesContent.innerHTML='';
   }
 }
 
-function renderLeavesList(list){
+function renderLeaves(list, pass){
+  $leavesContent.innerHTML='';
   if(!list.length){
-    $leavesContent.innerHTML = '<div class="info">Aucune demande pour ce mois.</div>';
+    $leavesContent.innerHTML = '<div class="hint">Aucune demande trouvée.</div>';
     return;
   }
 
-  const frag = document.createDocumentFragment();
-  list.forEach(item=>{
-    const row = document.createElement('div');
-    row.className = 'leave-row';
-    row.dataset.id = item.id;
-    row.innerHTML = `
-      <div><b>${(item.nom||'').trim()} ${(item.prenom||'').trim()}</b></div>
-      <div>${(item.magasin||'').trim()}</div>
-      <div>Du <b>${String(item.dateDu||'').slice(0,10)}</b> au <b>${String(item.dateAu||'').slice(0,10)}</b></div>
-      <div>${(item.type||'CP')}</div>
-      <div>
-        <span class="badge-mini ${
-          item.status==='accepted' ? 'badge-accepted' :
-          item.status==='refused'  ? 'badge-refused'  : 'badge-pending'
-        }">
-          ${item.status || 'pending'}
-        </span>
-      </div>
-      <div>
-        <button class="badge" data-act="accept">Accepter</button>
-        <button class="badge" data-act="refuse">Refuser</button>
-      </div>
-    `;
-    frag.appendChild(row);
+  const groups = {
+    pending: { title: "En attente", items: [] },
+    accepted: { title: "Acceptées", items: [] },
+    refused: { title: "Refusées", items: [] }
+  };
+  list.forEach(x=> groups[x.status||"pending"]?.items.push(x));
+
+  ["pending","accepted","refused"].forEach(k=>{
+    const g = groups[k]; if(!g.items.length) return;
+    const h = document.createElement('div'); h.className='section-title'; h.textContent = g.title;
+    $leavesContent.appendChild(h);
+
+    g.items.forEach(item=>{
+      const card = document.createElement('div'); card.className='leaves-card';
+      const title = document.createElement('div'); title.className='leaves-title';
+      title.textContent = `${(item.nom||"").toUpperCase()} ${item.prenom||""} — ${item.magasin||"?"}`;
+      const meta = document.createElement('div'); meta.className='leaves-meta';
+      meta.textContent = `Du ${item.dateDu?.slice(0,10)} au ${item.dateAu?.slice(0,10)} • ${item.nbJours||"?"} jour(s) • Service: ${item.service||"?"} • Mois: ${item.month||"?"}`;
+      const actions = document.createElement('div'); actions.className='leaves-actions';
+
+      if((item.status||"pending")==="pending"){
+        const bOk = document.createElement('button'); bOk.className='primary'; bOk.textContent='Accepter';
+        bOk.onclick = ()=> decideLeave(item, "accept", pass);
+        const bKo = document.createElement('button'); bKo.textContent='Refuser';
+        bKo.onclick = ()=> decideLeave(item, "refuse", pass);
+        actions.appendChild(bOk); actions.appendChild(bKo);
+      }else{
+        const tag = document.createElement('span'); tag.className='hint';
+        tag.textContent = item.status === 'accepted' ? "✔ Acceptée" : "✖ Refusée";
+        actions.appendChild(tag);
+      }
+
+      card.appendChild(title); card.appendChild(meta); card.appendChild(actions);
+      $leavesContent.appendChild(card);
+    });
   });
-  $leavesContent.innerHTML = '';
-  $leavesContent.appendChild(frag);
 }
 
-// Actions accepter / refuser
-$leavesContent.addEventListener('click', async (ev)=>{
-  const btn = ev.target.closest('button[data-act]');
-  if(!btn) return;
-  const row = btn.closest('.leave-row');
-  const id = row?.dataset?.id;
-  if(!id) return;
-
-  const decision = btn.dataset.act === 'accept' ? 'accept' : 'refuse';
-  const pass = $leavesPass.value.trim();
-  const ym = $leavesMonth.value;
-
-  [...row.querySelectorAll('button')].forEach(b=>b.disabled=true);
+async function decideLeave(item, decision, pass){
   try{
-    await fetchJSON('/leaves/decision', {
+    await fetchJSON(`/leaves/decision`, {
       method: 'POST',
       headers: { 'x-pass': pass },
-      body: JSON.stringify({ yyyymm: ym, id, decision })
+      body: JSON.stringify({ yyyymm: item.month, id: item.id, decision })
     });
     await loadLeaves();
-    alert(decision === 'accept' ? 'Demande acceptée ✔ (CP appliqués)' : 'Demande refusée ✔');
+    if(decision==="accept"){
+      alert("Demande acceptée : CP appliqué automatiquement dans les présences.");
+    }
   }catch(e){
-    alert('Action impossible (mot de passe ou réseau).');
-    [...row.querySelectorAll('button')].forEach(b=>b.disabled=false);
+    alert("Échec de la décision.");
   }
-});
+}
 
-/* ====== Diag ====== */
 document.getElementById('btn-diag').addEventListener('click', async ()=>{
   try{
     const r = await fetchJSON('/_diag');

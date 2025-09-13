@@ -6,8 +6,8 @@ import os from "os";
 
 const router = express.Router();
 
-const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
-const LEAVES_DIR = FTP_ROOT + "/leaves";
+const FTP_ROOT  = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
+const LEAVES_DIR = `${FTP_ROOT}/leaves`;
 const MAGASINS = [
   "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
   "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
@@ -17,16 +17,16 @@ const MAGASINS = [
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 
 const yyyymm = (dateStr) => String(dateStr).slice(0,7);
-const pad  = n => n<10? "0"+n : ""+n;
+const pad = n => n<10? "0"+n : ""+n;
 const tmpFile = (name) => path.join(os.tmpdir(), name);
 const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
 const norm = s => String(s||"").normalize("NFD").replace(/\p{Diacritic}/gu,"").trim().replace(/\s+/g," ").toUpperCase();
-const isWeekend = d => { const x=d.getDay(); return x===0||x===6; };
-const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
 function* eachDayInclusive(d1Str, d2Str){
   let d = new Date(d1Str), end = new Date(d2Str);
-  for(; d<=end; d=addDays(d,1)) yield new Date(d);
+  for(; d<=end; d = addDays(d,1)) yield new Date(d);
 }
 
 function tlsOptions(){
@@ -44,7 +44,7 @@ async function openFtp(){
     password: process.env.FTP_PASSWORD,
     port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
     secure: String(process.env.FTP_SECURE||"false") === "true",
-    secureOptions: tlsOptions()
+    secureOptions: tlsOptions(),
   });
   try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
   return client;
@@ -77,7 +77,7 @@ async function writeJSON(client, remotePath, obj){
   try{ fs.unlinkSync(out); }catch{}
 }
 
-async function withFtp(actionLabel, fn, retries=2){
+async function withFtp(label, fn, retries=2){
   let lastErr;
   for (let attempt=0; attempt<=retries; attempt++){
     let client;
@@ -90,7 +90,7 @@ async function withFtp(actionLabel, fn, retries=2){
       lastErr = e;
       try{ client?.close(); }catch{}
       if (attempt < retries){
-        console.warn(`[PRES/FTP] ${actionLabel} tentative ${attempt+1} échouée:`, e?.message||e);
+        console.warn(`[PRES/FTP] ${label} tentative ${attempt+1} échouée:`, e?.message||e);
         await sleep(300 + attempt*500);
         continue;
       }
@@ -180,7 +180,7 @@ router.get("/month", async (req, res) => {
           const resp = await fetch(`${process.env.GS_PRESENCES_URL}?action=personnel&magasin=${encodeURIComponent(m)}`);
           personnel[m] = resp.ok ? await resp.json() : {employes:[], interims:[], livreurs:{}};
         }else{
-          personnel[m] = {employes:[], interims:[], livreurs:{}};
+          personnel[m] = {employes:[], interims:[], livreeurs:{}};
         }
       }catch{
         personnel[m] = {employes:[], interims:[], livreurs:{}};
@@ -206,7 +206,7 @@ router.get("/month-store", async (req, res) => {
       files[magasin] = json || {};
     });
 
-    let personnel = {};
+    const personnel = {};
     try{
       if(process.env.GS_PRESENCES_URL){
         const resp = await fetch(`${process.env.GS_PRESENCES_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
@@ -233,17 +233,37 @@ function checkPass(req){
 }
 
 router.get("/leaves", async (req, res) => {
+  const wantAll = String(req.query.all||"") === "1";
   const month = String(req.query.yyyymm || "");
-  const all = String(req.query.all||"") === "1";
-  if(!month) return res.status(400).json({ok:false, error:"missing params"});
   if(!checkPass(req)) return res.status(401).json({ok:false, error:"unauthorized"});
 
-  const file = `${LEAVES_DIR}/${month}.json`;
   try{
     const list = await withFtp("leaves-get", async (client)=>{
-      const json = await tryDownloadJSON(client, file);
-      return Array.isArray(json) ? json : (json?.list || []);
+      if(wantAll){
+        await ensureDir(client, LEAVES_DIR);
+        const entries = await client.list(LEAVES_DIR).catch(()=>[]);
+        const all = [];
+        for(const e of entries){
+          if(!e.isFile) continue;
+          if(!/\.json$/i.test(e.name)) continue;
+          const m = e.name.replace(/\.json$/i,"");
+          const arr = await tryDownloadJSON(client, `${LEAVES_DIR}/${e.name}`);
+          const listForMonth = Array.isArray(arr) ? arr : (arr?.list || []);
+          listForMonth.forEach(x=>{
+            if(!x.month) x.month = m;
+            all.push(x);
+          });
+        }
+        all.sort((a,b)=> String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+        return all;
+      }else{
+        if(!month) return [];
+        const json = await tryDownloadJSON(client, `${LEAVES_DIR}/${month}.json`);
+        const arr = Array.isArray(json) ? json : (json?.list || []);
+        return arr.map(x=> x.month ? x : {...x, month});
+      }
     });
+
     res.json({ ok:true, list: list || [] });
   }catch(e){
     console.error("[LEAVES] get error", e?.message||e);
@@ -260,7 +280,7 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
     }
     const file = `${LEAVES_DIR}/${month}.json`;
 
-    let updated, target;
+    let target;
     await withFtp("leaves-decision", async (client)=>{
       const list = await tryDownloadJSON(client, file) || [];
       const idx = list.findIndex(x=> String(x.id)===String(id));
@@ -268,7 +288,6 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
       list[idx].status = (decision==="accept" ? "accepted" : "refused");
       target = list[idx];
       await writeJSON(client, file, list);
-      updated = list;
     });
 
     if(decision==="accept" && target){
@@ -300,35 +319,37 @@ async function applyCPForLeave(leave){
 
   await withFtp("apply-cp", async (client)=>{
     const json = (await tryDownloadJSON(client, remoteFile)) || {};
-    for (const d of eachDayInclusive(d1,d2)){
-      if(isWeekend(d)) continue;
+    for(const d of eachDayInclusive(d1,d2)){
+      const day = d.getDay();
+      if(day===0 || day===6) continue;
       const dk = iso(d);
       const dayRec = json[dk] || { data: { rows: [] }, savedAt: new Date().toISOString() };
       const rows = dayRec.data.rows || [];
 
       let rowIndex = rows.findIndex(r => norm(r.label) === keyWanted);
+
       if(rowIndex < 0){
-        const fallbackKey = norm(`(A rapprocher) ${labelWanted}`);
+        const fallbackKey = norm(`(À rapprocher) ${labelWanted}`);
         rowIndex = rows.findIndex(r => norm(r.label) === fallbackKey);
       }
+
       if(rowIndex < 0){
         rows.push({ label: `(À rapprocher) ${labelWanted}`, values: {} });
-        rowIndex = rows.length-1;
+        rowIndex = rows.length - 1;
       }
 
       const values = rows[rowIndex].values || {};
-      values["Matin"]  = "CP";
+      if(values["Matin"]==null) values["Matin"] = "";
+      if(values["A. Midi"]==null) values["A. Midi"] = "";
+      values["Matin"]   = "CP";
       values["A. Midi"] = "CP";
-      rows[rowIndex].values = values;
 
+      rows[rowIndex].values = values;
       dayRec.data.rows = rows;
       json[dk] = dayRec;
     }
-
     await writeJSON(client, remoteFile, json);
   });
-
-  console.log("[LEAVES] CP appliqués", { magasin, d1, d2, label: labelWanted });
 }
 
 router.get("/_diag", async (_req, res) => {
