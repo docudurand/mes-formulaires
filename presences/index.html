@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!doctype html>
 <html lang="fr">
 <head>
@@ -9,7 +8,7 @@
 <style>
 :root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --ok:#1a7f37; }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:#f6f7f8}
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
 .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
 .app-header .today{color:var(--muted)}
@@ -33,7 +32,7 @@ button.badge.code{border-radius:8px}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
-.sub-label{font-size:.86rem;color:var(--muted);font-style:italic;white-space:nowrap}
+.sub-label{font-size:.86rem;color:#666;font-style:italic;white-space:nowrap}
 .section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
 .section-sub{font-weight:800;margin:6px 0 0 2px;color:#111;font-size:.95rem}
 .mag-divider{border-top:2px solid var(--line); margin:18px 0 8px}
@@ -97,14 +96,17 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
   outline:2px solid color-mix(in srgb,var(--brand),transparent 70%); border-color: var(--brand);
 }
 
-.hint,.legend{color:var(--muted);font-size:.9rem}
+.hint,.legend{color:#666;font-size:.9rem}
 .error{color:#a40000;font-weight:700}
-.loading{padding:14px;color:var(--muted)}
+.loading{padding:14px;color:#666}
 @media (max-width:900px){ .cell{min-width:26px;height:28px} }
 
 .badge.action.btn-accept{ background:#e8f5ec; color:#1a7f37; border-color:#d9f0e1; }
 .badge.action.btn-reject{ background:#fee2e2; color:#b91c1c; }
 .badge.action.btn-cancel{ background:#fff7ed; color:#b45309; }
+.inline-loading{ display:flex; align-items:center; gap:8px; color:#666; font-weight:600; }
+.spinner{ width:14px; height:14px; border-radius:50%; border:2px solid #ddd; border-top-color: var(--brand); animation:spin 1s linear infinite; }
+@keyframes spin{ to{ transform: rotate(360deg) } }
 </style>
 </head>
 <body>
@@ -563,12 +565,11 @@ function statusLabelFR(s){
     default:          return String(s||"");
   }
 }
+
 function renderLeaves(items){
   items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
   const wrap=document.createElement('div');
-  const makeBtn = (label, fn, cls) => {
-    const b=document.createElement('button'); b.className='badge action '+(cls||''); b.textContent=label; b.addEventListener('click', fn); return b;
-  };
+
   items.forEach(it=>{
     const card=document.createElement('div');
     card.style.border='1px solid var(--line)'; card.style.borderRadius='10px'; card.style.background='#fff';
@@ -589,26 +590,76 @@ function renderLeaves(items){
     status.innerHTML = `Statut: <b>${lib}</b>` + (it.reason? ` — ${it.reason}`:'');
     card.appendChild(status);
 
-    const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.gap='8px';
+    const actions = document.createElement('div'); actions.className='leaf-actions';
+    actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.gap='8px';
+
+    const loadingRow = document.createElement('div'); loadingRow.className='inline-loading';
+    loadingRow.style.display='none';
+    loadingRow.innerHTML = '<span class="spinner"></span><span class="loading-text">Traitement…</span>';
+    const setBusy = (busy, text) => {
+      if(text) loadingRow.querySelector('.loading-text').textContent = text;
+      actions.style.display = busy ? 'none' : 'flex';
+      loadingRow.style.display = busy ? 'flex' : 'none';
+    };
+
     if(String(it.status)==="pending"){
-      actions.appendChild(makeBtn('Accepter', ()=> decideLeave(it.id,'accept'), 'btn-accept'));
-      actions.appendChild(makeBtn('Refuser', ()=> { const r=prompt("Motif du refus ? (optionnel)",""); decideLeave(it.id,'reject', r||""); }, 'btn-reject'));
+      const btnAccept = document.createElement('button');
+      btnAccept.className='badge action btn-accept';
+      btnAccept.textContent='Accepter';
+      btnAccept.addEventListener('click', ()=>{
+        setBusy(true, 'Validation…');
+        decideLeave(it.id,'accept',"",{ setBusy });
+      });
+      const btnReject = document.createElement('button');
+      btnReject.className='badge action btn-reject';
+      btnReject.textContent='Refuser';
+      btnReject.addEventListener('click', ()=>{
+        const r=prompt("Motif du refus ? (optionnel)","");
+        if(r===null) return;
+        setBusy(true, 'Refus…');
+        decideLeave(it.id,'reject', r||"", { setBusy });
+      });
+      actions.appendChild(btnAccept);
+      actions.appendChild(btnReject);
     } else if (String(it.status)==="accepted"){
-      actions.appendChild(makeBtn('Annuler', ()=> cancelLeave(it.id), 'btn-cancel'));
+      const btnCancel = document.createElement('button');
+      btnCancel.className='badge action btn-cancel';
+      btnCancel.textContent='Annuler';
+      btnCancel.addEventListener('click', ()=>{
+        if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return;
+        setBusy(true, 'Annulation…');
+        cancelLeave(it.id, { setBusy });
+      });
+      actions.appendChild(btnCancel);
     }
+
     if(actions.childElementCount) card.appendChild(actions);
+    card.appendChild(loadingRow);
     wrap.appendChild(card);
   });
+
   $leavesContent.innerHTML=''; $leavesContent.appendChild(wrap);
 }
-async function decideLeave(id, decision, reason=""){
-  try{ await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision, reason }) }); alert('Décision enregistrée.'); loadLeaves(); }
-  catch(e){ alert('Échec de la décision: ' + (e?.message||'')); }
+
+async function decideLeave(id, decision, reason="", ui){
+  try{
+    await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision, reason }) });
+    alert('Décision enregistrée.');
+    loadLeaves();
+  }catch(e){
+    ui?.setBusy?.(false);
+    alert('Échec de la décision: ' + (e?.message||''));
+  }
 }
-async function cancelLeave(id){
-  if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return;
-  try{ await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision:'cancel' }) }); alert('Validation annulée et jours supprimés.'); loadLeaves(); }
-  catch(e){ alert('Échec de l’annulation: ' + (e?.message||'')); }
+async function cancelLeave(id, ui){
+  try{
+    await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision:'cancel' }) });
+    alert('Validation annulée et jours supprimés.');
+    loadLeaves();
+  }catch(e){
+    ui?.setBusy?.(false);
+    alert('Échec de l’annulation: ' + (e?.message||''));
+  }
 }
 
 document.getElementById('today').textContent = todayISO();
