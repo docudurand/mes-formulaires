@@ -7,11 +7,6 @@ import os from "os";
 const router = express.Router();
 
 const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
-const MAGASINS = [
-  "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
-  "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
-  "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
-];
 const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
 
@@ -98,9 +93,7 @@ router.get("/personnel", async (req, res) => {
     try{
       const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
       if(resp.ok){ return res.json(await resp.json()); }
-    }catch(e){
-      console.warn("[PRES] personnel fallback:", e?.message||e);
-    }
+    }catch(e){ console.warn("[PRES] personnel fallback:", e?.message||e); }
   }
   return res.json({ employes: [], interims: [], livreurs: {} });
 });
@@ -126,13 +119,52 @@ router.post("/save", express.json({limit:"2mb"}), async (req, res) => {
   }
 });
 
+router.get("/day", async (req, res) => {
+  try{
+    const magasin = String(req.query.magasin||"").trim();
+    const date = String(req.query.date||"").trim();
+    if(!magasin || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ ok:false, error:"invalid_params" });
+
+    const month = yyyymm(date);
+    const remoteFile = `${FTP_ROOT}/${month}/${magasin}.json`;
+    const file = await withFtp("day-read", async (client)=> (await tryDownloadJSON(client, remoteFile)) || {} );
+    const block = file[date]?.data || { rows:[] };
+    return res.json({ ok:true, data:block });
+  }catch(e){
+    console.error("[PRES] day error:", e?.message||e);
+    return res.status(200).json({ ok:true, data:{ rows:[] } });
+  }
+});
+
+router.get("/month-store", async (req, res) => {
+  try{
+    const month = String(req.query.yyyymm||"").trim();
+    const magasin = String(req.query.magasin||"").trim();
+    if(!/^\d{4}-\d{2}$/.test(month) || !magasin) return res.status(400).json({ ok:false, error:"invalid_params" });
+
+    const remoteFile = `${FTP_ROOT}/${month}/${magasin}.json`;
+    const file = await withFtp("month-store-read", async (client)=> (await tryDownloadJSON(client, remoteFile)) || {} );
+
+    let personnel = { employes:[], interims:[], livreurs:{} };
+    const url = process.env.GS_PRESENCES_URL;
+    if(url){
+      try{
+        const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+        if(resp.ok){ personnel = await resp.json(); }
+      }catch(e){  }
+    }
+
+    return res.json({ ok:true, file, personnel });
+  }catch(e){
+    console.error("[PRES] month-store error:", e?.message||e);
+    return res.json({ ok:true, file:{}, personnel:{ employes:[], interims:[], livreurs:{} } }); // jamais 404
+  }
+});
+
 router.get("/leaves", async (req, res) => {
   if(!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
   try{
-    const leaves = await withFtp("leaves-get", async (client)=>{
-      const json = await tryDownloadJSON(client, LEAVES_FILE);
-      return Array.isArray(json) ? json : [];
-    });
+    const leaves = await withFtp("leaves-get", async (client)=> (await tryDownloadJSON(client, LEAVES_FILE)) || [] );
     res.json({ ok:true, leaves });
   }catch(e){
     console.error("[LEAVES] get error:", e?.message||e);
@@ -143,9 +175,7 @@ router.get("/leaves", async (req, res) => {
 router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) => {
   if(!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
   const { id, decision, reason } = req.body || {};
-  if(!id || !decision || !/^(accept|reject|cancel)$/i.test(decision)) {
-    return res.status(400).json({ ok:false, error:"invalid_params" });
-  }
+  if(!id || !decision || !/^(accept|reject|cancel)$/i.test(decision)) return res.status(400).json({ ok:false, error:"invalid_params" });
 
   try{
     await withFtp("leaves-decision", async (client)=>{
@@ -160,66 +190,47 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
       const DEF_SLOTS = ["Matin","A. Midi"];
 
       const act = decision.toLowerCase();
-
       if(act === "accept"){
         if(item.status !== "pending") throw new Error("already_decided");
-        item.status = "accepted";
-        item.reason = reason || "";
-        item.decidedAt = new Date().toISOString();
+        item.status = "accepted"; item.reason = reason || ""; item.decidedAt = new Date().toISOString();
 
         for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
           if(isWE(d)) continue;
           const dk = d.toISOString().slice(0,10);
           const month = yyyymm(dk);
-          const remoteFile = `${FTP_ROOT}/${month}/${item.magasin}.json`;
-
-          const file = (await tryDownloadJSON(client, remoteFile)) || {};
+          const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
+          const file = (await tryDownloadJSON(client, remote)) || {};
           const dayBlock = file[dk]?.data || { rows:[] };
-
           let row = (dayBlock.rows||[]).find(r => String(r.label).trim().toUpperCase() === label);
           if(!row){ row = { label, values:{} }; dayBlock.rows.push(row); }
           DEF_SLOTS.forEach(s=>{ row.values[s] = "CP"; });
-
           file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
-          await writeJSON(client, remoteFile, file);
+          await writeJSON(client, remote, file);
         }
-      } else if (act === "reject"){
+      }else if(act==="reject"){
         if(item.status !== "pending") throw new Error("already_decided");
-        item.status = "rejected";
-        item.reason = reason || "";
-        item.decidedAt = new Date().toISOString();
-      } else if (act === "cancel"){
+        item.status = "rejected"; item.reason = reason || ""; item.decidedAt = new Date().toISOString();
+      }else{
         if(item.status !== "accepted") throw new Error("not_accepted");
-        item.status = "cancelled";
-        item.cancelledAt = new Date().toISOString();
-        item.reason = reason || item.reason || "";
-
+        item.status = "cancelled"; item.cancelledAt = new Date().toISOString(); item.reason = reason || item.reason || "";
         for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
           if(isWE(d)) continue;
           const dk = d.toISOString().slice(0,10);
           const month = yyyymm(dk);
-          const remoteFile = `${FTP_ROOT}/${month}/${item.magasin}.json`;
-
-          const file = (await tryDownloadJSON(client, remoteFile)) || {};
+          const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
+          const file = (await tryDownloadJSON(client, remote)) || {};
           const dayBlock = file[dk]?.data || { rows:[] };
-
           const row = (dayBlock.rows||[]).find(r => String(r.label).trim().toUpperCase() === label);
           if(row){
-            let changed = false;
-            DEF_SLOTS.forEach(s=>{
-              if(row.values?.[s] === "CP"){ row.values[s] = ""; changed = true; }
-            });
-            if(changed){
-              file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
-              await writeJSON(client, remoteFile, file);
-            }
+            let changed=false;
+            DEF_SLOTS.forEach(s=>{ if(row.values?.[s]==="CP"){ row.values[s] = ""; changed=true; }});
+            if(changed){ file[dk] = { data: dayBlock, savedAt: new Date().toISOString() }; await writeJSON(client, remote, file); }
           }
         }
       }
 
       await writeJSON(client, LEAVES_FILE, leaves);
     });
-
     res.json({ ok:true });
   }catch(e){
     console.error("[LEAVES] decision error:", e?.message||e);
