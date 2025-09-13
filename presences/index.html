@@ -165,6 +165,8 @@ $today.textContent=todayISO(); $dateInput.value=todayISO(); $resumeMonth.value=t
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
 
+$tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=1){
   const ctrl = new AbortController();
