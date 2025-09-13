@@ -210,34 +210,44 @@ router.post("/leaves/decision", express.json({limit:"1mb"}), async (req, res) =>
       }else if(act==="reject"){
         if(item.status !== "pending") throw new Error("already_decided");
         item.status = "rejected"; item.reason = reason || ""; item.decidedAt = new Date().toISOString();
-      }else{
-        if(item.status !== "accepted") throw new Error("not_accepted");
-        item.status = "cancelled"; item.cancelledAt = new Date().toISOString(); item.reason = reason || item.reason || "";
-        for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-          if(isWE(d)) continue;
-          const dk = d.toISOString().slice(0,10);
-          const month = yyyymm(dk);
-          const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
-          const file = (await tryDownloadJSON(client, remote)) || {};
-          const dayBlock = file[dk]?.data || { rows:[] };
-          const row = (dayBlock.rows||[]).find(r => String(r.label).trim().toUpperCase() === label);
-		if(row){
-			let changed=false;
-			DEF_SLOTS.forEach(s=>{
-			const cur = String(row.values?.[s] ?? '').trim();
-			if(cur === "CP"){
-			row.values[s] = "";
-			changed = true;
-			}
-		});
-			if(changed){
-		file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
-			await writeJSON(client, remote, file);
-		}
-	}
+} else {
+  if(item.status !== "accepted") throw new Error("not_accepted");
+  item.status = "cancelled";
+  item.cancelledAt = new Date().toISOString();
+  item.reason = reason || item.reason || "";
 
+  const normalize = (s) => String(s||"").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+
+    const dkUTC = new Date(d).toISOString().slice(0, 10);
+    const dkLOC = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    for (const dk of new Set([dkUTC, dkLOC])) {
+      const month = dk.slice(0,7);
+      const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
+      const file = (await tryDownloadJSON(client, remote)) || {};
+      const dayBlock = file[dk]?.data || { rows: [] };
+
+      const row = (dayBlock.rows || []).find(r => normalize(r.label) === normalize(`${(item.nom||"")} ${item.prenom||""}`));
+      if (!row) continue;
+
+      let changed = false;
+      for (const slot of Object.keys(row.values || {})) {
+        const cur = String(row.values[slot] ?? "").trim();
+        if (cur === "CP") {
+          row.values[slot] = "";
+          changed = true;
         }
       }
+
+      if (changed) {
+        file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
+        await writeJSON(client, remote, file);
+      }
+    }
+  }
+}
 
       await writeJSON(client, LEAVES_FILE, leaves);
     });
