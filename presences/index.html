@@ -329,23 +329,6 @@ function buildSaisieUI(){
   });
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
 }
-document.querySelectorAll('button.badge[data-code]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const code=btn.dataset.code; if(!selectedCells.size) return;
-    selectedCells.forEach(td=>{
-      CODES.forEach(c=>td.classList.remove(c));
-      td.textContent = code || ''; if(code) td.classList.add(code);
-    });
-  });
-});
-$btnFillAll.addEventListener('click',()=>{
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    CODES.forEach(c=>td.classList.remove(c)); td.textContent='P'; td.classList.add('P');
-  });
-});
-$btnClear.addEventListener('click',()=>{
-  selectedCells.forEach(td=>{ CODES.forEach(c=>td.classList.remove(c)); td.textContent=''; });
-});
 async function prefillDay(){
   if(!currentMagasin) return;
   try{
