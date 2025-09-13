@@ -6,7 +6,6 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
-import axios from "axios";
 
 import * as stats from "./stats.js";
 
@@ -17,7 +16,11 @@ import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
+
 import presences from "./routes/presences.js";
+
+import ftp from "basic-ftp";
+import os from "os";
 
 dotenv.config();
 
@@ -26,21 +29,18 @@ const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
-
 app.use('/presence', presences);
-
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
   const method = req.method;
-
   res.on("finish", async () => {
     try {
       const success = res.statusCode >= 200 && res.statusCode < 300;
@@ -53,7 +53,6 @@ app.use((req, res, next) => {
       console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
     }
   });
-
   next();
 });
 
@@ -62,67 +61,31 @@ const APPS_SCRIPT_URL =
 
 app.get("/api/sheets/televente", async (req, res) => {
   const tryOnce = async () =>
-    axios.get(APPS_SCRIPT_URL, {
-      timeout: 12000,
-      params: req.query,
-      headers: { "User-Agent": "televente-proxy/1.0" },
-    });
+    fetch(APPS_SCRIPT_URL + "?" + new URLSearchParams(req.query), {
+      headers: { "User-Agent": "televente-proxy/1.0" }
+    }).then(r => r.json());
 
   try {
-    let r;
-    try { r = await tryOnce(); }
-    catch { await new Promise(t=>setTimeout(t,400)); r = await tryOnce(); }
-
+    let data;
+    try { data = await tryOnce(); }
+    catch { await new Promise(t => setTimeout(t, 400)); data = await tryOnce(); }
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json(r.data);
+    res.status(200).json(data);
   } catch (e) {
     res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
-  }
-});
-
-app.get("/stats/counters", async (_req, res) => {
-  try {
-    const data = await stats.getCounters();
-    res.json({ ok: true, data });
-  } catch (e) {
-    console.error("Erreur /stats/counters:", e);
-    res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" });
-  }
-});
-
-app.get("/admin/compteurs", async (_req, res) => {
-  try {
-    const data = await stats.getCounters();
-    res.json(data);
-  } catch (e) {
-    console.error("Erreur /admin/compteurs:", e);
-    res.status(500).json({ error: "Erreur de lecture des compteurs" });
   }
 });
 
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
 });
-
 app.use(
   express.static(path.join(__dirname, "public"), {
     extensions: ["html", "htm"],
     index: false,
   })
 );
-
-console.log("[BOOT] public/conges ?",
-  fs.existsSync(path.join(__dirname, "public", "conges"))
-);
-console.log("[BOOT] public/conges/index.html ?",
-  fs.existsSync(path.join(__dirname, "public", "conges", "index.html"))
-);
-
-app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
-app.get("/conges", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
-});
 
 const ROUTING = {
   "GLEIZE": {
@@ -138,6 +101,81 @@ function resolveRecipient(magasin, service, globalDefault) {
   if (perMag && perMag["__DEFAULT"]) return perMag["__DEFAULT"];
   return globalDefault;
 }
+
+function esc(str = "") {
+  return String(str)
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+function fmtFR(dateStr = "") {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
+}
+
+const FTP_ROOT = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "") + "/presences";
+const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+
+function tlsOptions(){
+  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
+  const servername = process.env.FTP_HOST || undefined;
+  return { rejectUnauthorized, servername };
+}
+async function ftpClient(){
+  const client = new ftp.Client(30_000);
+  if (FTP_DEBUG) client.ftp.verbose = true;
+  await client.access({
+    host: process.env.FTP_HOST, user: process.env.FTP_USER, password: process.env.FTP_PASSWORD,
+    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+    secure: String(process.env.FTP_SECURE||"false")==="true", secureOptions: tlsOptions()
+  });
+  try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
+  return client;
+}
+function tmpFile(name){ return path.join(os.tmpdir(), name); }
+async function dlJSON(client, remote){
+  const out = tmpFile("lv_"+Date.now()+".json");
+  try{
+    await client.downloadTo(out, remote);
+    return JSON.parse(fs.readFileSync(out,"utf8"));
+  }catch{ return null }
+  finally{ try{ fs.unlinkSync(out); }catch{} }
+}
+async function upJSON(client, remote, obj){
+  const out = tmpFile("lv_up_"+Date.now()+".json");
+  fs.writeFileSync(out, JSON.stringify(obj));
+  const dir = path.posix.dirname(remote);
+  await client.ensureDir(dir);
+  await client.uploadFrom(out, remote);
+  try{ fs.unlinkSync(out) }catch{}
+}
+async function appendLeave(payload){
+  await (async ()=>{
+    let client;
+    try{
+      client = await ftpClient();
+      const arr = (await dlJSON(client, LEAVES_FILE)) || [];
+      const item = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        ...payload
+      };
+      arr.push(item);
+      await upJSON(client, LEAVES_FILE, arr);
+      console.log("[LEAVES] appended:", { id:item.id, magasin:item.magasin, du:item.dateDu, au:item.dateAu });
+    }catch(e){
+      console.error("[LEAVES] append error:", e?.message||e);
+    }finally{
+      try{ client?.close() }catch{}
+    }
+  })();
+}
+
+app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
+app.get("/conges", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "conges", "index.html"));
+});
 
 app.post("/conges/api", async (req, res) => {
   try {
@@ -181,12 +219,8 @@ app.post("/conges/api", async (req, res) => {
       return res.status(500).json({ ok: false, error: "smtp_not_configured" });
     }
 
-    const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
     const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: GMAIL_USER, pass: cleanedPass },
-    });
+    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: cleanedPass } });
 
     const duFR = fmtFR(dateDu);
     const auFR = fmtFR(dateAu);
@@ -194,15 +228,10 @@ app.post("/conges/api", async (req, res) => {
 
     const pdfBuffer = await makeLeavePdf({
       logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
-      magasin,
-      nomPrenom: nomPrenomStr,
-      service,
-      nbJours: n,
-      du: duFR,
-      au: auFR,
-      signatureData,
+      magasin, nomPrenom: nomPrenomStr, service, nbJours: n, du: duFR, au: auFR, signatureData,
     });
 
+    const toRecipients = resolveRecipient(magasin, service, MAIL_CG);
     const subject = `Demande - ${nomPrenomStr}`;
     const html = `
       <h2>Demande de Jours de Congés</h2>
@@ -221,28 +250,14 @@ app.post("/conges/api", async (req, res) => {
       replyTo: email,
       subject,
       html,
-      attachments: [
-        {
-          filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
-        },
-      ],
+      attachments: [{ filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
     });
 
     console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
 
-    try{
-      const base = `${req.protocol}://${req.get("host")}`;
-      await fetch(`${base}/presence/leaves/record`, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({
-          magasin, nom: _nom, prenom: _prenom, service, nbJours: n,
-          dateDu, dateAu, email
-        })
-      });
-    }catch(e){ console.warn("[CONGES] leave recording failed:", e?.message||e); }
+    await appendLeave({
+      magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email
+    });
 
     res.json({ ok: true });
   } catch (e) {
@@ -269,27 +284,10 @@ app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
 (async () => {
-  try {
-    await stats.initCounters();
-  } catch (e) {
-    console.warn("[COMPTEUR] initCounters souci:", e?.message || e);
-  }
+  try { await stats.initCounters(); }
+  catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
-
-function esc(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function fmtFR(dateStr = "") {
-  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
-}
 
 async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -297,37 +295,21 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  function drawCrossInBox(doc, x, y, size) {
-    const pad = Math.max(2, Math.round(size * 0.2));
-    doc.save();
-    doc.lineWidth(1.5);
-    doc.moveTo(x + pad, y + pad).lineTo(x + size - pad, y + size - pad).stroke();
-    doc.moveTo(x + size - pad, y + pad).lineTo(x + pad, y + size - pad).stroke();
-    doc.restore();
-  }
-
   const pageLeft = 50;
   const pageRight = 545;
   const logoX = pageLeft;
   const logoY = 40;
   const logoW = 120;
 
-  const titleX = logoX + logoW + 20;
-  const titleWidth = pageRight - titleX;
-
   try {
     const resp = await fetch(logoUrl);
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, logoX, logoY, { width: logoW });
-  } catch (e) {
-    console.warn("[CONGES][PDF] Logo non chargé:", e.message);
-  }
+  } catch (e) { }
 
-  const titleStr = "DEMANDE DE JOURS DE CONGÉS";
-  doc.fontSize(18).font("Helvetica-Bold").text(titleStr, titleX, logoY + 45, { width: titleWidth, align: "left" });
+  doc.fontSize(18).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", logoX + logoW + 20, logoY + 45);
 
   let y = 180;
-
   const bodySize = 13;
   const labelGap = 32;
   const rowGap = 38;
@@ -367,7 +349,9 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 
     doc.rect(x, yy, box, box).stroke();
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
-      drawCrossInBox(doc, x, yy, box);
+      const pad = Math.max(2, Math.round(box * 0.2));
+      doc.moveTo(x + pad, yy + pad).lineTo(x + box - pad, yy + box - pad).stroke();
+      doc.moveTo(x + box - pad, yy + pad).lineTo(x + pad, yy + box - pad).stroke();
     }
     doc.font("Helvetica").text(s, x + box + 6, yy - 2);
   });
@@ -390,12 +374,8 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
       const sigY = y + 14;
       doc.image(sigBuf, 370, sigY, { width: 150 });
       y = Math.max(y + 90, sigY + 90);
-    } catch (e) {
-      y += 70;
-    }
-  } else {
-    y += 70;
-  }
+    } catch { y += 70; }
+  } else { y += 70; }
 
   const colLeft = pageLeft;
   const colRight = 330;
