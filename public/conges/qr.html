@@ -20,9 +20,7 @@
   </div>
 </div>
 <script>
-  // URL absolue vers /conges
   const url = (location.origin + "/conges");
-  // Génération du QR via un service public (simple et suffisant)
   const src = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=" + encodeURIComponent(url);
   document.getElementById("qr").src = src;
   const a = document.getElementById("link"); a.href = url; a.textContent = url;

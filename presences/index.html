@@ -126,9 +126,6 @@ button.badge[data-code="MAL"]{color:#946200}
   <section id="tab-leaves" class="tab-panel">
     <div class="toolbar">
       <div><b>Mois :</b> <input id="leaves-month" type="month"/></div>
-      <div><b>Magasin :</b>
-        <select id="leaves-store"></select>
-      </div>
       <div><b>Mot de passe :</b>
         <input id="leaves-pass" type="password" placeholder="Mot de passe admin" style="min-width:200px"/>
       </div>
@@ -156,6 +153,7 @@ const MAGASINS = [
  "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
 ];
 const CODES=["P","CP","ABS","MAL","R"];
+const ORDERED_SLOTS=["Matin","A. Midi","NUIT","10H","12H","16H"];
 
 let currentMagasin=null;
 let personnel=null;
@@ -185,7 +183,6 @@ const $resumeError=document.getElementById('resume-error');
 const $btnDiag=document.getElementById('btn-diag');
 
 const $leavesMonth=document.getElementById('leaves-month');
-const $leavesStore=document.getElementById('leaves-store');
 const $leavesPass=document.getElementById('leaves-pass');
 const $btnLoadLeaves=document.getElementById('btn-load-leaves');
 const $leavesContent=document.getElementById('leaves-content');
@@ -197,10 +194,8 @@ $resumeMonth.value=thisYM();
 $leavesMonth.value=thisYM();
 
 MAGASINS.forEach(m=>{
-  const opt1=document.createElement('option'); opt1.value=m; opt1.textContent=m;
-  $resumeStore.appendChild(opt1);
-  const opt2=document.createElement('option'); opt2.value=m; opt2.textContent=m;
-  $leavesStore.appendChild(opt2);
+  const opt=document.createElement('option'); opt.value=m; opt.textContent=m;
+  $resumeStore.appendChild(opt);
 });
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -385,8 +380,12 @@ $btnSave.addEventListener('click', async ()=>{
 });
 $dateInput.addEventListener('change',prefillDay);
 
-$btnLoadStore.addEventListener('click', loadResumeForStore);
-$btnRefreshResume.addEventListener('click', loadResumeForStore);
+MAGASINS.forEach(m=>{
+  const opt=document.createElement('option'); opt.value=m; opt.textContent=m;
+  $resumeStore.appendChild(opt);
+});
+document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
+document.getElementById('btn-refresh-resume').addEventListener('click', loadResumeForStore);
 
 async function loadResumeForStore(){
   $resumeError.style.display='none';
@@ -508,7 +507,7 @@ function renderOneStore(yyyymm, magasin, monthData){
   if(empSec) wrap.appendChild(empSec);
 
   const intLabels = [...labelsInt].map(k=> observed.get(k)?.label
-    || (pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
+    || (pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k) ? `${p=pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).nom} ${pers.interims.find(p=>norm(`${p.nom} ${p.prenom||""}`)===k).prenom||""}`.trim() : k));
   const intSec = makeSection("INTÉRIM", intLabels, (_lbl, obs)=> (obs && obs.slots.size? [...obs.slots] : ["Matin","A. Midi"]));
   if(intSec) wrap.appendChild(intSec);
 
@@ -524,29 +523,28 @@ function renderOneStore(yyyymm, magasin, monthData){
   $resumeContent.appendChild(wrap);
 }
 
-$btnLoadLeaves.addEventListener('click', loadLeaves);
+document.getElementById('btn-load-leaves').addEventListener('click', loadLeaves);
 
 async function loadLeaves(){
   $leavesError.style.display='none';
   $leavesContent.innerHTML = '<div class="loading">Chargement des demandes…</div>';
   try{
     const ym = $leavesMonth.value;
-    const mag = $leavesStore.value;
     const pass = $leavesPass.value;
-    if(!ym || !mag || !pass){ throw new Error("missing"); }
-    const data = await fetchJSON(`/leaves?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`, {
+    if(!ym || !pass){ throw new Error("missing"); }
+
+    const data = await fetchJSON(`/leaves?yyyymm=${ym}&all=1`, {
       headers: { "x-pass": pass }
     });
-    if(!data.ok) throw new Error("bad");
-
-    renderLeaves(ym, mag, data.list || [], pass);
+    if(data?.ok !== true) throw new Error("bad");
+    renderLeaves(ym, data.list || [], pass);
   }catch(e){
     $leavesError.textContent = "Impossible de charger les demandes (mot de passe ou réseau).";
     $leavesError.style.display='block';
     $leavesContent.innerHTML = '';
   }
 }
-function renderLeaves(ym, mag, list, pass){
+function renderLeaves(ym, list, pass){
   const wrap = document.createElement('div');
   if(!list.length){
     wrap.innerHTML = '<div class="hint">Aucune demande pour ce mois.</div>';
@@ -557,6 +555,7 @@ function renderLeaves(ym, mag, list, pass){
     const stClass = item.status==="accepted" ? "badge-accepted" : item.status==="refused" ? "badge-refused" : "badge-pending";
     row.innerHTML = `
       <div><b>${item.nom} ${item.prenom||""}</b></div>
+      <div>${item.magasin||"—"}</div>
       <div>${item.service||""}</div>
       <div>${item.dateDu} → ${item.dateAu}</div>
       <div>${item.nbJours||""} j</div>
@@ -566,27 +565,27 @@ function renderLeaves(ym, mag, list, pass){
         <button class="badge" data-act="refuse">Refuser</button>
       </div>
     `;
-    row.querySelector('[data-act="accept"]').addEventListener('click',()=> decideLeave(ym, mag, item.id, "accept", pass));
-    row.querySelector('[data-act="refuse"]').addEventListener('click',()=> decideLeave(ym, mag, item.id, "refuse", pass));
+    row.querySelector('[data-act="accept"]').addEventListener('click',()=> decideLeave(ym, item.id, "accept", pass));
+    row.querySelector('[data-act="refuse"]').addEventListener('click',()=> decideLeave(ym, item.id, "refuse", pass));
     wrap.appendChild(row);
   });
   $leavesContent.innerHTML = ''; $leavesContent.appendChild(wrap);
 }
-async function decideLeave(ym, mag, id, decision, pass){
+async function decideLeave(ym, id, decision, pass){
   try{
     await fetchJSON('/leaves/decision', {
       method:'POST',
       headers:{ 'x-pass': pass },
-      body: JSON.stringify({ yyyymm: ym, magasin: mag, id, decision })
+      body: JSON.stringify({ yyyymm: ym, id, decision })
     });
-    loadLeaves();
+    await loadLeaves();
     alert(decision==="accept" ? "Demande acceptée + CP appliqué." : "Demande refusée.");
   }catch(e){
     alert("Action impossible.");
   }
 }
 
-$btnDiag.addEventListener('click', async ()=>{
+document.getElementById('btn-diag').addEventListener('click', async ()=>{
   try{
     const r = await fetchJSON('/_diag');
     alert('Diag OK: ' + (r?.ok ? 'connexion FTP OK' : 'KO'));
