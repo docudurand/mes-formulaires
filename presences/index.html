@@ -581,11 +581,25 @@ async function loadAdminPersonnel(){
   if(!mag) return;
   try{
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
-    const add = (p)=>{ const o=document.createElement('option'); o.value = `${p.nom} ${p.prenom||""}`.trim();
+    const add = (p)=>{ 
+      const o=document.createElement('option'); 
+      o.value = `${p.nom} ${p.prenom||""}`.trim();
       o.textContent = `${p.nom} ${p.prenom||""}`.trim();
-      o.dataset.nom = p.nom; o.dataset.prenom = p.prenom||""; $arPers.appendChild(o); };
+      o.dataset.nom = p.nom; 
+      o.dataset.prenom = p.prenom||""; 
+      $arPers.appendChild(o); 
+    };
     (pers.employes||[]).forEach(add);
     (pers.interims||[]).forEach(add);
+
+    Object.keys(pers.livreurs||{}).forEach(g=>{
+      const o = document.createElement('option');
+      o.value = g;
+      o.textContent = `Livreur — ${g}`;
+      o.dataset.nom = g;
+      o.dataset.prenom = "";
+      $arPers.appendChild(o);
+    });
   }catch{}
 }
 
