@@ -52,7 +52,6 @@ button.badge.code{border-radius:8px}
 .cell.R{background:#dcfce7;color:#15803d;font-weight:700}
 .cell.D{background:#dbeafe;color:#1d4ed8;font-weight:700}
 .cell.RI{background:#fef9c3;color:#a16207;font-weight:700}
-
 .cell.PSITE{background:#f5d0aa;color:#6b3e00;font-weight:700}
 
 .badge.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
@@ -67,7 +66,6 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="R"]  {background:#dcfce7;color:#15803d}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
-
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
 
 .section-toolbar{
@@ -107,6 +105,10 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
 .inline-loading{ display:flex; align-items:center; gap:8px; color:#666; font-weight:600; }
 .spinner{ width:14px; height:14px; border-radius:50%; border:2px solid #ddd; border-top-color: var(--brand); animation:spin 1s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg) } }
+
+.admin-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.admin-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.admin-row>*{flex:1 1 180px}
 </style>
 </head>
 <body>
@@ -120,7 +122,7 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
     <button class="tab active" data-tab="magasins">Magasins</button>
     <button class="tab" data-tab="saisie">Saisie du jour</button>
     <button class="tab" data-tab="resume">Résumé du mois</button>
-    <button class="tab" data-tab="leaves">Demandes de congés</button>
+    <button class="tab" data-tab="leaves">Admin</button>
   </nav>
 
   <section id="tab-magasins" class="tab-panel active">
@@ -162,6 +164,20 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
         <button type="submit" id="btn-login" class="primary">Se connecter</button>
       </form>
     </div>
+
+    <div id="admin-range" class="admin-box" style="display:none">
+      <div style="font-weight:800;margin-bottom:8px">Ajout par période</div>
+      <div class="admin-row">
+        <select id="ar-magasin"></select>
+        <select id="ar-personnel"><option value="">— Personnel —</option></select>
+        <select id="ar-code"></select>
+        <input id="ar-du" type="date" />
+        <input id="ar-au" type="date" />
+        <button id="ar-add" class="primary">Ajouter</button>
+      </div>
+      <div id="ar-msg" class="hint" style="margin-top:6px"></div>
+    </div>
+
     <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
   </section>
@@ -213,6 +229,15 @@ const $rememberPw=document.getElementById('remember-pw');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 
+const $arBox=document.getElementById('admin-range');
+const $arMag=document.getElementById('ar-magasin');
+const $arPers=document.getElementById('ar-personnel');
+const $arCode=document.getElementById('ar-code');
+const $arDu=document.getElementById('ar-du');
+const $arAu=document.getElementById('ar-au');
+const $arAdd=document.getElementById('ar-add');
+const $arMsg=document.getElementById('ar-msg');
+
 $today.textContent=todayISO();
 $dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
@@ -221,6 +246,10 @@ sessionStorage.removeItem('leavesToken');
 
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); }); // admin
+
+[...MAIN_CODES, ...PSITE_CODES].forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; $arCode.appendChild(o); });
+
 try{ const saved = localStorage.getItem('leavesToken'); if(saved){ $leavesPass.value = saved; } }catch{}
 
 $tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -231,11 +260,11 @@ async function fetchJSON(path, opts={}, retries=1){
   try{
     const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
     const token = sessionStorage.getItem('leavesToken');
-    if(path.startsWith('/leaves')){ if(token) headers['X-Admin-Token'] = token; }
+    if(path.startsWith('/leaves') || path.startsWith('/range-mark')){ if(token) headers['X-Admin-Token'] = token; }
     const r = await fetch(apiBase+path, { ...opts, headers, signal: ctrl.signal });
     if(!r.ok){
       const txt = await r.text().catch(()=> '');
-      if (r.status === 401 && path.startsWith('/leaves')) throw new Error('401');
+      if (r.status === 401 && (path.startsWith('/leaves') || path.startsWith('/range-mark'))) throw new Error('401');
       throw new Error(txt || ('HTTP '+r.status));
     }
     return await r.json();
@@ -251,11 +280,16 @@ function switchTab(key){
   if(key==="leaves"){
     const token = sessionStorage.getItem('leavesToken');
     if(!token){
-      $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher les demandes.";
+      $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher et agir.";
       $leavesError.style.display='block';
       $leavesContent.innerHTML = "";
+      $arBox.style.display='none';
       return;
     }
+    $leavesError.style.display='none';
+    $arBox.style.display='block';
+    if(currentMagasin) $arMag.value = currentMagasin;
+    loadAdminPersonnel();
     loadLeaves();
   }
 }
@@ -378,8 +412,9 @@ function buildSaisieUI(){
 
 document.getElementById('btn-fill-all').addEventListener('click', ()=>{
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE');
-    td.textContent='P'; td.classList.add('P');
+    if (!td.textContent.trim()) {
+      td.textContent='P'; td.classList.add('P');
+    }
   });
 });
 
@@ -533,7 +568,44 @@ $loginForm.addEventListener('submit', (ev)=>{
   sessionStorage.setItem('leavesToken', pw);
   if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
   $leavesError.style.display='none';
+  $arBox.style.display='block';
+  if(currentMagasin) $arMag.value = currentMagasin;
+  loadAdminPersonnel();
   loadLeaves();
+});
+
+$arMag.addEventListener('change', loadAdminPersonnel);
+async function loadAdminPersonnel(){
+  $arPers.innerHTML = '<option value="">— Personnel —</option>';
+  const mag = $arMag.value;
+  if(!mag) return;
+  try{
+    const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
+    const add = (p)=>{ const o=document.createElement('option'); o.value = `${p.nom} ${p.prenom||""}`.trim();
+      o.textContent = `${p.nom} ${p.prenom||""}`.trim();
+      o.dataset.nom = p.nom; o.dataset.prenom = p.prenom||""; $arPers.appendChild(o); };
+    (pers.employes||[]).forEach(add);
+    (pers.interims||[]).forEach(add);
+  }catch{}
+}
+
+$arAdd.addEventListener('click', async ()=>{
+  const token = sessionStorage.getItem('leavesToken');
+  if(!token){ alert("Connectez-vous d'abord."); return; }
+  const magasin = $arMag.value;
+  const opt = $arPers.selectedOptions[0];
+  const nom = opt?.dataset?.nom||""; const prenom = opt?.dataset?.prenom||"";
+  const code = $arCode.value; const du = $arDu.value; const au = $arAu.value;
+  if(!magasin || !nom || !code || !du || !au){ $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return; }
+  $arAdd.disabled=true; $arMsg.textContent="Ajout en cours…"; $arMsg.style.color="#666";
+  try{
+    await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au }) });
+    $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
+  }catch(e){
+    $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000";
+  }finally{
+    $arAdd.disabled=false;
+  }
 });
 
 async function loadLeaves(){

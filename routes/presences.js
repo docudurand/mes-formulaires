@@ -15,17 +15,13 @@ const yyyymm = (dateStr = "") => String(dateStr).slice(0, 7);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG || "0") === "1";
-const isWE = (d) => {
-  const x = d.getDay();
-  return x === 0 || x === 6;
-};
+const isWE = (d) => { const x = d.getDay(); return x === 0 || x === 6; };
 
 function tlsOptions() {
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH || "1") === "1";
   const servername = process.env.FTP_HOST || undefined;
   return { rejectUnauthorized, servername };
 }
-
 async function openFtp() {
   const client = new ftp.Client(30_000);
   if (FTP_DEBUG) client.ftp.verbose = true;
@@ -37,14 +33,10 @@ async function openFtp() {
     secure: String(process.env.FTP_SECURE || "false") === "true",
     secureOptions: tlsOptions(),
   });
-  try {
-    client.ftp.socket?.setKeepAlive?.(true, 10_000);
-  } catch {}
+  try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
   return client;
 }
-async function ensureDir(client, remoteDir) {
-  await client.ensureDir(remoteDir);
-}
+async function ensureDir(client, remoteDir) { await client.ensureDir(remoteDir); }
 
 async function tryDownloadJSON(client, remotePath) {
   const out = tmpFile("pres_" + Date.now() + ".json");
@@ -52,27 +44,19 @@ async function tryDownloadJSON(client, remotePath) {
     await client.downloadTo(out, remotePath);
     const txt = fs.readFileSync(out, "utf8");
     return JSON.parse(txt);
-  } catch (e) {
-    if (FTP_DEBUG) console.warn("[PRES][FTP] download fail:", remotePath, e?.message || e);
+  } catch {
+    if (FTP_DEBUG) console.warn("[PRES][FTP] download fail:", remotePath);
     return null;
-  } finally {
-    try {
-      fs.unlinkSync(out);
-    } catch {}
-  }
+  } finally { try { fs.unlinkSync(out); } catch {} }
 }
-
 async function writeJSON(client, remotePath, obj) {
   const dir = path.posix.dirname(remotePath);
   await ensureDir(client, dir);
   const out = tmpFile("pres_" + Date.now() + ".json");
   fs.writeFileSync(out, JSON.stringify(obj));
   await client.uploadFrom(out, remotePath);
-  try {
-    fs.unlinkSync(out);
-  } catch {}
+  try { fs.unlinkSync(out); } catch {}
 }
-
 async function withFtp(actionLabel, fn, retries = 2) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -80,15 +64,11 @@ async function withFtp(actionLabel, fn, retries = 2) {
     try {
       client = await openFtp();
       const result = await fn(client);
-      try {
-        client.close();
-      } catch {}
+      try { client.close(); } catch {}
       return result;
     } catch (e) {
       lastErr = e;
-      try {
-        client?.close();
-      } catch {}
+      try { client?.close(); } catch {}
       if (attempt < retries) {
         console.warn(`[PRES/FTP] ${actionLabel} tentative ${attempt + 1} échouée:`, e?.message || e);
         await sleep(300 + attempt * 500);
@@ -106,18 +86,16 @@ function authOk(req) {
 
 function frStatus(s) {
   switch (String(s || "").toLowerCase()) {
-    case "pending":
-      return "en attente";
-    case "accepted":
-      return "validée";
-    case "rejected":
-      return "refusée";
-    case "cancelled":
-      return "annulée";
-    default:
-      return String(s || "");
+    case "pending": return "en attente";
+    case "accepted": return "validée";
+    case "rejected": return "refusée";
+    case "cancelled": return "annulée";
+    default: return String(s || "");
   }
 }
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
+const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
+const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
 router.get("/personnel", async (req, res) => {
   const magasin = String(req.query.magasin || "");
@@ -125,12 +103,8 @@ router.get("/personnel", async (req, res) => {
   if (url) {
     try {
       const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
-      if (resp.ok) {
-        return res.json(await resp.json());
-      }
-    } catch (e) {
-      console.warn("[PRES] personnel fallback:", e?.message || e);
-    }
+      if (resp.ok) return res.json(await resp.json());
+    } catch (e) { console.warn("[PRES] personnel fallback:", e?.message || e); }
   }
   return res.json({ employes: [], interims: [], livreurs: {} });
 });
@@ -160,11 +134,14 @@ router.get("/day", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "").trim();
     const date = String(req.query.date || "").trim();
-    if (!magasin || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ ok: false, error: "invalid_params" });
+    if (!magasin || !/^\d{4}-\d{2}-\d{2}$/.test(date))
+      return res.status(400).json({ ok: false, error: "invalid_params" });
 
     const month = yyyymm(date);
     const remoteFile = `${FTP_ROOT}/${month}/${magasin}.json`;
-    const file = await withFtp("day-read", async (client) => (await tryDownloadJSON(client, remoteFile)) || {});
+    const file = await withFtp("day-read", async (client) =>
+      (await tryDownloadJSON(client, remoteFile)) || {}
+    );
     const block = file[date]?.data || { rows: [] };
     return res.json({ ok: true, data: block });
   } catch (e) {
@@ -177,33 +154,36 @@ router.get("/month-store", async (req, res) => {
   try {
     const month = String(req.query.yyyymm || "").trim();
     const magasin = String(req.query.magasin || "").trim();
-    if (!/^\d{4}-\d{2}$/.test(month) || !magasin) return res.status(400).json({ ok: false, error: "invalid_params" });
+    if (!/^\d{4}-\d{2}$/.test(month) || !magasin)
+      return res.status(400).json({ ok: false, error: "invalid_params" });
 
     const remoteFile = `${FTP_ROOT}/${month}/${magasin}.json`;
-    const file = await withFtp("month-store-read", async (client) => (await tryDownloadJSON(client, remoteFile)) || {});
+    const file = await withFtp("month-store-read", async (client) =>
+      (await tryDownloadJSON(client, remoteFile)) || {}
+    );
 
     let personnel = { employes: [], interims: [], livreurs: {} };
     const url = process.env.GS_PRESENCES_URL;
     if (url) {
       try {
         const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
-        if (resp.ok) {
-          personnel = await resp.json();
-        }
+        if (resp.ok) { personnel = await resp.json(); }
       } catch (e) {}
     }
 
     return res.json({ ok: true, file, personnel });
   } catch (e) {
     console.error("[PRES] month-store error:", e?.message || e);
-    return res.json({ ok: true, file: {}, personnel: { employes: [], interims: [], livreurs: {} } }); // jamais 404
+    return res.json({ ok: true, file: {}, personnel: { employes: [], interims: [], livreurs: {} } });
   }
 });
 
 router.get("/leaves", async (req, res) => {
   if (!authOk(req)) return res.status(401).json({ ok: false, error: "auth_required" });
   try {
-    const raw = await withFtp("leaves-get", async (client) => (await tryDownloadJSON(client, LEAVES_FILE)) || []);
+    const raw = await withFtp("leaves-get", async (client) =>
+      (await tryDownloadJSON(client, LEAVES_FILE)) || []
+    );
     const leaves = raw.map((l) => ({ ...l, statusFr: l.statusFr || frStatus(l.status) }));
     res.json({ ok: true, leaves });
   } catch (e) {
@@ -228,8 +208,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
       const start = new Date(item.dateDu);
       const end = new Date(item.dateAu);
 
-      const normalize = (s) =>
-        String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
+      const normalize = (s) => String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
       const WANTED_KEY = normalize(`${item.nom || ""} ${item.prenom || ""}`);
       const CANON_LABEL = `${(item.nom || "").toUpperCase()} ${(item.prenom || "").toUpperCase()}`;
       const DEF_SLOTS = ["Matin", "A. Midi"];
@@ -247,9 +226,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
           if (isWE(d)) continue;
 
           const dkUTC = new Date(d).toISOString().slice(0, 10);
-          const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-            d.getDate()
-          ).padStart(2, "0")}`;
+          const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
           for (const dk of new Set([dkUTC, dkLOC])) {
             const month = dk.slice(0, 7);
@@ -258,15 +235,9 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
             const dayBlock = file[dk]?.data || { rows: [] };
 
             let row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
+            if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
 
-            if (!row) {
-              row = { label: CANON_LABEL, values: {} };
-              dayBlock.rows.push(row);
-            }
-
-            DEF_SLOTS.forEach((s) => {
-              row.values[s] = "CP";
-            });
+            DEF_SLOTS.forEach((s) => { row.values[s] = "CP"; });
 
             file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
             await writeJSON(client, remote, file);
@@ -289,9 +260,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dkUTC = new Date(d).toISOString().slice(0, 10);
-          const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-            d.getDate()
-          ).padStart(2, "0")}`;
+          const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           for (const dk of new Set([dkUTC, dkLOC])) {
             const month = dk.slice(0, 7);
             const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
@@ -304,10 +273,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
             let changed = false;
             for (const slot of Object.keys(row.values || {})) {
               const cur = String(row.values[slot] ?? "").trim();
-              if (cur === "CP") {
-                row.values[slot] = "";
-                changed = true;
-              }
+              if (cur === "CP") { row.values[slot] = ""; changed = true; }
             }
             if (changed) {
               file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
@@ -323,6 +289,55 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
   } catch (e) {
     console.error("[LEAVES] decision error:", e?.message || e);
     res.status(500).json({ ok: false, error: e?.message || "decision_failed" });
+  }
+});
+
+router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
+  if (!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
+
+  const { magasin, nom, prenom, code, dateDu, dateAu } = req.body || {};
+  if (!magasin || !nom || !code || !dateDu || !dateAu)
+    return res.status(400).json({ ok:false, error:"invalid_params" });
+  if (!ALL_CODES.has(String(code)))
+    return res.status(400).json({ ok:false, error:"invalid_code" });
+
+  const start = new Date(dateDu), end = new Date(dateAu);
+  if (isNaN(start) || isNaN(end) || end < start)
+    return res.status(400).json({ ok:false, error:"invalid_dates" });
+
+  const normalize = (s) => String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
+  const WANTED_KEY = normalize(`${nom||""} ${prenom||""}`);
+  const CANON_LABEL = `${(nom||"").toUpperCase()} ${(prenom||"").toUpperCase()}`;
+  const DEF_SLOTS = ["Matin","A. Midi"];
+
+  try{
+    await withFtp("range-mark", async (client) => {
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+        if (isWE(d)) continue;
+
+        const dkUTC = new Date(d).toISOString().slice(0,10);
+        const dkLOC = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        for (const dk of new Set([dkUTC, dkLOC])) {
+          const month = dk.slice(0,7);
+          const remote = `${FTP_ROOT}/${month}/${magasin}.json`;
+          const file = (await tryDownloadJSON(client, remote)) || {};
+          const dayBlock = file[dk]?.data || { rows: [] };
+
+          let row = (dayBlock.rows || []).find(r => normalize(r.label) === WANTED_KEY);
+          if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
+
+          DEF_SLOTS.forEach(s => { row.values[s] = code; });
+
+          file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
+          await writeJSON(client, remote, file);
+        }
+      }
+    });
+    res.json({ ok:true });
+  }catch(e){
+    console.error("[RANGE] error:", e?.message||e);
+    res.status(500).json({ ok:false, error:"range_failed" });
   }
 });
 
