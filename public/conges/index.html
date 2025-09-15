@@ -20,8 +20,7 @@
     label{ display:block; font-weight:600; font-size:.95rem; margin-bottom:8px; }
     select,input,button{ width:100%; max-width:100%; min-width:0; padding:12px; border-radius:10px;
       border:1px solid var(--border); font-size:1rem; background:#fff; }
-    input[type="date"]{ width:100%; min-height:var(--control-h); padding:10px; line-height:1.2;
-      -webkit-appearance:none; appearance:none; background-color:#fff; }
+    input[type="date"]{ width:100%; min-height:var(--control-h); padding:10px; line-height:1.2; appearance:none; background-color:#fff; }
     input:focus,select:focus{ outline:2px solid #cde4ff; border-color:#93c5fd; }
     .row{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
     .row>div{ min-width:0; }
@@ -37,6 +36,7 @@
     .sig-actions button{width:auto;min-width:120px;padding:10px 20px;}
     .sig-wrap.invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);}
     .muted{ color:var(--muted); font-size:.9rem; margin-top:6px; }
+    .pill{display:inline-block;padding:6px 10px;border:1px solid var(--border);border-radius:999px;margin-top:6px;}
   </style>
 </head>
 <body>
@@ -76,12 +76,13 @@
   </div>
 
   <div class="field">
-    <label for="nom">Nom *</label>
-    <input id="nom" type="text" placeholder="Ex: DUPONT" required autocomplete="family-name" />
-  </div>
-  <div class="field">
-    <label for="prenom">Prénom *</label>
-    <input id="prenom" type="text" placeholder="Ex: Marie" required autocomplete="given-name" />
+    <label for="person">Nom, Prénom *</label>
+    <select id="person" required disabled>
+      <option value="">-- Choisissez votre nom --</option>
+    </select>
+    <div id="soldeInfo" class="muted" style="display:none">
+      Solde actuel : <b><span id="soldeActuel">0</span> jour(s)</b> — Reste après demande : <b><span id="soldeApres">0</span> jour(s)</b>
+    </div>
   </div>
 
   <div class="field">
@@ -149,6 +150,8 @@
   document.querySelector(".desktop-gate").style.display = wide ? "block" : "none";
 })();
 
+const apiBase = '/presence';
+
 const canvas = document.getElementById('signaturePad');
 const ctx = canvas.getContext('2d');
 let drawing = false, strokes = [], currentStroke = [];
@@ -164,8 +167,7 @@ function resizeCanvas(){
   };
   img.src = data;
 }
-canvas.width = canvas.clientWidth;
-canvas.height = canvas.clientHeight;
+canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
 ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111'; ctx.fillStyle = '#fff';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 window.addEventListener('resize', resizeCanvas);
@@ -181,10 +183,17 @@ canvas.addEventListener('touchstart', start, { passive:false }); canvas.addEvent
 canvas.addEventListener('touchend', end);
 document.getElementById('clearSig').onclick = () => { strokes=[]; ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); };
 
-const $dateDu = document.getElementById('dateDu');
-const $dateAu = document.getElementById('dateAu');
-const $nb     = document.getElementById('nbJours');
-const $nbHint = document.getElementById('nbHint');
+const $magasin = document.getElementById('magasin');
+const $person  = document.getElementById('person');
+const $dateDu  = document.getElementById('dateDu');
+const $dateAu  = document.getElementById('dateAu');
+const $nb      = document.getElementById('nbJours');
+const $nbHint  = document.getElementById('nbHint');
+const $soldeInfo = document.getElementById('soldeInfo');
+const $soldeActuel = document.getElementById('soldeActuel');
+const $soldeApres  = document.getElementById('soldeApres');
+
+let cacheEmployes = [];
 
 function businessDaysInclusive(duStr, auStr){
   if(!duStr || !auStr) return 0;
@@ -203,34 +212,73 @@ function updateNb(){
   const n = businessDaysInclusive($dateDu.value, $dateAu.value);
   $nb.value = n ? String(n) : "";
   $nbHint.textContent = n ? `Les samedis et dimanches ne sont pas comptés. → ${n} jour(s)` : `Les samedis et dimanches ne sont pas comptés.`;
+  updateSoldeApres();
+}
+function updateSoldeApres(){
+  const n = Number($nb.value||0);
+  const sel = $person.selectedOptions[0];
+  const cr = sel ? Number(sel.dataset.solde||0) : 0;
+  const reste = Math.max(0, cr - (Number.isFinite(n)? n:0));
+  if(sel){
+    $soldeInfo.style.display='block';
+    $soldeActuel.textContent = String(cr);
+    $soldeApres.textContent = String(reste);
+  }else{
+    $soldeInfo.style.display='none';
+  }
 }
 $dateDu.addEventListener('change', updateNb);
 $dateAu.addEventListener('change', updateNb);
+
+$magasin.addEventListener('change', async ()=>{
+  $person.innerHTML = '<option value="">-- Choisissez votre nom --</option>';
+  $person.disabled = true; $soldeInfo.style.display='none'; cacheEmployes=[];
+  const mag = $magasin.value;
+  if(!mag) return;
+  try{
+    const r = await fetch(`${apiBase}/employes?magasin=${encodeURIComponent(mag)}`);
+    const data = await r.json();
+    cacheEmployes = Array.isArray(data.employes)? data.employes : [];
+    cacheEmployes.forEach(p=>{
+      const o=document.createElement('option');
+      o.value = `${p.nom}:::${p.prenom||""}`;
+      o.textContent = `${p.nom} ${p.prenom||""}`.trim();
+      o.dataset.solde = String(p.congeRestant||0);
+      $person.appendChild(o);
+    });
+    $person.disabled = false;
+  }catch(e){
+    alert("Impossible de charger la liste des employés.");
+  }
+});
+$person.addEventListener('change', updateSoldeApres);
 
 const form = document.getElementById("formConges");
 const btn  = document.getElementById("submitBtn");
 const ok   = document.getElementById("ok");
 const err  = document.getElementById("err");
+const $email = document.getElementById('email');
+const $service = document.getElementById('service');
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault(); ok.style.display="none"; err.style.display="none";
-
   updateNb();
 
-  const magasin = document.getElementById("magasin").value.trim();
-  const nom     = document.getElementById("nom").value.trim();
-  const prenom  = document.getElementById("prenom").value.trim();
-  const service = document.getElementById("service").value.trim();
-  const nbJours = document.getElementById("nbJours").value.trim();
-  const dateDu  = document.getElementById("dateDu").value;
-  const dateAu  = document.getElementById("dateAu").value;
-  const email   = document.getElementById("email").value.trim();
+  const magasin = $magasin.value.trim();
+  const pv = $person.value;
+  const [nom, prenom] = pv ? pv.split(':::') : ["",""];
+  const email = $email.value.trim();
+  const service = $service.value.trim();
+  const nbJours = Number($nb.value||0);
+  const dateDu  = $dateDu.value;
+  const dateAu  = $dateAu.value;
+  const sel = $person.selectedOptions[0];
+  const soldeAvant = sel ? Number(sel.dataset.solde||0) : 0;
 
-  if (!magasin || !nom || !prenom || !service || !nbJours || !dateDu || !dateAu || !email) {
+  if (!magasin || !pv || !service || !nbJours || !dateDu || !dateAu || !email) {
     return showErr("Merci de remplir tous les champs obligatoires.");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr("Adresse e-mail invalide.");
-  const n = Number(nbJours); if (!Number.isFinite(n) || n <= 0) return showErr("La période choisie ne contient aucun jour ouvré.");
   if (new Date(dateAu) < new Date(dateDu)) return showErr("La date 'Au' doit être ≥ 'Du'.");
   if (strokes.length === 0) {
     const sig = document.querySelector('.sig-wrap'); sig.classList.add('invalid'); sig.setAttribute('aria-invalid','true');
@@ -245,12 +293,12 @@ form.addEventListener("submit", async (e) => {
     const res = await fetch("/conges/api", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ magasin, nom, prenom, service, nbJours: n, dateDu, dateAu, email, signatureData })
+      body: JSON.stringify({ magasin, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData, soldeAvant })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.ok) {
       ok.style.display = "block"; err.style.display = "none";
-      form.reset(); document.getElementById('clearSig').click(); updateNb();
+      form.reset(); document.getElementById('clearSig').click(); updateNb(); $soldeInfo.style.display='none'; $person.disabled=true;
     } else {
       showErr("Envoi impossible. Vérifiez vos infos et réessayez.");
     }
@@ -261,7 +309,7 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-function showErr(msg){ err.textContent = "❌ " + msg; err.style.display = "block"; ok.style.display = "none"; }
+function showErr(msg){ const el=document.getElementById('err'); el.textContent="❌ "+msg; el.style.display="block"; ok.style.display="none"; }
 </script>
 </body>
 </html>
