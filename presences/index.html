@@ -197,14 +197,14 @@ const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','N']; // + N (Noir)
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const CODE_DEFS = [
   {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
   {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
   {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
   {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
-  {code:'UST',label:'Un seul tour'},{code:'N',label:'Noir (forcé)'},
+  {code:'UST',label:'Un seul tour'},{code:'NP',label:'Non planifié'},
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
@@ -400,7 +400,7 @@ function buildSection(title, rows){
 
   const addBtn=(code,label)=>{
     const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
-    if(code==='N'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='N Noir (fond noir)'; }
+    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
     b.addEventListener('click',()=>{
       const scope=[...selectedCells].filter(td=>td.closest('table')===table);
       if(!scope.length) return;
@@ -412,9 +412,9 @@ function buildSection(title, rows){
 
         td.textContent=code;
 
-        if(code==='N'){
-          td.classList.add('weekend');
-        }else{
+        if(code==='NP'){
+  td.classList.add('weekend');
+}else{
           td.classList.add(code);
           if(/^P\d+$/.test(code)) td.classList.add('PSITE');
         }
@@ -473,16 +473,17 @@ function applyPrefill(data){
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
       td.classList.remove('PSITE');
-      td.classList.remove('weekend'); // sera remis si week-end ou si v === 'N'
+      td.classList.remove('weekend');
       td.textContent = v;
       if (v) {
-        if (v === 'N') {
-          td.classList.add('weekend'); // noir forcé
-        } else {
-          td.classList.add(v);
-          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-        }
-      }
+  if (v === 'NP') {
+    td.classList.add('weekend');
+  } else {
+    td.classList.add(v);
+    if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+  }
+}
+
     });
   });
   paintWeekendInSaisie();
@@ -589,7 +590,7 @@ function renderOneStore(yyyymm, magasin, data){
           if(v){
             td.classList.add(v);
             if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-            if (v === 'N') td.classList.add('weekend');
+            if (v === 'NP') td.classList.add('weekend');
           }
           tr.appendChild(td);
         });

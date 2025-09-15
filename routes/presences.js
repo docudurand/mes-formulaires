@@ -94,7 +94,7 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','N'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
@@ -331,7 +331,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
           }
         }
         const n = Math.max(0, Number(item.nbJours || 0));
-        if (n > 0) await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: -n }); // récrédit
+        if (n > 0) await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: -n });
       }
 
       await writeJSON(client, LEAVES_FILE, leaves);
