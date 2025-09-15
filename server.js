@@ -33,9 +33,58 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
+const GAS_BASE = process.env.GAS_BASE || "https://script.google.com/macros/s/XXXXXXXX/exec";
+async function gasGet(params) {
+  const url = GAS_BASE + "?" + new URLSearchParams(params).toString();
+  const r = await fetch(url, { method: "GET", headers: { "User-Agent": "presence-proxy/1.0" } });
+  if (!r.ok) throw new Error(`GAS GET ${r.status}`);
+  return r.json();
+}
+async function gasPost(params, body) {
+  const url = GAS_BASE + "?" + new URLSearchParams(params).toString();
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": "presence-proxy/1.0" },
+    body: JSON.stringify(body || {})
+  });
+  if (!r.ok) throw new Error(`GAS POST ${r.status}`);
+  return r.json();
+}
+
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
-app.use('/presence', presences);
+
+app.get("/presence/personnel", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await gasGet({ action: "personnel", magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+app.get("/presence/employes", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await gasGet({ action: "employes", magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+app.post("/presence/dec-cp", async (req, res) => {
+  try {
+    const { magasin, nom, prenom, nbJours } = req.body || {};
+    const out = await gasPost({ action: "deccp" }, { magasin, nom, prenom, nbJours });
+    res.json(out);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+app.use("/presence", presences);
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 
 app.use((req, res, next) => {
@@ -159,7 +208,6 @@ async function upText(client, remote, buf){
   await client.uploadFrom(out, remote);
   try{ fs.unlinkSync(out) }catch{}
 }
-
 async function withFtpLeave(label, fn, retries = 2) {
   let lastErr;
   for (let i = 0; i <= retries; i++) {
@@ -180,10 +228,33 @@ async function withFtpLeave(label, fn, retries = 2) {
   }
   throw lastErr;
 }
+async function readLeavesFile() {
+  return withFtpLeave("read", async (client) => {
+    await client.ensureDir(PRES_ROOT);
+    const arr = (await dlJSON(client, LEAVES_FILE)) || [];
+    return Array.isArray(arr) ? arr : [];
+  });
+}
+async function writeLeavesFile(arr) {
+  return withFtpLeave("write", async (client) => {
+    await client.ensureDir(PRES_ROOT);
+    await upJSON(client, LEAVES_FILE, Array.isArray(arr) ? arr : []);
+    return true;
+  });
+}
+function safeName(s){ return String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64); }
+async function writeLeaveUnit(item) {
+  return withFtpLeave("unit", async (client) => {
+    await client.ensureDir(LEAVE_DIR);
+    const base = `${item.createdAt?.slice(0,10) || new Date().toISOString().slice(0,10)}_${safeName(item.magasin)}_${safeName(item.nom)}_${safeName(item.prenom)}_${item.id}.json`;
+    const remoteUnit = `${LEAVE_DIR}/${base}`;
+    await upText(client, remoteUnit, JSON.stringify(item, null, 2));
+    return true;
+  });
+}
 
 async function appendLeave(payload) {
   return withFtpLeave("append", async (client) => {
-
     await client.ensureDir(PRES_ROOT);
     await client.ensureDir(LEAVE_DIR);
 
@@ -198,8 +269,7 @@ async function appendLeave(payload) {
     arr.push(item);
     await upJSON(client, LEAVES_FILE, arr);
 
-    const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
-    const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
+    const base = `${item.createdAt.slice(0, 10)}_${safeName(item.magasin)}_${safeName(item.nom)}_${safeName(item.prenom)}_${item.id}.json`;
     const remoteUnit = `${LEAVE_DIR}/${base}`;
     await upText(client, remoteUnit, JSON.stringify(item, null, 2));
 
@@ -305,6 +375,64 @@ app.post("/conges/api", async (req, res) => {
   }
 });
 
+app.get("/presence/leaves", async (req, res) => {
+  try {
+    const all = String(req.query.all || "") === "1";
+    const arr = await readLeavesFile();
+    const out = all ? arr : arr.filter(l => (l.status || "pending") === "pending");
+    res.json({ leaves: out });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+app.post("/presence/leaves/decision", async (req, res) => {
+  try {
+    const { id, decision, reason } = req.body || {};
+    if (!id || !decision) return res.status(400).json({ error: "missing_params" });
+
+    const arr = await readLeavesFile();
+    const idx = arr.findIndex(x => String(x.id) === String(id));
+    if (idx < 0) return res.status(404).json({ error: "not_found" });
+
+    const it = arr[idx];
+
+    if (decision === "accept") {
+      try {
+        await gasPost({ action: "deccp" }, {
+          magasin: it.magasin,
+          nom: it.nom,
+          prenom: it.prenom,
+          nbJours: it.nbJours
+        });
+      } catch (e) {
+        console.warn("[LEAVES] deccp failed:", e?.message || e);
+      }
+      it.status   = "accepted";
+      it.statusFr = "validée";
+      it.reason   = reason || "";
+    } else if (decision === "reject") {
+      it.status   = "rejected";
+      it.statusFr = "refusée";
+      it.reason   = reason || "";
+    } else if (decision === "cancel") {
+      it.status   = "cancelled";
+      it.statusFr = "annulée";
+      it.reason   = "";
+    } else {
+      return res.status(400).json({ error: "unknown_decision" });
+    }
+
+    arr[idx] = it;
+    await writeLeavesFile(arr);
+    await writeLeaveUnit(it);
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
 app.get("/healthz", (_req, res) => res.sendStatus(200));
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
@@ -350,7 +478,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 
   let y = 180;
   const bodySize = 13;
-  const labelGap = 32;
   const rowGap = 38;
   const afterServicesGap = 38;
   const afterDemandGap = 26;
@@ -358,7 +485,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 
   doc.fontSize(bodySize).font("Helvetica-Bold").text("SITE :", pageLeft, y);
   doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
-  y += labelGap;
+  y += 32;
 
   const parts = String(nomPrenom || "").trim().split(/\s+/);
   const _nom = parts[0] || "";
@@ -416,7 +543,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     } catch { y += 70; }
   } else { y += 70; }
 
-  const colLeft = pageLeft;
+  const colLeft = 50;
   const colRight = 330;
   doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
   doc.text("RESPONSABLE DE SITE :", colRight, y);
