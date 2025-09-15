@@ -197,13 +197,14 @@ const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','N']; // + N (Noir)
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const CODE_DEFS = [
   {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
   {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
   {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
-  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},{code:'UST',label:'Un seul tour'},
+  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
+  {code:'UST',label:'Un seul tour'},{code:'N',label:'Noir (forcé)'},
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
@@ -336,6 +337,23 @@ function headerSelectColumn(th){
 }
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
+function isSaisieWeekend(){
+  const v = $dateInput.value;
+  if(!v) return false;
+  const d = new Date(v);
+  const g = d.getDay();
+  return g===0 || g===6;
+}
+function paintWeekendInSaisie(){
+  const we = isSaisieWeekend();
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
+    if(we){ td.classList.add('weekend'); }
+    else{
+      if (td.textContent.trim() !== 'N') td.classList.remove('weekend');
+    }
+  });
+}
+
 function buildSection(title, rows){
   const headerSlots = union(...rows.map(r=>r.slots||[]));
 
@@ -370,18 +388,36 @@ function buildSection(title, rows){
   clearBtn.addEventListener('click',()=>{
     const scope=[...selectedCells].filter(td=>td.closest('table')===table);
     if(!scope.length) return;
-    scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE'); td.textContent=''; });
+    const we = isSaisieWeekend();
+    scope.forEach(td=>{
+      ALL_CODES.forEach(c=>td.classList.remove(c));
+      td.classList.remove('PSITE');
+      td.textContent='';
+      if(!we) td.classList.remove('weekend');
+    });
   });
   controls.appendChild(clearBtn);
 
   const addBtn=(code,label)=>{
     const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
+    if(code==='N'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='N Noir (fond noir)'; }
     b.addEventListener('click',()=>{
       const scope=[...selectedCells].filter(td=>td.closest('table')===table);
       if(!scope.length) return;
+      const we = isSaisieWeekend();
       scope.forEach(td=>{
-        ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE');
-        td.textContent=code; td.classList.add(code); if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+        ALL_CODES.forEach(c=>td.classList.remove(c));
+        td.classList.remove('PSITE');
+        if(!we) td.classList.remove('weekend');
+
+        td.textContent=code;
+
+        if(code==='N'){
+          td.classList.add('weekend');
+        }else{
+          td.classList.add(code);
+          if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+        }
       });
     });
     return b;
@@ -409,6 +445,7 @@ function buildSaisieUI(){
     sections.push({title:`LIVREURS — ${g}`, rows});
   });
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
+  paintWeekendInSaisie();
 }
 
 document.getElementById('btn-fill-all').addEventListener('click', ()=>{
@@ -436,13 +473,19 @@ function applyPrefill(data){
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
       td.classList.remove('PSITE');
+      td.classList.remove('weekend'); // sera remis si week-end ou si v === 'N'
       td.textContent = v;
       if (v) {
-        td.classList.add(v);
-        if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+        if (v === 'N') {
+          td.classList.add('weekend'); // noir forcé
+        } else {
+          td.classList.add(v);
+          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+        }
       }
     });
   });
+  paintWeekendInSaisie();
 }
 function collectData(){
   const rows=[];
@@ -463,7 +506,10 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   }catch{ alert("Échec de l'enregistrement"); }
   finally{ $btnSave.disabled=false; }
 });
-$dateInput.addEventListener('change',prefillDay);
+$dateInput.addEventListener('change',async ()=>{
+  await prefillDay();
+  paintWeekendInSaisie();
+});
 
 document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
 async function loadResumeForStore(){
@@ -540,7 +586,11 @@ function renderOneStore(yyyymm, magasin, data){
           if(isWE(d)) td.classList.add('weekend');
           const v = values[slot] || '';
           td.textContent = v;
-          if(v){ td.classList.add(v); if(/^P\d+$/.test(v)) td.classList.add('PSITE'); }
+          if(v){
+            td.classList.add(v);
+            if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+            if (v === 'N') td.classList.add('weekend');
+          }
           tr.appendChild(td);
         });
       });
@@ -812,10 +862,12 @@ document.addEventListener('keydown', (e) => {
   if (!scope.length) return;
 
   e.preventDefault();
+  const we = isSaisieWeekend();
   scope.forEach(td => {
     ALL_CODES.forEach(c => td.classList.remove(c));
     td.classList.remove('PSITE');
     td.textContent = '';
+    if(!we) td.classList.remove('weekend');
   });
 });
 

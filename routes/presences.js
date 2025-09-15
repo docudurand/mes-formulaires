@@ -94,7 +94,7 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','N'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
