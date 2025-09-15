@@ -65,6 +65,7 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="E"]  {background:#ecfccb;color:#65a30d}
 .badge.code[data-code="R"]  {background:#dcfce7;color:#15803d}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
+.badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
 
 .section-toolbar{
@@ -108,13 +109,6 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
 .admin-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .admin-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .admin-row>*{flex:1 1 180px}
-
-.conges-restants{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:12px; }
-.conges-restants h3{ margin:0 0 8px; font-size:1rem; text-transform:uppercase; color:var(--brand); }
-.cr-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:8px; }
-.cr-item{ padding:10px; border:1px solid var(--line); border-radius:10px; display:flex; justify-content:space-between; align-items:center; }
-.cr-name{ font-weight:700; }
-.cr-val{ font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -158,12 +152,6 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
       <button id="btn-load-store" class="primary">Charger</button>
     </div>
     <div id="resume-content"></div>
-
-    <div id="resume-cr" class="conges-restants" style="display:none">
-      <h3>Congés restants</h3>
-      <div id="cr-list" class="cr-list"></div>
-    </div>
-
     <p id="resume-error" class="error" style="display:none"></p>
   </section>
 
@@ -250,9 +238,6 @@ const $arAu=document.getElementById('ar-au');
 const $arAdd=document.getElementById('ar-add');
 const $arMsg=document.getElementById('ar-msg');
 
-const $crBox = document.getElementById('resume-cr');
-const $crList = document.getElementById('cr-list');
-
 $today.textContent=todayISO();
 $dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
@@ -261,7 +246,7 @@ sessionStorage.removeItem('leavesToken');
 
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); }); // admin
 
 [...MAIN_CODES, ...PSITE_CODES].forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; $arCode.appendChild(o); });
 
@@ -478,30 +463,12 @@ document.getElementById('btn-load-store').addEventListener('click', loadResumeFo
 async function loadResumeForStore(){
   $resumeError.style.display='none';
   $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
-  $crBox.style.display='none'; $crList.innerHTML='';
-
   const ym=$resumeMonth.value, mag=$resumeStore.value;
   try{
     const data = await fetchJSON(`/month-store?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`);
     renderOneStore(ym, mag, data);
-
-    const emp = await fetchJSON(`/employes?magasin=${encodeURIComponent(mag)}`);
-    const list = (emp.employes||[]);
-    if(list.length){
-      list.sort((a,b)=> (a.nom||'').localeCompare(b.nom||'') || (a.prenom||'').localeCompare(b.prenom||''));
-      $crList.innerHTML = '';
-      list.forEach(p=>{
-        const div = document.createElement('div');
-        div.className = 'cr-item';
-        const name = document.createElement('div'); name.className='cr-name'; name.textContent = `${p.nom} ${p.prenom||''}`.trim();
-        const val = document.createElement('div'); val.className='cr-val'; val.textContent = `${Number(p.congeRestant||0)} j`;
-        div.appendChild(name); div.appendChild(val);
-        $crList.appendChild(div);
-      });
-      $crBox.style.display='block';
-    }
   }catch(e){
-    $resumeError.textContent="Impossible de charger le résumé ou les congés restants.";
+    $resumeError.textContent="Impossible de charger le résumé.";
     $resumeError.style.display='block';
     $resumeContent.innerHTML='';
   }
@@ -519,33 +486,32 @@ function renderOneStore(yyyymm, magasin, data){
   function makeSection(title, labels, slotsResolver){
     if(!labels.length) return null;
 
-    const order = [];
-    const seen = new Set();
-    const add = (s)=>{ if(!seen.has(s)){ seen.add(s); order.push(s); } };
-
+    const all=new Set(), order=[];
     labels.forEach(lbl=>{
       const key = norm(lbl);
       Object.values(file).forEach(day=>{
         const found = (day?.data?.rows||[]).find(r=> norm(r.label)===key);
-        if(found){ Object.keys(found.values||{}).forEach(add); }
+        if(found){ Object.keys(found.values||{}).forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); } }); }
       });
-      (slotsResolver(lbl)||[]).forEach(add);
+      const def = slotsResolver(lbl) || [];
+      def.forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); }});
     });
 
     const table=document.createElement('table'); table.className='table';
     const thead=document.createElement('thead');
+
     const trA=document.createElement('tr');
-    const th0=document.createElement('th'); th0.className='row-label'; th0.textContent='Nom / Ligne'; trA.appendChild(th0);
+    trA.innerHTML = '<th class="row-label">Nom / Ligne</th>';
     days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=dowLetter(d); trA.appendChild(th); });
     thead.appendChild(trA);
 
     const trB=document.createElement('tr');
-    const thB0=document.createElement('th'); thB0.className='sub-label'; thB0.textContent=' '; trB.appendChild(thB0);
+    trB.innerHTML = '<th class="sub-label"> </th>';
     days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=String(d.getDate()); trB.appendChild(th); });
     thead.appendChild(trB);
 
     const trC=document.createElement('tr');
-    const thC0=document.createElement('th'); thC0.className='sub-label'; thC0.textContent=' '; trC.appendChild(thC0);
+    trC.innerHTML = '<th class="sub-label"> </th>';
     days.forEach(()=>{ order.forEach(s=>{ const th=document.createElement('th'); th.textContent=s; trC.appendChild(th); }); });
     thead.appendChild(trC);
 
@@ -591,6 +557,34 @@ function renderOneStore(yyyymm, magasin, data){
     const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
     if(sec) wrap.appendChild(sec);
   });
+
+  const cr = document.createElement('div');
+  cr.className = 'section-sub';
+  cr.style.marginTop = '14px';
+  cr.textContent = 'Congés restants (EMPLOYÉS)';
+  wrap.appendChild(cr);
+
+  const list = document.createElement('div');
+  list.style.background = '#fff';
+  list.style.border = '1px solid var(--line)';
+  list.style.borderRadius = '10px';
+  list.style.padding = '8px 10px';
+  list.style.fontWeight = '600';
+  list.style.fontSize = '.95rem';
+
+  const arr = (pers.employes||[]).slice().sort((a,b)=> norm(a.nom).localeCompare(norm(b.nom)) || norm(a.prenom).localeCompare(norm(b.prenom)));
+  if (arr.length) {
+    arr.forEach(p=>{
+      const row = document.createElement('div');
+      row.style.display='flex'; row.style.justifyContent='space-between'; row.style.borderTop='1px solid var(--line)';
+      row.style.padding='6px 0';
+      row.innerHTML = `<span>${(p.nom||'').toUpperCase()} ${p.prenom||''}</span><span>${Number(p.congeRestant||0)} jour(s)</span>`;
+      list.appendChild(row);
+    });
+  } else {
+    list.textContent = '—';
+  }
+  wrap.appendChild(list);
 
   wrap.appendChild(Object.assign(document.createElement('div'),{className:'mag-divider'}));
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
@@ -638,6 +632,25 @@ async function loadAdminPersonnel(){
   }catch{}
 }
 
+$arAdd.addEventListener('click', async ()=>{
+  const token = sessionStorage.getItem('leavesToken');
+  if(!token){ alert("Connectez-vous d'abord."); return; }
+  const magasin = $arMag.value;
+  const opt = $arPers.selectedOptions[0];
+  const nom = opt?.dataset?.nom||""; const prenom = opt?.dataset?.prenom||"";
+  const code = $arCode.value; const du = $arDu.value; const au = $arAu.value;
+  if(!magasin || !nom || !code || !du || !au){ $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return; }
+  $arAdd.disabled=true; $arMsg.textContent="Ajout en cours…"; $arMsg.style.color="#666";
+  try{
+    await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au }) });
+    $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
+  }catch(e){
+    $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000";
+  }finally{
+    $arAdd.disabled=false;
+  }
+});
+
 async function loadLeaves(){
   const token = sessionStorage.getItem('leavesToken');
   if(!token){
@@ -667,6 +680,7 @@ function statusLabelFR(s){
     default:          return String(s||"");
   }
 }
+
 function renderLeaves(items){
   items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
   const wrap=document.createElement('div');
@@ -715,7 +729,8 @@ function renderLeaves(items){
       btnReject.className='badge action btn-reject';
       btnReject.textContent='Refuser';
       btnReject.addEventListener('click', ()=>{
-        const r=prompt("Motif du refus ? (optionnel)",""); if(r===null) return;
+        const r=prompt("Motif du refus ? (optionnel)","");
+        if(r===null) return;
         setBusy(true, 'Refus…');
         decideLeave(it.id,'reject', r||"", { setBusy });
       });
@@ -726,7 +741,7 @@ function renderLeaves(items){
       btnCancel.className='badge action btn-cancel';
       btnCancel.textContent='Annuler';
       btnCancel.addEventListener('click', ()=>{
-        if(!confirm("Annuler la validation ?")) return;
+        if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return;
         setBusy(true, 'Annulation…');
         cancelLeave(it.id, { setBusy });
       });
@@ -740,6 +755,7 @@ function renderLeaves(items){
 
   $leavesContent.innerHTML=''; $leavesContent.appendChild(wrap);
 }
+
 async function decideLeave(id, decision, reason="", ui){
   try{
     await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision, reason }) });
@@ -753,7 +769,7 @@ async function decideLeave(id, decision, reason="", ui){
 async function cancelLeave(id, ui){
   try{
     await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision:'cancel' }) });
-    alert('Validation annulée.');
+    alert('Validation annulée et jours supprimés.');
     loadLeaves();
   }catch(e){
     ui?.setBusy?.(false);
