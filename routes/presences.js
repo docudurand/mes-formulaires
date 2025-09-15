@@ -10,7 +10,7 @@ const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const FTP_ROOT = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
-const GS_URL = process.env.GS_PRESENCES_URL;
+const GS_URL = process.env.GS_PRESENCES_URL || "";
 
 const yyyymm = (dateStr = "") => String(dateStr).slice(0, 7);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
@@ -94,61 +94,73 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
-
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
-async function gsGet(params) {
-  if (!GS_URL) throw new Error("GS_PRESENCES_URL not set");
-  const u = `${GS_URL}?` + new URLSearchParams(params).toString();
-  const r = await fetch(u, { headers:{ "User-Agent":"presences-proxy/1.0" } });
-  if (!r.ok) throw new Error(`GS GET ${r.status}`);
-  return r.json();
-}
-async function gsPost(params, body) {
-  if (!GS_URL) throw new Error("GS_PRESENCES_URL not set");
-  const u = `${GS_URL}?` + new URLSearchParams(params).toString();
-  const r = await fetch(u, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json", "User-Agent":"presences-proxy/1.0" },
-    body: JSON.stringify(body||{})
-  });
-  const json = await r.json().catch(()=> ({}));
-  if (!r.ok) throw new Error(json?.error || `GS POST ${r.status}`);
-  return json;
+async function gsAdjustCP({ magasin, nom, prenom, delta }) {
+  if (!GS_URL) {
+    console.warn("[GS] GS_PRESENCES_URL non défini — pas d’ajustement CP");
+    return { ok: false, reason: "no_gs_url" };
+  }
+  try {
+    const resp = await fetch(`${GS_URL}?action=deccp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ magasin, nom, prenom, nbJours: delta }),
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok || json?.ok === false) {
+      console.warn("[GS] Ajustement CP échoué:", resp.status, json);
+      return { ok: false, status: resp.status, body: json };
+    }
+    return { ok: true, body: json };
+  } catch (e) {
+    console.warn("[GS] Ajustement CP erreur:", e?.message || e);
+    return { ok: false, error: e?.message || String(e) };
+  }
 }
 
 router.get("/personnel", async (req, res) => {
-  try {
-    const magasin = String(req.query.magasin || "");
-    const data = await gsGet({ action:"personnel", magasin });
-    return res.json(data);
-  } catch (e) {
-    console.warn("[PRES] /personnel -> fallback:", e?.message || e);
-    return res.json({ employes: [], interims: [], livreurs: {} });
+  const magasin = String(req.query.magasin || "");
+  if (GS_URL) {
+    try {
+      const resp = await fetch(`${GS_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+      if (resp.ok) return res.json(await resp.json());
+    } catch (e) { console.warn("[PRES] personnel fallback:", e?.message || e); }
   }
+  return res.json({ employes: [], interims: [], livreurs: {} });
 });
 
 router.get("/employes", async (req, res) => {
+  const magasin = String(req.query.magasin || "");
   try {
-    const magasin = String(req.query.magasin || "");
-    const data = await gsGet({ action:"employes", magasin });
-    return res.json(data);
-  } catch (e) {
-    console.warn("[PRES] /employes -> fallback:", e?.message || e);
+    if (GS_URL) {
+      try {
+        const r = await fetch(`${GS_URL}?action=employes&magasin=${encodeURIComponent(magasin)}`);
+        if (r.ok) {
+          const json = await r.json();
+          if (json && Array.isArray(json.employes)) return res.json(json);
+        }
+      } catch (e) {
+      }
+      try {
+        const r2 = await fetch(`${GS_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+        if (r2.ok) {
+          const pers = await r2.json();
+          const employes = (pers?.employes || []).map(p => ({
+            nom: p.nom || "",
+            prenom: p.prenom || "",
+            congeRestant: p.congeRestant ?? null
+          }));
+          return res.json({ employes });
+        }
+      } catch (e2) {}
+    }
     return res.json({ employes: [] });
-  }
-});
-
-router.post("/dec-cp", express.json({ limit: "1mb" }), async (req, res) => {
-  try {
-    const { magasin, nom, prenom, nbJours } = req.body || {};
-    const out = await gsPost({ action:"deccp" }, { magasin, nom, prenom, nbJours });
-    return res.json(out);
   } catch (e) {
-    console.error("[PRES] /dec-cp error:", e?.message || e);
-    return res.status(500).json({ ok:false, error:"deccp_failed" });
+    console.error("[PRES] /employes error:", e?.message || e);
+    return res.status(200).json({ employes: [] });
   }
 });
 
@@ -206,7 +218,12 @@ router.get("/month-store", async (req, res) => {
     );
 
     let personnel = { employes: [], interims: [], livreurs: {} };
-    try { personnel = await gsGet({ action:"personnel", magasin }); } catch {}
+    if (GS_URL) {
+      try {
+        const resp = await fetch(`${GS_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+        if (resp.ok) { personnel = await resp.json(); }
+      } catch (e) {}
+    }
 
     return res.json({ ok: true, file, personnel });
   } catch (e) {
@@ -261,35 +278,22 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           if (isWE(d)) continue;
-
           const dkUTC = new Date(d).toISOString().slice(0, 10);
           const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
           for (const dk of new Set([dkUTC, dkLOC])) {
             const month = dk.slice(0, 7);
             const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
             const file = (await tryDownloadJSON(client, remote)) || {};
             const dayBlock = file[dk]?.data || { rows: [] };
-
             let row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
             if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
             DEF_SLOTS.forEach((s) => { row.values[s] = "CP"; });
-
             file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
             await writeJSON(client, remote, file);
           }
         }
-
-        try {
-          await gsPost({ action:"deccp" }, {
-            magasin: item.magasin,
-            nom: item.nom,
-            prenom: item.prenom,
-            nbJours: item.nbJours
-          });
-        } catch (e) {
-          console.warn("[LEAVES] deccp failed:", e?.message || e);
-        }
+        const n = Math.max(0, Number(item.nbJours || 0));
+        if (n > 0) await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: n });
       }
       else if (act === "reject") {
         if (item.status !== "pending") throw new Error("already_decided");
@@ -313,13 +317,12 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
             const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
             const file = (await tryDownloadJSON(client, remote)) || {};
             const dayBlock = file[dk]?.data || { rows: [] };
-
             const row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
             if (!row) continue;
-
             let changed = false;
             for (const slot of Object.keys(row.values || {})) {
-              if (String(row.values[slot] || "") === "CP") { row.values[slot] = ""; changed = true; }
+              const cur = String(row.values[slot] ?? "").trim();
+              if (cur === "CP") { row.values[slot] = ""; changed = true; }
             }
             if (changed) {
               file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
@@ -327,6 +330,8 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
             }
           }
         }
+        const n = Math.max(0, Number(item.nbJours || 0));
+        if (n > 0) await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: -n }); // récrédit
       }
 
       await writeJSON(client, LEAVES_FILE, leaves);
