@@ -347,9 +347,10 @@ function isSaisieWeekend(){
 function paintWeekendInSaisie(){
   const we = isSaisieWeekend();
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if(we){ td.classList.add('weekend'); }
-    else{
-      if (td.textContent.trim() !== 'N') td.classList.remove('weekend');
+    if (we) {
+      td.classList.add('weekend');
+    } else {
+      if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
     }
   });
 }
