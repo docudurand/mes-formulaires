@@ -10,7 +10,7 @@ const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const FTP_ROOT = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
-const GS_URL = process.env.GS_PRESENCES_URL;
+const GS_URL = process.env.GS_PRESENCES_URL || "";
 
 const yyyymm = (dateStr = "") => String(dateStr).slice(0, 7);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
@@ -94,62 +94,43 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
-
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
-async function gsGet(params) {
-  if (!GS_URL) throw new Error("GS_PRESENCES_URL not set");
-  const u = `${GS_URL}?` + new URLSearchParams(params).toString();
-  const r = await fetch(u, { headers:{ "User-Agent":"presences-proxy/1.0" } });
-  if (!r.ok) throw new Error(`GS GET ${r.status}`);
-  return r.json();
-}
-async function gsPost(params, body) {
-  if (!GS_URL) throw new Error("GS_PRESENCES_URL not set");
-  const u = `${GS_URL}?` + new URLSearchParams(params).toString();
-  const r = await fetch(u, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json", "User-Agent":"presences-proxy/1.0" },
-    body: JSON.stringify(body||{})
-  });
-  const json = await r.json().catch(()=> ({}));
-  if (!r.ok) throw new Error(json?.error || `GS POST ${r.status}`);
-  return json;
+async function gsAdjustCP({ magasin, nom, prenom, delta }) {
+  if (!GS_URL) {
+    console.warn("[GS] GS_PRESENCES_URL non défini — pas d’ajustement CP");
+    return { ok: false, reason: "no_gs_url" };
+  }
+  try {
+    const resp = await fetch(`${GS_URL}?action=deccp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ magasin, nom, prenom, nbJours: delta }),
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok || json?.ok === false) {
+      console.warn("[GS] Ajustement CP échoué:", resp.status, json);
+      return { ok: false, status: resp.status, body: json };
+    }
+    return { ok: true, body: json };
+  } catch (e) {
+    console.warn("[GS] Ajustement CP erreur:", e?.message || e);
+    return { ok: false, error: e?.message || String(e) };
+  }
 }
 
 router.get("/personnel", async (req, res) => {
-  try {
-    const magasin = String(req.query.magasin || "");
-    const data = await gsGet({ action:"personnel", magasin });
-    return res.json(data);
-  } catch (e) {
-    console.warn("[PRES] /personnel -> fallback:", e?.message || e);
-    return res.json({ employes: [], interims: [], livreurs: {} });
+  const magasin = String(req.query.magasin || "");
+  const url = GS_URL;
+  if (url) {
+    try {
+      const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+      if (resp.ok) return res.json(await resp.json());
+    } catch (e) { console.warn("[PRES] personnel fallback:", e?.message || e); }
   }
-});
-
-router.get("/employes", async (req, res) => {
-  try {
-    const magasin = String(req.query.magasin || "");
-    const data = await gsGet({ action:"employes", magasin });
-    return res.json(data);
-  } catch (e) {
-    console.warn("[PRES] /employes -> fallback:", e?.message || e);
-    return res.json({ employes: [] });
-  }
-});
-
-router.post("/dec-cp", express.json({ limit: "1mb" }), async (req, res) => {
-  try {
-    const { magasin, nom, prenom, nbJours } = req.body || {};
-    const out = await gsPost({ action:"deccp" }, { magasin, nom, prenom, nbJours });
-    return res.json(out);
-  } catch (e) {
-    console.error("[PRES] /dec-cp error:", e?.message || e);
-    return res.status(500).json({ ok:false, error:"deccp_failed" });
-  }
+  return res.json({ employes: [], interims: [], livreurs: {} });
 });
 
 router.post("/save", express.json({ limit: "2mb" }), async (req, res) => {
@@ -206,7 +187,13 @@ router.get("/month-store", async (req, res) => {
     );
 
     let personnel = { employes: [], interims: [], livreurs: {} };
-    try { personnel = await gsGet({ action:"personnel", magasin }); } catch {}
+    const url = GS_URL;
+    if (url) {
+      try {
+        const resp = await fetch(`${url}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+        if (resp.ok) { personnel = await resp.json(); }
+      } catch (e) {}
+    }
 
     return res.json({ ok: true, file, personnel });
   } catch (e) {
@@ -273,6 +260,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 
             let row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
             if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
+
             DEF_SLOTS.forEach((s) => { row.values[s] = "CP"; });
 
             file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
@@ -280,15 +268,10 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
           }
         }
 
-        try {
-          await gsPost({ action:"deccp" }, {
-            magasin: item.magasin,
-            nom: item.nom,
-            prenom: item.prenom,
-            nbJours: item.nbJours
-          });
-        } catch (e) {
-          console.warn("[LEAVES] deccp failed:", e?.message || e);
+        const n = Math.max(0, Number(item.nbJours || 0));
+        if (n > 0) {
+          const r = await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: n });
+          if (!r.ok) console.warn("[LEAVES] Décrément CP non appliqué (GS).");
         }
       }
       else if (act === "reject") {
@@ -319,13 +302,20 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 
             let changed = false;
             for (const slot of Object.keys(row.values || {})) {
-              if (String(row.values[slot] || "") === "CP") { row.values[slot] = ""; changed = true; }
+              const cur = String(row.values[slot] ?? "").trim();
+              if (cur === "CP") { row.values[slot] = ""; changed = true; }
             }
             if (changed) {
               file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
               await writeJSON(client, remote, file);
             }
           }
+        }
+
+        const n = Math.max(0, Number(item.nbJours || 0));
+        if (n > 0) {
+          const r = await gsAdjustCP({ magasin: item.magasin, nom: item.nom, prenom: item.prenom, delta: -n });
+          if (!r.ok) console.warn("[LEAVES] Récrédit CP non appliqué (GS).");
         }
       }
 
