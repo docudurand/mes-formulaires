@@ -43,6 +43,7 @@ button.badge.code{border-radius:8px}
 .cell.P{background:#e8f5ec;color:#1a7f37;font-weight:700}
 .cell.CP{background:#efe6ff;color:#6b21a8;font-weight:700}
 .cell.AM{background:#fee2e2;color:#b91c1c;font-weight:700}
+.cell.UST{background:#fef3c7;color:#92400e;font-weight:700}
 .cell.AT{background:#dcfce7;color:#15803d;font-weight:700}
 .cell.F{background:#ccfbf1;color:#0f766e;font-weight:700}
 .cell.Cep{background:#ffedd5;color:#b45309;font-weight:700}
@@ -57,6 +58,7 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
 .badge.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
 .badge.code[data-code="AM"] {background:#fee2e2;color:#b91c1c}
+.badge.code[data-code="UST"]{background:#fef3c7;color:#92400e}
 .badge.code[data-code="AT"] {background:#dcfce7;color:#15803d}
 .badge.code[data-code="F"]  {background:#ccfbf1;color:#0f766e}
 .badge.code[data-code="Cep"]{background:#ffedd5;color:#b45309}
@@ -195,13 +197,13 @@ const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const CODE_DEFS = [
   {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
   {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
   {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
-  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
+  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},{code:'UST',label:'Un seul tour'},
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
@@ -558,33 +560,46 @@ function renderOneStore(yyyymm, magasin, data){
     if(sec) wrap.appendChild(sec);
   });
 
-  const cr = document.createElement('div');
-  cr.className = 'section-sub';
-  cr.style.marginTop = '14px';
-  cr.textContent = 'Congés restants (EMPLOYÉS)';
-  wrap.appendChild(cr);
+  const sub = document.createElement('div');
+  sub.className = 'section-sub';
+  sub.style.marginTop = '14px';
+  sub.textContent = 'Congés restants (EMPLOYÉS)';
+  wrap.appendChild(sub);
 
-  const list = document.createElement('div');
-  list.style.background = '#fff';
-  list.style.border = '1px solid var(--line)';
-  list.style.borderRadius = '10px';
-  list.style.padding = '8px 10px';
-  list.style.fontWeight = '600';
-  list.style.fontSize = '.95rem';
+  const line = document.createElement('div');
+  line.style.display = 'flex';
+  line.style.flexWrap = 'wrap';
+  line.style.gap = '8px';
+  line.style.alignItems = 'center';
+  line.style.background = '#fff';
+  line.style.border = '1px solid var(--line)';
+  line.style.borderRadius = '10px';
+  line.style.padding = '10px';
 
-  const arr = (pers.employes||[]).slice().sort((a,b)=> norm(a.nom).localeCompare(norm(b.nom)) || norm(a.prenom).localeCompare(norm(b.prenom)));
+  const arr = (pers.employes||[])
+    .slice()
+    .sort((a,b)=> norm(a.nom).localeCompare(norm(b.nom)) || norm(a.prenom).localeCompare(norm(b.prenom)));
+
   if (arr.length) {
     arr.forEach(p=>{
-      const row = document.createElement('div');
-      row.style.display='flex'; row.style.justifyContent='space-between'; row.style.borderTop='1px solid var(--line)';
-      row.style.padding='6px 0';
-      row.innerHTML = `<span>${(p.nom||'').toUpperCase()} ${p.prenom||''}</span><span>${Number(p.congeRestant||0)} jour(s)</span>`;
-      list.appendChild(row);
+      const badge = document.createElement('span');
+      badge.style.display = 'inline-block';
+      badge.style.padding = '6px 10px';
+      badge.style.border = '1px solid var(--line)';
+      badge.style.borderRadius = '999px';
+      badge.style.background = '#fafafa';
+      badge.style.fontWeight = '700';
+      badge.style.fontSize = '.9rem';
+      const solde = Number(p.congeRestant||0);
+      badge.textContent = `${(p.nom||'').toUpperCase()} ${p.prenom||''} — ${solde} j`;
+      line.appendChild(badge);
     });
   } else {
-    list.textContent = '—';
+    const empty = document.createElement('span');
+    empty.textContent = '—';
+    line.appendChild(empty);
   }
-  wrap.appendChild(list);
+  wrap.appendChild(line);
 
   wrap.appendChild(Object.assign(document.createElement('div'),{className:'mag-divider'}));
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);

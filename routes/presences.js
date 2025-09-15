@@ -10,7 +10,7 @@ const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const FTP_ROOT = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
-const GS_URL = process.env.GS_PRESENCES_URL; // <-- unique variable utilisée
+const GS_URL = process.env.GS_PRESENCES_URL;
 
 const yyyymm = (dateStr = "") => String(dateStr).slice(0, 7);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
@@ -95,7 +95,7 @@ function frStatus(s) {
   }
 }
 
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI'];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 

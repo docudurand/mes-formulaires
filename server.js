@@ -19,21 +19,24 @@ import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
 import presences from "./routes/presences.js";
 
+import ftp from "basic-ftp";
+import os from "os";
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const app = express();
-
 app.set("trust proxy", 1);
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
-app.use('/presence', presences);
+app.use("/presence", presences);
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 
 app.use((req, res, next) => {
@@ -69,12 +72,8 @@ app.get("/api/sheets/televente", async (req, res) => {
 
   try {
     let r;
-    try {
-      r = await tryOnce();
-    } catch {
-      await new Promise((t) => setTimeout(t, 400));
-      r = await tryOnce();
-    }
+    try { r = await tryOnce(); }
+    catch { await new Promise(t => setTimeout(t, 400)); r = await tryOnce(); }
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json(r.data);
@@ -92,7 +91,6 @@ app.get("/stats/counters", async (_req, res) => {
     res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" });
   }
 });
-
 app.get("/admin/compteurs", async (_req, res) => {
   try {
     const data = await stats.getCounters();
@@ -102,11 +100,9 @@ app.get("/admin/compteurs", async (_req, res) => {
     res.status(500).json({ error: "Erreur de lecture des compteurs" });
   }
 });
-
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
 });
-
 app.use(
   express.static(path.join(__dirname, "public"), {
     extensions: ["html", "htm"],
@@ -140,6 +136,106 @@ function resolveRecipient(magasin, service, globalDefault) {
   if (perMag && perMag["__DEFAULT"]) return perMag["__DEFAULT"];
   return globalDefault;
 }
+function esc(str = "") {
+  return String(str)
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+function fmtFR(dateStr = "") {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
+}
+
+const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
+const PRES_ROOT = `${FTP_ROOT_BASE}/presences`;
+const LEAVES_FILE = `${PRES_ROOT}/leaves.json`;
+const LEAVE_DIR   = `${FTP_ROOT_BASE}/presence/leave`;
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+
+function tlsOptions(){
+  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
+  const servername = process.env.FTP_HOST || undefined;
+  return { rejectUnauthorized, servername };
+}
+async function ftpClient(){
+  const client = new ftp.Client(30_000);
+  if (FTP_DEBUG) client.ftp.verbose = true;
+  await client.access({
+    host: process.env.FTP_HOST,
+    user: process.env.FTP_USER,
+    password: process.env.FTP_PASSWORD,
+    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+    secure: String(process.env.FTP_SECURE||"false")==="true",
+    secureOptions: tlsOptions()
+  });
+  try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
+  return client;
+}
+function tmpFile(name){ return path.join(os.tmpdir(), name); }
+async function dlJSON(client, remote){
+  const out = tmpFile("lv_"+Date.now()+".json");
+  try{
+    await client.downloadTo(out, remote);
+    return JSON.parse(fs.readFileSync(out,"utf8"));
+  }catch{ return null }
+  finally{ try{ fs.unlinkSync(out); }catch{} }
+}
+async function upJSON(client, remote, obj){
+  const out = tmpFile("lv_up_"+Date.now()+".json");
+  fs.writeFileSync(out, JSON.stringify(obj));
+  const dir = path.posix.dirname(remote);
+  await client.ensureDir(dir);
+  await client.uploadFrom(out, remote);
+  try{ fs.unlinkSync(out) }catch{}
+}
+async function upText(client, remote, buf){
+  const dir = path.posix.dirname(remote);
+  await client.ensureDir(dir);
+  const out = tmpFile("lv_file_"+Date.now());
+  fs.writeFileSync(out, buf);
+  await client.uploadFrom(out, remote);
+  try{ fs.unlinkSync(out) }catch{}
+}
+
+async function appendLeave(payload) {
+  let lastErr;
+  for (let i=0; i<3; i++){
+    let client;
+    try{
+      client = await ftpClient();
+
+      await client.ensureDir(PRES_ROOT);
+      await client.ensureDir(LEAVE_DIR);
+
+      const arr = (await dlJSON(client, LEAVES_FILE)) || [];
+      const item = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        statusFr: "en attente",
+        ...payload,
+      };
+      arr.push(item);
+      await upJSON(client, LEAVES_FILE, arr);
+
+      const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+      const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
+      const remoteUnit = `${LEAVE_DIR}/${base}`;
+      await upText(client, remoteUnit, JSON.stringify(item, null, 2));
+
+      try { client.close(); } catch {}
+      console.log("[LEAVES] appended:", { id:item.id, magasin:item.magasin, du:item.dateDu, au:item.dateAu });
+      return item.id;
+    }catch(e){
+      lastErr = e;
+      try { client?.close(); } catch {}
+      await new Promise(t=>setTimeout(t, 400*(i+1)));
+    }
+  }
+  throw lastErr;
+}
+
+app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 
 app.post("/conges/api", async (req, res) => {
   try {
@@ -175,6 +271,14 @@ app.post("/conges/api", async (req, res) => {
 
     if (errors.length) {
       return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
+    }
+
+    try {
+      await appendLeave({
+        magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email
+      });
+    } catch (e) {
+      console.warn("[LEAVES] append failed:", e?.message || e);
     }
 
     const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
@@ -235,7 +339,7 @@ app.post("/conges/api", async (req, res) => {
     console.log("[CONGES] email envoyé à", toRecipients || MAIL_CG, "reply-to", email);
     res.json({ ok: true });
   } catch (e) {
-    console.error("[CONGES][MAIL] Erreur:", e);
+    console.error("[CONGES] Erreur inattendue:", e);
     res.status(500).json({ ok: false, error: "send_failed" });
   }
 });
@@ -258,27 +362,10 @@ app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
 (async () => {
-  try {
-    await stats.initCounters();
-  } catch (e) {
-    console.warn("[COMPTEUR] initCounters souci:", e?.message || e);
-  }
+  try { await stats.initCounters(); }
+  catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
-
-function esc(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function fmtFR(dateStr = "") {
-  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
-}
 
 async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -379,12 +466,8 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
       const sigY = y + 14;
       doc.image(sigBuf, 370, sigY, { width: 150 });
       y = Math.max(y + 90, sigY + 90);
-    } catch (e) {
-      y += 70;
-    }
-  } else {
-    y += 70;
-  }
+    } catch { y += 70; }
+  } else { y += 70; }
 
   const colLeft = pageLeft;
   const colRight = 330;
