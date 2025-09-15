@@ -34,7 +34,7 @@ button.badge.code{border-radius:8px}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:#666;font-style:italic;white-space:nowrap}
 .section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
-.section-sub{font-weight:800;margin:6px 0 0 2px;color:#111;font-size:.95rem}
+.section-sub{font-weight:800;margin:6px 0 0 2px;color:var(--brand);font-size:.95rem}
 .mag-divider{border-top:2px solid var(--line); margin:18px 0 8px}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
 .cell.selected{outline:3px solid #2563eb44}
@@ -143,7 +143,7 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
       </div>
     </div>
     <div id="saisie-content"></div>
-    <div class="legend">Sélection : clic (cellule), Ctrl/Cmd (ajouts), Shift (plage), clic sur l’entête = toute la colonne.</div>
+    <div class="legend"></div>
     <p id="saisie-error" class="error" style="display:none"></p>
   </section>
 
@@ -244,11 +244,9 @@ $today.textContent=todayISO();
 $dateInput.value=todayISO();
 $resumeMonth.value=thisYM();
 
-sessionStorage.removeItem('leavesToken');
-
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); }); // admin
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
 
 [...MAIN_CODES, ...PSITE_CODES].forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; $arCode.appendChild(o); });
 
@@ -310,6 +308,7 @@ async function loadPersonnel(){
   try{ personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`); }
   catch{ personnel = { employes:[], interims:[], livreurs:{} }; }
 }
+
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
@@ -430,11 +429,9 @@ async function prefillDay(){
 }
 function applyPrefill(data){
   const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
-
   $saisieContent.querySelectorAll('tbody tr').forEach(tr => {
     const labelKey = norm(tr.querySelector('.row-label').textContent.trim());
     const vals = map.get(labelKey) || {};
-
     tr.querySelectorAll('td.cell').forEach(td => {
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
@@ -705,7 +702,6 @@ function statusLabelFR(s){
     default:          return String(s||"");
   }
 }
-
 function renderLeaves(items){
   items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
   const wrap=document.createElement('div');
@@ -780,7 +776,6 @@ function renderLeaves(items){
 
   $leavesContent.innerHTML=''; $leavesContent.appendChild(wrap);
 }
-
 async function decideLeave(id, decision, reason="", ui){
   try{
     await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision, reason }) });
@@ -801,6 +796,28 @@ async function cancelLeave(id, ui){
     alert('Échec de l’annulation: ' + (e?.message||''));
   }
 }
+
+document.addEventListener('keydown', (e) => {
+  const key = e.key;
+  if (key !== 'Backspace' && key !== 'Delete') return;
+
+  const a = document.activeElement;
+  const inEditable = a && (
+    a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' ||
+    a.tagName === 'SELECT' || a.isContentEditable
+  );
+  if (inEditable) return;
+
+  const scope = [...selectedCells].filter(td => td.closest('#saisie-content'));
+  if (!scope.length) return;
+
+  e.preventDefault();
+  scope.forEach(td => {
+    ALL_CODES.forEach(c => td.classList.remove(c));
+    td.classList.remove('PSITE');
+    td.textContent = '';
+  });
+});
 
 document.getElementById('today').textContent = todayISO();
 </script>
