@@ -429,14 +429,21 @@ async function prefillDay(){
   }catch{}
 }
 function applyPrefill(data){
-  const map=new Map((data.rows||[]).map(r=>[`${r.label}`, r.values||{}]));
-  $saisieContent.querySelectorAll('tbody tr').forEach(tr=>{
-    const label=tr.querySelector('.row-label').textContent.trim();
-    const vals=map.get(label)||{};
-    tr.querySelectorAll('td.cell').forEach(td=>{
-      const v=vals[td.dataset.slot]||'';
-      ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE');
-      td.textContent=v; if(v){ td.classList.add(v); if(/^P\d+$/.test(v)) td.classList.add('PSITE'); }
+  const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
+
+  $saisieContent.querySelectorAll('tbody tr').forEach(tr => {
+    const labelKey = norm(tr.querySelector('.row-label').textContent.trim());
+    const vals = map.get(labelKey) || {};
+
+    tr.querySelectorAll('td.cell').forEach(td => {
+      const v = vals[td.dataset.slot] || '';
+      ALL_CODES.forEach(c => td.classList.remove(c));
+      td.classList.remove('PSITE');
+      td.textContent = v;
+      if (v) {
+        td.classList.add(v);
+        if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+      }
     });
   });
 }
@@ -552,13 +559,8 @@ function renderOneStore(yyyymm, magasin, data){
   const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
 
-  const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]); if(empSec) wrap.appendChild(empSec);
-  const intSec = makeSection("INTÉRIM", intLabels, ()=>["Matin","A. Midi"]); if(intSec) wrap.appendChild(intSec);
-
-  Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
-    const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
-    if(sec) wrap.appendChild(sec);
-  });
+  const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
+  if(empSec) wrap.appendChild(empSec);
 
   const sub = document.createElement('div');
   sub.className = 'section-sub';
@@ -600,6 +602,14 @@ function renderOneStore(yyyymm, magasin, data){
     line.appendChild(empty);
   }
   wrap.appendChild(line);
+
+  const intSec = makeSection("INTÉRIM", intLabels, ()=>["Matin","A. Midi"]);
+  if(intSec) wrap.appendChild(intSec);
+
+  Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
+    const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
+    if(sec) wrap.appendChild(sec);
+  });
 
   wrap.appendChild(Object.assign(document.createElement('div'),{className:'mag-divider'}));
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
