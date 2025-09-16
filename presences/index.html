@@ -258,7 +258,31 @@ MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.tex
 MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
 MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
 
-[...MAIN_CODES, ...PSITE_CODES].forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; $arCode.appendChild(o); });
+$arCode.innerHTML = '';
+
+const grpStd = document.createElement('optgroup');
+grpStd.label = 'Codes standards';
+CODE_DEFS
+  .filter(d => MAIN_CODES.includes(d.code))
+  .forEach(({ code, label }) => {
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = `${code} — ${label}`;
+    grpStd.appendChild(o);
+  });
+
+const grpPS = document.createElement('optgroup');
+grpPS.label = 'Présence autre site (P1…P20)';
+PSITE_CODES.forEach(code => {
+  const o = document.createElement('option');
+  o.value = code;
+  o.textContent = `${code} — Présence autre site`;
+  grpPS.appendChild(o);
+});
+
+$arCode.appendChild(grpStd);
+$arCode.appendChild(grpPS);
+
 
 try{ const saved = localStorage.getItem('leavesToken'); if(saved){ $leavesPass.value = saved; } }catch{}
 
@@ -366,14 +390,24 @@ function paintWeekendInSaisie(){
 }
 
 function labelsFromMonthFile(file){
-  const set = new Set();
+  const byNorm = new Map();
   Object.values(file || {}).forEach(rec=>{
     (rec?.data?.rows || []).forEach(r=>{
-      const lbl = String(r.label||"").trim();
-      if (lbl) set.add(lbl);
+      const raw = String(r.label || "").trim();
+      if (!raw) return;
+      const k = norm(raw);
+      if (!byNorm.has(k)) byNorm.set(k, raw.toUpperCase());
     });
   });
-  return [...set];
+  return [...byNorm.values()];
+}
+function uniqByNorm(labels){
+  const m = new Map();
+  labels.forEach(lbl => {
+    const k = norm(lbl);
+    if (!m.has(k)) m.set(k, lbl.toUpperCase());
+  });
+  return [...m.values()];
 }
 function labelsFromDayData(dayData){
   return (dayData?.rows || [])
@@ -684,8 +718,10 @@ function renderOneStore(yyyymm, magasin, data){
   const livreurGroups = Object.keys(pers.livreurs||{});
   const knownNow = new Set([...empLabels, ...intLabels, ...livreurGroups].map(norm));
 
-  const histLabelsAll = labelsFromMonthFile(file);
-  const histOld = histLabelsAll.filter(lbl => !knownNow.has(norm(lbl)));
+ const histLabelsAll = labelsFromMonthFile(file);
+const histOld = uniqByNorm(
+  histLabelsAll.filter(lbl => !knownNow.has(norm(lbl)))
+);
 
   const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
   if(empSec) wrap.appendChild(empSec);

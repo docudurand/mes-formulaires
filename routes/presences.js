@@ -18,6 +18,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG || "0") === "1";
 const isWE = (d) => { const x = d.getDay(); return x === 0 || x === 6; };
 
+const HOLIDAYS = new Set([
+  "2025-01-01",
+  "2025-04-21",
+  "2025-05-01",
+  "2025-05-08",
+  "2025-05-29",
+  "2025-06-09",
+  "2025-07-14",
+  "2025-08-15",
+  "2025-11-01",
+  "2025-11-11",
+  "2025-12-25",
+]);
+function isHoliday(isoDate) { return HOLIDAYS.has(String(isoDate)); }
+
 function tlsOptions() {
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH || "1") === "1";
   const servername = process.env.FTP_HOST || undefined;
@@ -84,7 +99,6 @@ function authOk(req) {
   const token = String(req.get("X-Admin-Token") || req.query.token || "").trim();
   return LEAVES_ADMIN_TOKEN && token && token === LEAVES_ADMIN_TOKEN;
 }
-
 function frStatus(s) {
   switch (String(s || "").toLowerCase()) {
     case "pending": return "en attente";
@@ -94,7 +108,6 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
-
 const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
@@ -289,7 +302,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
       const normalize = (s) => String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
       const WANTED_KEY = normalize(`${item.nom || ""} ${item.prenom || ""}`);
       const CANON_LABEL = `${(item.nom || "").toUpperCase()} ${(item.prenom || "").toUpperCase()}`;
-      const DEF_SLOTS = ["Matin", "A. Midi"]; // CP: employés en 2 créneaux par défaut
+      const DEF_SLOTS = ["Matin", "A. Midi"];
 
       const act = decision.toLowerCase();
 
@@ -302,16 +315,22 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           if (isWE(d)) continue;
+
           const dkUTC = new Date(d).toISOString().slice(0, 10);
           const dkLOC = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           for (const dk of new Set([dkUTC, dkLOC])) {
+            if (isHoliday(dk)) continue;
+
             const month = dk.slice(0, 7);
             const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
             const file = (await tryDownloadJSON(client, remote)) || {};
             const dayBlock = file[dk]?.data || { rows: [] };
+
             let row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
             if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
+
             DEF_SLOTS.forEach((s) => { row.values[s] = "CP"; });
+
             file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
             await writeJSON(client, remote, file);
           }
@@ -341,8 +360,10 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
             const remote = `${FTP_ROOT}/${month}/${item.magasin}.json`;
             const file = (await tryDownloadJSON(client, remote)) || {};
             const dayBlock = file[dk]?.data || { rows: [] };
+
             const row = (dayBlock.rows || []).find((r) => normalize(r.label) === WANTED_KEY);
             if (!row) continue;
+
             let changed = false;
             for (const slot of Object.keys(row.values || {})) {
               const cur = String(row.values[slot] ?? "").trim();
@@ -395,6 +416,8 @@ router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
         const dkLOC = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
         for (const dk of new Set([dkUTC, dkLOC])) {
+          if (isHoliday(dk)) continue;
+
           const month = dk.slice(0,7);
           const remote = `${FTP_ROOT}/${month}/${magasin}.json`;
           const file = (await tryDownloadJSON(client, remote)) || {};
