@@ -739,23 +739,28 @@ async function loadAdminPersonnel(){
   if(!mag) return;
   try{
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
+
+    const defaultSlots = ["Matin","A. Midi"];
+
     const add = (p)=>{ 
       const o=document.createElement('option'); 
       o.value = `${p.nom} ${p.prenom||""}`.trim();
       o.textContent = `${p.nom} ${p.prenom||""}`.trim();
       o.dataset.nom = p.nom; 
       o.dataset.prenom = p.prenom||""; 
+      o.dataset.slots = defaultSlots.join('|');
       $arPers.appendChild(o); 
     };
     (pers.employes||[]).forEach(add);
     (pers.interims||[]).forEach(add);
 
-    Object.keys(pers.livreurs||{}).forEach(g=>{
+    Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
       const o = document.createElement('option');
       o.value = g;
       o.textContent = `Livreur — ${g}`;
       o.dataset.nom = g;
       o.dataset.prenom = "";
+      o.dataset.slots = (Array.isArray(slots) && slots.length ? slots : defaultSlots).join('|');
       $arPers.appendChild(o);
     });
   }catch{}
@@ -764,14 +769,27 @@ async function loadAdminPersonnel(){
 $arAdd.addEventListener('click', async ()=>{
   const token = sessionStorage.getItem('leavesToken');
   if(!token){ alert("Connectez-vous d'abord."); return; }
+
   const magasin = $arMag.value;
   const opt = $arPers.selectedOptions[0];
-  const nom = opt?.dataset?.nom||""; const prenom = opt?.dataset?.prenom||"";
-  const code = $arCode.value; const du = $arDu.value; const au = $arAu.value;
-  if(!magasin || !nom || !code || !du || !au){ $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return; }
+  const nom = opt?.dataset?.nom||"";
+  const prenom = opt?.dataset?.prenom||"";
+  const code = $arCode.value;
+  const du = $arDu.value;
+  const au = $arAu.value;
+
+  const slots = String(opt?.dataset?.slots||"Matin|A. Midi")
+                  .split('|').map(s=>s.trim()).filter(Boolean);
+
+  if(!magasin || !nom || !code || !du || !au){
+    $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return;
+  }
   $arAdd.disabled=true; $arMsg.textContent="Ajout en cours…"; $arMsg.style.color="#666";
   try{
-    await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au }) });
+    await fetchJSON('/range-mark', {
+      method:'POST',
+      body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au, slots })
+    });
     $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
   }catch(e){
     $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000";

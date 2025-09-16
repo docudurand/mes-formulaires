@@ -94,6 +94,7 @@ function frStatus(s) {
     default: return String(s || "");
   }
 }
+
 const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
@@ -121,6 +122,30 @@ async function gsAdjustCP({ magasin, nom, prenom, delta }) {
   }
 }
 
+async function resolveSlotsForRangeMark({ magasin, nom, prenom, slotsFromBody }) {
+  const fallback = ['Matin', 'A. Midi'];
+
+  const cleaned = Array.isArray(slotsFromBody)
+    ? slotsFromBody.map(s => String(s||'').trim()).filter(Boolean)
+    : [];
+  if (cleaned.length) return cleaned;
+
+  if (!prenom && GS_URL) {
+    try {
+      const r = await fetch(`${GS_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
+      if (r.ok) {
+        const pers = await r.json();
+        const slots = pers?.livreurs?.[String(nom||'').trim()] || null;
+        if (Array.isArray(slots) && slots.length) return slots.map(s=>String(s||'').trim()).filter(Boolean);
+      }
+    } catch (e) {
+      console.warn("[GS] resolveSlotsForRangeMark personnel fail:", e?.message||e);
+    }
+  }
+
+  return fallback;
+}
+
 router.get("/personnel", async (req, res) => {
   const magasin = String(req.query.magasin || "");
   if (GS_URL) {
@@ -142,8 +167,7 @@ router.get("/employes", async (req, res) => {
           const json = await r.json();
           if (json && Array.isArray(json.employes)) return res.json(json);
         }
-      } catch (e) {
-      }
+      } catch (e) {}
       try {
         const r2 = await fetch(`${GS_URL}?action=personnel&magasin=${encodeURIComponent(magasin)}`);
         if (r2.ok) {
@@ -265,7 +289,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
       const normalize = (s) => String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
       const WANTED_KEY = normalize(`${item.nom || ""} ${item.prenom || ""}`);
       const CANON_LABEL = `${(item.nom || "").toUpperCase()} ${(item.prenom || "").toUpperCase()}`;
-      const DEF_SLOTS = ["Matin", "A. Midi"];
+      const DEF_SLOTS = ["Matin", "A. Midi"]; // CP: employés en 2 créneaux par défaut
 
       const act = decision.toLowerCase();
 
@@ -346,7 +370,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
 router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
   if (!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
 
-  const { magasin, nom, prenom, code, dateDu, dateAu } = req.body || {};
+  const { magasin, nom, prenom, code, dateDu, dateAu, slots } = req.body || {};
   if (!magasin || !nom || !code || !dateDu || !dateAu)
     return res.status(400).json({ ok:false, error:"invalid_params" });
   if (!ALL_CODES.has(String(code)))
@@ -359,9 +383,10 @@ router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
   const normalize = (s) => String(s || "").normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase();
   const WANTED_KEY = normalize(`${nom||""} ${prenom||""}`);
   const CANON_LABEL = `${(nom||"").toUpperCase()} ${(prenom||"").toUpperCase()}`;
-  const DEF_SLOTS = ["Matin","A. Midi"];
 
   try{
+    const slotList = await resolveSlotsForRangeMark({ magasin, nom, prenom, slotsFromBody: slots });
+
     await withFtp("range-mark", async (client) => {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
         if (isWE(d)) continue;
@@ -378,7 +403,7 @@ router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
           let row = (dayBlock.rows || []).find(r => normalize(r.label) === WANTED_KEY);
           if (!row) { row = { label: CANON_LABEL, values: {} }; dayBlock.rows.push(row); }
 
-          DEF_SLOTS.forEach(s => { row.values[s] = code; });
+          slotList.forEach(s => { row.values[s] = code; });
 
           file[dk] = { data: dayBlock, savedAt: new Date().toISOString() };
           await writeJSON(client, remote, file);
