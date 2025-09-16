@@ -54,6 +54,7 @@ button.badge.code{border-radius:8px}
 .cell.D{background:#dbeafe;color:#1d4ed8;font-weight:700}
 .cell.RI{background:#fef9c3;color:#a16207;font-weight:700}
 .cell.PSITE{background:#f5d0aa;color:#6b3e00;font-weight:700}
+.cell.FERIE { background:#e5e7eb !important; color:#111 !important; font-weight:800; }
 
 .badge.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
 .badge.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
@@ -194,6 +195,12 @@ const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; f
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
+
+const FERIES = new Set([
+  "2025-01-01","2025-04-21","2025-05-01","2025-05-08","2025-05-29","2025-06-09",
+  "2025-07-14","2025-08-15","2025-11-01","2025-11-11","2025-12-25",
+]);
+const isHoliday = iso => FERIES.has(String(iso));
 
 const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
@@ -346,14 +353,15 @@ function isSaisieWeekend(){
   const g = d.getDay();
   return g===0 || g===6;
 }
+function isSaisieHoliday(){
+  const v = $dateInput.value;
+  return v ? isHoliday(v) : false;
+}
 function paintWeekendInSaisie(){
   const we = isSaisieWeekend();
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if (we) {
-      td.classList.add('weekend');
-    } else {
-      if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
-    }
+    if (we) td.classList.add('weekend');
+    else if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
   });
 }
 
@@ -389,7 +397,8 @@ function buildSection(title, rows){
     const nameTd=document.createElement('td'); nameTd.className='row-label'; nameTd.textContent=r.label; tr.appendChild(nameTd);
     headerSlots.forEach(slot=>{
       const td=document.createElement('td'); td.className='cell'; td.dataset.slot=slot;
-      td.addEventListener('click',ev=>handleCellClick(ev,td)); tr.appendChild(td);
+      td.addEventListener('click',ev=>handleCellClick(ev,td));
+      tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
@@ -410,7 +419,7 @@ function buildSection(title, rows){
     const we = isSaisieWeekend();
     scope.forEach(td=>{
       ALL_CODES.forEach(c=>td.classList.remove(c));
-      td.classList.remove('PSITE');
+      td.classList.remove('PSITE','FERIE');
       td.textContent='';
       if(!we) td.classList.remove('weekend');
     });
@@ -424,9 +433,10 @@ function buildSection(title, rows){
       const scope=[...selectedCells].filter(td=>td.closest('table')===table);
       if(!scope.length) return;
       const we = isSaisieWeekend();
+      const fer = isSaisieHoliday();
       scope.forEach(td=>{
         ALL_CODES.forEach(c=>td.classList.remove(c));
-        td.classList.remove('PSITE');
+        td.classList.remove('PSITE','FERIE');
         if(!we) td.classList.remove('weekend');
 
         td.textContent=code;
@@ -436,6 +446,7 @@ function buildSection(title, rows){
         }else{
           td.classList.add(code);
           if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+          if(fer && code==='F') td.classList.add('FERIE');
         }
       });
     });
@@ -507,6 +518,7 @@ async function prefillDay(){
     }
 
     applyPrefill(payload?.data||{});
+    applyHolidayDefaultsForDay();
   }catch{}
 }
 function applyPrefill(data){
@@ -517,21 +529,35 @@ function applyPrefill(data){
     tr.querySelectorAll('td.cell').forEach(td => {
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
-      td.classList.remove('PSITE');
+      td.classList.remove('PSITE','FERIE');
       td.classList.remove('weekend');
       td.textContent = v;
       if (v) {
-        if (v === 'NP') {
-          td.classList.add('weekend');
-        } else {
+        if (v === 'NP') td.classList.add('weekend');
+        else {
           td.classList.add(v);
           if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+          if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
         }
       }
     });
   });
   paintWeekendInSaisie();
 }
+function applyHolidayDefaultsForDay(){
+  const day = $dateInput.value;
+  if(!day || !isHoliday(day)) return;
+  $saisieContent.querySelectorAll('td.cell').forEach(td=>{
+    const cur = td.textContent.trim();
+    if(!cur){
+      td.textContent = 'F';
+      td.classList.add('F','FERIE');
+    }else if(cur==='F'){
+      td.classList.add('FERIE');
+    }
+  });
+}
+
 function collectData(){
   const rows=[];
   $saisieContent.querySelectorAll('tbody tr').forEach(tr=>{
@@ -629,13 +655,16 @@ function renderOneStore(yyyymm, magasin, data){
         order.forEach(slot=>{
           const td=document.createElement('td'); td.className='cell';
           if(isWE(d)) td.classList.add('weekend');
-          const v = values[slot] || '';
+          let v = values[slot] || '';
+          if(!v && isHoliday(dk)) v = 'F';
+
           td.textContent = v;
           if(v){
             if (v === 'NP') td.classList.add('weekend');
             else {
               td.classList.add(v);
               if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+              if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
             }
           }
           tr.appendChild(td);
@@ -940,7 +969,7 @@ document.addEventListener('keydown', (e) => {
   const we = isSaisieWeekend();
   scope.forEach(td => {
     ALL_CODES.forEach(c => td.classList.remove(c));
-    td.classList.remove('PSITE');
+    td.classList.remove('PSITE','FERIE');
     td.textContent = '';
     if(!we) td.classList.remove('weekend');
   });
