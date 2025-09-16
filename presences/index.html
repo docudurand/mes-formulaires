@@ -193,6 +193,7 @@ const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
 const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
@@ -210,6 +211,7 @@ const CODE_DEFS = [
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
 
 let currentMagasin=null, personnel=null, selectedCells=new Set();
+let HIST_ROWS_SAISIE = [];
 
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
@@ -301,6 +303,7 @@ async function selectMagasin(mag,btn){
   btn.classList.add('active'); $currMag.textContent=mag;
   $magLoading.style.display='block';
   try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
+  HIST_ROWS_SAISIE = [];
   buildSaisieUI();
   await prefillDay();
   switchTab('saisie');
@@ -335,7 +338,6 @@ function headerSelectColumn(th){
     const td=tr.cells[idx]; if(td && td.classList.contains('cell')){ td.classList.add('selected'); selectedCells.add(td); }
   });
 }
-function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
 function isSaisieWeekend(){
   const v = $dateInput.value;
@@ -353,6 +355,22 @@ function paintWeekendInSaisie(){
       if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
     }
   });
+}
+
+function labelsFromMonthFile(file){
+  const set = new Set();
+  Object.values(file || {}).forEach(rec=>{
+    (rec?.data?.rows || []).forEach(r=>{
+      const lbl = String(r.label||"").trim();
+      if (lbl) set.add(lbl);
+    });
+  });
+  return [...set];
+}
+function labelsFromDayData(dayData){
+  return (dayData?.rows || [])
+    .map(r => String(r.label||"").trim())
+    .filter(Boolean);
 }
 
 function buildSection(title, rows){
@@ -414,8 +432,8 @@ function buildSection(title, rows){
         td.textContent=code;
 
         if(code==='NP'){
-  td.classList.add('weekend');
-}else{
+          td.classList.add('weekend');
+        }else{
           td.classList.add(code);
           if(/^P\d+$/.test(code)) td.classList.add('PSITE');
         }
@@ -445,6 +463,11 @@ function buildSaisieUI(){
     const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
     sections.push({title:`LIVREURS — ${g}`, rows});
   });
+
+  if (Array.isArray(HIST_ROWS_SAISIE) && HIST_ROWS_SAISIE.length){
+    sections.push({ title:"HISTORIQUE (ce jour)", rows: HIST_ROWS_SAISIE });
+  }
+
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
   paintWeekendInSaisie();
 }
@@ -462,6 +485,27 @@ async function prefillDay(){
   try{
     const day=$dateInput.value;
     const payload = await fetchJSON(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+
+    const labelsInDay = labelsFromDayData(payload?.data);
+    const currentLabels = new Set(
+      [...document.querySelectorAll('#saisie-content .row-label')].map(el=>norm(el.textContent))
+    );
+    const missing = labelsInDay
+      .map(lbl => ({ raw: lbl, key: norm(lbl) }))
+      .filter(x => !currentLabels.has(x.key));
+
+    if (missing.length){
+      const rowsMap = new Map((payload?.data?.rows||[]).map(r => [norm(r.label||""), r]));
+      HIST_ROWS_SAISIE = missing.map(x=>{
+        const rec = rowsMap.get(x.key) || {};
+        const slots = Object.keys(rec.values || {});
+        return { label: rec.label || x.raw, slots: (slots.length ? slots : ["Matin","A. Midi"]) };
+      });
+      buildSaisieUI();
+    }else{
+      HIST_ROWS_SAISIE = [];
+    }
+
     applyPrefill(payload?.data||{});
   }catch{}
 }
@@ -477,14 +521,13 @@ function applyPrefill(data){
       td.classList.remove('weekend');
       td.textContent = v;
       if (v) {
-  if (v === 'NP') {
-    td.classList.add('weekend');
-  } else {
-    td.classList.add(v);
-    if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-  }
-}
-
+        if (v === 'NP') {
+          td.classList.add('weekend');
+        } else {
+          td.classList.add(v);
+          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+        }
+      }
     });
   });
   paintWeekendInSaisie();
@@ -589,9 +632,11 @@ function renderOneStore(yyyymm, magasin, data){
           const v = values[slot] || '';
           td.textContent = v;
           if(v){
-            td.classList.add(v);
-            if (/^P\d+$/.test(v)) td.classList.add('PSITE');
             if (v === 'NP') td.classList.add('weekend');
+            else {
+              td.classList.add(v);
+              if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+            }
           }
           tr.appendChild(td);
         });
@@ -607,6 +652,11 @@ function renderOneStore(yyyymm, magasin, data){
 
   const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const livreurGroups = Object.keys(pers.livreurs||{});
+  const knownNow = new Set([...empLabels, ...intLabels, ...livreurGroups].map(norm));
+
+  const histLabelsAll = labelsFromMonthFile(file);
+  const histOld = histLabelsAll.filter(lbl => !knownNow.has(norm(lbl)));
 
   const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
   if(empSec) wrap.appendChild(empSec);
@@ -659,6 +709,11 @@ function renderOneStore(yyyymm, magasin, data){
     const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
     if(sec) wrap.appendChild(sec);
   });
+
+  if (histOld.length){
+    const histSec = makeSection("ANCIENS (mois choisi)", histOld, ()=>["Matin","A. Midi"]);
+    if (histSec) wrap.appendChild(histSec);
+  }
 
   wrap.appendChild(Object.assign(document.createElement('div'),{className:'mag-divider'}));
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
