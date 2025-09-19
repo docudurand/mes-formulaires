@@ -36,7 +36,7 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
-// SMTP Gmail (utilisé seulement pour l’envoi)
+// SMTP Gmail (utilisé seulement pour envoyer)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -113,7 +113,7 @@ function esc(t = "") {
   );
 }
 
-/* ===== PDF : EXACTEMENT les infos du formulaire, ordre demandé ===== */
+/* ===== PDF : EXACTEMENT les champs du formulaire, ordre demandé ===== */
 async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
@@ -127,7 +127,7 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const pageLeft  = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
 
-  // Logo (géré par fetch global de Node 18+)
+  // Logo
   try {
     const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
     const buf = Buffer.from(await resp.arrayBuffer());
@@ -136,15 +136,16 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
     /* ignore logo errors */
   }
 
-  // Titre centré
-  const titleY = 70;
+  // Titre centré sur 2 lignes, sous le logo (pas de chevauchement)
+  const titleY = 140; // > 36 + hauteur logo
   doc
     .font("Helvetica-Bold")
     .fillColor(blue)
     .fontSize(24)
-    .text("Demande de ramasse de pièces", pageLeft, titleY, {
+    .text("Demande de\nramasse de pièces", pageLeft, titleY, {
       align: "center",
       width: pageRight - pageLeft,
+      lineGap: 2,
     });
 
   doc.moveDown(3);
@@ -160,10 +161,6 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const labelW = 110;
   doc.fontSize(11).fillColor(gray).font("Helvetica-Bold").text("Fournisseur :", pageLeft, y, { width: labelW });
   doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + labelW + 10, y, { width: colW - labelW - 10 });
-  y = doc.y + 6;
-
-  doc.font("Helvetica-Bold").fillColor(gray).text("Adresse e-mail :", pageLeft, y, { width: labelW });
-  doc.font("Helvetica").fillColor("#000").text(email || "—", pageLeft + labelW + 10, y, { width: colW - labelW - 10 });
 
   // Références (pleine largeur)
   doc.y = Math.max(doc.y, y) + 18;
