@@ -11,7 +11,6 @@
       margin: 0;
       padding: 10px;
     }
-
     .form-container {
       background: white;
       padding: 30px;
@@ -20,79 +19,30 @@
       max-width: 800px;
       margin: auto;
     }
-
-    h2 {
-      text-align: center;
-      color: #1e90ff;
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-      color: #333;
-    }
-
+    h2 { text-align: center; color: #1e90ff; margin-bottom: 20px; }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
     input, select, textarea {
-      width: 100%;
-      padding: 5px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 1rem;
-      box-sizing: border-box;
+      width: 100%; padding: 5px; margin-top: 5px;
+      border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;
     }
-
     .info-box {
-      background: #f7fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-top: 8px;
-      color: #374151;
-      font-weight: bold;
+      background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 10px 12px; margin-top: 8px; color: #374151; font-weight: bold;
     }
-
     .file-preview { margin-top: 10px; }
     .file-item {
-      background: #f0f0f0;
-      border-radius: 5px;
-      margin-bottom: 8px;
-      padding: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: #f0f0f0; border-radius: 5px; margin-bottom: 8px; padding: 8px;
+      display: flex; justify-content: space-between; align-items: center;
     }
     .file-item img { max-height: 40px; margin-right: 10px; }
-    .file-item button {
-      background: red;
-      color: white;
-      border: none;
-      padding: 3px 6px;
-      cursor: pointer;
-    }
-
+    .file-item button { background: red; color: white; border: none; padding: 3px 6px; cursor: pointer; }
     .paste-zone {
-      border: 2px dashed #aaa;
-      padding: 15px;
-      margin-top: 10px;
-      border-radius: 6px;
-      text-align: center;
-      color: #555;
-      background: #fafafa;
+      border: 2px dashed #aaa; padding: 15px; margin-top: 10px; border-radius: 6px;
+      text-align: center; color: #555; background: #fafafa;
     }
-
     button[type="submit"] {
-      margin-top: 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 4px;
-      cursor: pointer;
+      margin-top: 20px; background: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer;
     }
-
     .status { margin-top: 15px; font-weight: bold; }
   </style>
 </head>
@@ -101,9 +51,9 @@
     <h2>🧰 Demande de ramasse de pièces</h2>
 
     <form id="ramasseForm" enctype="multipart/form-data">
-
-		   <script>window.RAMASSE_API_BASE = 'https://mes-formulaires.onrender.com';</script>
-
+      <!-- Pointe par défaut sur ton API Render.
+           Si tu sers ce HTML depuis le même serveur, tu peux remplacer par: window.RAMASSE_API_BASE = '' -->
+      <script>window.RAMASSE_API_BASE = window.RAMASSE_API_BASE || 'https://mes-formulaires.onrender.com';</script>
 
       <label for="fournisseur">Fournisseur</label>
       <select id="fournisseur" name="fournisseur" required></select>
@@ -116,6 +66,11 @@
       <label for="email">Votre Adresse e-mail</label>
       <input type="email" id="email" name="email" list="emailsList" required />
       <datalist id="emailsList"></datalist>
+
+      <label for="magasinDest">Magasin destination</label>
+      <select id="magasinDest" name="magasinDest" required>
+        <option value="" disabled selected>— Choisir —</option>
+      </select>
 
       <label for="pieces">Références de la/les pièce(s) à récupérer</label>
       <textarea id="pieces" name="pieces" rows="3" placeholder="Ex : 1234ABC, 9876XYZ" required></textarea>
@@ -167,6 +122,11 @@
       if(!res.ok) throw new Error('Impossible de charger les fournisseurs');
       return res.json();
     }
+    async function loadMagasins(){
+      const res = await fetch(`${API_BASE}/api/ramasse/magasins`);
+      if(!res.ok) throw new Error('Impossible de charger les magasins');
+      return res.json();
+    }
 
     function setMagasin(magasin){
       document.getElementById('magasinCharge').textContent = magasin || '—';
@@ -175,14 +135,19 @@
 
     (async () => {
       try {
-        const data = await loadFournisseurs();
-        const sel = document.getElementById('fournisseur');
-        sel.innerHTML = '<option value="" disabled selected>— Choisir —</option>' +
-          data.map(f => `<option value="${f.name.replaceAll('"','&quot;')}" data-magasin="${f.magasin.replaceAll('"','&quot;')}">${f.name}</option>`).join('');
-        sel.addEventListener('change', () => {
-          const opt = sel.selectedOptions[0];
+        const [fournisseurs, magasins] = await Promise.all([loadFournisseurs(), loadMagasins()]);
+
+        const selF = document.getElementById('fournisseur');
+        selF.innerHTML = '<option value="" disabled selected>— Choisir —</option>' +
+          fournisseurs.map(f => `<option value="${f.name.replaceAll('"','&quot;')}" data-magasin="${(f.magasin||'').replaceAll('"','&quot;')}">${f.name}</option>`).join('');
+        selF.addEventListener('change', () => {
+          const opt = selF.selectedOptions[0];
           setMagasin(opt?.getAttribute('data-magasin') || '');
         });
+
+        const selM = document.getElementById('magasinDest');
+        selM.innerHTML = '<option value="" disabled selected>— Choisir —</option>' +
+          magasins.map(m => `<option value="${String(m).replaceAll('"','&quot;')}">${m}</option>`).join('');
       } catch(e){ console.error(e); }
     })();
 
