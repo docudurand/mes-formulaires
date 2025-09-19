@@ -1,4 +1,3 @@
-// routes/ramasse.js
 import express from "express";
 import multer from "multer";
 import path from "path";
@@ -15,18 +14,15 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
-/* ===================== CONFIG / ENV ===================== */
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
-// Secret HMAC pour signer le lien d’accusé
 const RAMASSE_SECRET =
   process.env.RAMASSE_SECRET ||
   process.env.PRESENCES_LEAVES_PASSWORD ||
   process.env.LEAVES_PASS ||
   "change-me";
 
-// chemins possibles pour les fichiers de config
 const SUPPLIERS_PATHS = [
   path.resolve(__dirname, "suppliers.json"),
   path.resolve(__dirname, "../suppliers.json"),
@@ -36,7 +32,6 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
-// SMTP Gmail (utilisé seulement pour envoyer)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -45,7 +40,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/* ===================== UPLOAD ===================== */
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TMP_DIR),
@@ -60,7 +54,6 @@ const upload = multer({
   limits: { fileSize: 24 * 1024 * 1024 },
 });
 
-/* ===================== HELPERS ===================== */
 function loadJsonFrom(paths, fallback) {
   for (const p of paths) {
     try {
@@ -68,9 +61,7 @@ function loadJsonFrom(paths, fallback) {
         const raw = fs.readFileSync(p, "utf8");
         return JSON.parse(raw);
       }
-    } catch {
-      /* ignore */
-    }
+    } catch {  }
   }
   return fallback;
 }
@@ -83,12 +74,10 @@ function loadSuppliers() {
 function loadMagasins() {
   const data = loadJsonFrom(MAGASINS_PATHS, []);
   if (Array.isArray(data) && data.length) {
-    // accepte ["GLEIZE","MIRIBEL"] ou [{"name":"GLEIZE"}, ...]
     return Array.from(
       new Set(data.map(x => (typeof x === "string" ? x : (x?.name || ""))).filter(Boolean))
     );
   }
-  // fallback éventuel si magasins.json absent
   const set = new Set();
   for (const s of loadSuppliers()) if (s.magasin) set.add(String(s.magasin));
   return Array.from(set);
@@ -113,7 +102,6 @@ function esc(t = "") {
   );
 }
 
-/* ===== PDF : EXACTEMENT les champs du formulaire, ordre demandé ===== */
 async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
@@ -127,17 +115,13 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const pageLeft  = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
 
-  // Logo
   try {
     const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
-  } catch {
-    /* ignore logo errors */
-  }
+  } catch {  }
 
-  // Titre centré sur 2 lignes, sous le logo (pas de chevauchement)
-  const titleY = 140; // > 36 + hauteur logo
+  const titleY = 140;
   doc
     .font("Helvetica-Bold")
     .fillColor(blue)
@@ -150,7 +134,6 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
 
   doc.moveDown(3);
 
-  // Bloc "Informations" (colonne gauche)
   const colGap = 24;
   const colW   = (pageRight - pageLeft - colGap) / 2;
   let y = doc.y;
@@ -162,19 +145,16 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   doc.fontSize(11).fillColor(gray).font("Helvetica-Bold").text("Fournisseur :", pageLeft, y, { width: labelW });
   doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + labelW + 10, y, { width: colW - labelW - 10 });
 
-  // Références (pleine largeur)
   doc.y = Math.max(doc.y, y) + 18;
   doc.font("Helvetica-Bold").fillColor(gray).text("Références :", pageLeft, doc.y);
   doc.moveDown(0.3);
   doc.font("Helvetica").fillColor("#000").text((pieces || "—"), { width: pageRight - pageLeft });
 
-  // Destinataire(s) magasin — SOUS Références
   doc.moveDown(0.8);
   doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", pageLeft, doc.y);
   doc.moveDown(0.2);
   doc.font("Helvetica").fillColor("#000").text(magasinDest || "—", { width: pageRight - pageLeft });
 
-  // Commentaire (optionnel)
   if (commentaire && String(commentaire).trim()) {
     doc.moveDown(0.8);
     doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, doc.y);
@@ -182,7 +162,6 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
     doc.font("Helvetica").fillColor("#000").text(String(commentaire), { width: pageRight - pageLeft });
   }
 
-  // Fin
   doc.end();
   return new Promise((resolve, reject) => {
     stream.on("finish", () => resolve(pdfPath));
@@ -245,20 +224,30 @@ async function ftpUpload(localPath, remoteDir) {
   }
 }
 
-/* ===================== ROUTES ===================== */
+const ackRecent = new Map();
+const ACK_TTL_MS = 60 * 1000;
 
-// Fournisseurs (pour le select + info magasin en charge)
+function shouldSendAckOnce(sig) {
+  const now = Date.now();
+  const last = ackRecent.get(sig);
+
+  for (const [k, t] of ackRecent) {
+    if (now - t > ACK_TTL_MS) ackRecent.delete(k);
+  }
+  if (last && now - last < ACK_TTL_MS) return false;
+  ackRecent.set(sig, now);
+  return true;
+}
+
 router.get("/fournisseurs", (_req, res) => {
   const out = loadSuppliers().map(({ name, magasin }) => ({ name, magasin }));
   res.json(out);
 });
 
-// Magasins destination indépendants
 router.get("/magasins", (_req, res) => {
   res.json(loadMagasins());
 });
 
-// Dépôt demande — envoi UNIQUEMENT aux adresses du suppliers.json
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     const { fournisseur, magasin, email, pieces, commentaire, magasinDest } = req.body;
@@ -279,7 +268,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur (suppliers.json)." });
     }
 
-    // Lien d'accusé: envoi TOUJOURS (lien signé valable 14 jours)
     const ackPayload = {
       email: String(email),
       fournisseur: String(sup?.name || fournisseur),
@@ -290,7 +278,6 @@ router.post("/", upload.single("file"), async (req, res) => {
     };
     const ackUrl = buildAckUrl(req, ackPayload);
 
-    // PDF (champs du formulaire)
     const pdfPath = await buildPdf({
       fournisseur: sup?.name || fournisseur,
       magasinDest: magasinDest || mg,
@@ -327,7 +314,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       attachments,
     });
 
-    // archive PDF
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -345,7 +331,6 @@ router.post("/", upload.single("file"), async (req, res) => {
   }
 });
 
-// Accusé direct — ENVOI À CHAQUE CLIC (pas de 'déjà confirmé')
 router.get("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
@@ -365,18 +350,21 @@ router.get("/ack", async (req, res) => {
       && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
     if (!ok) return res.status(400).send("Signature invalide");
 
-    // Validité 14 jours
     const age = Date.now() - Number(ts);
     if (isFinite(age) && age > 14 * 24 * 3600 * 1000) {
       return res.status(400).send("Lien expiré");
     }
 
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
-      to: String(email),
-      subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-      html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
-    });
+    const sendNow = shouldSendAckOnce(String(sig));
+
+    if (sendNow) {
+      await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: String(email),
+        subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
+        html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+      });
+    }
 
     res
       .status(200)
