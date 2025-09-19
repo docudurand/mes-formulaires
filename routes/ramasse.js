@@ -79,28 +79,132 @@ function findSupplier(name) {
 function nowISO() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function buildPdf({ fournisseur, magasin, email, pieces, commentaire }) {
+function escText(s="") {
+  return String(s).replace(/\s+/g," ").trim();
+}
+
+// ===== PDF stylé type maquette fournie =====
+async function buildPdf({ fournisseur, magasin, email, pieces, commentaire }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
-  const doc = new PDFDocument({ size: "A4", margin: 48 });
+  const doc = new PDFDocument({ size: "A4", margin: 56 }); // marge un peu plus large
   const stream = fs.createWriteStream(pdfPath);
   doc.pipe(stream);
 
-  doc.fontSize(18).text("Demande de ramasse de pièces");
-  doc.moveDown(0.5);
-  doc.fontSize(12).text(`Date : ${nowISO()}`);
-  doc.text(`Fournisseur : ${fournisseur}`);
-  doc.text(`Magasin en charge : ${magasin || "—"}`);
-  doc.text(`Demandeur : ${email}`);
-  doc.moveDown();
-  doc.font("Helvetica-Bold").text("Références");
-  doc.font("Helvetica").text(pieces || "—");
-  doc.moveDown();
-  doc.font("Helvetica-Bold").text("Commentaire");
-  doc.font("Helvetica").text(commentaire || "—");
+  const blue = "#0f4c81"; // bleu DURAND approchant
+  const gray = "#102a43";
+
+  // ===== En-tête =====
+  const pageLeft = doc.page.margins.left;
+  const pageRight = doc.page.width - doc.page.margins.right;
+
+  // Logo à gauche
+  try {
+    const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
+    const buf = Buffer.from(await resp.arrayBuffer());
+    doc.image(buf, pageLeft, 36, { width: 90 });
+  } catch (e) {
+    // ignore si logo non chargé
+  }
+
+  // Site / Dossier à droite
+  const headX = pageRight - 180;
+  doc
+    .font("Helvetica-Bold")
+    .fillColor(blue)
+    .fontSize(12)
+    .text((magasin ? String(magasin).toUpperCase() : "DURAND"), headX, 40, { align: "right", width: 180 });
+  const dossierNo = String(Date.now()).slice(-5).padStart(5, "0");
+  doc
+    .fillColor(gray)
+    .fontSize(11)
+    .text(`Dossier n° ${dossierNo}`, headX, 58, { align: "right", width: 180 });
+
+  // Titre centré
+  doc
+    .moveDown(2.2)
+    .font("Helvetica-Bold")
+    .fillColor(blue)
+    .fontSize(22)
+    .text("Demande de Ramasse", { align: "center" });
+
+  doc.moveDown(1.2);
+
+  // ===== Sections =====
+  const label = (t) => doc.font("Helvetica-Bold").fillColor(gray).text(t);
+  const value = (t) => doc.font("Helvetica").fillColor("#000").text(t);
+
+  // Grille 2 colonnes
+  const colGap = 24;
+  const colW = (pageRight - pageLeft - colGap) / 2;
+  let y = doc.y + 10;
+
+  // Bloc: Informations client
+  doc.fontSize(13).fillColor(blue).text("Informations client", pageLeft, y);
+  y = doc.y + 6;
+  doc.moveTo(pageLeft, y).lineTo(pageRight, y).strokeColor("#e5eef6").lineWidth(1).stroke();
+  y += 10;
+
+  // Colonne gauche
+  doc.fontSize(11);
+  doc.text("", pageLeft, y, { width: colW });
+  doc.save();
+  doc.text("", pageLeft + colW + colGap, y, { width: colW });
+
+  // G column left
+  doc.font("Helvetica-Bold").fillColor(gray).text("Nom du client :", pageLeft, y, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(email ? email.split("@")[0] : "—", pageLeft + 110, y, { width: colW - 110 });
+  y = doc.y + 6;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Email client :", pageLeft, y, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(email || "—", pageLeft + 110, y, { width: colW - 110 });
+  y = doc.y + 6;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Fournisseur :", pageLeft, y, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + 110, y, { width: colW - 110 });
+  y = doc.y + 6;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Magasin d'envoi :", pageLeft, y, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(magasin || "—", pageLeft + 110, y, { width: colW - 110 });
+  y = doc.y + 6;
+
+  // Right column top baseline
+  let yR = doc.page.margins.top + 140;
+  const xR = pageLeft + colW + colGap;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Date de la demande :", xR, yR, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(nowISO().split(" ")[0], xR + 140, yR, { width: colW - 140 });
+  yR = doc.y + 6;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", xR, yR, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text("— (voir email)", xR + 170, yR, { width: colW - 170 });
+  yR = doc.y + 6;
+
+  // Ajuster Y courant
+  doc.restore();
+  doc.y = Math.max(y, yR) + 16;
+
+  // Détails références
+  doc.fontSize(13).fillColor(blue).text("Détails de la ramasse");
+  let y2 = doc.y + 6;
+  doc.moveTo(pageLeft, y2).lineTo(pageRight, y2).strokeColor("#e5eef6").lineWidth(1).stroke();
+  y2 += 10;
+
+  doc.fontSize(11).font("Helvetica-Bold").fillColor(gray).text("Références à récupérer :", pageLeft, y2);
+  y2 = doc.y + 6;
+  doc.font("Helvetica").fillColor("#000").text(escText(pieces || "—"), { width: pageRight - pageLeft });
+  y2 = doc.y + 10;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, y2);
+  y2 = doc.y + 6;
+  doc.font("Helvetica").fillColor("#000").text(commentaire ? String(commentaire) : "—", { width: pageRight - pageLeft });
+
+  // Pied de page
+  doc.moveTo(pageLeft, doc.page.height - 60).lineTo(pageRight, doc.page.height - 60).strokeColor("#e5eef6").lineWidth(1).stroke();
+  doc.fontSize(9).fillColor("#6b778d").text("Document généré automatiquement – Durand, pièces automobile et services", pageLeft, doc.page.height - 52, { align: "left" });
 
   doc.end();
   return new Promise((resolve, reject) => {
@@ -109,20 +213,14 @@ function buildPdf({ fournisseur, magasin, email, pieces, commentaire }) {
   });
 }
 
-function esc(s) {
-  return String(s || "").replace(/[&<>\"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
-
 function buildMailHtml({ fournisseur, magasin, email, pieces, commentaire, ackUrl }) {
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
     <p>Bonjour,</p>
-    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(pieces || "—")}</em>.</p>
-    <p><strong>Magasin en charge :</strong> ${esc(magasin || "—")}<br/>
-       <strong>Demandeur :</strong> ${esc(email)}</p>
-    ${commentaire ? `<p><strong>Commentaire :</strong><br/>${esc(commentaire).replace(/\\n/g,"<br/>")}</p>` : ""}
+    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${(pieces || "—")}</em>.</p>
+    <p><strong>Magasin en charge :</strong> ${(magasin || "—")}<br/>
+       <strong>Demandeur :</strong> ${(email)}</p>
+    ${commentaire ? `<p><strong>Commentaire :</strong><br/>${String(commentaire).replace(/\\n/g,"<br/>")}</p>` : ""}
     <p>
       <a href="${ackUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700">Accuser de réception</a>
     </p>
@@ -180,14 +278,6 @@ function ackKey(params) {
   return signAck(params);
 }
 
-async function ftpEnsure(client, dir) {
-  try { await client.ensureDir(dir); } catch {}
-}
-
-async function ftpExists(client, remotePath) {
-  try { await client.size(remotePath); return true; } catch { return false; }
-}
-
 async function markAckUsedOnFTP(key) {
   if (!process.env.FTP_HOST || !process.env.FTP_USER) return false;
   const client = new ftp.Client();
@@ -202,11 +292,9 @@ async function markAckUsedOnFTP(key) {
     });
     const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
     const dir = `${root}/${ACK_DIR}`.replace(/\/+/g, "/");
-    await ftpEnsure(client, dir);
+    await client.ensureDir(dir);
     const file = `${dir}/${key}.txt`;
-    const exists = await ftpExists(client, file);
-    if (exists) return true; // déjà utilisé
-
+    try { await client.size(file); return true; } catch {}
     const tmp = path.join(TMP_DIR, `ack_${key}.txt`);
     fs.writeFileSync(tmp, `ack-used ${new Date().toISOString()}\\n`);
     await client.uploadFrom(tmp, file);
@@ -261,7 +349,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur." });
     }
 
-    // Lien d'accusé: inclut un nonce + ts, confirmé ensuite par POST
+    // Lien d'accusé: inclut un nonce + ts (envoi direct au GET, mais idempotent)
     const ackPayload = {
       email: String(email),
       fournisseur: String(sup?.name || fournisseur),
@@ -272,7 +360,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     };
     const ackUrl = buildAckUrl(req, ackPayload);
 
-    // PDF récap
+    // PDF récap (style maquette)
     const pdfPath = await buildPdf({
       fournisseur: sup?.name || fournisseur,
       magasin: mg,
@@ -330,7 +418,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   }
 });
 
-// Page de confirmation (GET) — ne déclenche pas l’envoi
+// Accusé direct (GET) — envoie une seule fois (idempotent)
 router.get("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
@@ -344,8 +432,9 @@ router.get("/ack", async (req, res) => {
       ts: String(ts),
       nonce: String(nonce),
     };
-    const expect = signAck(params);
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) {
+    const h1 = Buffer.from(sig);
+    const h2 = Buffer.from(signAck(params));
+    if (h1.length !== h2.length || !crypto.timingSafeEqual(h1, h2)) {
       return res.status(400).send("Signature invalide");
     }
 
@@ -355,73 +444,30 @@ router.get("/ack", async (req, res) => {
       return res.status(400).send("Lien expiré");
     }
 
-    // page de confirmation
-    const html = `
-<!doctype html><meta charset="utf-8"/>
-<title>Confirmer l'accusé de réception</title>
-<div style="font-family:system-ui;max-width:640px;margin:40px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
-  <h2>Confirmer l'accusé de réception</h2>
-  <p>Fournisseur : <b>${esc(fournisseur)}</b></p>
-  <p>Références : <em>${esc(pieces || "—")}</em></p>
-  <form method="post" action="/api/ramasse/ack/confirm">
-    <input type="hidden" name="email" value="${esc(email)}"/>
-    <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
-    <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
-    <input type="hidden" name="pieces" value="${esc(pieces || "")}"/>
-    <input type="hidden" name="ts" value="${esc(ts)}"/>
-    <input type="hidden" name="nonce" value="${esc(nonce)}"/>
-    <input type="hidden" name="sig" value="${esc(sig)}"/>
-    <button type="submit" style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer">Confirmer</button>
-  </form>
-  <p style="color:#666;font-size:12px;margin-top:12px">Cette étape empêche les envois automatiques déclenchés par certains webmails.</p>
-</div>`;
-    res.status(200).send(html);
-  } catch (e) {
-    console.error("[RAMASSE] ACK view error:", e);
-    res.status(400).send("Lien invalide.");
-  }
-});
-
-// Confirmation (POST) — envoie l’accusé si pas déjà utilisé
-router.post("/ack/confirm", express.urlencoded({ extended: true }), async (req, res) => {
-  try {
-    const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body || {};
-    if (!email || !fournisseur || !ts || !nonce || !sig) return res.status(400).send("Requête incomplète");
-
-    const params = {
-      email: String(email),
-      fournisseur: String(fournisseur),
-      magasin: String(magasin || ""),
-      pieces: String(pieces || ""),
-      ts: String(ts),
-      nonce: String(nonce),
-    };
     const key = ackKey(params);
-    const expect = signAck(params);
-    if (sig !== expect) return res.status(400).send("Signature invalide");
 
-    // idempotence
-    if (isAckUsedInMemory(key)) {
+    // Si déjà utilisé, ne rien renvoyer deux fois
+    if (isAckUsedInMemory(key) || await markAckUsedOnFTP(key)) {
+      if (!isAckUsedInMemory(key)) markAckUsedInMemory(key);
       return res.status(200).send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">ℹ️ Accusé déjà confirmé.</div>`);
     }
-    const alreadyOnFTP = await markAckUsedOnFTP(key);
-    if (alreadyOnFTP) {
-      markAckUsedInMemory(key);
-      return res.status(200).send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">ℹ️ Accusé déjà confirmé.</div>`);
-    }
+
+    // Marquer AVANT d'envoyer pour éviter les courses (double clic / préfetch)
     markAckUsedInMemory(key);
+    await markAckUsedOnFTP(key);
 
+    // Envoi de l'accusé
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: String(email),
       subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-      html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+      html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${String(fournisseur)}</strong> concernant <em>${String(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${String(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
     });
 
     res.status(200).send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`);
   } catch (e) {
-    console.error("[RAMASSE] ACK confirm error:", e);
-    res.status(400).send("Erreur lors de l'envoi de l'accusé.");
+    console.error("[RAMASSE] ACK error:", e);
+    res.status(400).send("Lien invalide ou erreur d'envoi.");
   }
 });
 
