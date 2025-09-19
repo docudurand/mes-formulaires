@@ -14,15 +14,18 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
+/* ===================== CONFIG / ENV ===================== */
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
+// Secret HMAC pour signer le lien d’accusé
 const RAMASSE_SECRET =
   process.env.RAMASSE_SECRET ||
   process.env.PRESENCES_LEAVES_PASSWORD ||
   process.env.LEAVES_PASS ||
   "change-me";
 
+// chemins possibles pour les fichiers de config
 const SUPPLIERS_PATHS = [
   path.resolve(__dirname, "suppliers.json"),
   path.resolve(__dirname, "../suppliers.json"),
@@ -37,11 +40,16 @@ const FALLBACK_TO = (process.env.DEST_EMAIL_FORMULAIRE_PIECE || "")
 const FALLBACK_CC = (process.env.MAIL_CG || "")
   .split(",").map(s => s.trim()).filter(Boolean);
 
+// SMTP Gmail
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  auth: { user: process.env.GMAIL_USER, pass: String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "") },
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: String(process.env.GMAIL_PASS || "").replace(/["\s]/g, ""),
+  },
 });
 
+// Upload (24 Mo)
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TMP_DIR),
@@ -54,6 +62,7 @@ const upload = multer({
   limits: { fileSize: 24 * 1024 * 1024 },
 });
 
+/* ===================== HELPERS ===================== */
 function loadJsonFrom(paths, fallback) {
   for (const p of paths) {
     try {
@@ -61,7 +70,7 @@ function loadJsonFrom(paths, fallback) {
         const raw = fs.readFileSync(p, "utf8");
         return JSON.parse(raw);
       }
-    } catch {  }
+    } catch { /* ignore */ }
   }
   return fallback;
 }
@@ -74,9 +83,12 @@ function loadSuppliers() {
 function loadMagasins() {
   const data = loadJsonFrom(MAGASINS_PATHS, []);
   if (Array.isArray(data) && data.length) {
-    return Array.from(new Set(data.map(x => typeof x === "string" ? x : (x?.name || "")).filter(Boolean)));
+    // accepte ["GLEIZE","MIRIBEL"] ou [{"name":"GLEIZE"}, ...]
+    return Array.from(new Set(
+      data.map(x => (typeof x === "string" ? x : (x?.name || ""))).filter(Boolean)
+    ));
   }
-
+  // fallback si magasins.json absent
   const set = new Set();
   for (const s of loadSuppliers()) if (s.magasin) set.add(String(s.magasin));
   return Array.from(set);
@@ -88,16 +100,9 @@ function findSupplier(name) {
   return list.find(s => String(s.name || "").toLowerCase() === n);
 }
 
-function nowISO() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
+function esc(t=""){ return String(t).replace(/[&<>"]/g, s=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[s])); }
 
-function escText(s="") {
-  return String(s).replace(/\s+/g," ").trim();
-}
-
+/* ===== PDF : EXACTEMENT les infos du formulaire, rien d'autre ===== */
 async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
@@ -108,6 +113,7 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const blue = "#0f4c81";
   const gray = "#102a43";
 
+  // En-tête (logo + magasinDest à droite)
   const pageLeft = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
 
@@ -115,63 +121,60 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
     const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
-  } catch {}
+  } catch {/* ignore logo errors */}
 
   const headX = pageRight - 220;
-  doc.font("Helvetica-Bold").fillColor(blue).fontSize(12)
-     .text((magasinDest ? String(magasinDest).toUpperCase() : "DURAND"), headX, 40, { align: "right", width: 220 });
-  const dossierNo = String(Date.now()).slice(-5).padStart(5, "0");
-  doc.fillColor(gray).fontSize(11).text(`Dossier n° ${dossierNo}`, headX, 58, { align: "right", width: 220 });
+  if (magasinDest) {
+    doc.font("Helvetica-Bold").fillColor(blue).fontSize(12)
+       .text(String(magasinDest).toUpperCase(), headX, 40, { align: "right", width: 220 });
+  }
 
+  // Titre
   doc.moveDown(2.2).font("Helvetica-Bold").fillColor(blue).fontSize(22)
-     .text("Demande de Ramasse", { align: "center" });
+     .text("Demande de ramasse de pièces", { align: "center" });
   doc.moveDown(1.2);
 
+  // Deux colonnes — juste les champs du formulaire
   const colGap = 24;
   const colW = (pageRight - pageLeft - colGap) / 2;
-  let y = doc.y + 10;
+  let yL = (doc.y + 10);
 
-  doc.fontSize(13).fillColor(blue).text("Informations client", pageLeft, y);
-  y = doc.y + 10;
+  doc.fontSize(13).fillColor(blue).text("Informations", pageLeft, yL);
+  yL = doc.y + 10;
 
+  // Colonne gauche
   doc.fontSize(11);
-  doc.font("Helvetica-Bold").fillColor(gray).text("Nom du client :", pageLeft, y, { width: colW });
-  doc.font("Helvetica").fillColor("#000").text(email ? email.split("@")[0] : "—", pageLeft + 120, y, { width: colW - 120 });
-  y = doc.y + 6;
+  doc.font("Helvetica-Bold").fillColor(gray).text("Fournisseur :", pageLeft, yL, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + 100, yL, { width: colW - 100 });
+  yL = doc.y + 6;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Email client :", pageLeft, y, { width: colW });
-  doc.font("Helvetica").fillColor("#000").text(email || "—", pageLeft + 120, y, { width: colW - 120 });
-  y = doc.y + 6;
+  doc.font("Helvetica-Bold").fillColor(gray).text("Adresse e-mail :", pageLeft, yL, { width: colW });
+  doc.font("Helvetica").fillColor("#000").text(email || "—", pageLeft + 100, yL, { width: colW - 100 });
+  yL = doc.y + 6;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Fournisseur :", pageLeft, y, { width: colW });
-  doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + 120, y, { width: colW - 120 });
-
+  // Colonne droite
   let yR = doc.page.margins.top + 140;
   const xR = pageLeft + colW + colGap;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Date de la demande :", xR, yR, { width: colW });
-  doc.font("Helvetica").fillColor("#000").text(nowISO().split(" ")[0], xR + 160, yR, { width: colW - 160 });
-  yR = doc.y + 6;
-
   doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", xR, yR, { width: colW });
-  doc.font("Helvetica").fillColor("#000").text(magasinDest || "—", xR + 180, yR, { width: colW - 180 });
+  doc.font("Helvetica").fillColor("#000").text(magasinDest || "—", xR + 160, yR, { width: colW - 160 });
   yR = doc.y + 6;
 
-  doc.y = Math.max(y, yR) + 18;
-
-  doc.fontSize(11).font("Helvetica-Bold").fillColor(gray).text("Références à récupérer :", pageLeft, doc.y);
+  // Références (bloc pleine largeur)
+  doc.y = Math.max(yL, yR) + 16;
+  doc.font("Helvetica-Bold").fillColor(gray).text("Références :", pageLeft, doc.y);
   doc.moveDown(0.3);
-  doc.font("Helvetica").fillColor("#000").text(escText(pieces || "—"), { width: pageRight - pageLeft });
-  doc.moveDown(0.8);
+  doc.font("Helvetica").fillColor("#000").text((pieces || "—"), { width: pageRight - pageLeft });
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, doc.y);
-  doc.moveDown(0.3);
-  doc.font("Helvetica").fillColor("#000").text(commentaire ? String(commentaire) : "—", { width: pageRight - pageLeft });
+  // Commentaire si fourni
+  if (commentaire && String(commentaire).trim()) {
+    doc.moveDown(0.8);
+    doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, doc.y);
+    doc.moveDown(0.3);
+    doc.font("Helvetica").fillColor("#000").text(String(commentaire), { width: pageRight - pageLeft });
+  }
 
-  doc.fontSize(9).fillColor("#6b778d")
-     .text("Document généré automatiquement – Durand, pièces automobile et services",
-           pageLeft, doc.page.height - 52, { align: "left" });
-
+  // Pas de lignes / pas d’autres champs
   doc.end();
   return new Promise((resolve, reject) => {
     stream.on("finish", () => resolve(pdfPath));
@@ -183,14 +186,13 @@ function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, a
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
     <p>Bonjour,</p>
-    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${(pieces || "—")}</em>.</p>
-    <p><strong>Destinataire(s) magasin :</strong> ${(magasinDest || "—")}<br/>
-       <strong>Demandeur :</strong> ${(email)}</p>
-    ${commentaire ? `<p><strong>Commentaire :</strong><br/>${String(commentaire).replace(/\n/g,"<br/>")}</p>` : ""}
+    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(pieces || "—")}</em>.</p>
+    <p><strong>Destinataire(s) magasin :</strong> ${esc(magasinDest || "—")}<br/>
+       <strong>Demandeur :</strong> ${esc(email)}</p>
+    ${commentaire ? `<p><strong>Commentaire :</strong><br/>${esc(String(commentaire)).replace(/\n/g,"<br/>")}</p>` : ""}
     <p>
       <a href="${ackUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700">Accuser de réception</a>
     </p>
-    <p style="color:#666;font-size:12px">Le bouton ci-dessus enverra automatiquement un accusé au demandeur.</p>
   </div>`;
 }
 
@@ -235,65 +237,20 @@ async function ftpUpload(localPath, remoteDir) {
   }
 }
 
-const ACK_DIR = "ramasse/acks";
-const ACK_TTL_MS = 14 * 24 * 3600 * 1000;
+/* ===================== ROUTES ===================== */
 
-function ackKey(params) {
-  return signAck(params);
-}
-
-async function markAckUsedOnFTP(key) {
-  if (!process.env.FTP_HOST || !process.env.FTP_USER) return false;
-  const client = new ftp.Client();
-  try {
-    await client.access({
-      host: process.env.FTP_HOST,
-      port: Number(process.env.FTP_PORT || 21),
-      user: process.env.FTP_USER,
-      password: process.env.FTP_PASSWORD,
-      secure: String(process.env.FTP_SECURE || "false") === "true",
-      secureOptions: { rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0" },
-    });
-    const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
-    const dir = `${root}/${ACK_DIR}`.replace(/\/+/g, "/");
-    await client.ensureDir(dir);
-    const file = `${dir}/${key}.txt`;
-    try { await client.size(file); return true; } catch {}
-    const tmp = path.join(TMP_DIR, `ack_${key}.txt`);
-    fs.writeFileSync(tmp, `ack-used ${new Date().toISOString()}\n`);
-    await client.uploadFrom(tmp, file);
-    try { fs.unlinkSync(tmp); } catch {}
-    return false;
-  } catch (e) {
-    console.warn("[RAMASSE][ACK] FTP mark failed:", e?.message || e);
-    return false;
-  } finally {
-    try { client.close(); } catch {}
-  }
-}
-
-const USED_ACK_MEMORY = new Map();
-
-function isAckUsedInMemory(key) {
-  const ts = USED_ACK_MEMORY.get(key);
-  if (!ts) return false;
-  if (Date.now() - ts > ACK_TTL_MS) { USED_ACK_MEMORY.delete(key); return false; }
-  return true;
-}
-
-function markAckUsedInMemory(key) {
-  USED_ACK_MEMORY.set(key, Date.now());
-}
-
+// Fournisseurs (pour le select + info magasin en charge)
 router.get("/fournisseurs", (_req, res) => {
   const out = loadSuppliers().map(({ name, magasin }) => ({ name, magasin }));
   res.json(out);
 });
 
+// Magasins destination indépendants
 router.get("/magasins", (_req, res) => {
   res.json(loadMagasins());
 });
 
+// Dépôt demande
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     const { fournisseur, magasin, email, pieces, commentaire, magasinDest } = req.body;
@@ -313,6 +270,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur." });
     }
 
+    // Lien d'accusé: envoi TOUJOURS (pas d'idempotence) – mais lien signé & valable 14 jours
     const ackPayload = {
       email: String(email),
       fournisseur: String(sup?.name || fournisseur),
@@ -323,6 +281,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     };
     const ackUrl = buildAckUrl(req, ackPayload);
 
+    // PDF (seulement les champs du formulaire)
     const pdfPath = await buildPdf({
       fournisseur: sup?.name || fournisseur,
       magasinDest: magasinDest || mg,
@@ -361,6 +320,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       attachments,
     });
 
+    // archive PDF
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -378,6 +338,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   }
 });
 
+// Accusé direct — ENVOI À CHAQUE CLIC (aucun message “déjà confirmé”)
 router.get("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
@@ -391,32 +352,23 @@ router.get("/ack", async (req, res) => {
       ts: String(ts),
       nonce: String(nonce),
     };
-    const h1 = Buffer.from(sig);
-    const h2 = Buffer.from(signAck(params));
-    if (h1.length !== h2.length || !crypto.timingSafeEqual(h1, h2)) {
-      return res.status(400).send("Signature invalide");
-    }
 
+    const expected = signAck(params);
+    const ok = (expected.length === String(sig).length)
+      && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
+    if (!ok) return res.status(400).send("Signature invalide");
+
+    // Sécurité : validité 14 jours (retire si tu veux aucun limite)
     const age = Date.now() - Number(ts);
-    if (isFinite(age) && age > ACK_TTL_MS) {
+    if (isFinite(age) && age > 14 * 24 * 3600 * 1000) {
       return res.status(400).send("Lien expiré");
     }
-
-    const key = ackKey(params);
-
-    if (isAckUsedInMemory(key) || await markAckUsedOnFTP(key)) {
-      if (!isAckUsedInMemory(key)) markAckUsedInMemory(key);
-      return res.status(200).send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">ℹ️ Accusé déjà confirmé.</div>`);
-    }
-
-    markAckUsedInMemory(key);
-    await markAckUsedOnFTP(key);
 
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: String(email),
       subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-      html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${String(fournisseur)}</strong> concernant <em>${String(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${String(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+      html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
     });
 
     res.status(200).send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`);
