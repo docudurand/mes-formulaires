@@ -18,6 +18,7 @@ import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
 import presences from "./routes/presences.js";
+import ramasseRouter from "./routes/ramasse.js";
 
 import ftp from "basic-ftp";
 import os from "os";
@@ -38,6 +39,9 @@ app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/presences", express.static(path.join(__dirname, "presences")));
+app.use("/public", express.static(path.join(process.cwd(), "public")));
+app.use("/api/ramasse", ramasseRouter);
+app.get("/ramasse", (req, res) => res.redirect("/public/ramasse.html"));
 
 app.use((req, res, next) => {
   const url = req.originalUrl || req.url || "";
