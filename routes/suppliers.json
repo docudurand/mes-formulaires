@@ -6,10 +6,9 @@
     "cc": ["respmagchassieu@durandservices.fr"]
   },
   {
-    "name": "Volteo Lyon",
-    "magasin": "Chassieu",
-    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
-    "cc": ["respmagchassieu@durandservices.fr"]
+    "name": "Clas",
+    "magasin": "La Motte Servolex",
+    "recipients": ["receptionlms@durandservices.fr"]
   },
   {
     "name": "Planet LIne",
@@ -27,8 +26,14 @@
     "recipients": ["respmagsjb@durandservices.fr"]
   },
   {
-    "name": "Clas",
-    "magasin": "La Motte Servolex",
-    "recipients": ["receptionlms@durandservices.fr"]
+    "name": "Volteo Lyon",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"]
+  },
+  {
+    "name": "Volteo Villefranche",
+    "magasin": "Gleize",
+    "recipients": ["magvl4gleize@durandservices.fr"]
   }
 ]
