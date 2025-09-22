@@ -1,13 +1,34 @@
 [
   {
-    "name": "Fournisseur A",
+    "name": "Charnoud Equipiece",
     "magasin": "Chassieu",
-    "recipients": ["ramasse.chassieu@durandservices.fr"],
-    "cc": ["chef.magasin@durandservices.fr"]
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"]
   },
   {
-    "name": "Fournisseur B",
-    "magasin": "Gleizé",
-    "recipients": ["magvl4gleize@durandservices.fr"]
+    "name": "Volteo Lyon",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"]
+  },
+  {
+    "name": "Planet LIne",
+    "magasin": "Chasse sur Rhône",
+    "recipients": ["receptionchasse@durandservices.fr"]
+  },
+  {
+    "name": "RC Sport",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"]
+  },
+  {
+    "name": "St Fon Plaisance",
+    "magasin": "St Jean Bonnefonds",
+    "recipients": ["respmagsjb@durandservices.fr"]
+  },
+  {
+    "name": "Clas",
+    "magasin": "La Motte Servolex",
+    "recipients": ["receptionlms@durandservices.fr"]
   }
 ]

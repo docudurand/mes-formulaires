@@ -271,7 +271,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     const ackPayload = {
       email: String(email),
       fournisseur: String(sup?.name || fournisseur),
-      magasin: String(magasinDest || mg || ""),
+      magasin: String(mg || ""),
       pieces: String(pieces || ""),
       ts: Date.now().toString(),
       nonce: crypto.randomBytes(8).toString("hex"),
