@@ -65,8 +65,8 @@
       <label for="commentaire">Commentaire (optionnel)</label>
       <textarea id="commentaire" name="commentaire" rows="3" placeholder="Informations complémentaires…"></textarea>
 
-      <label for="file">Pièce jointe (optionnel)</label>
-      <input type="file" id="file" name="file" />
+      <label for="file">Pièce jointe</label>
+      <input type="file" id="file" name="file" required />
 
       <div class="paste-zone" id="pasteZone">
         📸 Vous pouvez aussi coller une capture d’écran avec <strong>Ctrl+V</strong>
@@ -116,8 +116,10 @@
     }
 
     function setMagasin(magasin){
-      document.getElementById('magasinCharge').textContent = magasin || '—';
-      document.getElementById('magasin').value = magasin || '';
+      const display = magasin && magasin !== '—' ? magasin : '—';
+      const hiddenVal = magasin && magasin !== '—' ? magasin : '';
+      document.getElementById('magasinCharge').textContent = display;
+      document.getElementById('magasin').value = hiddenVal;
     }
 
     (async () => {
@@ -130,6 +132,8 @@
         selF.addEventListener('change', () => {
           const opt = selF.selectedOptions[0];
           setMagasin(opt?.getAttribute('data-magasin') || '');
+          const mgVal = document.getElementById('magasin').value.trim();
+          selF.setCustomValidity(mgVal ? '' : 'Veuillez choisir un fournisseur qui possède un magasin en charge.');
         });
 
         const selM = document.getElementById('magasinDest');
@@ -182,11 +186,23 @@
 
     const form = document.getElementById('ramasseForm');
     const statusEl = document.getElementById('status');
+    const selF = document.getElementById('fournisseur');
 
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       statusEl.textContent = '⏳ Envoi en cours...';
       statusEl.style.color = 'black';
+
+      const mgVal = document.getElementById('magasin').value.trim();
+      if(!mgVal){
+        selF.setCustomValidity('Veuillez choisir un fournisseur valide (magasin en charge manquant).');
+        selF.reportValidity();
+        statusEl.textContent = '❌ Veuillez choisir un fournisseur valide (magasin en charge manquant).';
+        statusEl.style.color = 'red';
+        return;
+      } else {
+        selF.setCustomValidity('');
+      }
 
       const fd = new FormData(form);
       const cleaned = (fd.get('pieces')||'').toString()
