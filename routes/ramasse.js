@@ -23,9 +23,9 @@ const RAMASSE_SECRET =
   process.env.LEAVES_PASS ||
   "change-me";
 
-const SUPPLIERS_PATHS = [
-  path.resolve(__dirname, "suppliers.json"),
-  path.resolve(__dirname, "../suppliers.json"),
+const FOURNISSEUR_PATHS = [
+  path.resolve(__dirname, "fournisseur.json"),
+  path.resolve(__dirname, "../fournisseur.json"),
 ];
 const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
@@ -66,8 +66,8 @@ function loadJsonFrom(paths, fallback) {
   return fallback;
 }
 
-function loadSuppliers() {
-  const arr = loadJsonFrom(SUPPLIERS_PATHS, []);
+function loadFournisseurs() {
+  const arr = loadJsonFrom(FOURNISSEUR_PATHS, []);
   return Array.isArray(arr) ? arr : [];
 }
 
@@ -79,12 +79,12 @@ function loadMagasins() {
     );
   }
   const set = new Set();
-  for (const s of loadSuppliers()) if (s.magasin) set.add(String(s.magasin));
+  for (const f of loadFournisseurs()) if (f.magasin) set.add(String(f.magasin));
   return Array.from(set);
 }
 
-function findSupplier(name) {
-  const list = loadSuppliers();
+function findFournisseur(name) {
+  const list = loadFournisseurs();
   const n = String(name || "").trim().toLowerCase();
   return list.find(s => String(s.name || "").toLowerCase() === n);
 }
@@ -240,7 +240,7 @@ function shouldSendAckOnce(sig) {
 }
 
 router.get("/fournisseurs", (_req, res) => {
-  const out = loadSuppliers().map(({ name, magasin }) => ({ name, magasin }));
+  const out = loadFournisseurs().map(({ name, magasin }) => ({ name, magasin }));
   res.json(out);
 });
 
@@ -255,22 +255,22 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Champs requis manquants (fournisseur, email, pièces)." });
     }
 
-    const sup = findSupplier(fournisseur);
-    if (!sup) {
-      return res.status(400).json({ error: "Fournisseur inconnu dans suppliers.json" });
+    const four = findFournisseur(fournisseur);
+    if (!four) {
+      return res.status(400).json({ error: "Fournisseur inconnu dans fournisseur.json" });
     }
 
-    const mg = sup?.magasin || magasin || "";
-    const recipients = uniqEmails(sup?.recipients || []);
-    const cc = uniqEmails(sup?.cc || []);
+    const mg = four?.magasin || magasin || "";
+    const recipients = uniqEmails(four?.recipients || []);
+    const cc = uniqEmails(four?.cc || []);
 
     if (!recipients.length) {
-      return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur (suppliers.json)." });
+      return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur (fournisseur.json)." });
     }
 
     const ackPayload = {
       email: String(email),
-      fournisseur: String(sup?.name || fournisseur),
+      fournisseur: String(four?.name || fournisseur),
       magasin: String(mg || ""),
       pieces: String(pieces || ""),
       ts: Date.now().toString(),
@@ -279,16 +279,16 @@ router.post("/", upload.single("file"), async (req, res) => {
     const ackUrl = buildAckUrl(req, ackPayload);
 
     const pdfPath = await buildPdf({
-      fournisseur: sup?.name || fournisseur,
+      fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
       email,
       pieces,
       commentaire,
     });
 
-    const subject = `Demande de ramasse – ${sup?.name || fournisseur}`;
+    const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
     const html = buildMailHtml({
-      fournisseur: sup?.name || fournisseur,
+      fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
       email,
       pieces,
