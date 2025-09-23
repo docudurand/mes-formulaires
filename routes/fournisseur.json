@@ -2,8 +2,7 @@
   {
     "name": "AGRA",
     "magasin": "Chassieu",
-    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
-    "cc": ["respmagchassieu@durandservices.fr"],
+    "recipients": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
   },
     {
@@ -237,12 +236,12 @@
     "name": "VOLTEO VILLEFRANCHE",
     "magasin": "Gleize",
     "recipients": ["magvl4gleize@durandservices.fr"],
-	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
+	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
   },
   {
     "name": "Fournisseur Test",
     "magasin": "Gleize",
     "recipients": ["fselva@durandservices.fr"],
-	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
+	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
   }
 ]
