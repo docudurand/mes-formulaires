@@ -18,7 +18,7 @@ const salesMap = {
   'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
-  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Barret Olivier': 'magvl4gleize@durandservices.fr',
   'Remond Nicolas': 'nremond@durandservices.fr,magvl4gleize@durandservices.fr',
 };
 
@@ -76,12 +76,12 @@ router.post('/send-order', async (req, res) => {
     to,
     subject: `${subjectPrefix} ${salesperson || ''} – ${client || 'Client inconnu'}`,
     text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
-     attachments: [{
-    filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
-    content: Buffer.from(pdf, 'base64'),
-    contentType: 'application/pdf'
-  }]
-};
+    attachments: [{
+      filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
+      content: Buffer.from(pdf, 'base64'),
+      contentType: 'application/pdf'
+    }]
+  };
 
   try {
     await transporter.sendMail(mailOptions);
