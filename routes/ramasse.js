@@ -123,11 +123,11 @@ function formatParisNow() {
     minute: "2-digit",
     hour12: false,
   }).format(d);
-  const timeStr = time24.replace(":", "H"); // 10H11
+  const timeStr = time24.replace(":", "H");
   return { dateStr, timeStr };
 }
 
-async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }) {
+async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire, demandeurNomPrenom }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
   const doc = new PDFDocument({ size: "A4", margin: 56 });
@@ -199,6 +199,12 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(magasinDest), valX, y, valOpts);
   y += ROW_GAP;
 
+  if (demandeurNomPrenom && String(demandeurNomPrenom).trim()) {
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Nom Prénom du demandeur :", pageLeft, y, labelOpts);
+    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(demandeurNomPrenom), valX, y, valOpts);
+    y += ROW_GAP;
+  }
+
   if (commentaire && String(commentaire).trim()) {
     y += COMMENT_TOP_GAP;
     doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Commentaire :", pageLeft, y);
@@ -215,13 +221,13 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   });
 }
 
-function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, ackUrl }) {
+function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, ackUrl, demandeurNomPrenom }) {
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
     <p>Bonjour,</p>
     <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(pieces || "—")}</em>.</p>
     <p><strong>Destinataire(s) magasin :</strong> ${esc(magasinDest || "—")}<br/>
-       <strong>Demandeur :</strong> ${esc(email)}</p>
+       <strong>Demandeur :</strong> ${esc(email)}${demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""}</p>
     ${commentaire ? `<p><strong>Commentaire :</strong><br/>${esc(String(commentaire)).replace(/\n/g,"<br/>")}</p>` : ""}
     <p>
       <a href="${ackUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700">Accuser de réception</a>
@@ -296,7 +302,7 @@ router.get("/magasins", (_req, res) => {
 
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    const { fournisseur, magasin, email, pieces, commentaire, magasinDest } = req.body;
+    const { fournisseur, magasin, email, pieces, commentaire, magasinDest, demandeurNomPrenom } = req.body;
     if (!fournisseur || !email || !pieces) {
       return res.status(400).json({ error: "Champs requis manquants (fournisseur, email, pièces)." });
     }
@@ -330,6 +336,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       email,
       pieces,
       commentaire,
+      demandeurNomPrenom,
     });
 
     const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
@@ -340,6 +347,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       pieces,
       commentaire,
       ackUrl,
+      demandeurNomPrenom,
     });
 
     const attachments = [{ filename: path.basename(pdfPath), path: pdfPath, contentType: "application/pdf" }];
