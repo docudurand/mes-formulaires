@@ -2,8 +2,7 @@
   {
     "name": "Charnoud Equipiece",
     "magasin": "Chassieu",
-    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
-    "cc": ["respmagchassieu@durandservices.fr"]
+    "recipients": ["respmagchassieu@durandservices.fr"]
   },
   {
     "name": "Clas",
