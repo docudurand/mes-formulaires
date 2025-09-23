@@ -110,12 +110,13 @@ function formatParisNow() {
     month: "2-digit",
     year: "numeric",
   }).format(d);
-  const timeStr = new Intl.DateTimeFormat("fr-FR", {
+  const time24 = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(d).replace(":", "h");
+  }).format(d);
+  const timeStr = time24.replace(":", "H");
   return { dateStr, timeStr };
 }
 
@@ -138,17 +139,6 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
     doc.image(buf, pageLeft, 36, { width: 90 });
   } catch {  }
 
-  const { dateStr, timeStr } = formatParisNow();
-  doc
-    .font("Helvetica-Bold")
-    .fillColor(gray)
-    .fontSize(11)
-    .text(`${dateStr}\n${timeStr}`, pageLeft, 40, {
-      width: pageRight - pageLeft,
-      align: "right",
-      lineGap: 2,
-    });
-
   const titleY = 140;
   doc
     .font("Helvetica-Bold")
@@ -169,23 +159,29 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   doc.fontSize(13).fillColor(blue).text("Informations", pageLeft, y);
   y = doc.y + 10;
 
-  const labelW = 110;
-  doc.fontSize(11).fillColor(gray).font("Helvetica-Bold").text("Fournisseur :", pageLeft, y, { width: labelW });
-  doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", pageLeft + labelW + 10, y, { width: colW - labelW - 10 });
+  const labelW = 150;
+  const valX   = pageLeft + labelW + 10;
+  const valW   = colW - labelW - 10;
 
-  doc.y = Math.max(doc.y, y) + 18;
-  doc.font("Helvetica-Bold").fillColor(gray).text("Références :", pageLeft, doc.y);
-  doc.moveDown(0.3);
-  doc.font("Helvetica").fillColor("#000").text((pieces || "—"), { width: pageRight - pageLeft });
+  const { dateStr, timeStr } = formatParisNow();
+  doc.fontSize(11).fillColor(gray).font("Helvetica-Bold").text("Date de demande :", pageLeft, y, { width: labelW });
+  doc.font("Helvetica").fillColor("#000").text(`${dateStr} ${timeStr}`, valX, y, { width: valW });
+  y = Math.max(doc.y, y) + 18;
 
-  doc.moveDown(0.8);
-  doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", pageLeft, doc.y);
-  doc.moveDown(0.2);
-  doc.font("Helvetica").fillColor("#000").text(magasinDest || "—", { width: pageRight - pageLeft });
+  doc.font("Helvetica-Bold").fillColor(gray).text("Fournisseur :", pageLeft, y, { width: labelW });
+  doc.font("Helvetica").fillColor("#000").text(fournisseur || "—", valX, y, { width: valW });
+  y = Math.max(doc.y, y) + 18;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Références :", pageLeft, y, { width: labelW });
+  doc.font("Helvetica").fillColor("#000").text(pieces || "—", valX, y, { width: valW });
+  y = Math.max(doc.y, y) + 18;
+
+  doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", pageLeft, y, { width: labelW });
+  doc.font("Helvetica").fillColor("#000").text(magasinDest || "—", valX, y, { width: valW });
+  y = Math.max(doc.y, y) + 18;
 
   if (commentaire && String(commentaire).trim()) {
-    doc.moveDown(0.8);
-    doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, doc.y);
+    doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, y);
     doc.moveDown(0.2);
     doc.font("Helvetica").fillColor("#000").text(String(commentaire), { width: pageRight - pageLeft });
   }
