@@ -88,6 +88,15 @@
         <label for="qDate">Date (départ)</label>
         <input id="qDate" type="text" inputmode="numeric" placeholder="AAAA-MM-JJ ou JJ/MM/AAAA">
       </div>
+
+      <div>
+        <label for="qStatut">Statut</label>
+        <select id="qStatut">
+          <option value="">— Tous —</option>
+          <option value="en cours">En cours</option>
+          <option value="clôturé">Clôturé</option>
+        </select>
+      </div>
     </div>
 
     <div class="yearbar" aria-label="Filtre par année et mois (date de départ)">
@@ -97,7 +106,7 @@
       </div>
       <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
       <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
-      <div class="legend"></div>
+      <div class="legend">Astuce : ces onglets filtrent selon le <strong>mois de la date de départ</strong> du prêt.</div>
     </div>
 
     <div class="notice" id="notice"></div>
@@ -230,8 +239,14 @@
     const fmtTime=v=>{ const d=parseMaybeDate(v); return d?`${p2(d.getHours())}:${p2(d.getMinutes())}`:'—'; };
     const toDateInput=v=>{ const d=parseMaybeDate(v); return d?`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`:''; };
     const toTimeInput=v=>{ const d=parseMaybeDate(v); return d?`${p2(d.getHours())}:${p2(d.getMinutes())}`:''; };
-    const pill=s=>{ const n=String(s||'').toLowerCase(); if(n==='en cours') return '<span class="pill warn">En cours</span>'; if(n==='cloturé'||n==='clôturé') return '<span class="pill ok">Clôturé</span>'; return `<span class="pill">${s||'—'}</span>`; };
-    const isOpen=s => String(s||'').toLowerCase()==='en cours';
+
+    const pill=s=>{
+      const n=normalizeStatus(s);
+      if(n==='en cours') return '<span class="pill warn">En cours</span>';
+      if(n==='clôturé')  return '<span class="pill ok">Clôturé</span>';
+      return `<span class="pill">${s||'—'}</span>`;
+    };
+    const isOpen=s => normalizeStatus(s)==='en cours';
 
     let __rows = [];
     let __stores = [];
@@ -245,6 +260,15 @@
       const s1 = q.toLowerCase().replace(/[.\s]/g,'').replace(/\//g,'-');
       return s1;
     }
+
+    function normalizeStatus(s){
+      const v = String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+      if(v.includes('en cours')) return 'en cours';
+      if(v.includes('cloture') || v.includes('clôture') || v.includes('cloturee') || v.includes('cloturé')) return 'clôturé';
+      if(v.includes('cloturé') || v.includes('clôturé')) return 'clôturé';
+      return (String(s||'')).trim();
+    }
+
     function dateFormsForFilter(v){
       const d = parseMaybeDate(v);
       if(!d){
@@ -274,6 +298,7 @@
       const immat = (document.getElementById('qImmat').value || '').trim();
       const store = (document.getElementById('qStore').value || '').trim();
       const qDate = normalizeQueryDate(document.getElementById('qDate').value);
+      const qStatut = normalizeStatus(document.getElementById('qStatut').value || '');
 
       const filtered = (__rows||[]).filter(r=>{
         const okImmat = !immat || String(r.immatriculation||'')===immat;
@@ -282,6 +307,9 @@
         const forms = dateFormsForFilter(r.date_depart);
         const qNum  = qDate.replace(/\D/g,'');
         const okDateText = !qDate || forms.some(f=> f.includes(qDate) || f.replace(/\D/g,'').includes(qNum));
+
+        const rStatut = normalizeStatus(r.status);
+        const okStatut = !qStatut || rStatut === qStatut;
 
         const d = parseMaybeDate(r.date_depart);
         const y = d ? d.getFullYear() : null;
@@ -293,17 +321,19 @@
           );
         }
 
-        return okImmat && okStore && okDateText && okYearMonth;
+        return okImmat && okStore && okDateText && okStatut && okYearMonth;
       });
 
       render(filtered);
+
       const ymText = __yearFilter
-  ? ` – ${(__monthFilter && __monthFilter !== 'all')
-        ? `${p2(__monthFilter)}/${__yearFilter}`
-        : (__monthFilter === 'all'
-            ? `Tout ${__yearFilter}`
-            : `${__yearFilter}`)}`
-  : '';
+        ? ` – ${(__monthFilter && __monthFilter !== 'all')
+              ? `${p2(__monthFilter)}/${__yearFilter}`
+              : (__monthFilter === 'all'
+                  ? `Tout ${__yearFilter}`
+                  : `${__yearFilter}`)}`
+        : '';
+
       setNotice(`${filtered.length} résultat(s)${ymText}`);
     }
 
@@ -473,6 +503,7 @@
     document.getElementById('qImmat').addEventListener('change', applyFilters);
     document.getElementById('qStore').addEventListener('change', applyFilters);
     document.getElementById('qDate').addEventListener('input', applyFilters);
+    document.getElementById('qStatut').addEventListener('change', applyFilters);
 
     const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
 
@@ -501,7 +532,7 @@
 
     function setYearActive(year){
       __yearFilter = String(year||'') || '';
-      __monthFilter = '';
+      __monthFilter = ''; // reset jusqu’à sélection d’un mois
       document.querySelectorAll('.yearBtn').forEach(b=>{
         const on = String(b.dataset.year)===String(year);
         b.classList.toggle('active', on);
