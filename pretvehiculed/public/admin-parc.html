@@ -24,20 +24,31 @@
     tbody td{padding:calc(10px*var(--scale));border-bottom:var(--bw) solid #f1f3f5;vertical-align:top}
     tr:last-child td{border-bottom:0}
     .pill{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:calc(4px*var(--scale)) calc(8px*var(--scale));
-  border-radius:999px;
-  border:var(--bw) solid var(--line);
-  text-align:center;
-  min-width:calc(90px*var(--scale));
-}
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:calc(4px*var(--scale)) calc(8px*var(--scale));
+      border-radius:999px;border:var(--bw) solid var(--line);text-align:center;min-width:calc(90px*var(--scale));
+    }
     .ok{background:#f2faf4;color:#2e7d32;border-color:#b7e3c3}
     .warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
     .right{text-align:right;white-space:nowrap}
     .stack{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
     .notice{margin-top:calc(10px*var(--scale))}
+
+    .yearbar{margin:calc(12px*var(--scale)) 0 0;display:flex;flex-direction:column;gap:calc(8px*var(--scale))}
+    .yearTabs{display:flex;gap:calc(8px*var(--scale));flex-wrap:wrap}
+    .yearBtn{
+      background:#fff;color:#073763;border:var(--bw) solid var(--line);border-radius:999px;
+      padding:calc(6px*var(--scale)) calc(12px*var(--scale));font-weight:700;cursor:pointer;
+    }
+    .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
+    .months{display:none;gap:calc(6px*var(--scale));flex-wrap:wrap}
+    .months.active{display:flex}
+    .monthBtn{
+      background:#fff;border:var(--bw) solid var(--line);color:#073763;
+      border-radius:999px;padding:calc(6px*var(--scale)) calc(10px*var(--scale));cursor:pointer;font-weight:600
+    }
+    .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
+    .legend{opacity:.8;font-size:.95em}
 
     .modalMask{
       position:fixed; inset:0; background:#0006; display:none;
@@ -77,6 +88,16 @@
         <label for="qDate">Date (départ)</label>
         <input id="qDate" type="text" inputmode="numeric" placeholder="AAAA-MM-JJ ou JJ/MM/AAAA">
       </div>
+    </div>
+
+    <div class="yearbar" aria-label="Filtre par année et mois (date de départ)">
+      <div class="yearTabs" role="tablist" aria-label="Années">
+        <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
+        <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
+      </div>
+      <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
+      <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
+      <div class="legend"></div>
     </div>
 
     <div class="notice" id="notice"></div>
@@ -215,6 +236,9 @@
     let __rows = [];
     let __stores = [];
 
+    let __yearFilter = '';
+    let __monthFilter = '';
+
     function normalizeQueryDate(q){
       q = (q||'').trim();
       if(!q) return '';
@@ -257,13 +281,30 @@
 
         const forms = dateFormsForFilter(r.date_depart);
         const qNum  = qDate.replace(/\D/g,'');
-        const okDate = !qDate || forms.some(f=> f.includes(qDate) || f.replace(/\D/g,'').includes(qNum));
+        const okDateText = !qDate || forms.some(f=> f.includes(qDate) || f.replace(/\D/g,'').includes(qNum));
 
-        return okImmat && okStore && okDate;
+        const d = parseMaybeDate(r.date_depart);
+        const y = d ? d.getFullYear() : null;
+        const m = d ? (d.getMonth()+1) : null;
+        let okYearMonth = true;
+        if(__yearFilter){
+          okYearMonth = (String(y)===String(__yearFilter)) && (
+            !__monthFilter || __monthFilter==='all' || String(m)===String(__monthFilter)
+          );
+        }
+
+        return okImmat && okStore && okDateText && okYearMonth;
       });
 
       render(filtered);
-      setNotice(`${filtered.length} résultat(s)`);
+      const ymText = __yearFilter
+  ? ` – ${(__monthFilter && __monthFilter !== 'all')
+        ? `${p2(__monthFilter)}/${__yearFilter}`
+        : (__monthFilter === 'all'
+            ? `Tout ${__yearFilter}`
+            : `${__yearFilter}`)}`
+  : '';
+      setNotice(`${filtered.length} résultat(s)${ymText}`);
     }
 
     function render(rows){
@@ -433,7 +474,93 @@
     document.getElementById('qStore').addEventListener('change', applyFilters);
     document.getElementById('qDate').addEventListener('input', applyFilters);
 
-    (async ()=>{ await loadStores(); await loadAllLoans(); })();
+    const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+    function buildMonths(year){
+      const ctn = document.getElementById(`months-${year}`);
+      if(!ctn) return;
+      ctn.innerHTML = '';
+      MONTHS.forEach((label, idx)=>{
+        const m = idx+1;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'monthBtn';
+        btn.dataset.month = String(m);
+        btn.dataset.year  = String(year);
+        btn.textContent = label;
+        ctn.appendChild(btn);
+      });
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.className = 'monthBtn';
+      allBtn.dataset.month = 'all';
+      allBtn.dataset.year  = String(year);
+      allBtn.textContent = 'Tout';
+      ctn.appendChild(allBtn);
+    }
+
+    function setYearActive(year){
+      __yearFilter = String(year||'') || '';
+      __monthFilter = '';
+      document.querySelectorAll('.yearBtn').forEach(b=>{
+        const on = String(b.dataset.year)===String(year);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on?'true':'false');
+      });
+      document.querySelectorAll('.months').forEach(div=>{
+        div.classList.toggle('active', div.id===`months-${year}`);
+      });
+      document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove('active'));
+      applyFilters();
+    }
+
+    function setMonthActive(year, month){
+      if(String(__yearFilter)!==String(year)) setYearActive(year);
+      __monthFilter = String(month||'');
+
+      document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=>{
+        b.classList.toggle('active', String(b.dataset.month)===String(month));
+      });
+      applyFilters();
+    }
+
+    document.querySelector('.yearTabs').addEventListener('click', (e)=>{
+      const b = e.target.closest('.yearBtn');
+      if(!b) return;
+      setYearActive(b.dataset.year);
+    });
+
+    document.getElementById('months-2025').addEventListener('click', (e)=>{
+      const b = e.target.closest('.monthBtn'); if(!b) return;
+      setMonthActive('2025', b.dataset.month);
+    });
+    document.getElementById('months-2026').addEventListener('click', (e)=>{
+      const b = e.target.closest('.monthBtn'); if(!b) return;
+      setMonthActive('2026', b.dataset.month);
+    });
+
+    function autoSelectCurrentYearMonth(){
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1; // 1..12
+      if (y === 2025 || y === 2026) {
+        setMonthActive(String(y), String(m));
+      } else {
+        __yearFilter = '';
+        __monthFilter = '';
+        applyFilters();
+      }
+    }
+
+    (async ()=>{
+      buildMonths(2025);
+      buildMonths(2026);
+
+      await loadStores();
+      await loadAllLoans();
+
+      autoSelectCurrentYearMonth();
+    })();
   </script>
 </body>
 </html>
