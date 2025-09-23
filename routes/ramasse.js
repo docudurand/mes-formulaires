@@ -127,7 +127,15 @@ function formatParisNow() {
   return { dateStr, timeStr };
 }
 
-async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire, demandeurNomPrenom }) {
+async function buildPdf({
+  fournisseur,
+  magasinDest,
+  email,
+  pieces,
+  commentaire,
+  demandeurNomPrenom,
+  infoLivreur,
+}) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
   const doc = new PDFDocument({ size: "A4", margin: 56 });
@@ -170,7 +178,6 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire, 
     });
 
   doc.moveDown(3);
-
   let y = doc.y + GAP_AFTER_TITLE;
 
   doc.fontSize(SECTION_FS).fillColor(blue).text("Informations", pageLeft, y);
@@ -190,6 +197,12 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire, 
   doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Fournisseur :", pageLeft, y, labelOpts);
   doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(fournisseur), valX, y, valOpts);
   y += ROW_GAP;
+
+  if (infoLivreur && String(infoLivreur).trim()) {
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Info livreur :", pageLeft, y, labelOpts);
+    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(infoLivreur), valX, y, valOpts);
+    y += ROW_GAP;
+  }
 
   doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Références :", pageLeft, y, labelOpts);
   doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(pieces), valX, y, valOpts);
@@ -292,7 +305,7 @@ function shouldSendAckOnce(sig) {
 }
 
 router.get("/fournisseurs", (_req, res) => {
-  const out = loadFournisseurs().map(({ name, magasin }) => ({ name, magasin }));
+  const out = loadFournisseurs().map(({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur }));
   res.json(out);
 });
 
@@ -337,6 +350,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       pieces,
       commentaire,
       demandeurNomPrenom,
+      infoLivreur: four?.infoLivreur || "",
     });
 
     const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
