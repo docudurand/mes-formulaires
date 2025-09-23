@@ -2,7 +2,8 @@
   {
     "name": "Charnoud Equipiece",
     "magasin": "Chassieu",
-    "recipients": ["respmagchassieu@durandservices.fr"]
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"]
   },
   {
     "name": "Clas",
@@ -34,5 +35,10 @@
     "name": "Volteo Villefranche",
     "magasin": "Gleize",
     "recipients": ["magvl4gleize@durandservices.fr"]
+  },
+  {
+    "name": "Fournisseur Test",
+    "magasin": "Gleize",
+    "recipients": ["fselva@durandservices.fr"]
   }
 ]

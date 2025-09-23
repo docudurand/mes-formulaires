@@ -137,20 +137,32 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const blue = "#0f4c81";
   const gray = "#102a43";
 
+  const TITLE_FS   = 24;
+  const SECTION_FS = 14;
+  const LABEL_FS   = 12;
+  const VALUE_FS   = 12;
+  const COMMENT_FS = 12;
+
   const pageLeft  = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
+
+  const GAP_AFTER_TITLE = 28;
+  const GAP_AFTER_INFO_HDR = 22;
+  const ROW_GAP = 24;
+  const COMMENT_TOP_GAP = 14;
+  const COMMENT_LINE_GAP = 3;
 
   try {
     const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
-  } catch {  }
+  } catch {}
 
   const titleY = 140;
   doc
     .font("Helvetica-Bold")
     .fillColor(blue)
-    .fontSize(24)
+    .fontSize(TITLE_FS)
     .text("Demande de\nramasse de pièces", pageLeft, titleY, {
       align: "center",
       width: pageRight - pageLeft,
@@ -159,12 +171,10 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
 
   doc.moveDown(3);
 
-  const colGap = 24;
-  const colW   = (pageRight - pageLeft - colGap) / 2;
-  let y = doc.y;
+  let y = doc.y + GAP_AFTER_TITLE;
 
-  doc.fontSize(13).fillColor(blue).text("Informations", pageLeft, y);
-  y = doc.y + 10;
+  doc.fontSize(SECTION_FS).fillColor(blue).text("Informations", pageLeft, y);
+  y = doc.y + GAP_AFTER_INFO_HDR;
 
   const labelW = 160;
   const valX   = pageLeft + labelW + 10;
@@ -173,26 +183,29 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
   const valOpts   = { width: valW, lineBreak: false };
 
   const { dateStr, timeStr } = formatParisNow();
-  doc.fontSize(11).fillColor(gray).font("Helvetica-Bold").text("Date de demande :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fillColor("#000").text(`${dateStr} ${timeStr}`, valX, y, valOpts);
-  y += 18;
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Date de demande :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(`${dateStr} ${timeStr}`, valX, y, valOpts);
+  y += ROW_GAP;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Fournisseur :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fillColor("#000").text(oneLine(fournisseur), valX, y, valOpts);
-  y += 18;
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Fournisseur :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(fournisseur), valX, y, valOpts);
+  y += ROW_GAP;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Références :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fillColor("#000").text(oneLine(pieces), valX, y, valOpts);
-  y += 18;
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Références :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(pieces), valX, y, valOpts);
+  y += ROW_GAP;
 
-  doc.font("Helvetica-Bold").fillColor(gray).text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fillColor("#000").text(oneLine(magasinDest), valX, y, valOpts);
-  y += 18;
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(magasinDest), valX, y, valOpts);
+  y += ROW_GAP;
 
   if (commentaire && String(commentaire).trim()) {
-    doc.font("Helvetica-Bold").fillColor(gray).text("Commentaire :", pageLeft, y);
-    doc.moveDown(0.2);
-    doc.font("Helvetica").fillColor("#000").text(String(commentaire), { width: pageRight - pageLeft });
+    y += COMMENT_TOP_GAP;
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Commentaire :", pageLeft, y);
+    y = doc.y + COMMENT_LINE_GAP;
+    doc.font("Helvetica").fontSize(COMMENT_FS).fillColor("#000").text(String(commentaire), pageLeft, y, {
+      width: pageRight - pageLeft,
+    });
   }
 
   doc.end();
