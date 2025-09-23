@@ -102,6 +102,23 @@ function esc(t = "") {
   );
 }
 
+function formatParisNow() {
+  const d = new Date();
+  const dateStr = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
+  const timeStr = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d).replace(":", "h");
+  return { dateStr, timeStr };
+}
+
 async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }) {
   const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
   const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
@@ -120,6 +137,17 @@ async function buildPdf({ fournisseur, magasinDest, email, pieces, commentaire }
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
   } catch {  }
+
+  const { dateStr, timeStr } = formatParisNow();
+  doc
+    .font("Helvetica-Bold")
+    .fillColor(gray)
+    .fontSize(11)
+    .text(`${dateStr}\n${timeStr}`, pageLeft, 40, {
+      width: pageRight - pageLeft,
+      align: "right",
+      lineGap: 2,
+    });
 
   const titleY = 140;
   doc
