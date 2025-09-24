@@ -1,5 +1,17 @@
 [
   {
+    "name": "AIR PN",
+    "magasin": "La Motte Servolex",
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	 "infoLivreur": "Ville : MURS ET GELIGNIEUX Tournée AIN"
+  },
+  {
+    "name": "ALGI",
+    "magasin": "Annemasse",
+    "recipients": [""],
+	 "infoLivreur": "Ville : SCIONZIER Tournée ROCHOIS"
+  },
+  {
     "name": "AGRA",
     "magasin": "Chassieu",
     "recipients": ["respmagchassieu@durandservices.fr"],
@@ -48,6 +60,12 @@
 	 "infoLivreur": "Ville : SAINT PRIEST Tournée 6"
   },
   {
+    "name": "CEMO",
+    "magasin": "Miribel",
+    "recipients": [""],
+	 "infoLivreur": "Ville : MONTANAY Tournée NORD"
+  },
+  {
     "name": "CHARNOUD EQUIPIECE",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -55,10 +73,10 @@
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
   },
   {
-    "name": "CLAS",
+    "name": "CLAS EQUIPPEMENT ",
     "magasin": "La Motte Servolex",
-    "recipients": ["receptionlms@durandservices.fr"],
-	 "infoLivreur": ""
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
   },
   {
     "name": "COMPTOIR FRANCE ESPAGNE",
@@ -66,6 +84,12 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "COVERGUARD",
+    "magasin": "Miribel",
+    "recipients": [""],
+	 "infoLivreur": "Ville : MIONNAY Tournée NORD"
   },
   {
     "name": "DAF SAINT PRIEST",
@@ -103,6 +127,12 @@
 	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
   },
   {
+    "name": "KONIG",
+    "magasin": "La Motte Servolex",
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
+  },
+  {
     "name": "MAHLE",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -136,6 +166,12 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "MG ATTELAGE",
+    "magasin": "Miribel",
+    "recipients": [""],
+	 "infoLivreur": "Ville : DARDILLY Tournée OUEST"
   },
   {
     "name": "MORREAU",
@@ -201,8 +237,16 @@
   {
     "name": "ST-FONS-PLAISANCE",
     "magasin": "St Jean Bonnefonds",
-    "recipients": ["respmagsjb@durandservices.fr"],
-	 "infoLivreur": ""
+    "recipients": ["magvl5sjb@durandservices.fr,"],
+	"cc": ["respmagsjb@durandservices.fr"],
+	 "infoLivreur": "Ville : ST PRIEST 42 Tournée ST ETIENNE OU MONTBRISON"
+  },
+  {
+    "name": "TEXA",
+    "magasin": "St Jean Bonnefonds",
+    "recipients": ["magvl5sjb@durandservices.fr,"],
+	"cc": ["respmagsjb@durandservices.fr"],
+	 "infoLivreur": "Ville : LA TALUIDIERE Tournée ST ETIENNE OU MONTBRISON"
   },
   {
     "name": "TOYOTA MEYZIEU",
