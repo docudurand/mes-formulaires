@@ -657,7 +657,11 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
-      const entries = computeCpDeltaAgainstSnapshotFromDOM();
+      const entries = computeCpDeltaAgainstSnapshotFromDOM(); // [{nom, prenom, fullName, delta}, ...]
+await fetchJSON('/adjust-conges', {
+  method:'POST',
+  body: JSON.stringify({ magasin: currentMagasin, date: $dateInput.value || todayISO(), entries })
+});
       if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         // resnapshot to new state to avoid double comptage

@@ -65,29 +65,38 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
+// === Base FTP paths (needed by ADJUST_LOG) ===
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
-const ADJUST_LOG = `${PRES_ROOT}/adjust_conges.jsonl`;
+const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
 
 async function appendJSONL(client, remotePath, obj){
   const tmp = tmpFile("adj_"+Date.now()+".jsonl");
   try{
-    // essayer de télécharger le fichier existant si présent
-    try{ await client.downloadTo(tmp, remotePath); }catch{}
-    const line = JSON.stringify(obj) + "\n";
-    require('fs').appendFileSync(tmp, line, "utf8");
-    const dir = require('path').posix.dirname(remotePath);
+    // Best-effort: récupérer l’existant
+    try { await client.downloadTo(tmp, remotePath); } catch {}
+    const dir = path.posix.dirname(remotePath);
     await client.ensureDir(dir);
+    fs.appendFileSync(tmp, JSON.stringify(obj) + "\n", "utf8");
     await client.uploadFrom(tmp, remotePath);
-  } finally { try{ require('fs').unlinkSync(tmp); }catch{} }
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
 }
 
 app.post("/presence/adjust-conges", async (req, res) => {
   try{
-    const { magasin, date, entries } = req.body || {};
-    if (!magasin || !Array.isArray(entries)) return res.status(400).json({ ok:false, error:"bad_request" });
+    // On accepte { entries: [...] } ou { adjustments: [...] }
+    const { magasin, date, entries, adjustments } = req.body || {};
+    const list = Array.isArray(entries) ? entries : (Array.isArray(adjustments) ? adjustments : null);
+    if (!magasin || !Array.isArray(list)) {
+      return res.status(400).json({ ok:false, error:"bad_request" });
+    }
+
     const stamp = new Date().toISOString();
-    const payload = { magasin, date: date || stamp.slice(0,10), entries, stamp, source:"front" };
+    const payload = { magasin, date: date || stamp.slice(0,10), entries: list, stamp, source:"front" };
+
+    // 1) Journal JSONL sur FTP (best-effort)
     try{
       const client = await ftpClient();
       await appendJSONL(client, ADJUST_LOG, payload);
@@ -95,14 +104,50 @@ app.post("/presence/adjust-conges", async (req, res) => {
     }catch(e){
       console.warn("[adjust-conges] persistence skipped:", e?.message||e);
     }
+
+    // 2) Relai Apps Script : si tu gardes 'deccp' seulement => on n’envoie que les deltas négatifs;
+    //    si tu ajoutes 'adjustcp' (patch ci-dessous), on enverra les deux sens (+/-).
+    const GS_URL = process.env.CP_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_URL || undefined;
+    const SUPPORTS_ADJUST = String(process.env.CP_GS_SUPPORTS_ADJUST || "0") === "1";
+
+    if (GS_URL) {
+      for (const e of list) {
+        const delta = Number(e.delta || 0);
+        if (!delta || !e) continue;
+
+        // On normalise nom/prenom si absent mais fullName présent
+        const full = String(e.fullName || "").trim();
+        const nom = (e.nom || (full.split(/\s+/)[0] || "")).trim();
+        const prenom = (e.prenom || (full.split(/\s+/).slice(1).join(" ") || "")).trim();
+
+        try {
+          if (SUPPORTS_ADJUST) {
+            // Nouveau handler Apps Script (ci-dessous) — gère +/-
+            await fetch(`${GS_URL}?action=adjustcp`, {
+              method:"POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({ magasin, nom, prenom, delta }) // delta peut être négatif (consomme) ou positif (rends)
+            });
+          } else if (delta < 0) {
+            // Ancien handler (décrément uniquement)
+            await fetch(`${GS_URL}?action=deccp`, {
+              method:"POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({ magasin, nom, prenom, nbJours: Math.abs(delta) })
+            });
+          }
+        } catch(err) {
+          console.warn("[adjust-conges] GS relay failed for", nom, prenom, delta, err?.message||err);
+        }
+      }
+    }
+
     return res.json({ ok:true });
   }catch(e){
     console.error("[adjust-conges]", e);
     return res.status(200).json({ ok:true, note:"no_persist" });
   }
 });
-
-
 
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 app.use("/public", express.static(path.join(process.cwd(), "public")));
