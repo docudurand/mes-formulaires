@@ -15,25 +15,22 @@
   .wrap{max-width:1680px;margin:22px auto;padding:14px}
   h1{ margin:0 0 10px; color:var(--primary); font-size:1.35rem; }
 
-  /* Toolbar */
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 12px}
   label{font-weight:600;color:#334155}
   select,input{padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:.95rem; background:#fff}
 
-  /* Années/Mois */
+  /* Années / Mois */
   .yearbar{margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
   .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
-  .yearBtn{background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;
-    padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem}
+  .yearBtn{background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem}
   .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
   .months{display:none;gap:6px;flex-wrap:wrap}
   .months.active{display:flex}
-  .monthBtn{background:#fff;border:1px solid var(--line);color:#073763;border-radius:999px;
-    padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem}
+  .monthBtn{background:#fff;border:1px solid var(--line);color:#073763;border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem}
   .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
   .legend{opacity:.8;font-size:.9rem}
 
-  /* Tableau – blanc, sans “cadrillage” */
+  /* Tableau (blanc, sans quadrillage) */
   .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
   table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; background:#fff}
   thead th{
@@ -41,27 +38,27 @@
     white-space:nowrap;
   }
   thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; } /* évite chevauchement */
-  tbody tr{background:#fff}                 /* lignes blanches */
-  tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff} /* pas de bordures */
+  tbody tr{background:#fff}
+  tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff}
 
-  /* Largeurs (100%) – Service & Compte réduits, fin de ligne élargie */
+  /* Largeurs (somme = 100%) – place à la fin de ligne, compte & client réduits */
   .col-no        { width: 5%  }
   .col-magasin   { width: 10% }
-  .col-compte    { width: 9%  }  /* ↓ */
-  .col-client    { width: 16% }
-  .col-service   { width: 17% }  /* ↓ */
+  .col-compte    { width: 8%  }  /* ↓ */
+  .col-client    { width: 14% }  /* ↓ */
+  .col-service   { width: 16% }  /* ↓ */
   .col-date      { width: 9%  }
-  .col-statut    { width: 14% }  /* ↑ */
-  .col-eta       { width: 7%  }  /* ↑ */
-  .col-actions   { width: 13% }  /* ↑ */
+  .col-statut    { width: 13% }
+  .col-eta       { width: 11% }  /* ↑ (liste visible) */
+  .col-actions   { width: 14% }  /* ↑ */
 
   .nowrap   { white-space:nowrap; }
   .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-  /* Statuts / contrôles – compacts mais lisibles */
+  /* Statuts / contrôles */
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
-    padding:6px 10px; border-radius:999px; font-weight:700; font-size:.85rem; min-width:100px; text-align:center;
+    padding:6px 10px; border-radius:999px; font-weight:700; font-size:.85rem; min-width:90px; text-align:center;
   }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
@@ -69,15 +66,14 @@
   .s-4{background:var(--s4); color:var(--s4b)}
 
   .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
-  .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:170px;}
-  .etaSel   {padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:68px;}
+  .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:150px;}
+  .etaSel   {padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:100px;}
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
-    padding:7px 12px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap; font-size:.9rem}
-  .btnView{min-width:120px} /* “Voir dossier” complet */
+    padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem}
+  .btnView{white-space:normal; line-height:1.05; padding:7px 10px; min-width:86px} /* “Voir” sur 1ère ligne, “dossier” dessous */
 
   .spinner{
-    width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:var(--primary);
-    border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
+    width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#004080;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -143,7 +139,7 @@
           <th class="nowrap">Service</th>
           <th class="nowrap">Date</th>
           <th class="nowrap">Statut</th>
-          <th class="th-eta">Estimation Temps Travaux</th>
+          <th class="th-eta">Estimation<br>Temps Travaux</th>
           <th class="th-actions">Actions</th>
         </tr>
       </thead>
@@ -304,7 +300,7 @@ function draw(){
         <td class="col-eta nowrap">${buildEstimateSelect(r.estimation)}</td>
         <td class="col-actions nowrap">
           <div class="actions">
-            <button class="btnView">Voir dossier</button>
+            <button class="btnView">Voir<br>dossier</button>
             <select class="statusSel">
               ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
             </select>
@@ -395,42 +391,6 @@ function openDetails(row){
       <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
       <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
     </div>
-
-    ${h.service === "Rectification Culasse" && cul ? `
-      <div class="section">
-        <h3>Détails Rectification Culasse</h3>
-        <div class="grid2">
-          <div><span class="label">Cylindre :</span> ${esc(cul.cylindre||"")}</div>
-          <div><span class="label">Soupapes :</span> ${esc(cul.soupapes||"")}</div>
-          <div><span class="label">Carburant :</span> ${esc(cul.carburant||"")}</div>
-        </div>
-        <div class="section">
-          <h3>Opérations</h3>
-          ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
-        </div>
-        <div class="section">
-          <h3>Pièces à fournir</h3>
-          ${piecesHTML}
-        </div>
-      </div>
-    ` : ""}
-
-    ${(h.service === "Contrôle injection Diesel" || h.service === "Contrôle injection Essence") && inj ? `
-      <div class="section">
-        <h3>Détails Contrôle injection</h3>
-        <div class="grid2">
-          <div><span class="label">Type :</span> ${esc(inj.type||"")}</div>
-          <div><span class="label">Nb injecteurs :</span> ${esc(inj.nombre||"")}</div>
-        </div>
-      </div>
-    ` : ""}
-
-    ${com ? `
-      <div class="section">
-        <h3>Commentaires</h3>
-        <div class="area">${esc(com)}</div>
-      </div>
-    ` : ""}
   `;
 
   $mask.style.display = "flex";
@@ -451,12 +411,9 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
         <meta charset="utf-8" />
         <style>
           body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
-          h3{color:#004080;margin-top:16px}
           .label{font-weight:700}
           .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
           .section{margin-top:14px}
-          .bul{margin:6px 0}
-          .sub{margin:2px 0 0 18px}
           .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
         </style>
       </head>
