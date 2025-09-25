@@ -102,9 +102,6 @@ app.post("/presence/adjust-conges", async (req, res) => {
 });
 
 
-// === AJOUT: endpoint ajustement congés (corrigé, sans doublons) ===
-    const stamp = new Date().toISOString();
-});
 
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 app.use("/public", express.static(path.join(process.cwd(), "public")));
