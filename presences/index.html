@@ -207,6 +207,7 @@ button.badge.code{border-radius:8px}
           <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
           <button id="btn-save" class="primary">Enregistrer</button>
           <button id="btn-fill-all" class="badge">Tout mettre P</button>
+<span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrement…</span></span>
         </div>
       </div>
 
@@ -652,17 +653,14 @@ function collectData(){
   return {rows};
 }
 document.getElementById('btn-save').addEventListener('click', async ()=>{
+  const $busy=document.getElementById('save-busy'); if($busy) $busy.style.display='flex';
   if(!currentMagasin) return;
   const data=collectData(); $btnSave.disabled=true;
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
       const entries = computeCpDeltaAgainstSnapshotFromDOM(); // [{nom, prenom, fullName, delta}, ...]
-await fetchJSON('/adjust-conges', {
-  method:'POST',
-  body: JSON.stringify({ magasin: currentMagasin, date: $dateInput.value || todayISO(), entries })
-});
-      if (entries && entries.length){
+if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         // resnapshot to new state to avoid double comptage
         takeSnapshotFromData(collectData());
@@ -671,7 +669,7 @@ await fetchJSON('/adjust-conges', {
 
     alert('Enregistré ✔');
   }catch{ alert("Échec de l'enregistrement"); }
-  finally{ $btnSave.disabled=false; }
+  finally{ $btnSave.disabled=false; const $busy=document.getElementById('save-busy'); if($busy) $busy.style.display='none'; }
 });
 $dateInput.addEventListener('change',async ()=>{
   await prefillDay();
