@@ -180,14 +180,6 @@ button.badge.code{border-radius:8px}
 </style>
 </head>
 <body>
-
-<script>
-window.GS_PRESENCES_URL = window.GS_PRESENCES_URL || (window.__GS_PRESENCES_URL__ || "");
-</script>
-<script>
-  window.GS_PRESENCES_URL = "https://script.google.com/macros/s/AKfycby74gtT7EH96m3gPSgZnHnDiWx4EGbEHUYPvpbRz3rwFD-V6PXuDc_hSkxoCRQtDgp-/exec";
-</script>
-
 <header class="app-header">
   <h1>Présences Durand Services</h1>
   <div class="today">Aujourd’hui : <span id="today"></span></div>
@@ -294,6 +286,49 @@ const CODE_DEFS = [
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
+// === AJOUT: snapshot & ajustement CP ===
+let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
+function keyFromLabel(label){ return String(label||'').trim().replace(/\s+/g,' ').toUpperCase(); }
+function takeSnapshotFromData(day){
+  try{
+    const map = new Map();
+    (day?.rows||[]).forEach(r=>{
+      const k = keyFromLabel(r.label||'');
+      const vals = Object.assign({}, r.values||{});
+      Object.keys(vals).forEach(s=> vals[s] = String(vals[s]||'').trim().toUpperCase());
+      if(k) map.set(k, vals);
+    });
+    LAST_DAY_SNAPSHOT = { byKey: map, date: $dateInput?.value || null };
+  }catch(e){}
+}
+function computeCpDeltaAgainstSnapshotFromDOM(){
+  const out=[];
+  document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
+    const label = tr.querySelector('.row-label')?.textContent || '';
+    const key = keyFromLabel(label);
+    const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
+    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
+    let delta = 0;
+    Object.keys(Object.assign({}, before, now)).forEach(slot=>{
+      const b = before[slot]||''; const a = now[slot]||'';
+      if (b!=='CP' && a==='CP') delta -= 0.5;
+      else if (b==='CP' && a!=='CP') delta += 0.5;
+    });
+    if (delta){
+      const parts = String(label).trim().split(/\s+/);
+      const nom = (parts[0]||'').toUpperCase();
+      const prenom = parts.slice(1).join(' ');
+      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
+    }
+  });
+  return out;
+}
+async function postAdjustConges(payload){
+  try{ return await fetchJSON('/adjust-conges', { method:'POST', body: JSON.stringify(payload) }); }
+  catch(e){ console.warn('[adjust-conges] erreur', e?.message||e); return null; }
+}
+
+
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
 const $panels={ magasins:document.getElementById('tab-magasins'), saisie:document.getElementById('tab-saisie'), resume:document.getElementById('tab-resume'), leaves:document.getElementById('tab-leaves') };
@@ -543,7 +578,6 @@ async function prefillDay(){
   try{
     const day=$dateInput.value;
     const payload = await fetchJSON(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
-    try{ takeSnapshotFromData(payload?.data||{}); }catch{}
 
     const labelsInDay = labelsFromDayData(payload?.data);
     const currentLabels = new Set(
@@ -593,62 +627,6 @@ function applyPrefill(data){
   });
   paintWeekendInSaisie();
 }
-// ===== CP delta snapshot (minimal, no UI change) =====
-
-function takeSnapshotFromData(day){
-  try{
-    const map = new Map();
-    (day?.rows||[]).forEach(r=>{
-      const k = norm(r.label||'');
-      const vals = Object.assign({}, r.values||{});
-      Object.keys(vals).forEach(s=> vals[s] = String(vals[s]||'').trim().toUpperCase());
-      if(k) map.set(k, vals);
-    });
-    LAST_DAY_SNAPSHOT = { byKey: map, date: document.getElementById('saisie-date')?.value || null };
-  }catch(e){}
-}
-
-let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
-function computeCpDeltaAgainstSnapshotFromDOM(){
-  const out=[];
-  document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
-    const label = tr.querySelector('.row-label')?.textContent || '';
-    const key = norm(label);
-    const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
-    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
-    let delta = 0;
-    Object.keys(Object.assign({}, before, now)).forEach(slot=>{
-      const b = before[slot]||''; const a = now[slot]||'';
-      if (b!=='CP' && a==='CP') delta -= 0.5;
-      else if (b==='CP' && a!=='CP') delta += 0.5;
-    });
-    if (delta){
-      const parts = String(label).trim().split(/\s+/);
-      const nom = (parts[0]||'').toUpperCase();
-      const prenom = parts.slice(1).join(' ');
-      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
-    }
-  });
-  return out;
-}
-
-async function postAdjustConges(payload){
-  const list = Array.isArray(payload?.entries) ? payload.entries : (Array.isArray(payload) ? payload : []);
-  if (!Array.isArray(list) || !list.length) return true;
-  const base = (window.GS_PRESENCES_URL || "").trim();
-  if (!base) { console.warn("[adjustcp] GS_PRESENCES_URL manquant"); return true; }
-  const url = base + (base.includes("?") ? "&" : "?") + "action=adjustcp";
-  const reqs = list.map(e => {
-    const full = String(e.fullName||"").trim();
-    const nom = (e.nom || (full.split(/\s+/)[0]||"")).trim();
-    const prenom = (e.prenom || (full.split(/\s+/).slice(1).join(" ")||"")).trim();
-    const body = JSON.stringify({ magasin: payload.magasin || e.magasin || "", nom, prenom, delta: Number(e.delta||0) });
-    return fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body }).then(r=>r.json()).catch(()=>({ok:false}));
-  });
-  await Promise.allSettled(reqs);
-  return true;
-}
-
 function applyHolidayDefaultsForDay(){
   const day = $dateInput.value;
   if(!day || !isHoliday(day)) return;
@@ -680,6 +658,10 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
       const entries = computeCpDeltaAgainstSnapshotFromDOM(); // [{nom, prenom, fullName, delta}, ...]
+await fetchJSON('/adjust-conges', {
+  method:'POST',
+  body: JSON.stringify({ magasin: currentMagasin, date: $dateInput.value || todayISO(), entries })
+});
       if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         // resnapshot to new state to avoid double comptage
@@ -1178,7 +1160,7 @@ document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
 </script>
 
-
+</script>
 
 </body>
 </html>
