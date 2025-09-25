@@ -10,6 +10,20 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
+const GS_URL   = process.env.GS_ATELIER_URL || "";
+const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
+
+router.get("/config.js", (_req, res) => {
+  res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(
+    `window.__ATELIER_CFG = {
+      GS_URL: ${JSON.stringify(GS_URL)},
+      GS_SHEET: ${JSON.stringify(GS_SHEET)}
+    };`
+  );
+});
+
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 router.use((req, res, next) => {
@@ -65,9 +79,6 @@ function readJsonSafe(file, fallback) {
 function writeJsonSafe(file, obj) {
   try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
 }
-
-const GS_URL   = process.env.GS_ATELIER_URL;
-const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
 async function gsListCases() {
   if (!GS_URL) return { ok: true, data: [] };
@@ -125,7 +136,7 @@ async function nextDossierNumber(){
   if (current === null) current = 0;
   const next = current + 1;
   writeJsonSafe(COUNTER_FILE, { value: next });
-  return String(next).padStart(5, "0"); // 00001, 00002, ...
+  return String(next).padStart(5, "0");
 }
 
 function gmailTransport() {
@@ -397,6 +408,7 @@ router.post("/api/submit", async (req, res) => {
       no,
       date: new Date().toISOString(),
       status: "Demande envoyé",
+      estimation: "",
       snapshot: data,
 
       magasin: h.magasin || "",
@@ -435,6 +447,7 @@ router.post("/api/cases/:no/status", async (req, res) => {
 
     const dateStatus = new Date().toISOString();
     await gsUpdateStatus(no, String(status), dateStatus, Number(estimation));
+
 
     const st = String(status).toLowerCase();
     if (st === "renvoyé" || st === "renvoye") {
