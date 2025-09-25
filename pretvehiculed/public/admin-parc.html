@@ -532,7 +532,7 @@
 
     function setYearActive(year){
       __yearFilter = String(year||'') || '';
-      __monthFilter = ''; // reset jusqu’à sélection d’un mois
+      __monthFilter = '';
       document.querySelectorAll('.yearBtn').forEach(b=>{
         const on = String(b.dataset.year)===String(year);
         b.classList.toggle('active', on);
@@ -573,7 +573,7 @@
     function autoSelectCurrentYearMonth(){
       const now = new Date();
       const y = now.getFullYear();
-      const m = now.getMonth() + 1; // 1..12
+      const m = now.getMonth() + 1;
       if (y === 2025 || y === 2026) {
         setMonthActive(String(y), String(m));
       } else {

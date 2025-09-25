@@ -281,11 +281,5 @@
     "magasin": "Gleize",
     "recipients": ["magvl4gleize@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
-  },
-  {
-    "name": "Fournisseur Test",
-    "magasin": "Gleize",
-    "recipients": ["fselva@durandservices.fr"],
-	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
   }
 ]
