@@ -861,23 +861,34 @@ $loginForm.addEventListener('submit', (ev)=>{
 
 $arMag.addEventListener('change', loadAdminPersonnel);
 async function loadAdminPersonnel(){
-  $arPers.innerHTML = '<option value="">— Personnel —</option>';
+  $arPers.innerHTML = '<option value="">— Chargement… —</option>';
+  $arPers.disabled = true;
+
   const mag = $arMag.value;
-  if(!mag) return;
+  if(!mag){
+    $arPers.innerHTML = '<option value="">— Personnel —</option>';
+    $arPers.disabled = true;
+    return;
+  }
   try{
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
     const defaultSlots = ["Matin","A. Midi"];
+
+    $arPers.innerHTML = '<option value="">— Sélectionnez un personnel —</option>';
+
     const add = (p)=>{ 
       const o=document.createElement('option'); 
       o.value = `${p.nom} ${p.prenom||""}`.trim();
-      o.textContent = `${p.nom} ${p.prenom||""}`.trim();
-      o.dataset.nom = p.nom; 
-      o.dataset.prenom = p.prenom||""; 
+      o.textContent = `${(p.nom||'').toUpperCase()} ${p.prenom||""}`.trim();
+      o.dataset.nom = p.nom || ""; 
+      o.dataset.prenom = p.prenom || ""; 
       o.dataset.slots = defaultSlots.join('|');
       $arPers.appendChild(o); 
     };
+
     (pers.employes||[]).forEach(add);
     (pers.interims||[]).forEach(add);
+
     Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
       const o = document.createElement('option');
       o.value = g;
@@ -887,7 +898,12 @@ async function loadAdminPersonnel(){
       o.dataset.slots = (Array.isArray(slots) && slots.length ? slots : defaultSlots).join('|');
       $arPers.appendChild(o);
     });
-  }catch{}
+
+    $arPers.disabled = false;
+  }catch{
+    $arPers.innerHTML = '<option value="">— Erreur réseau —</option>';
+    $arPers.disabled = true;
+  }
 }
 
 $arAdd.addEventListener('click', async ()=>{
