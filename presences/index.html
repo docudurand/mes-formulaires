@@ -6,51 +6,9 @@
 <title>Présences DSG</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --ok:#1a7f37; --tabsH:48px; }
+:root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --tabsH:52px; }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:#f6f7f8}
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="search"],
-input[type="date"],
-input[type="month"],
-select,
-textarea {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  font: inherit;
-  background: #fff;
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  height: 40px;
-  padding: 10px 12px;
-  outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
-  box-shadow: 0 1px 0 rgba(0,0,0,.02);
-}
-#tab-resume .section-title { margin-top: 22px; margin-bottom: 8px; }
-#tab-resume .section-title:first-child { margin-top: 6px; }
-#tab-resume .section-sub { margin-top: 24px; margin-bottom: 8px; font-weight: 800; color: var(--brand); }
-textarea { min-height: 90px; resize: vertical; }
-input:focus, select:focus, textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
-input::placeholder, textarea::placeholder { color: #94a3b8; opacity: 1; }
-select {
-  padding-right: 36px;
-  background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='%23566' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 14px;
-}
-button.primary { background: var(--brand); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 800; letter-spacing: .2px; box-shadow: 0 2px 0 rgba(0,0,0,.04); cursor:pointer }
-button.primary:hover { filter: brightness(1.02); }
-button.primary:active { transform: translateY(1px); }
-input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; accent-color: var(--brand); }
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .7; filter: saturate(.9); }
-.input--sm { height: 34px; padding: 6px 10px; border-radius: 10px; }
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
 .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
 .app-header .today{color:var(--muted)}
@@ -63,8 +21,6 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacit
 .grid-buttons button{padding:14px 12px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
 .grid-buttons button.active{border-color:var(--brand);outline:3px solid color-mix(in srgb,var(--brand),transparent 70%)}
 .toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
-.toolbar .row-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.saisie-stick{position:sticky;top:var(--tabsH);z-index:4;display:grid;gap:8px}
 .codes-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
 .psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
 .psite-strip .badge{ flex:0 0 auto; }
@@ -72,15 +28,15 @@ input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacit
 .psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
 button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
 button.badge.code{border-radius:8px}
+button.primary { background: var(--brand); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 800; letter-spacing: .2px; box-shadow: 0 2px 0 rgba(0,0,0,.04); cursor:pointer }
+button.primary:disabled{ opacity:.6; cursor:not-allowed }
 .table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);margin:18px 0;border-radius:12px;overflow:hidden}
 .table th,.table td{border:1px solid var(--line);padding:8px;text-align:center}
 .table thead th{background:#fafafa;font-weight:800}
-.row-label{white-space:nowrap;text-align:left;font-weight:600}
-.sub-label{font-size:.86rem;color:#666;font-style:italic;white-space:nowrap}
-.section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color: var(--brand)}
+.row-label{text-align:left;font-weight:600;white-space:nowrap}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
 .cell.selected{outline:3px solid #2563eb44}
-.cell.weekend{background:#000;color:#fff}
+/* Codes */
 .cell.P{background:#e8f5ec;color:#1a7f37;font-weight:700}
 .cell.CP{background:#efe6ff;color:#6b21a8;font-weight:700}
 .cell.AM{background:#fee2e2;color:#b91c1c;font-weight:700}
@@ -95,7 +51,10 @@ button.badge.code{border-radius:8px}
 .cell.D{background:#dbeafe;color:#1d4ed8;font-weight:700}
 .cell.RI{background:#fef9c3;color:#a16207;font-weight:700}
 .cell.PSITE{background:#f5d0aa;color:#6b3e00;font-weight:700}
-.cell.FERIE { background:#e5e7eb !important; color:#111 !important; font-weight:800; }
+.cell.FERIE{ background:#e5e7eb !important; color:#111 !important; font-weight:800; }
+/* Week-end DOIT rester noir quoiqu'il arrive */
+.cell.weekend{background:#000 !important;color:#fff !important;font-weight:800 !important}
+/* Codes bar badges */
 .badge.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
 .badge.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
 .badge.code[data-code="AM"] {background:#fee2e2;color:#b91c1c}
@@ -110,19 +69,10 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
-.hint,.legend{color:#666;font-size:.9rem}
+.hint{color:#666}
 .error{color:#a40000;font-weight:700}
 .loading{padding:14px;color:#666}
-@media (max-width:900px){ .cell{min-width:26px;height:28px} }
-.badge.action.btn-accept{ background:#e8f5ec; color:#1a7f37; border-color:#d9f0e1; }
-.badge.action.btn-reject{ background:#fee2e2; color:#b91c1c; }
-.badge.action.btn-cancel{ background:#fff7ed; color:#b45309; }
-.inline-loading{ display:flex; align-items:center; gap:8px; color:#666; font-weight:600; }
-.spinner{ width:14px; height:14px; border-radius:50%; border:2px solid #ddd; border-top-color: var(--brand); animation:spin 1s linear infinite; }
-@keyframes spin{ to{ transform: rotate(360deg) } }
-.admin-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
-.admin-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.admin-row>*{flex:1 1 180px}
+.section-title{margin-top:8px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color: var(--brand)}
 </style>
 <script>window.GS_PRESENCES_URL = window.GS_PRESENCES_URL || (window.__GS_PRESENCES_URL__ || "");</script>
 </head>
@@ -147,19 +97,14 @@ button.badge.code{border-radius:8px}
   </section>
 
   <section id="tab-saisie" class="tab-panel">
-    <div class="saisie-stick">
-      <div class="toolbar">
-        <div class="row-top" style="width:100%">
-          <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
-          <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
-          <button id="btn-save" class="primary">Enregistrer</button>
-          <button id="btn-fill-all" class="badge">Tout mettre P</button>
-        </div>
-      </div>
-      <div id="codes-bar" class="codes-bar" aria-label="Codes de saisie"></div>
+    <div class="toolbar">
+      <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
+      <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
+      <button id="btn-save" class="primary">Enregistrer</button>
+      <button id="btn-fill-all" class="badge">Tout mettre P</button>
     </div>
+    <div id="codes-bar" class="codes-bar" aria-label="Codes de saisie"></div>
     <div id="saisie-content"></div>
-    <div class="legend"></div>
     <p id="saisie-error" class="error" style="display:none"></p>
   </section>
 
@@ -174,66 +119,44 @@ button.badge.code{border-radius:8px}
   </section>
 
   <section id="tab-leaves" class="tab-panel">
-    <div class="toolbar">
+    <div class="toolbar" style="width:100%">
       <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input id="leaves-user" name="username" type="text" value="admin" autocomplete="username" style="display:none">
-        <input id="leaves-pass" name="password" type="password" class="input-nice" placeholder="Mot de passe admin" autocomplete="current-password"/>
+        <input id="leaves-pass" name="password" type="password" placeholder="Mot de passe admin" autocomplete="current-password"/>
         <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="remember-pw"> Mémoriser</label>
         <button type="submit" id="btn-login" class="primary">Se connecter</button>
       </form>
     </div>
-    <div id="admin-range" class="admin-box" style="display:none">
-      <div style="font-weight:800;margin-bottom:8px">Ajout par période</div>
-      <div class="admin-row">
-        <select id="ar-magasin"></select>
-        <select id="ar-personnel"><option value="">— Personnel —</option></select>
-        <select id="ar-code"></select>
-        <input id="ar-du" type="date" />
-        <input id="ar-au" type="date" />
-        <button id="ar-add" class="primary">Ajouter</button>
-      </div>
-      <div id="ar-msg" class="hint" style="margin-top:6px"></div>
+    <div id="admin-range" class="toolbar" style="display:none">
+      <select id="ar-magasin"></select>
+      <select id="ar-personnel"><option value="">— Personnel —</option></select>
+      <select id="ar-code"></select>
+      <input id="ar-du" type="date"/>
+      <input id="ar-au" type="date"/>
+      <button id="ar-add" class="primary">Ajouter</button>
+      <div id="ar-msg" class="hint"></div>
     </div>
-    <div id="leaves-content"></div>
+    <div id="leaves-content" class="admin-box"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
   </section>
 </main>
 
 <script>
-// -------- Helpers de date / format --------
+document.addEventListener('DOMContentLoaded', () => {
+// ===== Helpers =====
 const pad = n => n<10 ? `0${n}` : `${n}`;
 const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 const thisYM = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const dowLetter = d => ["D","L","M","M","J","V","S"][d.getDay()];
-const daysOfMonth = ym => { const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
 const union = (...arrs) => [...new Set(arrs.flat().filter(Boolean))];
+const dowLetter = d => ["D","L","M","M","J","V","S"][d.getDay()];
 
-// -------- Fériés --------
-const FERIES = new Set([
-  "2025-01-01","2025-04-21","2025-05-01","2025-05-08","2025-05-29","2025-06-09",
-  "2025-07-14","2025-08-15","2025-11-01","2025-11-11","2025-12-25",
-]);
+// Fériés (échantillon)
+const FERIES = new Set(["2025-01-01","2025-05-01","2025-05-08","2025-07-14","2025-11-11","2025-12-25"]);
 const isHoliday = iso => FERIES.has(String(iso));
 
-// -------- Sélecteurs principaux --------
-const apiBase = '/presence';
-const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
-
-const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
-const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
-const CODE_DEFS = [
-  {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
-  {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
-  {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
-  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
-  {code:'UST',label:'Un seul tour'},{code:'NP',label:'Non planifié'},
-  ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
-];
-const ALL_CODES = CODE_DEFS.map(d=>d.code);
-
-// -------- DOM refs --------
+// ===== DOM refs =====
 const $today = document.getElementById('today');
 const $tabs = [...document.querySelectorAll('.tab')];
 const $panels = {
@@ -254,14 +177,13 @@ const $resumeStore = document.getElementById('resume-store');
 const $btnLoadStore= document.getElementById('btn-load-store');
 const $resumeContent = document.getElementById('resume-content');
 const $resumeError = document.getElementById('resume-error');
+const $codesBar    = document.getElementById('codes-bar');
+// Admin
 const $loginForm   = document.getElementById('leaves-login-form');
 const $leavesPass  = document.getElementById('leaves-pass');
 const $rememberPw  = document.getElementById('remember-pw');
 const $leavesContent = document.getElementById('leaves-content');
 const $leavesError = document.getElementById('leaves-error');
-const $codesBar    = document.getElementById('codes-bar');
-
-// Admin
 const $arBox = document.getElementById('admin-range');
 const $arMag = document.getElementById('ar-magasin');
 const $arPers= document.getElementById('ar-personnel');
@@ -272,24 +194,32 @@ const $arAdd = document.getElementById('ar-add');
 const $arMsg = document.getElementById('ar-msg');
 
 $today.textContent = todayISO();
-document.getElementById('resume-month').value = thisYM();
+$resumeMonth.value = thisYM();
 
-// -------- Ajax util --------
+// ===== Data =====
+const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
+const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
+const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
+const CODE_DEFS = [
+  {code:'P',label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
+  {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
+  {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
+  {code:'R',label:'Récup'},{code:'D',label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
+  {code:'UST',label:'Un seul tour'},{code:'NP',label:'Non planifié'},
+  ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
+];
+const ALL_CODES = CODE_DEFS.map(d=>d.code);
+
+const apiBase = '/presence';
+
+// ===== Utils Ajax =====
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=1){
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 15000);
   try{
     const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
-    const token = sessionStorage.getItem('leavesToken');
-    if(path.startsWith('/leaves') || path.startsWith('/range-mark')){
-      if(token) headers['X-Admin-Token'] = token;
-    }
     const r = await fetch(apiBase+path, { ...opts, headers, signal: ctrl.signal });
-    if(!r.ok){
-      const txt = await r.text().catch(()=> '');
-      if (r.status === 401 && (path.startsWith('/leaves') || path.startsWith('/range-mark'))) throw new Error('401');
-      throw new Error(txt || ('HTTP '+r.status));
-    }
+    if(!r.ok) throw new Error(await r.text());
     return await r.json();
   }catch(e){
     if(retries>0){ await delay(300); return fetchJSON(path, opts, retries-1); }
@@ -297,31 +227,72 @@ async function fetchJSON(path, opts={}, retries=1){
   }finally{ clearTimeout(t); }
 }
 
-// -------- Tabs --------
+// ===== Tabs =====
 $tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 function switchTab(key){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
   Object.entries($panels).forEach(([k,el])=>el.classList.toggle('active',k===key));
-  if(key==="leaves"){
+  if(key==='leaves'){
+    populateAdminCodes();
     const token = sessionStorage.getItem('leavesToken');
-    if(!token){
-      $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher et agir.";
-      $leavesError.style.display='block';
-      $leavesContent.innerHTML = "";
-      $arBox.style.display='none';
-      return;
-    }
-    $leavesError.style.display='none';
-    $arBox.style.display='block';
-    if(currentMagasin) $arMag.value = currentMagasin;
-    loadAdminPersonnel();
-    loadLeaves();
+    $arBox.style.display = token ? 'flex' : 'none';
+    $leavesError.style.display = token ? 'none' : 'block';
+    if(token && currentMagasin) $arMag.value = currentMagasin;
   }
 }
 
-// -------- Saisie du jour --------
+// ===== Magasins buttons =====
+function buildMagButtons(){
+  $magBtnsWrap.innerHTML='';
+  MAGASINS.forEach(m=>{
+    const b=document.createElement('button'); b.textContent=m;
+    b.addEventListener('click',()=>selectMagasin(m,b));
+    $magBtnsWrap.appendChild(b);
+  });
+}
+buildMagButtons();
+
+// ===== Codes bar =====
+function buildGlobalCodesBar(){
+  $codesBar.innerHTML = '';
+  const clearBtn=document.createElement('button');
+  clearBtn.className='badge'; clearBtn.textContent='Vider';
+  clearBtn.addEventListener('click',()=>{
+    const scope=[...selectedCells]; if(!scope.length) return;
+    scope.forEach(td=>{ ALL_CODES.forEach(c=>td.classList.remove(c)); td.classList.remove('PSITE','FERIE','weekend'); td.textContent=''; });
+  });
+  $codesBar.appendChild(clearBtn);
+  const addBtn=(code,label)=>{
+    const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
+    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
+    b.addEventListener('click',()=>{
+      const scope=[...selectedCells]; if(!scope.length) return;
+      scope.forEach(td=>{
+        ALL_CODES.forEach(c=>td.classList.remove(c));
+        td.classList.remove('PSITE','FERIE');
+        const wasWeekend = td.classList.contains('weekend');
+        td.textContent = code;
+        if(code==='NP'){ td.classList.add('weekend'); }
+        else {
+          td.classList.toggle('weekend', wasWeekend); // préserver fond weekend si déjà présent
+          td.classList.add(code);
+          if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+        }
+      });
+    });
+    return b;
+  };
+  MAIN_CODES.forEach(c => $codesBar.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
+  const strip=document.createElement('div'); strip.className='psite-strip';
+  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
+  $codesBar.appendChild(strip);
+}
+
+// ===== Saisie UI =====
 let currentMagasin=null, personnel=null, selectedCells=new Set();
 let HIST_ROWS_SAISIE = [];
+let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
+
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
   const isShift=ev.shiftKey, isCtrl=ev.ctrlKey||ev.metaKey;
@@ -345,63 +316,7 @@ function handleCellClick(ev,td){
     clearSelection(); td.classList.add('selected'); selectedCells.add(td);
   }
 }
-function buildGlobalCodesBar(){
-  $codesBar.innerHTML = '';
-  const clearBtn=document.createElement('button');
-  clearBtn.className='badge'; clearBtn.textContent='Vider';
-  clearBtn.title='Effacer les cellules sélectionnées';
-  clearBtn.addEventListener('click',()=>{
-    const scope=[...selectedCells]; if(!scope.length) return;
-    const we = isSaisieWeekend();
-    scope.forEach(td=>{
-      ALL_CODES.forEach(c=>td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
-      td.textContent='';
-      if(!we) td.classList.remove('weekend');
-    });
-  });
-  $codesBar.appendChild(clearBtn);
-  const addBtn=(code,label)=>{
-    const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
-    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
-    b.addEventListener('click',()=>{
-      const scope=[...selectedCells]; if(!scope.length) return;
-      const we = isSaisieWeekend(); const fer = isSaisieHoliday();
-      scope.forEach(td=>{
-        ALL_CODES.forEach(c=>td.classList.remove(c));
-        td.classList.remove('PSITE','FERIE');
-        if(!we) td.classList.remove('weekend');
-        td.textContent=code;
-        if(code==='NP'){ td.classList.add('weekend'); }
-        else {
-          td.classList.add(code);
-          if(/^P\\d+$/.test(code)) td.classList.add('PSITE');
-          if(fer && code==='F') td.classList.add('FERIE');
-        }
-      });
-    });
-    return b;
-  };
-  MAIN_CODES.forEach(c => $codesBar.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
-  const strip=document.createElement('div'); strip.className='psite-strip';
-  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
-  $codesBar.appendChild(strip);
-}
-function isSaisieWeekend(){
-  const v = $dateInput.value; if(!v) return false;
-  const d = new Date(v); const g = d.getDay();
-  return g===0 || g===6;
-}
-function isSaisieHoliday(){
-  const v = $dateInput.value; return v ? isHoliday(v) : false;
-}
-function paintWeekendInSaisie(){
-  const we = isSaisieWeekend();
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if (we) td.classList.add('weekend');
-    else if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
-  });
-}
+
 function buildSection(title, rows){
   const headerSlots = union(...rows.map(r=>r.slots||[]));
   const wrap=document.createElement('div');
@@ -427,7 +342,9 @@ function buildSection(title, rows){
   wrap.appendChild(table);
   return wrap;
 }
+
 function labelsFromDayData(dayData){ return (dayData?.rows || []).map(r => String(r.label||"").trim()).filter(Boolean); }
+
 function buildSaisieUI(){
   $saisieContent.innerHTML=''; clearSelection();
   const sections=[];
@@ -445,6 +362,7 @@ function buildSaisieUI(){
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
   paintWeekendInSaisie();
 }
+
 function takeSnapshotFromData(day){
   try{
     const map = new Map();
@@ -457,6 +375,7 @@ function takeSnapshotFromData(day){
     LAST_DAY_SNAPSHOT = { byKey: map, date: $dateInput?.value || null };
   }catch(e){}
 }
+
 function applyPrefill(data){
   try{ takeSnapshotFromData(data); }catch(e){}
   const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
@@ -466,14 +385,13 @@ function applyPrefill(data){
     tr.querySelectorAll('td.cell').forEach(td => {
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
-      td.classList.remove('weekend');
+      td.classList.remove('PSITE','FERIE','weekend');
       td.textContent = v;
       if (v) {
         if (v === 'NP') td.classList.add('weekend');
         else {
           td.classList.add(v);
-          if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
+          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
           if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
         }
       }
@@ -481,6 +399,19 @@ function applyPrefill(data){
   });
   paintWeekendInSaisie();
 }
+
+function isSaisieWeekend(){
+  const v = $dateInput.value; if(!v) return false;
+  const d = new Date(v); const g = d.getDay(); return g===0 || g===6;
+}
+function isSaisieHoliday(){ const v = $dateInput.value; return v ? isHoliday(v) : false; }
+function paintWeekendInSaisie(){
+  const we = isSaisieWeekend();
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
+    td.classList.toggle('weekend', we || td.textContent.trim()==='NP');
+  });
+}
+
 function applyHolidayDefaultsForDay(){
   const day = $dateInput.value;
   if(!day || !isHoliday(day)) return;
@@ -494,6 +425,7 @@ function applyHolidayDefaultsForDay(){
     }
   });
 }
+
 function collectData(){
   const rows=[];
   $saisieContent.querySelectorAll('tbody tr').forEach(tr=>{
@@ -505,8 +437,7 @@ function collectData(){
   return {rows};
 }
 
-// Snapshot CP
-let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
+// Snapshot CP delta
 function computeCpDeltaAgainstSnapshotFromDOM(){
   const out=[];
   document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
@@ -530,168 +461,7 @@ function computeCpDeltaAgainstSnapshotFromDOM(){
   return out;
 }
 
-// Sauvegarde du jour
-$btnSave.addEventListener('click', async ()=>{
-  if(!currentMagasin) return;
-  const data=collectData(); $btnSave.disabled=true;
-  try{
-    await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
-    try{
-      const entries = computeCpDeltaAgainstSnapshotFromDOM();
-      if (entries && entries.length){
-        await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
-        takeSnapshotFromData(collectData());
-      }
-    }catch(e){ console.warn('postAdjustConges failed', e?.message||e); }
-    alert('Enregistré ✔');
-  }catch{ alert("Échec de l'enregistrement"); }
-  finally{ $btnSave.disabled=false; }
-});
-$dateInput.addEventListener('change',async ()=>{ await prefillDay(); paintWeekendInSaisie(); });
-document.getElementById('btn-fill-all').addEventListener('click', ()=>{
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{ if (!td.textContent.trim()) { td.textContent='P'; td.classList.add('P'); } });
-});
-
-// Résumé
-const $resumeStoreSel=document.getElementById('resume-store');
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStoreSel.appendChild(o); });
-document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
-async function loadResumeForStore(){
-  $resumeError.style.display='none';
-  $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
-  const ym=$resumeMonth.value, mag=$resumeStore.value;
-  try{
-    const data = await fetchJSON(`/month-store?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`);
-    renderOneStore(ym, mag, data);
-  }catch(e){
-    $resumeError.textContent="Impossible de charger le résumé.";
-    $resumeError.style.display='block';
-    $resumeContent.innerHTML='';
-  }
-}
-function renderOneStore(yyyymm, magasin, data){
-  const days = daysOfMonth(yyyymm);
-  const file = data.file || {};
-  const pers = data.personnel || {employes:[], interims:[], livreurs:{}};
-  const wrap = document.createElement('div');
-  const title = document.createElement('div'); title.className='section-title'; title.textContent=magasin; wrap.appendChild(title);
-  const makeSection = (title, labels, slotsResolver) => {
-    if(!labels.length) return null;
-    const all=new Set(), order=[];
-    labels.forEach(lbl=>{
-      const key = norm(lbl);
-      Object.values(file).forEach(day=>{
-        const found = (day?.data?.rows||[]).find(r=> norm(r.label)===key);
-        if(found){ Object.keys(found.values||{}).forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); } }); }
-      });
-      const def = slotsResolver(lbl) || [];
-      def.forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); }});
-    });
-    const table=document.createElement('table'); table.className='table';
-    const thead=document.createElement('thead');
-    const trA=document.createElement('tr');
-    trA.innerHTML = '<th class="row-label">Nom / Ligne</th>';
-    days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=dowLetter(d); trA.appendChild(th); });
-    thead.appendChild(trA);
-    const trB=document.createElement('tr');
-    trB.innerHTML = '<th class="sub-label"> </th>';
-    days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=String(d.getDate()); trB.appendChild(th); });
-    thead.appendChild(trB);
-    const trC=document.createElement('tr');
-    trC.innerHTML = '<th class="sub-label"> </th>';
-    days.forEach(()=>{ order.forEach(s=>{ const th=document.createElement('th'); th.textContent=s; trC.appendChild(th); }); });
-    thead.appendChild(trC);
-    table.appendChild(thead);
-    const tbody=document.createElement('tbody');
-    labels.forEach(lbl=>{
-      const tr=document.createElement('tr');
-      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=lbl; tr.appendChild(td0);
-      days.forEach(d=>{
-        const dk = ymd(d);
-        const rec = file[dk];
-        let values={};
-        if(rec?.data?.rows){
-          const found = rec.data.rows.find(r => norm(r.label) === norm(lbl));
-          values = found?.values || {};
-        }
-        order.forEach(slot=>{
-          const td=document.createElement('td'); td.className='cell';
-          let v = values[slot] || '';
-          if(!v && isHoliday(dk)) v = 'F';
-          td.textContent = v;
-          if(v){
-            if (v === 'NP') td.classList.add('weekend');
-            else {
-              td.classList.add(v);
-              if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
-              if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
-            }
-          }
-          tr.appendChild(td);
-        });
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    const block=document.createElement('div'); const sub=document.createElement('div'); sub.className='section-sub'; sub.textContent=title;
-    block.appendChild(sub); block.appendChild(table);
-    return block;
-  };
-  const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
-  const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
-  const livreurGroups = Object.keys(pers.livreurs||{});
-  const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
-  if(empSec) wrap.appendChild(empSec);
-  const sub = document.createElement('div'); sub.className = 'section-sub'; sub.style.marginTop = '14px'; sub.textContent = 'Congés restants (EMPLOYÉS)'; wrap.appendChild(sub);
-  const line = document.createElement('div'); line.style.display='flex'; line.style.flexWrap='wrap'; line.style.gap='8px'; line.style.alignItems='center'; line.style.background='#fff'; line.style.border='1px solid var(--line)'; line.style.borderRadius='10px'; line.style.padding='10px';
-  const arr = (pers.employes||[]).slice().sort((a,b)=> norm(a.nom).localeCompare(norm(b.nom)) || norm(a.prenom).localeCompare(norm(b.prenom)));
-  if (arr.length) {
-    arr.forEach(p=>{
-      const badge = document.createElement('span');
-      badge.style.display = 'inline-block';
-      badge.style.padding = '6px 10px';
-      badge.style.border = '1px solid var(--line)';
-      badge.style.borderRadius = '999px';
-      badge.style.background = '#fafafa';
-      badge.style.fontWeight = '700';
-      badge.style.fontSize = '.9rem';
-      const solde = Number(p.congeRestant||0);
-      badge.textContent = `${(p.nom||'').toUpperCase()} ${p.prenom||''} — ${solde} j`;
-      line.appendChild(badge);
-    });
-  } else {
-    const empty = document.createElement('span'); empty.textContent = '—'; line.appendChild(empty);
-  }
-  wrap.appendChild(line);
-  const intSec = makeSection("INTÉRIM", intLabels, ()=>["Matin","A. Midi"]); if(intSec) wrap.appendChild(intSec);
-  Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
-    const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
-    if(sec) wrap.appendChild(sec);
-  });
-  $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
-}
-
-// -------- Magasins --------
-MAGASINS.forEach(m=>{
-  const b=document.createElement('button'); b.textContent=m;
-  b.addEventListener('click',()=>selectMagasin(m,b));
-  $magBtnsWrap.appendChild(b);
-});
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
-
-async function selectMagasin(mag,btn){
-  currentMagasin=mag;
-  document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
-  btn.classList.add('active'); $currMag.textContent=mag;
-  $magLoading.style.display='block';
-  try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
-  HIST_ROWS_SAISIE = [];
-  buildSaisieUI();
-  buildGlobalCodesBar();
-  $dateInput.value=todayISO();
-  await prefillDay();
-  switchTab('saisie');
-}
+// ===== Backend calls for day/personnel =====
 async function loadPersonnel(){
   try{ personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`); }
   catch{ personnel = { employes:[], interims:[], livreurs:{} }; }
@@ -712,15 +482,151 @@ async function prefillDay(){
         return { label: rec.label || x.raw, slots: (slots.length ? slots : ["Matin","A. Midi"]) };
       });
       buildSaisieUI();
-    }else{
-      HIST_ROWS_SAISIE = [];
-    }
+    }else{ HIST_ROWS_SAISIE = []; }
     applyPrefill(payload?.data||{});
     applyHolidayDefaultsForDay();
   }catch{}
 }
 
-// -------- Admin (login + ajouter) --------
+// ===== Saisie actions =====
+$btnSave.addEventListener('click', async ()=>{
+  if(!currentMagasin) return;
+  const data=collectData(); $btnSave.disabled=true;
+  try{
+    await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
+    try{
+      const entries = computeCpDeltaAgainstSnapshotFromDOM();
+      if (entries && entries.length){
+        await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
+        takeSnapshotFromData(collectData());
+      }
+    }catch(e){ console.warn('postAdjustConges failed', e?.message||e); }
+    alert('Enregistré ✔');
+  }catch{ alert("Échec de l'enregistrement"); }
+  finally{ $btnSave.disabled=false; }
+});
+
+document.getElementById('btn-fill-all').addEventListener('click', ()=>{
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{ if (!td.textContent.trim()) { td.textContent='P'; td.classList.add('P'); } });
+});
+
+$dateInput.addEventListener('change',async ()=>{ await prefillDay(); paintWeekendInSaisie(); });
+
+// ===== Résumé =====
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
+document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
+
+async function loadResumeForStore(){
+  $resumeError.style.display='none';
+  $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
+  const ym=$resumeMonth.value, mag=$resumeStore.value;
+  try{
+    const data = await fetchJSON(`/month-store?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`);
+    renderOneStore(ym, mag, data);
+  }catch(e){
+    $resumeError.textContent="Impossible de charger le résumé.";
+    $resumeError.style.display='block';
+    $resumeContent.innerHTML='';
+  }
+}
+
+function renderOneStore(yyyymm, magasin, data){
+  const days = (function(ym){ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; })(yyyymm);
+  const file = data.file || {};
+  const pers = data.personnel || {employes:[], interims:[], livreurs:{}};
+  const wrap = document.createElement('div');
+  const title = document.createElement('div'); title.className='section-title'; title.textContent=magasin; wrap.appendChild(title);
+  const makeSection = (title, labels, slotsResolver) => {
+    if(!labels.length) return null;
+    const all=new Set(), order=[];
+    labels.forEach(lbl=>{
+      const key = norm(lbl);
+      Object.values(file).forEach(day=>{
+        const found = (day?.data?.rows||[]).find(r=> norm(r.label)===key);
+        if(found){ Object.keys(found.values||{}).forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); } }); }
+      });
+      const def = slotsResolver(lbl) || [];
+      def.forEach(s=>{ if(!all.has(s)){ all.add(s); order.push(s); }});
+    });
+    const table=document.createElement('table'); table.className='table';
+    const thead=document.createElement('thead');
+    const trA=document.createElement('tr');
+    trA.innerHTML = '<th class="row-label">Nom / Ligne</th>';
+    days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=dowLetter(d); thead.appendChild(trA); trA.appendChild(th); });
+    const trB=document.createElement('tr'); trB.innerHTML = '<th> </th>'; days.forEach(d=>{ const th=document.createElement('th'); th.colSpan=order.length; th.textContent=String(d.getDate()); trB.appendChild(th); });
+    const trC=document.createElement('tr'); trC.innerHTML = '<th> </th>'; days.forEach(()=>{ order.forEach(s=>{ const th=document.createElement('th'); th.textContent=s; trC.appendChild(th); }); });
+    thead.appendChild(trA); thead.appendChild(trB); thead.appendChild(trC);
+    table.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    labels.forEach(lbl=>{
+      const tr=document.createElement('tr');
+      const td0=document.createElement('td'); td0.className='row-label'; td0.textContent=lbl; tr.appendChild(td0);
+      days.forEach(d=>{
+        const dk = ymd(d);
+        const rec = file[dk];
+        let values={};
+        if(rec?.data?.rows){
+          const found = rec.data.rows.find(r => norm(r.label) === norm(lbl));
+          values = found?.values || {};
+        }
+        order.forEach(slot=>{
+          const td=document.createElement('td'); td.className='cell';
+          const g = d.getDay(); if (g===0 || g===6) td.classList.add('weekend');
+          let v = values[slot] || '';
+          if(!v && isHoliday(dk)) v = 'F';
+          td.textContent = v;
+          if(v){
+            if (v === 'NP') td.classList.add('weekend');
+            else {
+              td.classList.add(v);
+              if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+              if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
+            }
+          }
+          tr.appendChild(td);
+        });
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    const block=document.createElement('div');
+    const sub=document.createElement('div'); sub.className='section-title'; sub.style.marginTop='10px'; sub.textContent=title;
+    block.appendChild(sub); block.appendChild(table);
+    return block;
+  };
+  const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]); if(empSec) wrap.appendChild(empSec);
+  const intSec = makeSection("INTÉRIM", intLabels, ()=>["Matin","A. Midi"]); if(intSec) wrap.appendChild(intSec);
+  $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
+}
+
+// ===== Admin =====
+function populateAdminCodes(){
+  if(!$arCode) return;
+  const opts = [
+    {v:'', t:'— Code —'},
+    {v:'CP', t:'CP — Congé payé'},
+    {v:'P', t:'P — Présent'},
+    {v:'AM', t:'AM — Arrêt maladie'},
+    {v:'AT', t:'AT — Accident travail'},
+    {v:'F', t:'F — Formation'},
+    {v:'Cep', t:'Cep — Congé exceptionnel'},
+    {v:'Ann', t:'Ann — Absence non motivée'},
+    {v:'SS', t:'SS — Sans solde'},
+    {v:'E', t:'E — École'},
+    {v:'R', t:'R — Récup'},
+    {v:'D', t:'D — Déplacement'},
+    {v:'RI', t:'RI — Récup inventaire'},
+    {v:'UST', t:'UST — Un seul tour'}
+  ];
+  const psite = Array.from({length:20}, (_,i)=>({v:`P${i+1}`, t:`P${i+1} — Présence autre site`}));
+  $arCode.innerHTML = '';
+  [...opts, ...psite].forEach(o=>{
+    const op=document.createElement('option'); op.value=o.v; op.textContent=o.t; $arCode.appendChild(op);
+  });
+}
+
 $loginForm.addEventListener('submit', (ev)=>{
   ev.preventDefault();
   const pw = $leavesPass.value.trim();
@@ -728,13 +634,12 @@ $loginForm.addEventListener('submit', (ev)=>{
   sessionStorage.setItem('leavesToken', pw);
   if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
   $leavesError.style.display='none';
-  $arBox.style.display='block';
+  $arBox.style.display='flex';
   if(currentMagasin) $arMag.value = currentMagasin;
-  loadAdminPersonnel();
-  loadLeaves();
+  populateAdminCodes();
 });
-$arMag.addEventListener('change', loadAdminPersonnel);
 
+$arMag.addEventListener('change', loadAdminPersonnel);
 async function loadAdminPersonnel(){
   $arPers.innerHTML = '<option value="">— Chargement… —</option>'; $arPers.disabled = true;
   const mag = $arMag.value;
@@ -742,7 +647,7 @@ async function loadAdminPersonnel(){
   try{
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
     const defaultSlots = ["Matin","A. Midi"];
-    $arPers.innerHTML = '<option value="">— Sélectionnez un personnel —</option>';
+    $arPers.innerHTML = '<option value="">— Sélectionnez —</option>';
     const add = (p)=>{
       const o=document.createElement('option');
       o.value = `${p.nom} ${p.prenom||""}`.trim();
@@ -767,7 +672,7 @@ async function loadAdminPersonnel(){
   }
 }
 
-// Unifie l'envoi des deltas CP vers Apps Script
+// Envoi CP vers Apps Script
 async function postAdjustConges(payload){
   const list = Array.isArray(payload?.entries) ? payload.entries : (Array.isArray(payload) ? payload : []);
   if (!Array.isArray(list) || !list.length) return true;
@@ -781,12 +686,11 @@ async function postAdjustConges(payload){
     const body = JSON.stringify({ magasin: payload.magasin || e.magasin || "", nom, prenom, delta: Number(e.delta||0) });
     return fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body }).then(r=>r.json()).catch(()=>({ok:false}));
   });
-  const rs = await Promise.allSettled(reqs);
-  const anyFail = rs.some(x => x.status==="rejected" || (x.value && x.value.ok===false));
-  if (anyFail) console.warn("[adjustcp] au moins un appel a échoué", rs);
+  await Promise.allSettled(reqs);
   return true;
 }
 
+// Admin > Ajouter
 $arAdd.addEventListener('click', async () => {
   const old = $arAdd.textContent; $arAdd.textContent = 'Ajout en cours…'; $arAdd.disabled = true; $arMsg.textContent='Ajout en cours…'; $arMsg.style.color='#666';
   try{
@@ -810,85 +714,35 @@ $arAdd.addEventListener('click', async () => {
     if (delta){
       await postAdjustConges({ magasin: mag, entries: [{ nom, prenom, delta }] });
     }
-    $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
+    $arMsg.textContent="Ajout effectué ✔"; $arMsg.style.color="#1a7f37";
   }catch(e){ console.warn('Admin add error', e); $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000"; }
   finally{ $arAdd.textContent = old; $arAdd.disabled = false; }
 });
 
-// -------- Leaves (admin list) --------
-async function loadLeaves(){
-  const token = sessionStorage.getItem('leavesToken');
-  if(!token){
-    $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher les demandes.";
-    $leavesError.style.display='block';
-    $leavesContent.innerHTML = "";
-    return;
-  }
-  $leavesError.style.display='none';
-  $leavesContent.innerHTML = '<div class="loading">Chargement des demandes…</div>';
-  try{
-    const data = await fetchJSON('/leaves?all=1', { headers:{} });
-    const arr = Array.isArray(data.leaves) ? data.leaves : [];
-    if(!arr.length){ $leavesContent.innerHTML = '<div class="loading">Aucune demande trouvée.</div>'; return; }
-    renderLeaves(arr);
-  }catch(e){
-    const msg = (String(e?.message||'').includes('401')) ? "Mot de passe invalide (401)." : "Impossible de charger les demandes (mot de passe ou réseau).";
-    $leavesError.textContent = msg; $leavesError.style.display='block'; $leavesContent.innerHTML = '';
-  }
-}
-function statusLabelFR(s){
-  switch(String(s||"").toLowerCase()){
-    case "pending":   return "en attente";
-    case "accepted":  return "validée";
-    case "rejected":  return "refusée";
-    case "cancelled": return "annulée";
-    default:          return String(s||"");
-  }
-}
-function renderLeaves(items){
-  items.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
-  const wrap=document.createElement('div');
-  items.forEach(it=>{
-    const card=document.createElement('div');
-    card.style.border='1px solid var(--line)'; card.style.borderRadius='10px'; card.style.background='#fff';
-    card.style.padding='10px'; card.style.margin='8px 0';
-    const h = document.createElement('div');
-    h.innerHTML = `<b>${(it.nom||'').toUpperCase()} ${it.prenom||''}</b> — <span style="color:var(--muted)">${it.magasin||'?'}</span>`;
-    card.appendChild(h);
-    const p = document.createElement('div');
-    p.style.fontSize='.95rem';
-    p.innerHTML = `Période: <b>${it.dateDu}</b> → <b>${it.dateAu}</b> • ${it.nbJours||'?'} jour(s) • Service: ${it.service||'-'} • Email: ${it.email||''}`;
-    card.appendChild(p);
-    const status = document.createElement('div'); status.style.marginTop='6px';
-    const lib = it.statusFr || statusLabelFR(it.status);
-    status.innerHTML = `Statut: <b>${lib}</b>` + (it.reason? ` — ${it.reason}`:'');
-    card.appendChild(status);
-    wrap.appendChild(card);
-  });
-  $leavesContent.innerHTML=''; $leavesContent.appendChild(wrap);
+// ===== Select a magasin =====
+async function selectMagasin(mag,btn){
+  currentMagasin=mag;
+  document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  $currMag.textContent=mag;
+  $magLoading.style.display='block';
+  try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
+  HIST_ROWS_SAISIE = [];
+  buildSaisieUI();
+  buildGlobalCodesBar();
+  $dateInput.value=todayISO();
+  await prefillDay();
+  switchTab('saisie');
 }
 
-// -------- Raccourcis clavier (Delete = vider) --------
-document.addEventListener('keydown', (e) => {
-  const key = e.key; if (key !== 'Backspace' && key !== 'Delete') return;
-  const a = document.activeElement;
-  const inEditable = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable);
-  if (inEditable) return;
-  const scope = [...selectedCells].filter(td => td.closest('#saisie-content'));
-  if (!scope.length) return;
-  e.preventDefault();
-  const we = isSaisieWeekend();
-  scope.forEach(td => {
-    ALL_CODES.forEach(c => td.classList.remove(c));
-    td.classList.remove('PSITE','FERIE');
-    td.textContent = '';
-    if(!we) td.classList.remove('weekend');
-  });
-});
+// Init magasins in Admin select
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
 
-// -------- Init --------
+// Defaults
 document.getElementById('today').textContent = todayISO();
-document.getElementById('resume-month').value=thisYM();
+$resumeMonth.value=thisYM();
+
+}); // DOMContentLoaded
 </script>
 </body>
 </html>
