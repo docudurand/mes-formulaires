@@ -65,7 +65,8 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
-// === AJOUT: endpoint ajustement congés (corrigé, sans doublons) ===
+const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
+const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const ADJUST_LOG = `${PRES_ROOT}/adjust_conges.jsonl`;
 
 async function appendJSONL(client, remotePath, obj){
