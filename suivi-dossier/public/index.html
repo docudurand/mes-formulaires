@@ -9,80 +9,96 @@
     --primary:#004080; --line:#e5e7eb; --ink:#0f172a;
     --s1:#2563eb10; --s2:#16a34a10; --s3:#f59e0b10; --s4:#9333ea10;
     --s1b:#2563eb;   --s2b:#16a34a;   --s3b:#d97706;   --s4b:#7e22ce;
-    --gap:12px;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-  .wrap{max-width:1220px;margin:24px auto;padding:16px}
-  h1{ margin:0 0 12px; color:var(--primary); font-size:1.5rem; }
+  .wrap{max-width:1200px;margin:20px auto;padding:12px}
+  h1{ margin:0 0 10px; color:var(--primary); font-size:1.35rem; }
 
-  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px}
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 12px}
   label{font-weight:600;color:#334155}
-  select,input{padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:1rem; background:#fff}
+  select,input{padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:.95rem; background:#fff}
 
-  .yearbar{margin:12px 0 10px;display:flex;flex-direction:column;gap:8px}
-  .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
+  .yearbar{margin:10px 0 8px;display:flex;flex-direction:column;gap:6px}
+  .yearTabs{display:flex;gap:6px;flex-wrap:wrap}
   .yearBtn{
     background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;
-    padding:6px 12px;font-weight:700;cursor:pointer
+    padding:5px 10px;font-weight:700;cursor:pointer;font-size:.95rem
   }
   .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
   .months{display:none;gap:6px;flex-wrap:wrap}
   .months.active{display:flex}
   .monthBtn{
     background:#fff;border:1px solid var(--line);color:#073763;
-    border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600
+    border-radius:999px;padding:5px 9px;cursor:pointer;font-weight:600;font-size:.9rem
   }
   .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
-  .legend{opacity:.8;font-size:.95em}
+  .legend{opacity:.8;font-size:.9rem}
 
-  .tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
-  table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; }
-  colgroup col{ }
+  .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow-x:hidden}
+  table{width:100%; border-collapse:separate; border-spacing:0 6px; table-layout:auto; }
   thead th{
     position:sticky; top:0; background:#f8fbff; z-index:1;
-    text-align:left; padding:12px; color:#334155; font-size:.95rem; border-bottom:1px solid var(--line);
+    text-align:left; padding:10px; color:#334155; font-size:.9rem; border-bottom:1px solid var(--line);
     white-space:nowrap;
   }
   tbody td{
-    padding:12px; background:#f9fafb; border:1px solid var(--line);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    vertical-align:middle;
+    padding:9px 10px; background:#f9fafb; border:1px solid var(--line);
+    font-size:.95rem; vertical-align:middle;
   }
-  tbody tr{ border-radius:10px }
+  .col-no        { width:6%  }
+  .col-magasin   { width:12% }
+  .col-compte    { width:12% }
+  .col-client    { width:18% }
+  .col-service   { width:16% }
+  .col-date      { width:8%  }
+  .col-statut    { width:10% }
+  .col-eta       { width:8%  }
+  .col-actions   { width:10% }
+
+  .wrap-ok { white-space:normal; word-break:break-word; }
+  .nowrap { white-space:nowrap; }
+
   tbody tr td:first-child{ border-radius:10px 0 0 10px }
   tbody tr td:last-child{ border-radius:0 10px 10px 0 }
 
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
-    padding:6px 10px; border-radius:999px; font-weight:700; font-size:.9rem; min-width:120px; text-align:center;
+    padding:5px 8px; border-radius:999px; font-weight:700; font-size:.85rem; min-width:100px; text-align:center;
   }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
   .s-4{background:var(--s4); color:var(--s4b)}
 
-  .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end}
-  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap}
-  .statusSel,.etaSel{padding:8px 10px; border:1px solid var(--line); border-radius:10px}
+  .actions{display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
+  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap; font-size:.9rem}
+  .statusSel,.etaSel{padding:7px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; max-width:100%}
 
   .spinner{
-    width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--primary);
+    width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:var(--primary);
     border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .mask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:20px; }
-  .box{ width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line); margin-top:12px; }
-  .bar{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--line); background:#f8fbff}
-  .content{padding:14px}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px 16px}
+  .mask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:16px; }
+  .box{ width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line); margin-top:10px; }
+  .bar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
+  .content{padding:12px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px}
   .label{font-weight:700}
-  .section{margin-top:14px}
-  .section h3{margin:10px 0; color:#0b4a6f; font-size:1rem}
+  .section{margin-top:12px}
+  .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
   .bul{margin:6px 0}
   .sub{margin:2px 0 0 18px}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
+
+  @media (max-width: 960px){
+    .wrap{padding:10px}
+    thead th, tbody td{font-size:.88rem}
+    .badge{min-width:84px;font-size:.8rem}
+    button{font-size:.85rem}
+  }
 </style>
 </head>
 <body>
@@ -98,7 +114,7 @@
         </select>
       </label>
 
-      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:320px" />
+      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
     </div>
 
     <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
@@ -114,27 +130,27 @@
     <div class="tableWrap">
       <table id="tab">
         <colgroup>
-          <col style="width:96px">
-          <col style="width:140px">
-          <col style="width:150px">
-          <col style="width:200px">
-          <col style="width:210px">
-          <col style="width:120px">
-          <col style="width:160px">
-          <col style="width:200px">
-          <col style="width:260px">
+          <col class="col-no">
+          <col class="col-magasin">
+          <col class="col-compte">
+          <col class="col-client">
+          <col class="col-service">
+          <col class="col-date">
+          <col class="col-statut">
+          <col class="col-eta">
+          <col class="col-actions">
         </colgroup>
         <thead>
           <tr>
-            <th>N°</th>
-            <th>Magasin</th>
-            <th>N° de compte</th>
-            <th>Client</th>
-            <th>Service</th>
-            <th>Date</th>
-            <th>Statut</th>
-            <th>Estimation Temps Travaux</th>
-            <th>Actions</th>
+            <th class="nowrap">N°</th>
+            <th class="wrap-ok">Magasin</th>
+            <th class="nowrap">N° de compte</th>
+            <th class="wrap-ok">Client</th>
+            <th class="wrap-ok">Service</th>
+            <th class="nowrap">Date</th>
+            <th class="nowrap">Statut</th>
+            <th class="nowrap">Estimation</th>
+            <th class="nowrap">Actions</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -167,7 +183,7 @@ const $modalContent = document.getElementById("modalContent");
 const $legend = document.getElementById("legend");
 
 function setTableLoading(msg){
-  $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#334155">
+  $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
   </td></tr>`;
 }
@@ -273,7 +289,7 @@ function buildEstimateSelect(value){
   for (let i=1;i<=10;i++){
     opts += `<option value="${i}" ${v===i?"selected":""}>${i}</option>`;
   }
-  return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
+  return `<select class="etaSel nowrap" aria-label="Estimation Temps Travaux">${opts}</select>`;
 }
 
 function matchesYearMonth(d){
@@ -316,17 +332,17 @@ function draw(){
       count++;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td title="${String(r.no)}">${String(r.no).padStart(5,'0')}</td>
-        <td title="${r.magasin||""}">${r.magasin||""}</td>
-        <td title="${r.compte||""}">${r.compte||""}</td>
-        <td title="${r.client||""}">${r.client||""}</td>
-        <td title="${r.service||""}">${r.service||""}</td>
-        <td title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
-        <td>${badge(r.status)}</td>
-        <td>${buildEstimateSelect(r.estimation)}</td>
-        <td class="actions">
-          <button class="btnView">Voir dossier</button>
-          <select class="statusSel">
+        <td class="col-no nowrap"        title="${String(r.no)}">${String(r.no).padStart(5,'0')}</td>
+        <td class="col-magasin wrap-ok"  title="${r.magasin||""}">${r.magasin||""}</td>
+        <td class="col-compte nowrap"    title="${r.compte||""}">${r.compte||""}</td>
+        <td class="col-client wrap-ok"   title="${r.client||""}">${r.client||""}</td>
+        <td class="col-service wrap-ok"  title="${r.service||""}">${r.service||""}</td>
+        <td class="col-date nowrap"      title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
+        <td class="col-statut nowrap">${badge(r.status)}</td>
+        <td class="col-eta nowrap">${buildEstimateSelect(r.estimation)}</td>
+        <td class="col-actions nowrap actions">
+          <button class="btnView">Voir</button>
+          <select class="statusSel nowrap">
             ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
           </select>
           <button class="btnSave">Valider</button>
@@ -345,7 +361,7 @@ function draw(){
 
         try{
           saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
-          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:8px"></span>Enregistrement…`;
+          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>...`;
 
           const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
@@ -519,14 +535,10 @@ function load(){
     })
     .catch(e=>{
       console.error(e);
-      $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
+      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
       alert("Erreur de chargement.");
     });
 }
-
-document.querySelector('.yearTabs'); // (déjà branché plus haut)
-document.getElementById('months-2025'); // (déjà branché plus haut)
-document.getElementById('months-2026'); // (déjà branché plus haut)
 
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
