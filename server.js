@@ -65,27 +65,7 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
-// === AJOUT: endpoint ajustement congés (corrigé, sans doublons) ===
-const ADJUST_LOG = `${PRES_ROOT}/adjust_conges.jsonl`;
-
-async function appendJSONL(client, remotePath, obj){
-  const tmp = tmpFile("adj_"+Date.now()+".jsonl");
-  try{
-    // essayer de télécharger le fichier existant si présent
-    try{ await client.downloadTo(tmp, remotePath); }catch{}
-    const line = JSON.stringify(obj) + "\n";
-    require('fs').appendFileSync(tmp, line, "utf8");
-    const dir = require('path').posix.dirname(remotePath);
-    await client.ensureDir(dir);
-    await client.uploadFrom(tmp, remotePath);
-  } finally { try{ require('fs').unlinkSync(tmp); }catch{} }
-}
-
-app.post("/presence/adjust-conges", async (req, res) => {
-  try{
-    const { magasin, date, entries } = req.body || {};
-    if (!magasin || !Array.isArray(entries)) return res.status(400).json({ ok:false, error:"bad_request" });
-    const stamp = new Date().toISOString();
+const stamp = new Date().toISOString();
     const payload = { magasin, date: date || stamp.slice(0,10), entries, stamp, source:"front" };
     try{
       const client = await ftpClient();
@@ -317,6 +297,45 @@ async function uploadPdfToPreferredDir(client, localTmpPath, destName){
   }
   throw lastErr;
 }
+// === AJOUT: endpoint ajustement congés (correct, single definition) ===
+const ADJUST_LOG = `${PRES_ROOT}/adjust_conges.jsonl`;
+
+async function appendJSONL(client, remotePath, obj){
+  const tmp = tmpFile("adj_"+Date.now()+".jsonl");
+  try{
+    // best-effort: download existing file if present
+    try{ await client.downloadTo(tmp, remotePath); }catch{}
+    const dir = require('path').posix.dirname(remotePath);
+    await client.ensureDir(dir);
+    require('fs').appendFileSync(tmp, JSON.stringify(obj)+"\n", "utf8");
+    await client.uploadFrom(tmp, remotePath);
+  } finally {
+    try{ require('fs').unlinkSync(tmp); }catch{}
+  }
+}
+
+app.post("/presence/adjust-conges", async (req, res) => {
+  try{
+    const { magasin, date, entries } = req.body || {};
+    if (!magasin || !Array.isArray(entries)) {
+      return res.status(400).json({ ok:false, error:"bad_request" });
+    }
+    const stamp = new Date().toISOString();
+    const payload = { magasin, date: date || stamp.slice(0,10), entries, stamp, source:"front" };
+    try{
+      const client = await ftpClient();
+      await appendJSONL(client, ADJUST_LOG, payload);
+      try{ client.close(); }catch{}
+    }catch(e){
+      console.warn("[adjust-conges] persistence skipped:", e?.message||e);
+    }
+    return res.json({ ok:true });
+  }catch(e){
+    console.error("[adjust-conges]", e);
+    return res.status(200).json({ ok:true, note:"no_persist" });
+  }
+});
+
 
 // ====== Métier congés ======
 async function appendLeave(payload) {
