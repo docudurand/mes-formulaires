@@ -36,13 +36,23 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
+
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
-const SITE_RESP_NAME  = (process.env.SITE_RESP_NAME || "FREDERICK SELVA").trim();
+
+const SITE_RESP_NAME_DEFAULT = (process.env.SITE_RESP_NAME || "SITE_RESP_NAME").trim();
+
+const RESP_SITE_NAME_BY_MAGASIN = {
+  "GLEIZE": "DAMIEN PICHARD",
+};
 
 const RESP_SERVICE_BY_MAGASIN = {
   "GLEIZE": "dampichard2007@gmail.com",
-
 };
+
+function siteRespNameFor(magasin) {
+  const m = String(magasin || "").trim().toUpperCase();
+  return (RESP_SITE_NAME_BY_MAGASIN[m] || SITE_RESP_NAME_DEFAULT).trim();
+}
 function respServiceEmailFor(magasin) {
   const m = String(magasin || "").trim().toUpperCase();
   return (RESP_SERVICE_BY_MAGASIN[m] || "").trim();
@@ -331,7 +341,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     const r  = Math.floor(i / cols), c = i % cols;
     const x  = pageLeft + c * colW;
     const yy = y + r * lh;
-
     doc.rect(x, yy, box, box).stroke();
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
       drawCrossInBox(doc, x, yy, box);
@@ -360,7 +369,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     } catch { y += 70; }
   } else { y += 70; }
 
-  const colLeft = pageLeft;
+  const colLeft = 50;
   const colRight = 330;
   doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
   doc.text("RESPONSABLE DE SITE :", colRight, y);
@@ -491,10 +500,7 @@ app.post("/conges/api", async (req, res) => {
       <p style="color:#6b7280">Chaque lien est personnel et utilisable une seule fois.</p>
     `;
 
-    const toList = [
-      SITE_RESP_EMAIL,
-      respServiceEmailFor(magasin),
-    ].filter(Boolean);
+    const toList = [ SITE_RESP_EMAIL, respServiceEmailFor(magasin) ].filter(Boolean);
     const toRecipients = toList.length ? toList.join(",") : email;
 
     await transporter.sendMail({
@@ -527,6 +533,19 @@ app.get("/conges/sign/:id", async (req, res) => {
   if (!["resp_service","resp_site"].includes(role) || !token) {
     return res.status(400).send("Lien invalide.");
   }
+
+  let prefillName = SITE_RESP_NAME_DEFAULT;
+  try {
+    const client = await ftpClient();
+    const arr = (await dlJSON(client, LEAVES_FILE)) || [];
+    const it = arr.find(x => x.id === id);
+    if (it && role === "resp_site") {
+      prefillName = siteRespNameFor(it.magasin);
+    }
+    try { client.close(); } catch {}
+  } catch {
+  }
+
   res.setHeader("Content-Type","text/html; charset=utf-8");
   res.end(`
 <!doctype html><meta charset="utf-8"/>
@@ -554,12 +573,12 @@ input{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
 </div>
 <script>
 const role=${JSON.stringify(role)}, token=${JSON.stringify(token)}, id=${JSON.stringify(id)};
-const prefillSiteName=${JSON.stringify(SITE_RESP_NAME)};
+const prefillSiteName=${JSON.stringify(prefillName)};
 const c=document.getElementById('pad'), ctx=c.getContext('2d'); let draw=false, pts=[];
 function size(){ const img=new Image(); img.onload=()=>{ c.width=c.clientWidth; c.height=220; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height); }
 img.src=c.toDataURL(); }
 window.addEventListener('resize', size); size();
-if(role==="resp_site"){ const i=document.getElementById('fullName'); i.value=prefillSiteName; }
+if(role==="resp_site"){ document.getElementById('fullName').value=prefillSiteName; }
 function P(e){const r=c.getBoundingClientRect();const t=e.touches&&e.touches[0];return {x:(t?t.clientX:e.clientX)-r.left,y:(t?t.clientY:e.clientY)-r.top};}
 c.addEventListener('mousedown', e=>{draw=true;pts=[P(e)]});
 c.addEventListener('mousemove', e=>{ if(!draw)return; const a=pts[pts.length-1], b=P(e); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); pts.push(b); });
@@ -617,7 +636,7 @@ app.post("/conges/sign/:id", async (req, res) => {
           try { fs.unlinkSync(tmpCheck); } catch {}
           remotePdf = candidate;
           break;
-        } catch {  }
+        } catch {}
       }
       if (!remotePdf) return res.status(404).json({ ok:false, error:"pdf_not_found" });
     }
@@ -642,7 +661,7 @@ app.post("/conges/sign/:id", async (req, res) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     let signerName = String(fullName || "").trim();
-    if (role === "resp_site" && !signerName) signerName = SITE_RESP_NAME;
+    if (role === "resp_site" && !signerName) signerName = siteRespNameFor(item.magasin);
 
     pg.drawText(signerName, { x: namePos.x, y: namePos.y, size: namePos.size, font, color: rgb(0,0,0) });
     const auditTxt = `${dayjs().format("YYYY-MM-DD HH:mm")} • ${signerName} • ${role}`;
