@@ -144,15 +144,20 @@ const PDF_DIR_PREFS = [
 ];
 
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425/i;
 
 function tlsOptions(){
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
   const servername = process.env.FTP_HOST || undefined;
   return { rejectUnauthorized, servername };
 }
+
 async function ftpClient(){
-  const client = new ftp.Client(30_000);
+  const client = new ftp.Client(45_000);
   if (FTP_DEBUG) client.ftp.verbose = true;
+
+  client.prepareTransfer = ftp.enterPassiveModeIPv4;
+
   await client.access({
     host: process.env.FTP_HOST,
     user: process.env.FTP_USER,
@@ -161,40 +166,88 @@ async function ftpClient(){
     secure: String(process.env.FTP_SECURE||"false")==="true",
     secureOptions: tlsOptions()
   });
-  try { client.ftp.socket?.setKeepAlive?.(true, 10_000); } catch {}
+
+  try {
+    client.ftp.socket?.setKeepAlive?.(true, 10_000);
+    client.ftp.timeout = 45_000;
+  } catch {}
+
   return client;
 }
+
 function tmpFile(name){ return path.join(os.tmpdir(), name); }
+
 async function dlJSON(client, remote){
   const out = tmpFile("lv_"+Date.now()+".json");
-  try{
-    await client.downloadTo(out, remote);
-    return JSON.parse(fs.readFileSync(out,"utf8"));
-  }catch{ return null }
-  finally{ try{ fs.unlinkSync(out); }catch{} }
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.downloadTo(out, remote);
+      const txt = fs.readFileSync(out, "utf8");
+      try{ fs.unlinkSync(out); }catch{}
+      return JSON.parse(txt);
+    }catch(e){
+      if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}; return null;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 250*attempt));
+    }
+  }
+  return null;
 }
+
 async function upJSON(client, remote, obj){
   const out = tmpFile("lv_up_"+Date.now()+".json");
   fs.writeFileSync(out, JSON.stringify(obj));
   const dir = path.posix.dirname(remote);
-  await client.ensureDir(dir);
-  try {
-    await client.uploadFrom(out, remote);
-  } catch (e) {
-    console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
-    throw e;
-  } finally {
-    try{ fs.unlinkSync(out) }catch{}
+
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
   }
 }
+
 async function upText(client, remote, buf){
   const dir = path.posix.dirname(remote);
-  await client.ensureDir(dir);
   const out = tmpFile("lv_file_"+Date.now());
   fs.writeFileSync(out, buf);
-  await client.uploadFrom(out, remote);
-  try{ fs.unlinkSync(out) }catch{}
+
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
+  }
 }
+
 async function uploadPdfToPreferredDir(client, localTmpPath, destName){
   let lastErr;
   for (const d of PDF_DIR_PREFS){
@@ -543,8 +596,7 @@ app.get("/conges/sign/:id", async (req, res) => {
       prefillName = siteRespNameFor(it.magasin);
     }
     try { client.close(); } catch {}
-  } catch {
-  }
+  } catch {}
 
   res.setHeader("Content-Type","text/html; charset=utf-8");
   res.end(`
