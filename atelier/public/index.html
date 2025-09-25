@@ -29,8 +29,28 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
-    .pdfMask{ position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; z-index:10000; padding:20px; }
-    .pdfBox{ width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line); }
+.pdfMask{
+  position: fixed;
+  inset: 0;
+  background: #0008;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 10000;
+  padding: 0;
+}
+.pdfBox{
+  width: min(900px, 96vw);
+  height: min(90vh, 800px);
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  margin-top: 0;
+  align-self: flex-start;
+}
     .pdfBar{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff; }
     #pdfFrame{ flex:1; width:100%; height:100%; border:0; }
   </style>
