@@ -31,68 +31,24 @@ textarea {
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
   box-shadow: 0 1px 0 rgba(0,0,0,.02);
 }
-#tab-resume .section-title {
-  margin-top: 22px;
-  margin-bottom: 8px;
-}
-#tab-resume .section-title:first-child {
-  margin-top: 6px;
-}
-
-#tab-resume .section-sub {
-  margin-top: 24px;
-  margin-bottom: 8px;
-  font-weight: 800;
-  color: var(--brand);
-}
+#tab-resume .section-title { margin-top: 22px; margin-bottom: 8px; }
+#tab-resume .section-title:first-child { margin-top: 6px; }
+#tab-resume .section-sub { margin-top: 24px; margin-bottom: 8px; font-weight: 800; color: var(--brand); }
 textarea { min-height: 90px; resize: vertical; }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #94a3b8;
-  opacity: 1;
-}
-
+input:focus, select:focus, textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+input::placeholder, textarea::placeholder { color: #94a3b8; opacity: 1; }
 select {
   padding-right: 36px;
   background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='%23566' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 14px;
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
 }
 
-button.primary {
-  background: var(--brand);
-  color: #fff;
-  border: 0;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-weight: 800;
-  letter-spacing: .2px;
-  box-shadow: 0 2px 0 rgba(0,0,0,.04);
-}
-button.primary:hover { filter: brightness(1.02); }
-button.primary:active { transform: translateY(1px); }
+button.primary { background: var(--brand); color: #fff; border: 0; border-radius: 12px; padding: 10px 16px; font-weight: 800; letter-spacing: .2px; box-shadow: 0 2px 0 rgba(0,0,0,.04); }
+button.primary:hover{ filter: brightness(1.02); } button.primary:active{ transform: translateY(1px); }
 
-input[type="checkbox"] {
-  width: 18px; height: 18px;
-  vertical-align: middle;
-  accent-color: var(--brand);
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="month"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: .7;
-  filter: saturate(.9);
-}
+input[type="checkbox"]{ width:18px; height:18px; vertical-align: middle; accent-color: var(--brand); }
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .7; filter: saturate(.9); }
 
 .input--sm { height: 34px; padding: 6px 10px; border-radius: 10px; }
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
@@ -363,6 +319,7 @@ function switchTab(key){
 
 let currentMagasin=null, personnel=null, selectedCells=new Set();
 let HIST_ROWS_SAISIE = [];
+let LAST_PREFILL_MAP = new Map();
 
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
@@ -436,17 +393,8 @@ function buildGlobalCodesBar(){
   $codesBar.appendChild(strip);
 }
 
-function isSaisieWeekend(){
-  const v = $dateInput.value;
-  if(!v) return false;
-  const d = new Date(v);
-  const g = d.getDay();
-  return g===0 || g===6;
-}
-function isSaisieHoliday(){
-  const v = $dateInput.value;
-  return v ? isHoliday(v) : false;
-}
+function isSaisieWeekend(){ const v=$dateInput.value; if(!v) return false; const d=new Date(v); const g=d.getDay(); return g===0||g===6; }
+function isSaisieHoliday(){ const v=$dateInput.value; return v ? isHoliday(v) : false; }
 function paintWeekendInSaisie(){
   const we = isSaisieWeekend();
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
@@ -485,31 +433,7 @@ function buildSection(title, rows){
   return wrap;
 }
 
-function labelsFromMonthFile(file){
-  const byNorm = new Map();
-  Object.values(file || {}).forEach(rec=>{
-    (rec?.data?.rows || []).forEach(r=>{
-      const raw = String(r.label || "").trim();
-      if (!raw) return;
-      const k = norm(raw);
-      if (!byNorm.has(k)) byNorm.set(k, raw.toUpperCase());
-    });
-  });
-  return [...byNorm.values()];
-}
-function uniqByNorm(labels){
-  const m = new Map();
-  labels.forEach(lbl => {
-    const k = norm(lbl);
-    if (!m.has(k)) m.set(k, lbl.toUpperCase());
-  });
-  return [...m.values()];
-}
-function labelsFromDayData(dayData){
-  return (dayData?.rows || [])
-    .map(r => String(r.label||"").trim())
-    .filter(Boolean);
-}
+function labelsFromDayData(dayData){ return (dayData?.rows || []).map(r => String(r.label||"").trim()).filter(Boolean); }
 
 function buildSaisieUI(){
   $saisieContent.innerHTML=''; clearSelection();
@@ -522,12 +446,40 @@ function buildSaisieUI(){
     const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
     sections.push({title:`LIVREURS — ${g}`, rows});
   });
-
-  if (Array.isArray(HIST_ROWS_SAISIE) && HIST_ROWS_SAISIE.length){
-    sections.push({ title:"HISTORIQUE (ce jour)", rows: HIST_ROWS_SAISIE });
-  }
-
+  if (Array.isArray(HIST_ROWS_SAISIE) && HIST_ROWS_SAISIE.length){ sections.push({ title:"HISTORIQUE (ce jour)", rows: HIST_ROWS_SAISIE }); }
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
+  paintWeekendInSaisie();
+}
+
+function snapshotToMap(data){
+  const map = new Map();
+  (data?.rows||[]).forEach(r=>{
+    const k = norm(r.label||"");
+    map.set(k, { ...(r.values||{}) });
+  });
+  return map;
+}
+function applyPrefill(data){
+  LAST_PREFILL_MAP = snapshotToMap(data);
+  const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
+  $saisieContent.querySelectorAll('tbody tr').forEach(tr => {
+    const labelKey = norm(tr.querySelector('.row-label').textContent.trim());
+    const vals = map.get(labelKey) || {};
+    tr.querySelectorAll('td.cell').forEach(td => {
+      const v = vals[td.dataset.slot] || '';
+      ALL_CODES.forEach(c => td.classList.remove(c));
+      td.classList.remove('PSITE','FERIE'); td.classList.remove('weekend');
+      td.textContent = v;
+      if (v) {
+        if (v === 'NP') td.classList.add('weekend');
+        else {
+          td.classList.add(v);
+          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+          if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
+        }
+      }
+    });
+  });
   paintWeekendInSaisie();
 }
 
@@ -541,9 +493,7 @@ async function prefillDay(){
     const currentLabels = new Set(
       [...document.querySelectorAll('#saisie-content .row-label')].map(el=>norm(el.textContent))
     );
-    const missing = labelsInDay
-      .map(lbl => ({ raw: lbl, key: norm(lbl) }))
-      .filter(x => !currentLabels.has(x.key));
+    const missing = labelsInDay.map(lbl => ({ raw: lbl, key: norm(lbl) })).filter(x => !currentLabels.has(x.key));
 
     if (missing.length){
       const rowsMap = new Map((payload?.data?.rows||[]).map(r => [norm(r.label||""), r]));
@@ -561,29 +511,7 @@ async function prefillDay(){
     applyHolidayDefaultsForDay();
   }catch{}
 }
-function applyPrefill(data){
-  const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
-  $saisieContent.querySelectorAll('tbody tr').forEach(tr => {
-    const labelKey = norm(tr.querySelector('.row-label').textContent.trim());
-    const vals = map.get(labelKey) || {};
-    tr.querySelectorAll('td.cell').forEach(td => {
-      const v = vals[td.dataset.slot] || '';
-      ALL_CODES.forEach(c => td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
-      td.classList.remove('weekend');
-      td.textContent = v;
-      if (v) {
-        if (v === 'NP') td.classList.add('weekend');
-        else {
-          td.classList.add(v);
-          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-          if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
-        }
-      }
-    });
-  });
-  paintWeekendInSaisie();
-}
+
 function applyHolidayDefaultsForDay(){
   const day = $dateInput.value;
   if(!day || !isHoliday(day)) return;
@@ -608,24 +536,66 @@ function collectData(){
   });
   return {rows};
 }
+
+function computeCpDeltaAgainstLast(){
+  const delta = new Map();
+  const cur = collectData();
+  const CUR = new Map((cur.rows||[]).map(r=>[norm(r.label), r.values||{}]));
+  const keys = new Set([...CUR.keys(), ...LAST_PREFILL_MAP.keys()]);
+
+  keys.forEach(k=>{
+    const before = LAST_PREFILL_MAP.get(k) || {};
+    const after  = CUR.get(k) || {};
+    const slots = new Set([...Object.keys(before), ...Object.keys(after)]);
+    let d = 0;
+    slots.forEach(s=>{
+      const b = String(before[s]||'').trim();
+      const a = String(after[s] ||'').trim();
+      if (b !== 'CP' && a === 'CP') d -= 0.5;
+      else if (b === 'CP' && a !== 'CP') d += 0.5;
+    });
+    if (d !== 0) delta.set(k, d);
+  });
+
+  const out = [];
+  const labelByNorm = new Map();
+  document.querySelectorAll('#saisie-content .row-label').forEach(el=>{
+    labelByNorm.set(norm(el.textContent), el.textContent.trim());
+  });
+  delta.forEach((d,k)=> out.push({ fullName: labelByNorm.get(k) || k, delta: Number(d.toFixed(2)) }));
+  return out;
+}
+
+async function postAdjustConges(magasin, entries, source){
+  if (!entries || !entries.length) return;
+  try{
+    await fetchJSON('/adjust-conges', { method:'POST', body: JSON.stringify({
+      magasin, entries: entries.map(e=>({ ...e, date: $dateInput.value || todayISO(), source: source||'saisie' }))
+    })});
+  }catch(e){
+    console.warn('[adjust-conges] échec (non bloquant):', e?.message||e);
+  }
+}
+
 document.getElementById('btn-save').addEventListener('click', async ()=>{
   if(!currentMagasin) return;
+  const cpDeltas = computeCpDeltaAgainstLast();
   const data=collectData(); $btnSave.disabled=true;
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
+    await postAdjustConges(currentMagasin, cpDeltas, 'saisie');
     alert('Enregistré ✔');
-  }catch{ alert("Échec de l'enregistrement"); }
-  finally{ $btnSave.disabled=false; }
+    LAST_PREFILL_MAP = snapshotToMap(data);
+  }catch{
+    alert("Échec de l'enregistrement");
+  }finally{ $btnSave.disabled=false; }
 });
-$dateInput.addEventListener('change',async ()=>{
-  await prefillDay();
-  paintWeekendInSaisie();
-});
+
+$dateInput.addEventListener('change',async ()=>{ await prefillDay(); paintWeekendInSaisie(); });
+
 document.getElementById('btn-fill-all').addEventListener('click', ()=>{
   document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if (!td.textContent.trim()) {
-      td.textContent='P'; td.classList.add('P');
-    }
+    if (!td.textContent.trim()) { td.textContent='P'; td.classList.add('P'); }
   });
 });
 
@@ -634,6 +604,7 @@ const $resumeStoreSel=document.getElementById('resume-store');
  .forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStoreSel.appendChild(o); });
 
 document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
+
 async function loadResumeForStore(){
   $resumeError.style.display='none';
   $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
@@ -647,6 +618,7 @@ async function loadResumeForStore(){
     $resumeContent.innerHTML='';
   }
 }
+
 function renderOneStore(yyyymm, magasin, data){
   const days = daysOfMonth(yyyymm);
   const file = data.file || {};
@@ -654,8 +626,6 @@ function renderOneStore(yyyymm, magasin, data){
 
   const wrap = document.createElement('div');
   const title = document.createElement('div'); title.className='section-title'; title.textContent=magasin; wrap.appendChild(title);
-
-  const isWE = d => { const x=d.getDay(); return x===0||x===6; };
 
   function makeSection(title, labels, slotsResolver){
     if(!labels.length) return null;
@@ -705,10 +675,9 @@ function renderOneStore(yyyymm, magasin, data){
         }
         order.forEach(slot=>{
           const td=document.createElement('td'); td.className='cell';
-          if(isWE(d)) td.classList.add('weekend');
+          if([0,6].includes(d.getDay())) td.classList.add('weekend');
           let v = values[slot] || '';
           if(!v && isHoliday(dk)) v = 'F';
-
           td.textContent = v;
           if(v){
             if (v === 'NP') td.classList.add('weekend');
@@ -733,10 +702,6 @@ function renderOneStore(yyyymm, magasin, data){
   const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const livreurGroups = Object.keys(pers.livreurs||{});
-
-  const knownNow = new Set([...empLabels, ...intLabels, ...livreurGroups].map(norm));
-  const histLabelsAll = labelsFromMonthFile(file);
-  const histOld = uniqByNorm(histLabelsAll.filter(lbl => !knownNow.has(norm(lbl))));
 
   const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
   if(empSec) wrap.appendChild(empSec);
@@ -907,9 +872,37 @@ async function loadAdminPersonnel(){
 }
 
 $arAdd.addEventListener('click', async ()=>{
-  const token = sessionStorage.getItem('leavesToken');
-  if(!token){ alert("Connectez-vous d'abord."); return; }
+  const mag = $arMag.value || currentMagasin;
+  const who = $arPers.value || '';
+  const code= $arCode.value || '';
+  const du = $arDu.value, au = $arAu.value;
+  if (!mag || !who || !code || !du || !au) return;
 
+  $arAdd.disabled = true; $arMsg.textContent = 'Ajout en cours…';
+  try{
+    const r = await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({
+      magasin: mag, label: who, code, du, au
+    })});
+if (code === 'CP') {
+const d1 = new Date(du), d2 = new Date(au);
+      let delta = 0;
+      for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)) {
+        const iso = ymd(d);
+        const w = d.getDay();
+        if (w!==0 && w!==6 && !isHoliday(iso)) {
+          delta -= 1;
+        }
+      }
+      await postAdjustConges(mag, [{ fullName: who, delta: Number(delta.toFixed(2)) }], 'admin_range');
+    }
+
+    $arMsg.textContent = 'Ajout effectué ✔';
+  }catch(e){
+    $arMsg.textContent = 'Échec de l’ajout.';
+  }finally{
+    $arAdd.disabled = false;
+  }
+});
   const magasin = $arMag.value;
   const opt = $arPers.selectedOptions[0];
   const nom = opt?.dataset?.nom||"";
