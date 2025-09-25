@@ -37,20 +37,20 @@
     background:#f8fbff; text-align:left; padding:10px 12px; color:#334155; font-size:.92rem; border-bottom:1px solid var(--line);
     white-space:nowrap;
   }
-  thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; } /* évite chevauchement */
+  thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; }
   tbody tr{background:#fff}
   tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff}
 
-  /* Largeurs (somme = 100%) – place à la fin de ligne, compte & client réduits */
+  /* Largeurs (100%) – Statut ↓, Estimation ↑ */
   .col-no        { width: 5%  }
   .col-magasin   { width: 10% }
-  .col-compte    { width: 8%  }  /* ↓ */
-  .col-client    { width: 14% }  /* ↓ */
-  .col-service   { width: 16% }  /* ↓ */
+  .col-compte    { width: 8%  }
+  .col-client    { width: 14% }
+  .col-service   { width: 16% }
   .col-date      { width: 9%  }
-  .col-statut    { width: 13% }
-  .col-eta       { width: 11% }  /* ↑ (liste visible) */
-  .col-actions   { width: 14% }  /* ↑ */
+  .col-statut    { width: 11% } /* réduit */
+  .col-eta       { width: 13% } /* élargi */
+  .col-actions   { width: 14% }
 
   .nowrap   { white-space:nowrap; }
   .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -58,7 +58,7 @@
   /* Statuts / contrôles */
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
-    padding:6px 10px; border-radius:999px; font-weight:700; font-size:.85rem; min-width:90px; text-align:center;
+    padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
   }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
@@ -67,10 +67,10 @@
 
   .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
   .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:150px;}
-  .etaSel   {padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:100px;}
+  .etaSel   {padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:110px;}
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
     padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem}
-  .btnView{white-space:normal; line-height:1.05; padding:7px 10px; min-width:86px} /* “Voir” sur 1ère ligne, “dossier” dessous */
+  .btnView{white-space:normal; line-height:1.05; padding:7px 10px; min-width:86px} /* “Voir” au-dessus de “dossier” */
 
   .spinner{
     width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#004080;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
@@ -86,8 +86,6 @@
   .label{font-weight:700}
   .section{margin-top:12px}
   .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
-  .bul{margin:6px 0}
-  .sub{margin:2px 0 0 18px}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
 </style>
 </head>
@@ -106,7 +104,7 @@
     <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
   </div>
 
-  <!-- Onglets années / mois -->
+  <!-- Années / Mois -->
   <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
     <div class="yearTabs" role="tablist" aria-label="Années">
       <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
@@ -182,9 +180,7 @@ function setTableLoading(msg){
 }
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
 function badge(status){
-  const m = {
-    "Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"
-  }[status] || "s-1";
+  const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
   return `<span class="badge ${m}">${status}</span>`;
 }
 function p2(n){ return String(n).padStart(2,"0"); }
@@ -348,80 +344,39 @@ function draw(){
 }
 
 /* ---------- Détails (modale) ---------- */
-function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function openDetails(row){
   const h = (row.snapshot && row.snapshot.header) || {};
-  const cul = (row.snapshot && row.snapshot.culasse) || null;
-  const inj = (row.snapshot && row.snapshot.injecteur) || null;
   const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
-
-  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || row.service || ""}`;
-
-  let opsHTML = "";
-  if (cul && Array.isArray(cul.operations) && cul.operations.length){
-    opsHTML = cul.operations.map(op=>{
-      const refs = Array.isArray(op.references) ? op.references.map(r=>{
-        const bits = [];
-        if (r.reference) bits.push(esc(r.reference));
-        if (r.libelleRef) bits.push(esc(r.libelleRef));
-        if (r.prixHT || r.prixHT===0) bits.push(`${esc(String(r.prixHT))} € HT`);
-        return `<div class="sub">- ${bits.join(" – ")}</div>`;
-      }).join("") : "";
-      return `<div class="bul">• ${esc(op.libelle || op.ligne)}</div>${refs}`;
-    }).join("");
-  }
-
-  const piecesHTML = (cul && Array.isArray(cul.piecesAFournir) && cul.piecesAFournir.length)
-    ? cul.piecesAFournir.map(p=>`<div class="bul">• ${esc(p)}</div>`).join("")
-    : "<div class='bul' style='opacity:.7'>Aucune pièce sélectionnée.</div>";
-
-  $modalContent.innerHTML = `
+  const html = `
     <div class="grid2">
-      <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
+      <div><span class="label">N° :</span> ${String(row.no).padStart(5,'0')}</div>
       <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
-      <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
-      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
-      <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
-      <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
-      <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
-      <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
-      <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
-      <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
-      <div><span class="label">Service :</span> ${esc(h.service||row.service||"")}</div>
-      <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
-      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
+      <div><span class="label">Magasin :</span> ${h.magasin||row.magasin||""}</div>
+      <div><span class="label">Statut :</span> ${row.status||""}</div>
+      <div><span class="label">Client :</span> ${h.client||row.client||""}</div>
+      <div><span class="label">Compte :</span> ${h.compte||row.compte||""}</div>
+      <div><span class="label">Véhicule :</span> ${h.vehicule||""}</div>
+      <div><span class="label">Immat. :</span> ${h.immat||""}</div>
+      <div><span class="label">Service :</span> ${h.service||row.service||""}</div>
+      <div><span class="label">Estimation :</span> ${row.estimation || "—"}</div>
     </div>
+    ${com ? `<div class="section"><h3>Commentaires</h3><div class="area">${com}</div></div>` : ""}
   `;
-
+  document.getElementById("modalTitle").textContent = `Dossier ${String(row.no).padStart(5,'0')}`;
+  document.getElementById("modalContent").innerHTML = html;
   $mask.style.display = "flex";
   $mask.setAttribute("aria-hidden","false");
 }
-
 document.getElementById("btnClose").addEventListener("click", ()=>{
   $mask.style.display = "none";
   $mask.setAttribute("aria-hidden","true");
-  $modalContent.innerHTML = "";
+  document.getElementById("modalContent").innerHTML = "";
 });
 document.getElementById("btnPrint").addEventListener("click", ()=>{
   const w = window.open("", "_blank");
-  w.document.write(`
-    <html>
-      <head>
-        <title>${$modalTitle.textContent}</title>
-        <meta charset="utf-8" />
-        <style>
-          body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
-          .label{font-weight:700}
-          .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
-          .section{margin-top:14px}
-          .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
-        </style>
-      </head>
-      <body>
-        ${$modalContent.innerHTML}
-      </body>
-    </html>
-  `);
+  w.document.write(`<html><head><meta charset="utf-8"><title>Impression</title>
+  <style>body{font-family:system-ui,Arial,sans-serif;padding:20px} .label{font-weight:700}</style></head>
+  <body>${document.getElementById("modalContent").innerHTML}</body></html>`);
   w.document.close(); w.focus(); w.print(); w.close();
 });
 
