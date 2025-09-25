@@ -14,6 +14,7 @@
     .grid{display:grid; gap:14px}
     @media(min-width:720px){ .grid-2{grid-template-columns:1fr 1fr} }
     label{display:block; font-weight:600; margin:4px 0 6px}
+    .req{color:#b91c1c; margin-left:4px}
     input, select, textarea{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff }
     textarea{ min-height:120px; resize:vertical }
     .section-title{margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); font-weight:700; color:#0f172a}
@@ -38,71 +39,71 @@
   <div class="wrap">
     <h1>Demande d’intervention</h1>
 
-    <form id="form-atelier" novalidate>
+    <form id="form-atelier">
       <div class="grid grid-2">
         <div>
-          <label for="client">Nom du client</label>
-          <input id="client" name="client" type="text" required />
+          <label for="client">Nom du client <span class="req">*</span></label>
+          <input id="client" name="client" type="text" required aria-required="true" />
         </div>
         <div>
-          <label for="compte">N° de compte client</label>
-          <input id="compte" name="compte" type="text" />
+          <label for="compte">N° de compte client <span class="req">*</span></label>
+          <input id="compte" name="compte" type="text" required aria-required="true" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
-          <label for="telephone">Téléphone client</label>
-          <input id="telephone" name="telephone" type="tel" inputmode="tel" />
+          <label for="telephone">Téléphone client <span class="req">*</span></label>
+          <input id="telephone" name="telephone" type="tel" inputmode="tel" required aria-required="true" />
         </div>
         <div>
-          <label for="email">Adresse mail magasinier/réceptionnaire</label>
-          <input id="email" name="email" type="email" />
-        </div>
-      </div>
-
-      <div class="grid grid-2">
-        <div>
-          <label for="vehicule">Marque et modèle du véhicule</label>
-          <input id="vehicule" name="vehicule" type="text" />
-        </div>
-        <div>
-          <label for="immat">Immatriculation</label>
-          <input id="immat" name="immat" type="text" />
+          <label for="email">Adresse mail magasinier/réceptionnaire <span class="req">*</span></label>
+          <input id="email" name="email" type="email" required aria-required="true" />
         </div>
       </div>
 
       <div class="grid grid-2">
         <div>
-          <label for="dateDemande">Date de la demande</label>
-          <input id="dateDemande" name="dateDemande" type="date" required />
+          <label for="vehicule">Marque et modèle du véhicule <span class="req">*</span></label>
+          <input id="vehicule" name="vehicule" type="text" required aria-required="true" />
         </div>
         <div>
-          <label for="magasin">Magasin d'envoi</label>
-          <select id="magasin" name="magasin" required>
+          <label for="immat">Immatriculation <span class="req">*</span></label>
+          <input id="immat" name="immat" type="text" required aria-required="true" />
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div>
+          <label for="dateDemande">Date de la demande <span class="req">*</span></label>
+          <input id="dateDemande" name="dateDemande" type="date" required aria-required="true" />
+        </div>
+        <div>
+          <label for="magasin">Magasin d'envoi <span class="req">*</span></label>
+          <select id="magasin" name="magasin" required aria-required="true">
             <option value="" selected disabled>-- Sélectionnez un magasin --</option>
             <option value="Annemasse">Annemasse</option>
             <option value="Bourgoin">Bourgoin</option>
-			<option value="Chasse sur Rhone">Chasse sur Rhone</option>
-			<option value="Chassieu">Chassieu</option>
-			<option value="Gleize">Gleize</option>
-			<option value="La Motte Servolex">La Motte Servolex</option>
-			<option value="Miribel">Miribel</option>
-			<option value="Pavi">Pavi</option>
-			<option value="Renage">Renage</option>
-			<option value="Rives">Rives</option>
-			<option value="St-Martin-D'Heres">Saint-Martin-D'Heres</option>
-			<option value="Seynod">Seynod</option>
-			<option value="St Egreve">St Egreve</option>
-			<option value="St-Jean-Bonnefonds">St-Jean-Bonnefonds</option>
+            <option value="Chasse sur Rhone">Chasse sur Rhone</option>
+            <option value="Chassieu">Chassieu</option>
+            <option value="Gleize">Gleize</option>
+            <option value="La Motte Servolex">La Motte Servolex</option>
+            <option value="Miribel">Miribel</option>
+            <option value="Pavi">Pavi</option>
+            <option value="Renage">Renage</option>
+            <option value="Rives">Rives</option>
+            <option value="St-Martin-D'Heres">Saint-Martin-D'Heres</option>
+            <option value="Seynod">Seynod</option>
+            <option value="St Egreve">St Egreve</option>
+            <option value="St-Jean-Bonnefonds">St-Jean-Bonnefonds</option>
           </select>
         </div>
       </div>
 
       <div class="grid">
         <div>
-          <label for="service">Service</label>
-          <select id="service" name="service" required>
+          <label for="service">Service <span class="req">*</span></label>
+          <select id="service" name="service" required aria-required="true">
             <option value="" selected disabled>-- Choisissez un service --</option>
             <option value="Rectification Culasse">Rectification Culasse</option>
             <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
@@ -160,20 +161,20 @@
           <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)"><span>JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)</span></label>
           <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE RODAGE"><span>POCHETTE RODAGE</span></label>
           <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE MOTEUR COMPLET (HAUT ET BAS)"><span>POCHETTE MOTEUR COMPLET (HAUT ET BAS)</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT D’INJECTEUR"><span>JOINT D’INJECTEUR</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE BRIDE D’INJECTEUR"><span>VIS DE BRIDE D’INJECTEUR</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE CULASSE"><span>VIS DE CULASSE</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="CALORSTAT"><span>CALORSTAT</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="SONDE DE TEMPERATURE"><span>SONDE DE TEMPERATURE</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="POMPE A EAU"><span>POMPE A EAU</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT DE DISTRIBUTION"><span>KIT DE DISTRIBUTION</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE DISTRIBUTION"><span>COURROIE DISTRIBUTION</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE D’ACCESSOIRE"><span>COURROIE D’ACCESSOIRE</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="GALET D’ACCESSOIRE"><span>GALET D’ACCESSOIRE</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="BOUGIES ALLUMAGE / CHAUFFE"><span>BOUGIES ALLUMAGE / CHAUFFE</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="INJECTEURS"><span>INJECTEURS</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT BAGUES ETANCHEITÉ"><span>KIT BAGUES ETANCHEITÉ</span></label>
-		  <label class="piece-item"><input type="checkbox" name="pieces[]" value="RADIATEUR"><span>RADIATEUR</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT D’INJECTEUR"><span>JOINT D’INJECTEUR</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE BRIDE D’INJECTEUR"><span>VIS DE BRIDE D’INJECTEUR</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE CULASSE"><span>VIS DE CULASSE</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="CALORSTAT"><span>CALORSTAT</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="SONDE DE TEMPERATURE"><span>SONDE DE TEMPERATURE</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="POMPE A EAU"><span>POMPE A EAU</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT DE DISTRIBUTION"><span>KIT DE DISTRIBUTION</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE DISTRIBUTION"><span>COURROIE DISTRIBUTION</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE D’ACCESSOIRE"><span>COURROIE D’ACCESSOIRE</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="GALET D’ACCESSOIRE"><span>GALET D’ACCESSOIRE</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="BOUGIES ALLUMAGE / CHAUFFE"><span>BOUGIES ALLUMAGE / CHAUFFE</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="INJECTEURS"><span>INJECTEURS</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT BAGUES ETANCHEITÉ"><span>KIT BAGUES ETANCHEITÉ</span></label>
+          <label class="piece-item"><input type="checkbox" name="pieces[]" value="RADIATEUR"><span>RADIATEUR</span></label>
         </div>
       </div>
 
@@ -251,36 +252,36 @@
     });
   }
 
-function matchRegles(service, cyl, soup, carb, seg, ligne){
-  const cand = REGLES.filter(r =>
-    String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
-    String(r.service).toLowerCase() === String(service).toLowerCase()
-  );
-  const score = r => {
-    const vlpl = String(r.vl_pl || r['vl/pl'] || r.vlpl || '').trim().toUpperCase();
-    const segU = String(seg||'').toUpperCase();
-    let s = 0;
+  function matchRegles(service, cyl, soup, carb, seg, ligne){
+    const cand = REGLES.filter(r =>
+      String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
+      String(r.service).toLowerCase() === String(service).toLowerCase()
+    );
+    const score = r => {
+      const vlpl = String(r.vl_pl || r['vl/pl'] || r.vlpl || '').trim().toUpperCase();
+      const segU = String(seg||'').toUpperCase();
+      let s = 0;
 
-    s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === '*' ? 0 : -999);
+      s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === '*' ? 0 : -999);
 
-    if (String(soup || '') === '') {
+      if (String(soup || '') === '') {
 
-    } else {
-      s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
-    }
+      } else {
+        s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
+      }
 
-    s += (String(r.carburant).toLowerCase() === String(carb).toLowerCase()) ? 1 : (r.carburant === '*' ? 0 : -999);
+      s += (String(r.carburant).toLowerCase() === String(carb).toLowerCase()) ? 1 : (r.carburant === '*' ? 0 : -999);
 
-    s += (vlpl === '' || vlpl === '*' || vlpl === segU) ? 1 : -999;
+      s += (vlpl === '' || vlpl === '*' || vlpl === segU) ? 1 : -999;
 
-    return s;
-  };
-  return cand
-    .map(r => ({ r, s: score(r) }))
-    .filter(x => x.s >= 0)
-    .sort((a,b) => b.s - a.s)
-    .map(x => x.r);
-}
+      return s;
+    };
+    return cand
+      .map(r => ({ r, s: score(r) }))
+      .filter(x => x.s >= 0)
+      .sort((a,b) => b.s - a.s)
+      .map(x => x.r);
+  }
 
   function refreshReferences(){
     if (el('service').value !== 'Rectification Culasse') return;
@@ -310,7 +311,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     blocC.classList.toggle('hidden', !isC);
     blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
     el('segment').required = el('cylindre').required = el('carburant').required = isC;
-	el('soupapes').required = false;
+    el('soupapes').required = false;
     if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
     else refreshReferences();
 
@@ -346,6 +347,8 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
   $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
+    if(!e.target.reportValidity()){ return; }
+
     e.preventDefault();
     const $status = document.getElementById("statusMsg");
     const $btn = document.getElementById("btnSubmit");

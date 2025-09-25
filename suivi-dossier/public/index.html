@@ -30,7 +30,7 @@
   .s-4{background:var(--s4); color:var(--s4b)}
   .actions{display:flex; gap:8px; align-items:center}
   button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
-  .statusSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
+  .statusSel,.etaSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
 
   .spinner{
     width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--primary);
@@ -59,7 +59,7 @@
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
 
   .bar button{
-    border:1px solid var(--primary); background:#fff; color:var(--primary);
+    border:1px solid var(--primary); background:#fff; color:#var(--primary);
     padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer; margin-left:6px;
   }
 </style>
@@ -94,7 +94,15 @@
     <table id="tab">
       <thead>
         <tr>
-          <th>N°</th><th>Magasin</th><th>N° de compte</th><th>Client</th><th>Service</th><th>Date</th><th>Statut</th><th>Actions</th>
+          <th>N°</th>
+          <th>Magasin</th>
+          <th>N° de compte</th>
+          <th>Client</th>
+          <th>Service</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th>Estimation Temps Travaux</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -127,12 +135,11 @@ const $modalContent = document.getElementById("modalContent");
 const $month = document.getElementById("filterMonth");
 const $day   = document.getElementById("filterDay");
 
-
 function showLoading(){  }
 function hideLoading(){  }
 
 function setTableLoading(msg){
-  $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#334155">
+  $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
   </td></tr>`;
 }
@@ -186,6 +193,15 @@ function updateDayOptions() {
 
 let rows = [];
 
+function buildEstimateSelect(value){
+  const v = Number(value) || "";
+  let opts = "";
+  for (let i=1;i<=10;i++){
+    opts += `<option value="${i}" ${v===i?"selected":""}>${i}</option>`;
+  }
+  return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
+}
+
 function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
@@ -210,6 +226,7 @@ function draw(){
         <td>${r.service||""}</td>
         <td>${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td>${badge(r.status)}</td>
+        <td>${buildEstimateSelect(r.estimate || r.estimationTempsTravaux)}</td>
         <td class="actions">
           <button class="btnView">Voir dossier</button>
           <select class="statusSel">
@@ -226,6 +243,10 @@ function draw(){
         const saveBtn = tr.querySelector(".btnSave");
         const oldHtml = saveBtn.innerHTML;
         const status = statusSel.value;
+
+        const etaSel = tr.querySelector(".etaSel");
+        r.estimate = Number(etaSel.value);
+
         try{
           saveBtn.disabled = true; statusSel.disabled = true;
           saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:8px"></span>Enregistrement…`;
@@ -379,7 +400,8 @@ function load(){
           compte:  x.compte  || (h && h.compte)  || "",
           client:  x.client  || (h && h.client)  || "",
           service: x.service || (h && h.service) || "",
-          demandeDate: x.demandeDate || (h && h.dateDemande) || ""
+          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
+          estimate: x.estimate || x.estimationTempsTravaux || ""
         };
       });
       buildYearOptions(rows);
@@ -389,7 +411,7 @@ function load(){
     })
     .catch(e=>{
       console.error(e);
-      $tbody.innerHTML = `<tr><td colspan="8" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
+      $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#b91c1c">Erreur de chargement.</td></tr>`;
       alert("Erreur de chargement.");
     });
 }

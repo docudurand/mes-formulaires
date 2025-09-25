@@ -35,7 +35,9 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
+const PUBLIC_BASE_URL   = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
+const SITE_RESP_EMAIL   = process.env.MAIL_CG || "";
+const SITE_RESP_NAME = process.env.SITE_RESP_NAME || "SITE_RESP_NAME";
 
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
@@ -106,23 +108,6 @@ console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public
 console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => { res.sendFile(path.join(__dirname, "public", "conges", "index.html")); });
-
-const RESPONSABLES = {
-  "GLEIZE": {
-    resp_service: { name: "FREDERICK SELVA", email: "dampichard2007@gmail.com" },
-    resp_site:    { name: "DAMIEN PICHARD",  email: "magvl4gleize@durandservices.fr" },
-  },
-};
-
-function recipientForMagasin(magasin, fallback) {
-  const m = String(magasin || "").trim().toUpperCase();
-  const conf = RESPONSABLES[m];
-  if (conf) {
-    const to = [conf.resp_service?.email, conf.resp_site?.email].filter(Boolean).join(",");
-    if (to) return to;
-  }
-  return fallback;
-}
 
 function esc(str = "") {
   return String(str)
@@ -196,7 +181,6 @@ async function upText(client, remote, buf){
   await client.uploadFrom(out, remote);
   try{ fs.unlinkSync(out) }catch{}
 }
-
 async function uploadPdfToPreferredDir(client, localTmpPath, destName){
   let lastErr;
   for (const d of PDF_DIR_PREFS){
@@ -343,7 +327,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     const r  = Math.floor(i / cols), c = i % cols;
     const x  = pageLeft + c * colW;
     const yy = y + r * lh;
-
     doc.rect(x, yy, box, box).stroke();
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
       drawCrossInBox(doc, x, yy, box);
@@ -388,12 +371,13 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
 }
 
 const SIGN_COORDS = {
-  resp_service: { page: 0, x: 60,  y: 180, w: 200, h: 60 },
-  resp_site:    { page: 0, x: 330, y: 180, w: 200, h: 60 },
+  resp_service: { page: 0, x: 120, y: 130, w: 220, h: 70 },
+  resp_site:    { page: 0, x: 390, y: 130, w: 220, h: 70 },
 };
+
 const NAME_COORDS = {
-  resp_service: { page: 0, x: 120, y: 224, size: 12 },
-  resp_site:    { page: 0, x: 390, y: 224, size: 12 },
+  resp_service: { page: 0, x: 120, y: 210, size: 12 },
+  resp_site:    { page: 0, x: 390, y: 210, size: 12 },
 };
 
 app.post("/conges/api", async (req, res) => {
@@ -461,7 +445,6 @@ app.post("/conges/api", async (req, res) => {
       try{ clientUp.close(); }catch{}
     }
 
-    // Jetons de signature + sauvegarde
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
     await patchLeave(leaveId, {
@@ -504,7 +487,7 @@ app.post("/conges/api", async (req, res) => {
       <p style="color:#6b7280">Chaque lien est personnel et utilisable une seule fois.</p>
     `;
 
-    const toRecipients = recipientForMagasin(magasin, process.env.MAIL_CG || email);
+    const toRecipients = SITE_RESP_EMAIL || email;
 
     await transporter.sendMail({
       to: toRecipients,
@@ -563,10 +546,12 @@ input{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
 </div>
 <script>
 const role=${JSON.stringify(role)}, token=${JSON.stringify(token)}, id=${JSON.stringify(id)};
+const prefillSiteName=${JSON.stringify(SITE_RESP_NAME)};
 const c=document.getElementById('pad'), ctx=c.getContext('2d'); let draw=false, pts=[];
 function size(){ const img=new Image(); img.onload=()=>{ c.width=c.clientWidth; c.height=220; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height); }
 img.src=c.toDataURL(); }
 window.addEventListener('resize', size); size();
+if(role==="resp_site"){ const i=document.getElementById('fullName'); i.value=prefillSiteName; }
 function P(e){const r=c.getBoundingClientRect();const t=e.touches&&e.touches[0];return {x:(t?t.clientX:e.clientX)-r.left,y:(t?t.clientY:e.clientY)-r.top};}
 c.addEventListener('mousedown', e=>{draw=true;pts=[P(e)]});
 c.addEventListener('mousemove', e=>{ if(!draw)return; const a=pts[pts.length-1], b=P(e); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); pts.push(b); });
@@ -647,9 +632,12 @@ app.post("/conges/sign/:id", async (req, res) => {
 
     const namePos = NAME_COORDS[role];
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    pg.drawText(fullName, { x: namePos.x, y: namePos.y, size: namePos.size, font, color: rgb(0,0,0) });
 
-    const auditTxt = `${dayjs().format("YYYY-MM-DD HH:mm")} • ${fullName} • ${role}`;
+    let signerName = String(fullName || "").trim();
+    if (role === "resp_site" && !signerName) signerName = SITE_RESP_NAME;
+
+    pg.drawText(signerName, { x: namePos.x, y: namePos.y, size: namePos.size, font, color: rgb(0,0,0) });
+    const auditTxt = `${dayjs().format("YYYY-MM-DD HH:mm")} • ${signerName} • ${role}`;
     pg.drawText(auditTxt, { x: 40, y: 30, size: 8, font, color: rgb(0.25,0.25,0.25) });
 
     const out = await pdfDoc.save();
@@ -658,8 +646,8 @@ app.post("/conges/sign/:id", async (req, res) => {
     try{ fs.unlinkSync(tmpPdf); }catch{}
 
     const patch = { tokens: { ...tokens, [role]: null } };
-    if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: fullName };
-    if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: fullName };
+    if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
+    if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
     const both =
       (patch.signedService || item.signedService) &&
@@ -678,15 +666,14 @@ app.post("/conges/sign/:id", async (req, res) => {
 
     if (both) {
       try {
-        const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+        const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
         const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
         if (GMAIL_USER && cleanedPass) {
           const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
           const tmp2 = tmpFile("final_"+id+".pdf");
           await client.downloadTo(tmp2, remotePdf);
           await transporter.sendMail({
-            to: MAIL_CG || RESPONSABLES[String(arr[i].magasin||"").toUpperCase()]?.resp_service?.email || "",
-            cc: RESPONSABLES[String(arr[i].magasin||"").toUpperCase()]?.resp_site?.email || undefined,
+            to: SITE_RESP_EMAIL || "",
             from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
             subject: `Validation — ${String(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
             html: `<p>La demande a été <b>validée</b> par les deux responsables.</p>
