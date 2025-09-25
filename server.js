@@ -137,8 +137,14 @@ function fmtFR(dateStr = "") {
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
-const LEAVE_DIR     = `${FTP_ROOT_BASE}/presence/leave`;
-const FTP_DEBUG     = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+const UNITS_DIR     = `${PRES_ROOT}/units`;
+
+const PDF_DIR_PREFS = [
+  `${FTP_ROOT_BASE}/presence/leave`,
+  `${PRES_ROOT}/leave`,
+];
+
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 
 function tlsOptions(){
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
@@ -191,6 +197,23 @@ async function upText(client, remote, buf){
   try{ fs.unlinkSync(out) }catch{}
 }
 
+async function uploadPdfToPreferredDir(client, localTmpPath, destName){
+  let lastErr;
+  for (const d of PDF_DIR_PREFS){
+    try{
+      await client.ensureDir(d);
+      const remote = `${d}/${destName}`;
+      await client.uploadFrom(localTmpPath, remote);
+      if (FTP_DEBUG) console.log("[FTP] PDF uploaded:", remote);
+      return remote;
+    }catch(e){
+      lastErr = e;
+      console.warn("[FTP] PDF upload failed in", d, "-", e?.code, e?.message);
+    }
+  }
+  throw lastErr;
+}
+
 async function appendLeave(payload) {
   let lastErr;
   for (let i=0; i<3; i++){
@@ -198,7 +221,7 @@ async function appendLeave(payload) {
     try{
       client = await ftpClient();
       await client.ensureDir(PRES_ROOT);
-      await client.ensureDir(LEAVE_DIR);
+      await client.ensureDir(UNITS_DIR);
 
       const arr = (await dlJSON(client, LEAVES_FILE)) || [];
       const item = {
@@ -213,7 +236,7 @@ async function appendLeave(payload) {
 
       const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
       const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
-      const remoteUnit = `${LEAVE_DIR}/${base}`; // miroir unitaire
+      const remoteUnit = `${UNITS_DIR}/${base}`;
       await upText(client, remoteUnit, JSON.stringify(item, null, 2));
 
       try { client.close(); } catch {}
@@ -236,8 +259,10 @@ async function patchLeave(id, patch){
     if (i >= 0) {
       arr[i] = { ...arr[i], ...patch };
       await upJSON(client, LEAVES_FILE, arr);
-      const unit = `${LEAVE_DIR}/${arr[i].createdAt.slice(0,10)}_${arr[i].magasin}_${arr[i].nom}_${arr[i].prenom}_${arr[i].id}.json`
-        .replace(/[^\w./-]+/g,"_");
+
+      const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+      const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
+      const unit = `${UNITS_DIR}/${base}`;
       await upText(client, unit, JSON.stringify(arr[i], null, 2));
       return arr[i];
     }
@@ -371,10 +396,6 @@ const NAME_COORDS = {
   resp_site:    { page: 0, x: 390, y: 224, size: 12 },
 };
 
-function drawAuditFoot(page, font, txt){
-  page.drawText(txt, { x: 40, y: 30, size: 8, font, color: rgb(0.25,0.25,0.25) });
-}
-
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -430,15 +451,17 @@ app.post("/conges/api", async (req, res) => {
     });
 
     const clientUp = await ftpClient();
-    const remotePdfPath = `${LEAVE_DIR}/${leaveId}.pdf`;
+    const tmp = tmpFile("leave_"+leaveId+".pdf");
+    fs.writeFileSync(tmp, pdfBuffer);
+    let remotePdfPath;
     try{
-      await clientUp.ensureDir(LEAVE_DIR);
-      const tmp = tmpFile("leave_"+leaveId+".pdf");
-      fs.writeFileSync(tmp, pdfBuffer);
-      await clientUp.uploadFrom(tmp, remotePdfPath);
+      remotePdfPath = await uploadPdfToPreferredDir(clientUp, tmp, `${leaveId}.pdf`);
+    } finally {
       try{ fs.unlinkSync(tmp); }catch{}
-    } finally { try{ clientUp.close(); }catch{} }
+      try{ clientUp.close(); }catch{}
+    }
 
+    // Jetons de signature + sauvegarde
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
     await patchLeave(leaveId, {
@@ -446,7 +469,7 @@ app.post("/conges/api", async (req, res) => {
       tokens: { resp_service: tokenService, resp_site: tokenSite },
     });
 
-    const { MAIL_CG, GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!GMAIL_USER || !GMAIL_PASS) {
       console.warn("[CONGES] smtp_not_configured:", { GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
       return res.status(500).json({ ok: false, error: "smtp_not_configured" });
@@ -591,7 +614,21 @@ app.post("/conges/sign/:id", async (req, res) => {
       return res.status(401).json({ ok:false, error:"token_invalid_or_used" });
     }
 
-    const remotePdf = item.pdfPath || `${LEAVE_DIR}/${id}.pdf`;
+    let remotePdf = item.pdfPath;
+    if (!remotePdf) {
+      for (const d of PDF_DIR_PREFS) {
+        const candidate = `${d}/${id}.pdf`;
+        try {
+          const tmpCheck = tmpFile("chk_"+id+".pdf");
+          await client.downloadTo(tmpCheck, candidate);
+          try { fs.unlinkSync(tmpCheck); } catch {}
+          remotePdf = candidate;
+          break;
+        } catch {  }
+      }
+      if (!remotePdf) return res.status(404).json({ ok:false, error:"pdf_not_found" });
+    }
+
     const tmpPdf = tmpFile("pdf_"+id+".pdf");
     await client.downloadTo(tmpPdf, remotePdf);
     const pdfBytes = fs.readFileSync(tmpPdf);
@@ -632,12 +669,12 @@ app.post("/conges/sign/:id", async (req, res) => {
       patch.statusFr = "validée";
     }
 
-    arr[i] = { ...item, ...patch };
+    arr[i] = { ...item, ...patch, pdfPath: remotePdf };
     await upJSON(client, LEAVES_FILE, arr);
 
-    const unit = `${LEAVE_DIR}/${item.createdAt.slice(0,10)}_${item.magasin}_${item.nom}_${item.prenom}_${item.id}.json`
-      .replace(/[^\w./-]+/g,"_");
-    await upText(client, unit, JSON.stringify(arr[i], null, 2));
+    const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+    const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
+    await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
 
     if (both) {
       try {
@@ -645,17 +682,18 @@ app.post("/conges/sign/:id", async (req, res) => {
         const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
         if (GMAIL_USER && cleanedPass) {
           const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
-          const tmp2 = tmpFile("final_"+id+".pdf"); await client.downloadTo(tmp2, remotePdf);
+          const tmp2 = tmpFile("final_"+id+".pdf");
+          await client.downloadTo(tmp2, remotePdf);
           await transporter.sendMail({
-            to: MAIL_CG || RESPONSABLES[String(item.magasin||"").toUpperCase()]?.resp_service?.email || "",
-            cc: RESPONSABLES[String(item.magasin||"").toUpperCase()]?.resp_site?.email || undefined,
+            to: MAIL_CG || RESPONSABLES[String(arr[i].magasin||"").toUpperCase()]?.resp_service?.email || "",
+            cc: RESPONSABLES[String(arr[i].magasin||"").toUpperCase()]?.resp_site?.email || undefined,
             from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
-            subject: `Validation — ${String(item.nom||'').toUpperCase()} ${item.prenom||''}`,
+            subject: `Validation — ${String(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
             html: `<p>La demande a été <b>validée</b> par les deux responsables.</p>
-                   <p>Employé : ${(item.nom||'').toUpperCase()} ${item.prenom||''}<br>
-                      Période : ${item.dateDu} → ${item.dateAu} • ${item.nbJours||'?'} jour(s)</p>`,
+                   <p>Employé : ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}<br>
+                      Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours||'?'} jour(s)</p>`,
             attachments: [{
-              filename: `Demande-conges-${(item.nom||'').toUpperCase()}_${item.prenom||''}.pdf`,
+              filename: `Demande-conges-${(arr[i].nom||'').toUpperCase()}_${arr[i].prenom||''}.pdf`,
               path: tmp2
             }]
           });
