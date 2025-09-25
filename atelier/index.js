@@ -87,14 +87,15 @@ async function gsAppendCase(entry) {
   }, { timeout: 15000 });
   return r.data;
 }
-async function gsUpdateStatus(no, status, dateStatusISO) {
+async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
   if (!GS_URL) return { ok: false, error: "no_gs_url" };
   const r = await axios.post(GS_URL, {
     action: "update_status",
     sheet: GS_SHEET,
     no,
     status,
-    dateStatus: dateStatusISO
+    dateStatus: dateStatusISO,
+    estimation
   }, { timeout: 15000 });
   return r.data;
 }
@@ -429,11 +430,11 @@ router.get("/api/cases", async (_req, res) => {
 router.post("/api/cases/:no/status", async (req, res) => {
   try {
     const { no } = req.params;
-    const { status } = req.body || {};
+    const { status, estimation } = req.body || {};
     if (!no || !status) return res.status(400).json({ ok:false, error:"bad_request" });
 
     const dateStatus = new Date().toISOString();
-    await gsUpdateStatus(no, String(status), dateStatus);
+    await gsUpdateStatus(no, String(status), dateStatus, Number(estimation));
 
     const st = String(status).toLowerCase();
     if (st === "renvoyé" || st === "renvoye") {
