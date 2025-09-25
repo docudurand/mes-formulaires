@@ -286,6 +286,48 @@ const CODE_DEFS = [
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
+// === AJOUT: snapshot & ajustement CP ===
+let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
+function keyFromLabel(label){ return String(label||'').trim().replace(/\s+/g,' ').toUpperCase(); }
+function takeSnapshotFromData(day){
+  try{
+    const map = new Map();
+    (day?.rows||[]).forEach(r=>{
+      const k = keyFromLabel(r.label||'');
+      const vals = Object.assign({}, r.values||{});
+      Object.keys(vals).forEach(s=> vals[s] = String(vals[s]||'').trim().toUpperCase());
+      if(k) map.set(k, vals);
+    });
+    LAST_DAY_SNAPSHOT = { byKey: map, date: $dateInput?.value || null };
+  }catch(e){}
+}
+function computeCpDeltaAgainstSnapshotFromDOM(){
+  const out=[];
+  document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
+    const label = tr.querySelector('.row-label')?.textContent || '';
+    const key = keyFromLabel(label);
+    const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
+    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
+    let delta = 0;
+    Object.keys(Object.assign({}, before, now)).forEach(slot=>{
+      const b = before[slot]||''; const a = now[slot]||'';
+      if (b!=='CP' && a==='CP') delta -= 0.5;
+      else if (b==='CP' && a!=='CP') delta += 0.5;
+    });
+    if (delta){
+      const parts = String(label).trim().split(/\s+/);
+      const nom = (parts[0]||'').toUpperCase();
+      const prenom = parts.slice(1).join(' ');
+      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
+    }
+  });
+  return out;
+}
+async function postAdjustConges(payload){
+  try{ return await fetchJSON('/adjust-conges', { method:'POST', body: JSON.stringify(payload) }); }
+  catch(e){ console.warn('[adjust-conges] erreur', e?.message||e); return null; }
+}
+
 
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
@@ -562,6 +604,7 @@ async function prefillDay(){
   }catch{}
 }
 function applyPrefill(data){
+  try{ takeSnapshotFromData(data); }catch(e){}
   const map = new Map((data.rows || []).map(r => [norm(r.label), r.values || {}]));
   $saisieContent.querySelectorAll('tbody tr').forEach(tr => {
     const labelKey = norm(tr.querySelector('.row-label').textContent.trim());
@@ -613,6 +656,15 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   const data=collectData(); $btnSave.disabled=true;
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
+    try{
+      const entries = computeCpDeltaAgainstSnapshotFromDOM();
+      if (entries && entries.length){
+        await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
+        // resnapshot to new state to avoid double comptage
+        takeSnapshotFromData(collectData());
+      }
+    }catch(e){ console.warn('postAdjustConges failed', e?.message||e); }
+
     alert('Enregistré ✔');
   }catch{ alert("Échec de l'enregistrement"); }
   finally{ $btnSave.disabled=false; }
@@ -908,6 +960,26 @@ async function loadAdminPersonnel(){
 
 $arAdd.addEventListener('click', async ()=>{
   const token = sessionStorage.getItem('leavesToken');
+    try{
+      if (($arCode?.value||'') === 'CP'){
+        const mag = $arMag?.value || currentMagasin;
+        const opt = $arPers?.selectedOptions?.[0];
+        const du = $arDu?.value, au = $arAu?.value;
+        const slots = String(opt?.dataset?.slots||'Matin|A. Midi').split('|').filter(Boolean);
+        const d1 = new Date(du), d2 = new Date(au);
+        let workdays = 0;
+        for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
+          const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const g = d.getDay();
+          if (g!==0 && g!==6 && !isHoliday(iso)) workdays++;
+        }
+        const delta = -0.5 * Math.max(1, slots.length) * workdays;
+        if (delta){
+          const nom = opt?.dataset?.nom||''; const prenom = opt?.dataset?.prenom||'';
+          await postAdjustConges({ magasin: mag, date: du, entries: [{ fullName: opt?.value||`${nom} ${prenom}`.trim(), nom, prenom, delta }] });
+        }
+      }
+    }catch(e){ console.warn('Admin CP adjust failed', e?.message||e); }
   if(!token){ alert("Connectez-vous d'abord."); return; }
 
   const magasin = $arMag.value;
@@ -918,6 +990,26 @@ $arAdd.addEventListener('click', async ()=>{
   const du = $arDu.value;
   const au = $arAu.value;
   const slots = String(opt?.dataset?.slots||"Matin|A. Midi").split('|').map(s=>s.trim()).filter(Boolean);
+    try{
+      if (($arCode?.value||'') === 'CP'){
+        const mag = $arMag?.value || currentMagasin;
+        const opt = $arPers?.selectedOptions?.[0];
+        const du = $arDu?.value, au = $arAu?.value;
+        const slots = String(opt?.dataset?.slots||'Matin|A. Midi').split('|').filter(Boolean);
+        const d1 = new Date(du), d2 = new Date(au);
+        let workdays = 0;
+        for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
+          const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const g = d.getDay();
+          if (g!==0 && g!==6 && !isHoliday(iso)) workdays++;
+        }
+        const delta = -0.5 * Math.max(1, slots.length) * workdays;
+        if (delta){
+          const nom = opt?.dataset?.nom||''; const prenom = opt?.dataset?.prenom||'';
+          await postAdjustConges({ magasin: mag, date: du, entries: [{ fullName: opt?.value||`${nom} ${prenom}`.trim(), nom, prenom, delta }] });
+        }
+      }
+    }catch(e){ console.warn('Admin CP adjust failed', e?.message||e); }
 
   if(!magasin || !nom || !code || !du || !au){
     $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return;

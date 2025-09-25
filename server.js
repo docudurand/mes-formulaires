@@ -65,6 +65,56 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
+
+// === AJOUT: endpoint ajustement congés (CP +/-0.5 par demi-journée) ===
+import os from "os";
+import ftp from "basic-ftp";
+import fs from "fs";
+import path from "path";
+
+const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
+const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
+const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
+
+async function _ftp(){
+  const client = new ftp.Client(30_000);
+  client.prepareTransfer = ftp.enterPassiveModeIPv4;
+  await client.access({
+    host: process.env.FTP_HOST,
+    user: process.env.FTP_USER,
+    password: process.env.FTP_PASSWORD,
+    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+    secure: String(process.env.FTP_SECURE||"false")==="true",
+  });
+  try{ client.ftp.socket?.setKeepAlive?.(true, 10_000); }catch{}
+  return client;
+}
+function _tmp(name){ return path.join(os.tmpdir(), name); }
+async function _appendJSONL(remotePath, lineObj){
+  const tmp = _tmp("adj_"+Date.now()+".jsonl");
+  const buf = JSON.stringify(lineObj) + "\n";
+  let client;
+  try{
+    client = await _ftp();
+    await client.ensureDir(path.posix.dirname(remotePath));
+    // best effort: download existing
+    try{ await client.downloadTo(tmp, remotePath); }catch{}
+    fs.appendFileSync(tmp, buf, "utf8");
+    await client.uploadFrom(tmp, remotePath);
+  }catch(e){ console.warn('[adjust-conges] append skip:', e?.message||e); }
+  finally{ try{ fs.unlinkSync(tmp); }catch{} try{ client?.close(); }catch{} }
+}
+app.post("/presence/adjust-conges", async (req, res) => {
+  try{
+    const { magasin, date, entries } = req.body || {};
+    if (!magasin || !Array.isArray(entries)) return res.status(400).json({ ok:false, error:"bad_request" });
+    const stamp = new Date().toISOString();
+    const line = { magasin, date: date||stamp.slice(0,10), entries, stamp, source:"front" };
+    await _appendJSONL(ADJUST_LOG, line);
+    return res.json({ ok:true });
+  }catch(e){ console.error('[adjust-conges]', e); return res.status(200).json({ ok:true, note:'no_persist' }); }
+});
+
 app.use("/presences", express.static(path.join(__dirname, "presences")));
 app.use("/public", express.static(path.join(process.cwd(), "public")));
 app.use("/api/ramasse", ramasseRouter);
