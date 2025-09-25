@@ -35,9 +35,18 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-const PUBLIC_BASE_URL   = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
-const SITE_RESP_EMAIL   = process.env.MAIL_CG || "";
-const SITE_RESP_NAME = process.env.SITE_RESP_NAME || "SITE_RESP_NAME";
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
+const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
+const SITE_RESP_NAME  = (process.env.SITE_RESP_NAME || "FREDERICK SELVA").trim();
+
+const RESP_SERVICE_BY_MAGASIN = {
+  "GLEIZE": "dampichard2007@gmail.com",
+
+};
+function respServiceEmailFor(magasin) {
+  const m = String(magasin || "").trim().toUpperCase();
+  return (RESP_SERVICE_BY_MAGASIN[m] || "").trim();
+}
 
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
@@ -64,6 +73,28 @@ app.use((req, res, next) => {
   next();
 });
 
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
+
+app.get("/api/sheets/televente", async (req, res) => {
+  const tryOnce = async () =>
+    axios.get(APPS_SCRIPT_URL, {
+      timeout: 12000,
+      params: req.query,
+      headers: { "User-Agent": "televente-proxy/1.0" },
+    });
+  try {
+    let r;
+    try { r = await tryOnce(); }
+    catch { await new Promise(t => setTimeout(t, 400)); r = await tryOnce(); }
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
+  }
+});
+
 app.get("/stats/counters", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
   catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); }
@@ -75,12 +106,7 @@ app.get("/admin/compteurs", async (_req, res) => {
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
 });
-app.use(
-  express.static(path.join(__dirname, "public"), {
-    extensions: ["html", "htm"],
-    index: false,
-  })
-);
+app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
 console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
 console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
@@ -305,6 +331,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
     const r  = Math.floor(i / cols), c = i % cols;
     const x  = pageLeft + c * colW;
     const yy = y + r * lh;
+
     doc.rect(x, yy, box, box).stroke();
     if (service && s.toLowerCase() === String(service).toLowerCase()) {
       drawCrossInBox(doc, x, yy, box);
@@ -352,7 +379,6 @@ const SIGN_COORDS = {
   resp_service: { page: 0, x: 120, y: 130, w: 220, h: 70 },
   resp_site:    { page: 0, x: 390, y: 130, w: 220, h: 70 },
 };
-
 const NAME_COORDS = {
   resp_service: { page: 0, x: 120, y: 210, size: 12 },
   resp_site:    { page: 0, x: 390, y: 210, size: 12 },
@@ -465,7 +491,11 @@ app.post("/conges/api", async (req, res) => {
       <p style="color:#6b7280">Chaque lien est personnel et utilisable une seule fois.</p>
     `;
 
-    const toRecipients = SITE_RESP_EMAIL || email;
+    const toList = [
+      SITE_RESP_EMAIL,
+      respServiceEmailFor(magasin),
+    ].filter(Boolean);
+    const toRecipients = toList.length ? toList.join(",") : email;
 
     await transporter.sendMail({
       to: toRecipients,
@@ -482,7 +512,7 @@ app.post("/conges/api", async (req, res) => {
       ],
     });
 
-    console.log("[CONGES] email envoyé à", toRecipients, "reply-to", email);
+    console.log("[CONGES] email envoyé à:", toRecipients, "| reply-to:", email, "| magasin:", magasin);
     res.json({ ok: true, id: leaveId });
   } catch (e) {
     console.error("[CONGES] Erreur inattendue:", e);
