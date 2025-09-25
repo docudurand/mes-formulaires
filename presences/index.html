@@ -6,9 +6,10 @@
 <title>Présences DSG</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --ok:#1a7f37; }
+:root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --ok:#1a7f37; --tabsH:48px; }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:#f6f7f8}
+
 .app-header{display:flex;align-items:baseline;gap:1rem;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
 .app-header h1{margin:0;font-weight:800;letter-spacing:.5px}
 .app-header .today{color:var(--muted)}
@@ -24,6 +25,13 @@ html,body{margin:0;padding:0;font-family:Montserrat,system-ui,-apple-system,"Seg
 
 .toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .toolbar .row-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.saisie-stick{position:sticky;top:var(--tabsH);z-index:4;display:grid;gap:8px}
+.codes-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+.psite-strip .badge{ flex:0 0 auto; }
+.psite-strip::-webkit-scrollbar{ height:6px; }
+.psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
+
 button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
 button.badge.code{border-radius:8px}
@@ -34,8 +42,6 @@ button.badge.code{border-radius:8px}
 .row-label{white-space:nowrap;text-align:left;font-weight:600}
 .sub-label{font-size:.86rem;color:#666;font-style:italic;white-space:nowrap}
 .section-title{margin-top:6px;margin-bottom:6px;font-weight:800;text-transform:uppercase;color:var(--brand)}
-.section-sub{font-weight:800;margin:6px 0 0 2px;color:var(--brand);font-size:.95rem}
-.mag-divider{border-top:2px solid var(--line); margin:18px 0 8px}
 .cell{min-width:32px;height:30px;cursor:pointer;user-select:none;position:relative;background:#fff}
 .cell.selected{outline:3px solid #2563eb44}
 .cell.weekend{background:#000;color:#fff}
@@ -70,32 +76,6 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
-
-.section-toolbar{
-  display:grid; grid-template-columns:max-content 1fr; gap:8px 12px;
-  padding:8px 10px; margin:6px 0 4px; background:#fff; border:1px solid var(--line); border-radius:10px;
-}
-.section-toolbar .title{ grid-column:1; grid-row:1; font-weight:800; text-transform:uppercase; color:var(--brand); }
-.section-toolbar .controls{ grid-column:2; grid-row:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.section-toolbar .psite-row{ grid-column:2; grid-row:2; }
-.psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
-.psite-strip .badge{ flex:0 0 auto; }
-.psite-strip::-webkit-scrollbar{ height:6px; }
-.psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
-
-input[type="date"], input[type="month"], select{
-  border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:#fff; box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
-}
-input[type="date"]:focus, input[type="month"]:focus, select:focus{
-  outline:2px solid color-mix(in srgb,var(--brand),transparent 70%); border-color: var(--brand);
-}
-.input-nice{
-  border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:1rem; background:#fff;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
-}
-.input-nice:focus{
-  outline:2px solid color-mix(in srgb,var(--brand),transparent 70%); border-color: var(--brand);
-}
 
 .hint,.legend{color:#666;font-size:.9rem}
 .error{color:#a40000;font-weight:700}
@@ -135,14 +115,19 @@ input[type="date"]:focus, input[type="month"]:focus, select:focus{
   </section>
 
   <section id="tab-saisie" class="tab-panel">
-    <div class="toolbar">
-      <div class="row-top" style="width:100%">
-        <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
-        <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
-        <button id="btn-save" class="primary">Enregistrer</button>
-        <button id="btn-fill-all" class="badge">Tout mettre P</button>
+    <div class="saisie-stick">
+      <div class="toolbar">
+        <div class="row-top" style="width:100%">
+          <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
+          <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
+          <button id="btn-save" class="primary">Enregistrer</button>
+          <button id="btn-fill-all" class="badge">Tout mettre P</button>
+        </div>
       </div>
+
+      <div id="codes-bar" class="codes-bar" aria-label="Codes de saisie"></div>
     </div>
+
     <div id="saisie-content"></div>
     <div class="legend"></div>
     <p id="saisie-error" class="error" style="display:none"></p>
@@ -217,9 +202,6 @@ const CODE_DEFS = [
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
 
-let currentMagasin=null, personnel=null, selectedCells=new Set();
-let HIST_ROWS_SAISIE = [];
-
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
 const $panels={ magasins:document.getElementById('tab-magasins'), saisie:document.getElementById('tab-saisie'), resume:document.getElementById('tab-resume'), leaves:document.getElementById('tab-leaves') };
@@ -240,6 +222,7 @@ const $leavesPass=document.getElementById('leaves-pass');
 const $rememberPw=document.getElementById('remember-pw');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
+const $codesBar=document.getElementById('codes-bar');
 
 const $arBox=document.getElementById('admin-range');
 const $arMag=document.getElementById('ar-magasin');
@@ -251,42 +234,6 @@ const $arAdd=document.getElementById('ar-add');
 const $arMsg=document.getElementById('ar-msg');
 
 $today.textContent=todayISO();
-$dateInput.value=todayISO();
-$resumeMonth.value=thisYM();
-
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStore.appendChild(o); });
-MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap.appendChild(b); });
-MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
-
-$arCode.innerHTML = '';
-
-const grpStd = document.createElement('optgroup');
-grpStd.label = 'Codes standards';
-CODE_DEFS
-  .filter(d => MAIN_CODES.includes(d.code))
-  .forEach(({ code, label }) => {
-    const o = document.createElement('option');
-    o.value = code;
-    o.textContent = `${code} — ${label}`;
-    grpStd.appendChild(o);
-  });
-
-const grpPS = document.createElement('optgroup');
-grpPS.label = 'Présence autre site (P1…P20)';
-PSITE_CODES.forEach(code => {
-  const o = document.createElement('option');
-  o.value = code;
-  o.textContent = `${code} — Présence autre site`;
-  grpPS.appendChild(o);
-});
-
-$arCode.appendChild(grpStd);
-$arCode.appendChild(grpPS);
-
-
-try{ const saved = localStorage.getItem('leavesToken'); if(saved){ $leavesPass.value = saved; } }catch{}
-
-$tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function fetchJSON(path, opts={}, retries=1){
@@ -308,6 +255,7 @@ async function fetchJSON(path, opts={}, retries=1){
   }finally{ clearTimeout(t); }
 }
 
+$tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 function switchTab(key){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
   Object.entries($panels).forEach(([k,el])=>el.classList.toggle('active',k===key));
@@ -328,21 +276,8 @@ function switchTab(key){
   }
 }
 
-async function selectMagasin(mag,btn){
-  currentMagasin=mag;
-  document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
-  btn.classList.add('active'); $currMag.textContent=mag;
-  $magLoading.style.display='block';
-  try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
-  HIST_ROWS_SAISIE = [];
-  buildSaisieUI();
-  await prefillDay();
-  switchTab('saisie');
-}
-async function loadPersonnel(){
-  try{ personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`); }
-  catch{ personnel = { employes:[], interims:[], livreurs:{} }; }
-}
+let currentMagasin=null, personnel=null, selectedCells=new Set();
+let HIST_ROWS_SAISIE = [];
 
 function clearSelection(){ selectedCells.forEach(c=>c.classList.remove('selected')); selectedCells.clear(); }
 function handleCellClick(ev,td){
@@ -350,8 +285,8 @@ function handleCellClick(ev,td){
   if(isShift && selectedCells.size){
     const last=[...selectedCells][selectedCells.size-1];
     const rect=(a,b)=>{const ar=a.closest('tr').rowIndex, ac=a.cellIndex; const br=b.closest('tr').rowIndex, bc=b.cellIndex;
-      const r1=Math.min(ar,br), r2=Math.max(ar,br); const c1=Math.min(ac,bc), c2=Math.max(ac,bc);
       const table=a.closest('table');
+      const r1=Math.min(ar,br), r2=Math.max(ar,br); const c1=Math.min(ac,bc), c2=Math.max(ac,bc);
       for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){ const cell=table.rows[r].cells[c];
         if(cell && cell.classList.contains('cell')){ cell.classList.add('selected'); selectedCells.add(cell); }
       }
@@ -363,11 +298,57 @@ function handleCellClick(ev,td){
     clearSelection(); td.classList.add('selected'); selectedCells.add(td);
   }
 }
-function headerSelectColumn(th){
-  const idx=th.cellIndex; const table=th.closest('table'); clearSelection();
-  [...table.tBodies[0].rows].forEach(tr=>{
-    const td=tr.cells[idx]; if(td && td.classList.contains('cell')){ td.classList.add('selected'); selectedCells.add(td); }
+
+function buildGlobalCodesBar(){
+  $codesBar.innerHTML = '';
+
+  const clearBtn=document.createElement('button');
+  clearBtn.className='badge'; clearBtn.textContent='Vider';
+  clearBtn.title='Effacer les cellules sélectionnées';
+  clearBtn.addEventListener('click',()=>{
+    const scope=[...selectedCells];
+    if(!scope.length) return;
+    const we = isSaisieWeekend();
+    scope.forEach(td=>{
+      ALL_CODES.forEach(c=>td.classList.remove(c));
+      td.classList.remove('PSITE','FERIE');
+      td.textContent='';
+      if(!we) td.classList.remove('weekend');
+    });
   });
+  $codesBar.appendChild(clearBtn);
+
+  const addBtn=(code,label)=>{
+    const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
+    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
+    b.addEventListener('click',()=>{
+      const scope=[...selectedCells];
+      if(!scope.length) return;
+      const we = isSaisieWeekend();
+      const fer = isSaisieHoliday();
+      scope.forEach(td=>{
+        ALL_CODES.forEach(c=>td.classList.remove(c));
+        td.classList.remove('PSITE','FERIE');
+        if(!we) td.classList.remove('weekend');
+
+        td.textContent=code;
+
+        if(code==='NP'){
+          td.classList.add('weekend');
+        }else{
+          td.classList.add(code);
+          if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+          if(fer && code==='F') td.classList.add('FERIE');
+        }
+      });
+    });
+    return b;
+  };
+  MAIN_CODES.forEach(c => $codesBar.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
+
+  const strip=document.createElement('div'); strip.className='psite-strip';
+  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
+  $codesBar.appendChild(strip);
 }
 
 function isSaisieWeekend(){
@@ -387,6 +368,36 @@ function paintWeekendInSaisie(){
     if (we) td.classList.add('weekend');
     else if (td.textContent.trim() !== 'NP') td.classList.remove('weekend');
   });
+}
+
+function buildSection(title, rows){
+  const headerSlots = union(...rows.map(r=>r.slots||[]));
+
+  const wrap=document.createElement('div');
+  const titleEl=document.createElement('div'); titleEl.className='section-title'; titleEl.textContent=title;
+  wrap.appendChild(titleEl);
+
+  const table=document.createElement('table'); table.className='table';
+  const thead=document.createElement('thead');
+  const tr1=document.createElement('tr');
+  tr1.innerHTML='<th class="row-label">Nom / Ligne</th>'+headerSlots.map(s=>`<th>${s}</th>`).join('');
+  thead.appendChild(tr1); table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    const nameTd=document.createElement('td'); nameTd.className='row-label'; nameTd.textContent=r.label; tr.appendChild(nameTd);
+    headerSlots.forEach(slot=>{
+      const td=document.createElement('td'); td.className='cell'; td.dataset.slot=slot;
+      td.addEventListener('click',ev=>handleCellClick(ev,td));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  wrap.appendChild(table);
+  return wrap;
 }
 
 function labelsFromMonthFile(file){
@@ -415,88 +426,6 @@ function labelsFromDayData(dayData){
     .filter(Boolean);
 }
 
-function buildSection(title, rows){
-  const headerSlots = union(...rows.map(r=>r.slots||[]));
-
-  const table=document.createElement('table'); table.className='table';
-  const thead=document.createElement('thead');
-  const tr1=document.createElement('tr');
-  tr1.innerHTML='<th class="row-label">Nom / Ligne</th>'+headerSlots.map(s=>`<th>${s}</th>`).join('');
-  tr1.querySelectorAll('th').forEach((th,i)=>{ if(i>0) th.addEventListener('click',()=>headerSelectColumn(th)); });
-  thead.appendChild(tr1); table.appendChild(thead);
-  const tbody=document.createElement('tbody');
-
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    const nameTd=document.createElement('td'); nameTd.className='row-label'; nameTd.textContent=r.label; tr.appendChild(nameTd);
-    headerSlots.forEach(slot=>{
-      const td=document.createElement('td'); td.className='cell'; td.dataset.slot=slot;
-      td.addEventListener('click',ev=>handleCellClick(ev,td));
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-
-  const bar=document.createElement('div'); bar.className='section-toolbar';
-  const titleEl=document.createElement('div'); titleEl.className='title'; titleEl.textContent=title;
-  bar.appendChild(titleEl);
-
-  const controls=document.createElement('div'); controls.className='controls';
-
-  const clearBtn=document.createElement('button');
-  clearBtn.className='badge'; clearBtn.textContent='Vider';
-  clearBtn.title='Effacer les cellules sélectionnées';
-  clearBtn.addEventListener('click',()=>{
-    const scope=[...selectedCells].filter(td=>td.closest('table')===table);
-    if(!scope.length) return;
-    const we = isSaisieWeekend();
-    scope.forEach(td=>{
-      ALL_CODES.forEach(c=>td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
-      td.textContent='';
-      if(!we) td.classList.remove('weekend');
-    });
-  });
-  controls.appendChild(clearBtn);
-
-  const addBtn=(code,label)=>{
-    const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
-    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
-    b.addEventListener('click',()=>{
-      const scope=[...selectedCells].filter(td=>td.closest('table')===table);
-      if(!scope.length) return;
-      const we = isSaisieWeekend();
-      const fer = isSaisieHoliday();
-      scope.forEach(td=>{
-        ALL_CODES.forEach(c=>td.classList.remove(c));
-        td.classList.remove('PSITE','FERIE');
-        if(!we) td.classList.remove('weekend');
-
-        td.textContent=code;
-
-        if(code==='NP'){
-          td.classList.add('weekend');
-        }else{
-          td.classList.add(code);
-          if(/^P\d+$/.test(code)) td.classList.add('PSITE');
-          if(fer && code==='F') td.classList.add('FERIE');
-        }
-      });
-    });
-    return b;
-  };
-  MAIN_CODES.forEach(c=> controls.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
-  bar.appendChild(controls);
-
-  const pRow = document.createElement('div'); pRow.className='psite-row';
-  const strip = document.createElement('div'); strip.className='psite-strip';
-  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
-  pRow.appendChild(strip); bar.appendChild(pRow);
-
-  const wrap=document.createElement('div'); wrap.appendChild(bar); wrap.appendChild(table); return wrap;
-}
-
 function buildSaisieUI(){
   $saisieContent.innerHTML=''; clearSelection();
   const sections=[];
@@ -516,14 +445,6 @@ function buildSaisieUI(){
   sections.forEach(s=> $saisieContent.appendChild(buildSection(s.title, s.rows)));
   paintWeekendInSaisie();
 }
-
-document.getElementById('btn-fill-all').addEventListener('click', ()=>{
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if (!td.textContent.trim()) {
-      td.textContent='P'; td.classList.add('P');
-    }
-  });
-});
 
 async function prefillDay(){
   if(!currentMagasin) return;
@@ -615,6 +536,17 @@ $dateInput.addEventListener('change',async ()=>{
   await prefillDay();
   paintWeekendInSaisie();
 });
+document.getElementById('btn-fill-all').addEventListener('click', ()=>{
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
+    if (!td.textContent.trim()) {
+      td.textContent='P'; td.classList.add('P');
+    }
+  });
+});
+
+const $resumeStoreSel=document.getElementById('resume-store');
+["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"]
+ .forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $resumeStoreSel.appendChild(o); });
 
 document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
 async function loadResumeForStore(){
@@ -716,12 +648,10 @@ function renderOneStore(yyyymm, magasin, data){
   const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const intLabels = (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
   const livreurGroups = Object.keys(pers.livreurs||{});
-  const knownNow = new Set([...empLabels, ...intLabels, ...livreurGroups].map(norm));
 
- const histLabelsAll = labelsFromMonthFile(file);
-const histOld = uniqByNorm(
-  histLabelsAll.filter(lbl => !knownNow.has(norm(lbl)))
-);
+  const knownNow = new Set([...empLabels, ...intLabels, ...livreurGroups].map(norm));
+  const histLabelsAll = labelsFromMonthFile(file);
+  const histOld = uniqByNorm(histLabelsAll.filter(lbl => !knownNow.has(norm(lbl))));
 
   const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
   if(empSec) wrap.appendChild(empSec);
@@ -780,9 +710,56 @@ const histOld = uniqByNorm(
     if (histSec) wrap.appendChild(histSec);
   }
 
-  wrap.appendChild(Object.assign(document.createElement('div'),{className:'mag-divider'}));
   $resumeContent.innerHTML=''; $resumeContent.appendChild(wrap);
 }
+
+try{ const saved = localStorage.getItem('leavesToken'); if(saved){ $leavesPass.value = saved; } }catch{}
+document.getElementById('resume-month').value=thisYM();
+document.getElementById('today').textContent = todayISO();
+
+const $magBtnsWrap2=document.getElementById('magasin-buttons');
+MAGASINS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; b.addEventListener('click',()=>selectMagasin(m,b)); $magBtnsWrap2.appendChild(b); });
+MAGASINS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $arMag.appendChild(o); });
+
+$arCode.innerHTML = '';
+const grpStd = document.createElement('optgroup');
+grpStd.label = 'Codes standards';
+CODE_DEFS.filter(d => MAIN_CODES.includes(d.code)).forEach(({ code, label }) => {
+  const o = document.createElement('option'); o.value = code; o.textContent = `${code} — ${label}`; grpStd.appendChild(o);
+});
+const grpPS = document.createElement('optgroup');
+grpPS.label = 'Présence autre site (P1…P20)';
+PSITE_CODES.forEach(code => { const o = document.createElement('option'); o.value = code; o.textContent = `${code} — Présence autre site`; grpPS.appendChild(o); });
+$arCode.appendChild(grpStd); $arCode.appendChild(grpPS);
+
+async function selectMagasin(mag,btn){
+  currentMagasin=mag;
+  document.querySelectorAll('#magasin-buttons button').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active'); $currMag.textContent=mag;
+  $magLoading.style.display='block';
+  try{ await loadPersonnel(); } finally { $magLoading.style.display='none'; }
+  HIST_ROWS_SAISIE = [];
+  buildSaisieUI();
+  buildGlobalCodesBar();
+  $dateInput.value=todayISO();
+  await prefillDay();
+  switchTab('saisie');
+}
+async function loadPersonnel(){
+  try{ personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`); }
+  catch{ personnel = { employes:[], interims:[], livreurs:{} }; }
+}
+
+$btnFillAll.addEventListener('click', ()=>{
+  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
+    if (!td.textContent.trim()) { td.textContent='P'; td.classList.add('P'); }
+  });
+});
+
+$dateInput.addEventListener('change',async ()=>{
+  await prefillDay();
+  paintWeekendInSaisie();
+});
 
 $loginForm.addEventListener('submit', (ev)=>{
   ev.preventDefault();
@@ -804,9 +781,7 @@ async function loadAdminPersonnel(){
   if(!mag) return;
   try{
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
-
     const defaultSlots = ["Matin","A. Midi"];
-
     const add = (p)=>{ 
       const o=document.createElement('option'); 
       o.value = `${p.nom} ${p.prenom||""}`.trim();
@@ -818,7 +793,6 @@ async function loadAdminPersonnel(){
     };
     (pers.employes||[]).forEach(add);
     (pers.interims||[]).forEach(add);
-
     Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
       const o = document.createElement('option');
       o.value = g;
@@ -842,25 +816,18 @@ $arAdd.addEventListener('click', async ()=>{
   const code = $arCode.value;
   const du = $arDu.value;
   const au = $arAu.value;
-
-  const slots = String(opt?.dataset?.slots||"Matin|A. Midi")
-                  .split('|').map(s=>s.trim()).filter(Boolean);
+  const slots = String(opt?.dataset?.slots||"Matin|A. Midi").split('|').map(s=>s.trim()).filter(Boolean);
 
   if(!magasin || !nom || !code || !du || !au){
     $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return;
   }
   $arAdd.disabled=true; $arMsg.textContent="Ajout en cours…"; $arMsg.style.color="#666";
   try{
-    await fetchJSON('/range-mark', {
-      method:'POST',
-      body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au, slots })
-    });
+    await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au, slots }) });
     $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
   }catch(e){
     $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000";
-  }finally{
-    $arAdd.disabled=false;
-  }
+  }finally{ $arAdd.disabled=false; }
 });
 
 async function loadLeaves(){
@@ -932,30 +899,17 @@ function renderLeaves(items){
       const btnAccept = document.createElement('button');
       btnAccept.className='badge action btn-accept';
       btnAccept.textContent='Accepter';
-      btnAccept.addEventListener('click', ()=>{
-        setBusy(true, 'Validation…');
-        decideLeave(it.id,'accept',"",{ setBusy });
-      });
+      btnAccept.addEventListener('click', ()=>{ setBusy(true, 'Validation…'); decideLeave(it.id,'accept',"",{ setBusy });});
       const btnReject = document.createElement('button');
       btnReject.className='badge action btn-reject';
       btnReject.textContent='Refuser';
-      btnReject.addEventListener('click', ()=>{
-        const r=prompt("Motif du refus ? (optionnel)","");
-        if(r===null) return;
-        setBusy(true, 'Refus…');
-        decideLeave(it.id,'reject', r||"", { setBusy });
-      });
-      actions.appendChild(btnAccept);
-      actions.appendChild(btnReject);
+      btnReject.addEventListener('click', ()=>{ const r=prompt("Motif du refus ? (optionnel)",""); if(r===null) return; setBusy(true, 'Refus…'); decideLeave(it.id,'reject', r||"", { setBusy });});
+      actions.appendChild(btnAccept); actions.appendChild(btnReject);
     } else if (String(it.status)==="accepted"){
       const btnCancel = document.createElement('button');
       btnCancel.className='badge action btn-cancel';
       btnCancel.textContent='Annuler';
-      btnCancel.addEventListener('click', ()=>{
-        if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return;
-        setBusy(true, 'Annulation…');
-        cancelLeave(it.id, { setBusy });
-      });
+      btnCancel.addEventListener('click', ()=>{ if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return; setBusy(true, 'Annulation…'); cancelLeave(it.id, { setBusy });});
       actions.appendChild(btnCancel);
     }
 
@@ -990,17 +944,11 @@ async function cancelLeave(id, ui){
 document.addEventListener('keydown', (e) => {
   const key = e.key;
   if (key !== 'Backspace' && key !== 'Delete') return;
-
   const a = document.activeElement;
-  const inEditable = a && (
-    a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' ||
-    a.tagName === 'SELECT' || a.isContentEditable
-  );
+  const inEditable = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable);
   if (inEditable) return;
-
   const scope = [...selectedCells].filter(td => td.closest('#saisie-content'));
   if (!scope.length) return;
-
   e.preventDefault();
   const we = isSaisieWeekend();
   scope.forEach(td => {
@@ -1012,6 +960,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('today').textContent = todayISO();
+document.getElementById('resume-month').value=thisYM();
 </script>
 </body>
 </html>
