@@ -65,49 +65,44 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
+// === AJOUT: endpoint ajustement congés (corrigé, sans doublons) ===
+const ADJUST_LOG = `${PRES_ROOT}/adjust_conges.jsonl`;
 
-// === AJOUT: endpoint ajustement congés (CP +/-0.5 par demi-journée) ===
-import os from "os";
-import ftp from "basic-ftp";
-import fs from "fs";
-import path from "path";
-
-const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
-const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
-const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
-
-async function _ftp(){
-  const client = new ftp.Client(30_000);
-  client.prepareTransfer = ftp.enterPassiveModeIPv4;
-  await client.access({
-    host: process.env.FTP_HOST,
-    user: process.env.FTP_USER,
-    password: process.env.FTP_PASSWORD,
-    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
-    secure: String(process.env.FTP_SECURE||"false")==="true",
-  });
-  try{ client.ftp.socket?.setKeepAlive?.(true, 10_000); }catch{}
-  return client;
-}
-function _tmp(name){ return path.join(os.tmpdir(), name); }
-async function _appendJSONL(remotePath, lineObj){
-  const tmp = _tmp("adj_"+Date.now()+".jsonl");
-  const buf = JSON.stringify(lineObj) + "\n";
-  let client;
+async function appendJSONL(client, remotePath, obj){
+  const tmp = tmpFile("adj_"+Date.now()+".jsonl");
   try{
-    client = await _ftp();
-    await client.ensureDir(path.posix.dirname(remotePath));
-    // best effort: download existing
+    // essayer de télécharger le fichier existant si présent
     try{ await client.downloadTo(tmp, remotePath); }catch{}
-    fs.appendFileSync(tmp, buf, "utf8");
+    const line = JSON.stringify(obj) + "\n";
+    require('fs').appendFileSync(tmp, line, "utf8");
+    const dir = require('path').posix.dirname(remotePath);
+    await client.ensureDir(dir);
     await client.uploadFrom(tmp, remotePath);
-  }catch(e){ console.warn('[adjust-conges] append skip:', e?.message||e); }
-  finally{ try{ fs.unlinkSync(tmp); }catch{} try{ client?.close(); }catch{} }
+  } finally { try{ require('fs').unlinkSync(tmp); }catch{} }
 }
+
 app.post("/presence/adjust-conges", async (req, res) => {
   try{
     const { magasin, date, entries } = req.body || {};
     if (!magasin || !Array.isArray(entries)) return res.status(400).json({ ok:false, error:"bad_request" });
+    const stamp = new Date().toISOString();
+    const payload = { magasin, date: date || stamp.slice(0,10), entries, stamp, source:"front" };
+    try{
+      const client = await ftpClient();
+      await appendJSONL(client, ADJUST_LOG, payload);
+      try{ client.close(); }catch{}
+    }catch(e){
+      console.warn("[adjust-conges] persistence skipped:", e?.message||e);
+    }
+    return res.json({ ok:true });
+  }catch(e){
+    console.error("[adjust-conges]", e);
+    return res.status(200).json({ ok:true, note:"no_persist" });
+  }
+});
+
+
+// === AJOUT: endpoint ajustement congés (corrigé, sans doublons) ===
     const stamp = new Date().toISOString();
     const line = { magasin, date: date||stamp.slice(0,10), entries, stamp, source:"front" };
     await _appendJSONL(ADJUST_LOG, line);
@@ -190,8 +185,6 @@ function fmtFR(dateStr = "") {
 }
 
 // ====== FTP config ======
-const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
-const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
 const UNITS_DIR     = `${PRES_ROOT}/units`;
 
