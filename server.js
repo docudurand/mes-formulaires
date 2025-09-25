@@ -110,7 +110,7 @@ app.get("/conges", (_req, res) => { res.sendFile(path.join(__dirname, "public", 
 const RESPONSABLES = {
   "GLEIZE": {
     resp_service: { name: "FREDERICK SELVA", email: "dampichard2007@gmail.com" },
-    resp_site:    { name: "DAMIEN PICHARD",    email: "magvl4gleize@durandservices.fr" },
+    resp_site:    { name: "DAMIEN PICHARD",  email: "magvl4gleize@durandservices.fr" },
   },
 };
 
@@ -135,10 +135,10 @@ function fmtFR(dateStr = "") {
 }
 
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
-const PRES_ROOT = `${FTP_ROOT_BASE}/presences`;
-const LEAVES_FILE = `${PRES_ROOT}/leaves.json`;
-const LEAVE_DIR   = `${FTP_ROOT_BASE}/presence/leave`;
-const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
+const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
+const LEAVE_DIR     = `${FTP_ROOT_BASE}/presence/leave`;
+const FTP_DEBUG     = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
 
 function tlsOptions(){
   const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
@@ -173,8 +173,14 @@ async function upJSON(client, remote, obj){
   fs.writeFileSync(out, JSON.stringify(obj));
   const dir = path.posix.dirname(remote);
   await client.ensureDir(dir);
-  await client.uploadFrom(out, remote);
-  try{ fs.unlinkSync(out) }catch{}
+  try {
+    await client.uploadFrom(out, remote);
+  } catch (e) {
+    console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
+    throw e;
+  } finally {
+    try{ fs.unlinkSync(out) }catch{}
+  }
 }
 async function upText(client, remote, buf){
   const dir = path.posix.dirname(remote);
@@ -207,7 +213,7 @@ async function appendLeave(payload) {
 
       const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
       const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
-      const remoteUnit = `${LEAVE_DIR}/${base}`;
+      const remoteUnit = `${LEAVE_DIR}/${base}`; // miroir unitaire
       await upText(client, remoteUnit, JSON.stringify(item, null, 2));
 
       try { client.close(); } catch {}
@@ -360,7 +366,6 @@ const SIGN_COORDS = {
   resp_service: { page: 0, x: 60,  y: 180, w: 200, h: 60 },
   resp_site:    { page: 0, x: 330, y: 180, w: 200, h: 60 },
 };
-
 const NAME_COORDS = {
   resp_service: { page: 0, x: 120, y: 224, size: 12 },
   resp_site:    { page: 0, x: 390, y: 224, size: 12 },
@@ -425,7 +430,7 @@ app.post("/conges/api", async (req, res) => {
     });
 
     const clientUp = await ftpClient();
-    let remotePdfPath = `${LEAVE_DIR}/${leaveId}.pdf`;
+    const remotePdfPath = `${LEAVE_DIR}/${leaveId}.pdf`;
     try{
       await clientUp.ensureDir(LEAVE_DIR);
       const tmp = tmpFile("leave_"+leaveId+".pdf");
@@ -436,7 +441,7 @@ app.post("/conges/api", async (req, res) => {
 
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
-    const updated = await patchLeave(leaveId, {
+    await patchLeave(leaveId, {
       pdfPath: remotePdfPath,
       tokens: { resp_service: tokenService, resp_site: tokenSite },
     });
@@ -480,13 +485,16 @@ app.post("/conges/api", async (req, res) => {
 
     await transporter.sendMail({
       to: toRecipients,
-      from: `Demande jours de congés <${process.env.FROM_EMAIL || GMAIL_USER}>`,
+      from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER}>`,
       replyTo: email,
       subject,
       html,
       attachments: [
-        { filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
-          content: pdfBuffer, contentType: "application/pdf" }
+        {
+          filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
       ],
     });
 
@@ -647,9 +655,9 @@ app.post("/conges/sign/:id", async (req, res) => {
                    <p>Employé : ${(item.nom||'').toUpperCase()} ${item.prenom||''}<br>
                       Période : ${item.dateDu} → ${item.dateAu} • ${item.nbJours||'?'} jour(s)</p>`,
             attachments: [{
-			filename: `Demande-conges-${(item.nom||'').toUpperCase()}_${item.prenom||''}.pdf`,
-			path: tmp2
-			}]
+              filename: `Demande-conges-${(item.nom||'').toUpperCase()}_${item.prenom||''}.pdf`,
+              path: tmp2
+            }]
           });
           try{ fs.unlinkSync(tmp2); }catch{}
         }
