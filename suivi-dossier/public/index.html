@@ -57,11 +57,6 @@
   .bul{margin:6px 0}
   .sub{margin:2px 0 0 18px}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
-
-  .bar button{
-    border:1px solid var(--primary); background:#fff; color:#var(--primary);
-    padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer; margin-left:6px;
-  }
 </style>
 </head>
 <body>
@@ -135,9 +130,6 @@ const $modalContent = document.getElementById("modalContent");
 const $month = document.getElementById("filterMonth");
 const $day   = document.getElementById("filterDay");
 
-function showLoading(){  }
-function hideLoading(){  }
-
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
@@ -154,7 +146,6 @@ function badge(status){
   }[status] || "s-1";
   return `<span class="badge ${m}">${status}</span>`;
 }
-
 function fmtJJMMYYYYdash(v){
   if (!v) return "—";
   const d = new Date(v);
@@ -162,7 +153,6 @@ function fmtJJMMYYYYdash(v){
   const p2 = n => String(n).padStart(2,"0");
   return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
 }
-
 function buildYearOptions(list){
   const years = new Set();
   const nowY = new Date().getFullYear();
@@ -192,7 +182,6 @@ function updateDayOptions() {
 }
 
 let rows = [];
-
 function buildEstimateSelect(value){
   const v = Number(value) || "";
   let opts = "";
@@ -226,7 +215,7 @@ function draw(){
         <td>${r.service||""}</td>
         <td>${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td>${badge(r.status)}</td>
-        <td>${buildEstimateSelect(r.estimate || r.estimationTempsTravaux)}</td>
+        <td>${buildEstimateSelect(r.estimation)}</td>
         <td class="actions">
           <button class="btnView">Voir dossier</button>
           <select class="statusSel">
@@ -240,28 +229,32 @@ function draw(){
 
       tr.querySelector(".btnSave").addEventListener("click", async ()=>{
         const statusSel = tr.querySelector(".statusSel");
+        const etaSel = tr.querySelector(".etaSel");
         const saveBtn = tr.querySelector(".btnSave");
         const oldHtml = saveBtn.innerHTML;
         const status = statusSel.value;
-
-        const etaSel = tr.querySelector(".etaSel");
-        r.estimate = Number(etaSel.value);
+        const estimation = Number(etaSel.value);
 
         try{
-          saveBtn.disabled = true; statusSel.disabled = true;
+          saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
           saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:8px"></span>Enregistrement…`;
 
           const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, estimation })
           });
-          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+
+          if(!resp.ok){
+            alert("Erreur de mise à jour");
+            return;
+          }
           r.status = status;
+          r.estimation = estimation;
           draw();
         } finally{
           saveBtn.innerHTML = oldHtml;
-          saveBtn.disabled = false; statusSel.disabled = false;
+          saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
         }
       });
 
@@ -301,30 +294,23 @@ function openDetails(row){
     <div class="grid2">
       <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
       <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
-      <div><span class="label">Magasin :</span> ${esc(h.magasin||"")}</div>
+      <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
       <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
-      <div><span class="label">Client :</span> ${esc(h.client||"")}</div>
-      <div><span class="label">N° de compte :</span> ${esc(h.compte||"")}</div>
+      <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
+      <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
       <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
       <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
       <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
       <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
-      <div><span class="label">Service :</span> ${esc(h.service||"")}</div>
-      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande))}</div>
+      <div><span class="label">Service :</span> ${esc(h.service||row.service||"")}</div>
+      <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
+      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
     </div>
 
     ${h.service === "Rectification Culasse" && cul ? `
       <div class="section">
         <h3>Détails Rectification Culasse</h3>
-        <div class="grid2">
-          <div><span class="label">Cylindre :</span> ${esc(cul.cylindre||"")}</div>
-          <div><span class="label">Soupapes :</span> ${esc(cul.soupapes||"")}</div>
-          <div><span class="label">Carburant :</span> ${esc(cul.carburant||"")}</div>
-        </div>
-        <div class="section">
-          <h3>Opérations</h3>
-          ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
-        </div>
+        ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
         <div class="section">
           <h3>Pièces à fournir</h3>
           ${piecesHTML}
@@ -359,7 +345,6 @@ document.getElementById("btnClose").addEventListener("click", ()=>{
   $mask.setAttribute("aria-hidden","true");
   $modalContent.innerHTML = "";
 });
-
 document.getElementById("btnPrint").addEventListener("click", ()=>{
   const w = window.open("", "_blank");
   w.document.write(`
@@ -401,7 +386,7 @@ function load(){
           client:  x.client  || (h && h.client)  || "",
           service: x.service || (h && h.service) || "",
           demandeDate: x.demandeDate || (h && h.dateDemande) || "",
-          estimate: x.estimate || x.estimationTempsTravaux || ""
+          estimation: Number(x.estimation || "") || ""
         };
       });
       buildYearOptions(rows);
@@ -415,12 +400,6 @@ function load(){
       alert("Erreur de chargement.");
     });
 }
-
-function buildMonthOptions(){  }
-
-const $monthEl = document.getElementById("filterMonth");
-const $dayEl   = document.getElementById("filterDay");
-const $yearEl  = document.getElementById("filterYear");
 
 $filter.addEventListener("change", draw);
 $month.addEventListener("change", () => { updateDayOptions(); draw(); });
