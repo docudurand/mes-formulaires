@@ -9,28 +9,62 @@
     --primary:#004080; --line:#e5e7eb; --ink:#0f172a;
     --s1:#2563eb10; --s2:#16a34a10; --s3:#f59e0b10; --s4:#9333ea10;
     --s1b:#2563eb;   --s2b:#16a34a;   --s3b:#d97706;   --s4b:#7e22ce;
+    --gap:12px;
   }
+  *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-  .wrap{max-width:1100px;margin:24px auto;padding:16px}
-  h1{ margin:0 0 12px; color:var(--primary); font-size:1.4rem; }
+  .wrap{max-width:1220px;margin:24px auto;padding:16px}
+  h1{ margin:0 0 12px; color:var(--primary); font-size:1.5rem; }
+
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px}
-  select,input{padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:1rem}
-  table{width:100%; border-collapse:separate; border-spacing:0 8px}
-  th,td{padding:10px 12px; text-align:left}
-  th{font-size:.95rem; color:#334155}
-  tr{background:#f9fafb; border:1px solid var(--line)}
+  label{font-weight:600;color:#334155}
+  select,input{padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:1rem; background:#fff}
+
+  .yearbar{margin:12px 0 10px;display:flex;flex-direction:column;gap:8px}
+  .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
+  .yearBtn{
+    background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-weight:700;cursor:pointer
+  }
+  .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
+  .months{display:none;gap:6px;flex-wrap:wrap}
+  .months.active{display:flex}
+  .monthBtn{
+    background:#fff;border:1px solid var(--line);color:#073763;
+    border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600
+  }
+  .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
+  .legend{opacity:.8;font-size:.95em}
+
+  .tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
+  table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; }
+  colgroup col{ }
+  thead th{
+    position:sticky; top:0; background:#f8fbff; z-index:1;
+    text-align:left; padding:12px; color:#334155; font-size:.95rem; border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  tbody td{
+    padding:12px; background:#f9fafb; border:1px solid var(--line);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    vertical-align:middle;
+  }
+  tbody tr{ border-radius:10px }
+  tbody tr td:first-child{ border-radius:10px 0 0 10px }
+  tbody tr td:last-child{ border-radius:0 10px 10px 0 }
 
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
-    padding:6px 12px; border-radius:999px; font-weight:700; font-size:.9rem; min-width:100px; text-align:center;
+    padding:6px 10px; border-radius:999px; font-weight:700; font-size:.9rem; min-width:120px; text-align:center;
   }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
   .s-4{background:var(--s4); color:var(--s4b)}
-  .actions{display:flex; gap:8px; align-items:center}
-  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer}
-  .statusSel,.etaSel{padding:8px 10px; border:1px solid var(--line); border-radius:8px}
+
+  .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end}
+  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap}
+  .statusSel,.etaSel{padding:8px 10px; border:1px solid var(--line); border-radius:10px}
 
   .spinner{
     width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--primary);
@@ -38,16 +72,8 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .mask{
-    position:fixed; inset:0; background:#0008; display:none;
-    align-items:flex-start; justify-content:center;
-    z-index:10000; padding:20px;
-  }
-  .box{
-    width:min(900px,96vw); max-height:min(90vh,800px);
-    background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line);
-    margin-top:12px;
-  }
+  .mask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:20px; }
+  .box{ width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line); margin-top:12px; }
   .bar{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--line); background:#f8fbff}
   .content{padding:14px}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px 16px}
@@ -63,6 +89,7 @@
 
   <div class="wrap">
     <h1>Suivi des dossiers Atelier</h1>
+
     <div class="toolbar">
       <label>Filtrer magasin :
         <select id="filterMag">
@@ -71,37 +98,48 @@
         </select>
       </label>
 
-      <label>Jour :
-        <select id="filterDay"></select>
-      </label>
-
-      <label>Mois :
-        <select id="filterMonth"></select>
-      </label>
-
-      <label>Année :
-        <select id="filterYear"></select>
-      </label>
-
-      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service, date…)" style="min-width:280px" />
+      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:320px" />
     </div>
 
-    <table id="tab">
-      <thead>
-        <tr>
-          <th>N°</th>
-          <th>Magasin</th>
-          <th>N° de compte</th>
-          <th>Client</th>
-          <th>Service</th>
-          <th>Date</th>
-          <th>Statut</th>
-          <th>Estimation Temps Travaux</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
+      <div class="yearTabs" role="tablist" aria-label="Années">
+        <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
+        <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
+      </div>
+      <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
+      <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="tableWrap">
+      <table id="tab">
+        <colgroup>
+          <col style="width:96px">
+          <col style="width:140px">
+          <col style="width:150px">
+          <col style="width:200px">
+          <col style="width:210px">
+          <col style="width:120px">
+          <col style="width:160px">
+          <col style="width:200px">
+          <col style="width:260px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Magasin</th>
+            <th>N° de compte</th>
+            <th>Client</th>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Statut</th>
+            <th>Estimation Temps Travaux</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="mask" id="mask" aria-hidden="true">
@@ -120,15 +158,13 @@
 <script>
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
-const $year   = document.getElementById("filterYear");
 const $q      = document.getElementById("q");
 const $mask   = document.getElementById("mask");
 const $btnClose = document.getElementById("btnClose");
 const $btnPrint = document.getElementById("btnPrint");
 const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
-const $month = document.getElementById("filterMonth");
-const $day   = document.getElementById("filterDay");
+const $legend = document.getElementById("legend");
 
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="9" style="padding:16px 12px;color:#334155">
@@ -146,42 +182,91 @@ function badge(status){
   }[status] || "s-1";
   return `<span class="badge ${m}">${status}</span>`;
 }
+function p2(n){ return String(n).padStart(2,"0"); }
 function fmtJJMMYYYYdash(v){
-  if (!v) return "—";
-  const d = new Date(v);
-  if (isNaN(d)) return "—";
-  const p2 = n => String(n).padStart(2,"0");
+  const d = parseDate(v);
+  if (!d) return "—";
   return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
 }
-function buildYearOptions(list){
-  const years = new Set();
-  const nowY = new Date().getFullYear();
-  (list||[]).forEach(r=>{
-    const d = r.demandeDate ? new Date(r.demandeDate) : null;
-    if (d && !isNaN(d)) years.add(d.getFullYear());
-  });
-  if (years.size === 0) years.add(nowY);
-  const sorted = Array.from(years).sort((a,b)=>b-a);
-  $year.innerHTML = sorted.map(y=>`<option value="${y}">${y}</option>`).join("");
-  $year.value = String(sorted.includes(nowY) ? nowY : (sorted[0] || nowY));
-}
-function buildMonthOptions() {
-  const months = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  $month.innerHTML = `<option value="">Tous</option>` + months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
-  $month.value = "";
-}
-function updateDayOptions() {
-  const y = Number($year.value) || new Date().getFullYear();
-  const m = Number($month.value) || 0;
-  const maxDay = m ? new Date(y, m, 0).getDate() : 31;
-  const prev = $day.value;
-  let html = `<option value="">Tous</option>`;
-  for (let d = 1; d <= maxDay; d++) html += `<option value="${d}">${String(d).padStart(2,"0")}</option>`;
-  $day.innerHTML = html;
-  if (prev && Number(prev) <= maxDay) $day.value = prev; else $day.value = "";
+function parseDate(v){
+  if (!v && v!==0) return null;
+  const d = new Date(v);
+  if (!isNaN(d)) return d;
+  const m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m1) { const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
+  const m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
+  return null;
 }
 
+const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+let YEAR_FILTER = '';   // '2025' / '2026' / ''
+let MONTH_FILTER = '';  // '1'..'12' / 'all' / ''
+
+function buildMonths(year){
+  const ctn = document.getElementById(`months-${year}`);
+  if(!ctn) return;
+  ctn.innerHTML = '';
+  MONTHS_FULL.forEach((label, idx)=>{
+    const m = idx+1;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'monthBtn';
+    btn.dataset.month = String(m);
+    btn.dataset.year  = String(year);
+    btn.textContent = label;
+    ctn.appendChild(btn);
+  });
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = 'monthBtn';
+  allBtn.dataset.month = 'all';
+  allBtn.dataset.year  = String(year);
+  allBtn.textContent = 'Tout';
+  ctn.appendChild(allBtn);
+}
+
+function setYearActive(year){
+  YEAR_FILTER = String(year||'') || '';
+  MONTH_FILTER = '';
+  document.querySelectorAll('.yearBtn').forEach(b=>{
+    const on = String(b.dataset.year)===String(year);
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on?'true':'false');
+  });
+  document.querySelectorAll('.months').forEach(div=>{
+    div.classList.toggle('active', div.id===`months-${year}`);
+  });
+  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove('active'));
+  draw();
+}
+
+function setMonthActive(year, month){
+  if(String(YEAR_FILTER)!==String(year)) setYearActive(year);
+  MONTH_FILTER = String(month||'');
+
+  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=>{
+    b.classList.toggle('active', String(b.dataset.month)===String(month));
+  });
+  draw();
+}
+
+document.querySelector('.yearTabs').addEventListener('click', (e)=>{
+  const b = e.target.closest('.yearBtn');
+  if(!b) return;
+  setYearActive(b.dataset.year);
+});
+document.getElementById('months-2025').addEventListener('click', (e)=>{
+  const b = e.target.closest('.monthBtn'); if(!b) return;
+  setMonthActive('2025', b.dataset.month);
+});
+document.getElementById('months-2026').addEventListener('click', (e)=>{
+  const b = e.target.closest('.monthBtn'); if(!b) return;
+  setMonthActive('2026', b.dataset.month);
+});
+
 let rows = [];
+
 function buildEstimateSelect(value){
   const v = Number(value) || "";
   let opts = "";
@@ -191,29 +276,52 @@ function buildEstimateSelect(value){
   return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
 }
 
+function matchesYearMonth(d){
+  if (!YEAR_FILTER) return true;
+  if (!d) return false;
+  if (String(d.getFullYear()) !== String(YEAR_FILTER)) return false;
+  if (!MONTH_FILTER || MONTH_FILTER==='all') return true;
+  return (d.getMonth()+1) === Number(MONTH_FILTER);
+}
+
 function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
-  const yearVal  = ($year.value  || "").trim();
-  const monthVal = ($month.value || "").trim();
-  const dayVal   = ($day.value   || "").trim();
 
+  const list = [...rows].sort((a,b)=>{
+    const da = parseDate(a.demandeDate);
+    const db = parseDate(b.demandeDate);
+    const ta = da ? da.getTime() : 0;
+    const tb = db ? db.getTime() : 0;
+    return tb - ta;
+  });
+
+  let count = 0;
   $tbody.innerHTML = "";
-  rows
+  list
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
-    .filter(r => { if (!monthVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && (d.getMonth()+1) === Number(monthVal); })
-    .filter(r => { if (!dayVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && d.getDate() === Number(dayVal); })
-    .filter(r => { if (!yearVal) return true; const d = r.demandeDate ? new Date(r.demandeDate) : null; return d && !isNaN(d) && String(d.getFullYear()) === yearVal; })
-    .filter(r => { if (!q) return true; const searchable = (JSON.stringify(r) + ' ' + String(r.no).padStart(5,'0')).toLowerCase(); return searchable.includes(q); })
+    .filter(r => {
+      const d = parseDate(r.demandeDate);
+      return matchesYearMonth(d);
+    })
+    .filter(r => {
+      if (!q) return true;
+      const searchable = [
+        String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service,
+        fmtJJMMYYYYdash(r.demandeDate)
+      ].join(' ').toLowerCase();
+      return searchable.includes(q);
+    })
     .forEach(r => {
+      count++;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${String(r.no).padStart(5,'0')}</td>
-        <td>${r.magasin||""}</td>
-        <td>${r.compte||""}</td>
-        <td>${r.client||""}</td>
-        <td>${r.service||""}</td>
-        <td>${fmtJJMMYYYYdash(r.demandeDate)}</td>
+        <td title="${String(r.no)}">${String(r.no).padStart(5,'0')}</td>
+        <td title="${r.magasin||""}">${r.magasin||""}</td>
+        <td title="${r.compte||""}">${r.compte||""}</td>
+        <td title="${r.client||""}">${r.client||""}</td>
+        <td title="${r.service||""}">${r.service||""}</td>
+        <td title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td>${badge(r.status)}</td>
         <td>${buildEstimateSelect(r.estimation)}</td>
         <td class="actions">
@@ -239,7 +347,6 @@ function draw(){
           saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
           saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:8px"></span>Enregistrement…`;
 
-          // → le backend relaie vers Apps Script (action=update_status)
           const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -261,6 +368,13 @@ function draw(){
 
       $tbody.appendChild(tr);
     });
+
+  const ymText = YEAR_FILTER
+    ? (MONTH_FILTER && MONTH_FILTER!=='all'
+        ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
+        : `Tout ${YEAR_FILTER}`)
+    : 'Toutes années';
+  $legend.textContent = `${count} dossier(s) • ${ymText}`;
 }
 
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -378,6 +492,7 @@ function load(){
     .then(r=>r.json())
     .then(json=>{
       const data = (json && json.data) || [];
+
       rows = data.map(x=>{
         const h = (x.snapshot && x.snapshot.header) || {};
         return {
@@ -390,10 +505,17 @@ function load(){
           estimation: Number(x.estimation || "") || ""
         };
       });
-      buildYearOptions(rows);
-      buildMonthOptions();
-      updateDayOptions();
-      draw();
+
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth()+1;
+      buildMonths(2025);
+      buildMonths(2026);
+      if (y === 2025 || y === 2026) {
+        setMonthActive(String(y), String(m));
+      } else {
+        YEAR_FILTER = ''; MONTH_FILTER=''; draw();
+      }
     })
     .catch(e=>{
       console.error(e);
@@ -402,10 +524,11 @@ function load(){
     });
 }
 
+document.querySelector('.yearTabs'); // (déjà branché plus haut)
+document.getElementById('months-2025'); // (déjà branché plus haut)
+document.getElementById('months-2026'); // (déjà branché plus haut)
+
 $filter.addEventListener("change", draw);
-$month.addEventListener("change", () => { updateDayOptions(); draw(); });
-$day.addEventListener("change", draw);
-$year.addEventListener("change", () => { updateDayOptions(); draw(); });
 $q.addEventListener("input", draw);
 
 load();
