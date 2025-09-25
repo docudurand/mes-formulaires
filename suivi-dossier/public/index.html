@@ -12,7 +12,6 @@
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-  /* largeur globale généreuse */
   .wrap{max-width:1680px;margin:22px auto;padding:14px}
   h1{ margin:0 0 10px; color:var(--primary); font-size:1.35rem; }
 
@@ -24,50 +23,42 @@
   /* Années/Mois */
   .yearbar{margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
   .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
-  .yearBtn{
-    background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;
-    padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem
-  }
+  .yearBtn{background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem}
   .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
   .months{display:none;gap:6px;flex-wrap:wrap}
   .months.active{display:flex}
-  .monthBtn{
-    background:#fff;border:1px solid var(--line);color:#073763;
-    border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem
-  }
+  .monthBtn{background:#fff;border:1px solid var(--line);color:#073763;border-radius:999px;
+    padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem}
   .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
   .legend{opacity:.8;font-size:.9rem}
 
-  /* Tableau */
+  /* Tableau – blanc, sans “cadrillage” */
   .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
-  table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed;}
+  table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; background:#fff}
   thead th{
     background:#f8fbff; text-align:left; padding:10px 12px; color:#334155; font-size:.92rem; border-bottom:1px solid var(--line);
     white-space:nowrap;
   }
-  /* Autoriser wrap uniquement pour ces entêtes pour éviter tout chevauchement */
-  thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; }
+  thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; } /* évite chevauchement */
+  tbody tr{background:#fff}                 /* lignes blanches */
+  tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff} /* pas de bordures */
 
-  tbody td{
-    padding:10px 12px; background:#f9fafb; border:1px solid var(--line);
-    font-size:.95rem; vertical-align:middle;
-  }
-
-  /* Largeurs (somme = 100%) – plus d’air pour Service / Date / Statut / Estimation / Actions */
+  /* Largeurs (100%) – Service & Compte réduits, fin de ligne élargie */
   .col-no        { width: 5%  }
   .col-magasin   { width: 10% }
-  .col-compte    { width: 11% }
+  .col-compte    { width: 9%  }  /* ↓ */
   .col-client    { width: 16% }
-  .col-service   { width: 20% }
+  .col-service   { width: 17% }  /* ↓ */
   .col-date      { width: 9%  }
-  .col-statut    { width: 13% }
-  .col-eta       { width: 6%  } /* 1–10 suffisant */
-  .col-actions   { width: 10% }
+  .col-statut    { width: 14% }  /* ↑ */
+  .col-eta       { width: 7%  }  /* ↑ */
+  .col-actions   { width: 13% }  /* ↑ */
 
   .nowrap   { white-space:nowrap; }
   .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-  /* Statuts / contrôles */
+  /* Statuts / contrôles – compacts mais lisibles */
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
     padding:6px 10px; border-radius:999px; font-weight:700; font-size:.85rem; min-width:100px; text-align:center;
@@ -77,11 +68,12 @@
   .s-3{background:var(--s3); color:var(--s3b)}
   .s-4{background:var(--s4); color:var(--s4b)}
 
-  .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end}
+  .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
   .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:170px;}
   .etaSel   {padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:68px;}
-  button{appearance:none; border:1px solid var(--primary); background:#fff; color:var(--primary); padding:7px 12px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap; font-size:.9rem}
-  .btnView{min-width:120px} /* “Voir dossier” */
+  button{appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
+    padding:7px 12px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap; font-size:.9rem}
+  .btnView{min-width:120px} /* “Voir dossier” complet */
 
   .spinner{
     width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:var(--primary);
@@ -105,77 +97,77 @@
 </head>
 <body>
 
-  <div class="wrap">
-    <h1>Suivi des dossiers Atelier</h1>
+<div class="wrap">
+  <h1>Suivi des dossiers Atelier</h1>
 
-    <div class="toolbar">
-      <label>Filtrer magasin :
-        <select id="filterMag">
-          <option value="">Tous</option>
-          <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
-        </select>
-      </label>
-      <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
-    </div>
-
-    <!-- Onglets années / mois -->
-    <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
-      <div class="yearTabs" role="tablist" aria-label="Années">
-        <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
-        <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
-      </div>
-      <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
-      <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
-      <div class="legend" id="legend"></div>
-    </div>
-
-    <div class="tableWrap">
-      <table id="tab">
-        <colgroup>
-          <col class="col-no">
-          <col class="col-magasin">
-          <col class="col-compte">
-          <col class="col-client">
-          <col class="col-service">
-          <col class="col-date">
-          <col class="col-statut">
-          <col class="col-eta">
-          <col class="col-actions">
-        </colgroup>
-        <thead>
-          <tr>
-            <th class="nowrap">N°</th>
-            <th class="nowrap">Magasin</th>
-            <th class="nowrap">N° de compte</th>
-            <th class="nowrap">Client</th>
-            <th class="nowrap">Service</th>
-            <th class="nowrap">Date</th>
-            <th class="nowrap">Statut</th>
-            <th class="th-eta">Estimation Temps Travaux</th>
-            <th class="th-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+  <div class="toolbar">
+    <label>Filtrer magasin :
+      <select id="filterMag">
+        <option value="">Tous</option>
+        <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
+      </select>
+    </label>
+    <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
   </div>
 
-  <!-- Modale détails -->
-  <div class="mask" id="mask" aria-hidden="true">
-    <div class="box" role="dialog" aria-label="Dossier">
-      <div class="bar">
-        <div id="modalTitle" style="font-weight:800;color:#004080">Dossier</div>
-        <div>
-          <button id="btnPrint">Imprimer</button>
-          <button id="btnClose">Fermer</button>
-        </div>
-      </div>
-      <div class="content" id="modalContent"></div>
+  <!-- Onglets années / mois -->
+  <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
+    <div class="yearTabs" role="tablist" aria-label="Années">
+      <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
+      <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
     </div>
+    <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
+    <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
+    <div class="legend" id="legend"></div>
   </div>
+
+  <div class="tableWrap">
+    <table id="tab">
+      <colgroup>
+        <col class="col-no">
+        <col class="col-magasin">
+        <col class="col-compte">
+        <col class="col-client">
+        <col class="col-service">
+        <col class="col-date">
+        <col class="col-statut">
+        <col class="col-eta">
+        <col class="col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="nowrap">N°</th>
+          <th class="nowrap">Magasin</th>
+          <th class="nowrap">N° de compte</th>
+          <th class="nowrap">Client</th>
+          <th class="nowrap">Service</th>
+          <th class="nowrap">Date</th>
+          <th class="nowrap">Statut</th>
+          <th class="th-eta">Estimation Temps Travaux</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modale détails -->
+<div class="mask" id="mask" aria-hidden="true">
+  <div class="box" role="dialog" aria-label="Dossier">
+    <div class="bar">
+      <div id="modalTitle" style="font-weight:800;color:#004080">Dossier</div>
+      <div>
+        <button id="btnPrint">Imprimer</button>
+        <button id="btnClose">Fermer</button>
+      </div>
+    </div>
+    <div class="content" id="modalContent"></div>
+  </div>
+</div>
 
 <script>
-/* ------------------------- DOM refs ------------------------- */
+/* ---------- DOM refs ---------- */
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
 const $q      = document.getElementById("q");
@@ -186,7 +178,7 @@ const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
 const $legend = document.getElementById("legend");
 
-/* ------------------------- Helpers -------------------------- */
+/* ---------- Helpers ---------- */
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
@@ -195,19 +187,11 @@ function setTableLoading(msg){
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
 function badge(status){
   const m = {
-    "Demande envoyé":"s-1",
-    "Pièce reçu":"s-2",
-    "Travaux en cours":"s-3",
-    "Renvoyé":"s-4"
+    "Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"
   }[status] || "s-1";
   return `<span class="badge ${m}">${status}</span>`;
 }
 function p2(n){ return String(n).padStart(2,"0"); }
-function fmtJJMMYYYYdash(v){
-  const d = parseDate(v);
-  if (!d) return "—";
-  return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
-}
 function parseDate(v){
   if (!v && v!==0) return null;
   const d = new Date(v);
@@ -218,38 +202,30 @@ function parseDate(v){
   if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
   return null;
 }
+function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—"; }
 
-/* --------------------- Années / Mois ------------------------ */
+/* ---------- Années / Mois ---------- */
 const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 let YEAR_FILTER = '';   // '2025' / '2026' / ''
 let MONTH_FILTER = '';  // '1'..'12' / 'all' / ''
 
 function buildMonths(year){
-  const ctn = document.getElementById(`months-${year}`);
-  if(!ctn) return;
+  const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
   ctn.innerHTML = '';
   MONTHS_FULL.forEach((label, idx)=>{
     const m = idx+1;
     const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'monthBtn';
-    btn.dataset.month = String(m);
-    btn.dataset.year  = String(year);
-    btn.textContent = label;
-    ctn.appendChild(btn);
+    btn.type = 'button'; btn.className = 'monthBtn';
+    btn.dataset.month = String(m); btn.dataset.year = String(year);
+    btn.textContent = label; ctn.appendChild(btn);
   });
   const allBtn = document.createElement('button');
-  allBtn.type = 'button';
-  allBtn.className = 'monthBtn';
-  allBtn.dataset.month = 'all';
-  allBtn.dataset.year  = String(year);
-  allBtn.textContent = 'Tout';
-  ctn.appendChild(allBtn);
+  allBtn.type = 'button'; allBtn.className = 'monthBtn';
+  allBtn.dataset.month = 'all'; allBtn.dataset.year = String(year);
+  allBtn.textContent = 'Tout'; ctn.appendChild(allBtn);
 }
-
 function setYearActive(year){
-  YEAR_FILTER = String(year||'') || '';
-  MONTH_FILTER = ''; // reset
+  YEAR_FILTER = String(year||'') || ''; MONTH_FILTER = '';
   document.querySelectorAll('.yearBtn').forEach(b=>{
     const on = String(b.dataset.year)===String(year);
     b.classList.toggle('active', on);
@@ -269,29 +245,21 @@ function setMonthActive(year, month){
   });
   draw();
 }
-
 document.querySelector('.yearTabs').addEventListener('click', (e)=>{
-  const b = e.target.closest('.yearBtn'); if(!b) return;
-  setYearActive(b.dataset.year);
+  const b = e.target.closest('.yearBtn'); if(!b) return; setYearActive(b.dataset.year);
 });
 document.getElementById('months-2025').addEventListener('click', (e)=>{
-  const b = e.target.closest('.monthBtn'); if(!b) return;
-  setMonthActive('2025', b.dataset.month);
+  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2025', b.dataset.month);
 });
 document.getElementById('months-2026').addEventListener('click', (e)=>{
-  const b = e.target.closest('.monthBtn'); if(!b) return;
-  setMonthActive('2026', b.dataset.month);
+  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2026', b.dataset.month);
 });
 
-/* ------------------------- Données -------------------------- */
+/* ---------- Données ---------- */
 let rows = [];
-
 function buildEstimateSelect(value){
   const v = Number(value) || "";
-  let opts = "";
-  for (let i=1;i<=10;i++){
-    opts += `<option value="${i}" ${v===i?"selected":""}>${i}</option>`;
-  }
+  let opts = ""; for (let i=1;i<=10;i++) opts += `<option value="${i}" ${v===i?"selected":""}>${i}</option>`;
   return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
 }
 function matchesYearMonth(d){
@@ -306,13 +274,9 @@ function draw(){
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
 
-  // tri par date de la demande
   const list = [...rows].sort((a,b)=>{
-    const da = parseDate(a.demandeDate);
-    const db = parseDate(b.demandeDate);
-    const ta = da ? da.getTime() : 0;
-    const tb = db ? db.getTime() : 0;
-    return tb - ta;
+    const da = parseDate(a.demandeDate), db = parseDate(b.demandeDate);
+    return (db?db.getTime():0) - (da?da.getTime():0);
   });
 
   let count = 0;
@@ -322,11 +286,9 @@ function draw(){
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
     .filter(r => {
       if (!q) return true;
-      const searchable = [
-        String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service,
-        fmtJJMMYYYYdash(r.demandeDate)
-      ].join(' ').toLowerCase();
-      return searchable.includes(q);
+      const s = [String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service, fmtJJMMYYYYdash(r.demandeDate)]
+        .join(' ').toLowerCase();
+      return s.includes(q);
     })
     .forEach(r => {
       count++;
@@ -370,12 +332,8 @@ function draw(){
             headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ status, estimation })
           });
-          if(!resp.ok){
-            alert("Erreur de mise à jour");
-            return;
-          }
-          r.status = status;
-          r.estimation = estimation;
+          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+          r.status = status; r.estimation = estimation;
         } finally{
           saveBtn.innerHTML = oldHtml;
           saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
@@ -385,16 +343,15 @@ function draw(){
       $tbody.appendChild(tr);
     });
 
-  // Légende
   const ymText = YEAR_FILTER
     ? (MONTH_FILTER && MONTH_FILTER!=='all'
         ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
         : `Tout ${YEAR_FILTER}`)
     : 'Toutes années';
-  document.getElementById('legend').textContent = `${count} dossier(s) • ${ymText}`;
+  $legend.textContent = `${count} dossier(s) • ${ymText}`;
 }
 
-/* ---------------------- Détails (modale) --------------------- */
+/* ---------- Détails (modale) ---------- */
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function openDetails(row){
   const h = (row.snapshot && row.snapshot.header) || {};
@@ -511,14 +468,13 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
   w.document.close(); w.focus(); w.print(); w.close();
 });
 
-/* ------------------- Chargement des dossiers ------------------- */
+/* ---------- Chargement ---------- */
 function load(){
   setTableLoading("Chargement des dossiers…");
   fetch("/atelier/api/cases")
     .then(r=>r.json())
     .then(json=>{
       const data = (json && json.data) || [];
-
       rows = data.map(x=>{
         const h = (x.snapshot && x.snapshot.header) || {};
         return {
@@ -532,13 +488,10 @@ function load(){
         };
       });
 
-      // construire les onglets mois/années
       buildMonths(2025);
       buildMonths(2026);
 
-      // sélection auto du mois courant si 2025/2026, sinon “toutes années”
-      const now = new Date();
-      const y = now.getFullYear(), m = now.getMonth()+1;
+      const now = new Date(); const y = now.getFullYear(), m = now.getMonth()+1;
       if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
       else { YEAR_FILTER=''; MONTH_FILTER=''; draw(); }
     })
