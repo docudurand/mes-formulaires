@@ -19,7 +19,6 @@
   label{font-weight:600;color:#334155}
   select,input{padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:.95rem; background:#fff}
 
-  /* Années / Mois */
   .yearbar{margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
   .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
   .yearBtn{background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem}
@@ -30,7 +29,6 @@
   .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
   .legend{opacity:.8;font-size:.9rem}
 
-  /* Tableau (blanc, sans quadrillage) */
   .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
   table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; background:#fff}
   thead th{
@@ -41,22 +39,20 @@
   tbody tr{background:#fff}
   tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff}
 
-  /* Largeurs (100%) – Service ↓, ETA/Actions respirent */
   .col-no        { width: 5%  }
-  .col-magasin   { width: 10% }   /* peut maintenant aller à la ligne */
+  .col-magasin   { width: 10% }
   .col-compte    { width: 8%  }
-  .col-client    { width: 14% }
-  .col-service   { width: 14% }   /* ↓ encore un peu */
+  .col-client    { width: 13% }
+  .col-service   { width: 14% }
   .col-date      { width: 9%  }
   .col-statut    { width: 11% }
-  .col-eta       { width: 15% }   /* ↑ pour ne pas chevaucher */
-  .col-actions   { width: 14% }
+  .col-eta       { width: 15% }
+  .col-actions   { width: 15% }
 
   .nowrap   { white-space:nowrap; }
   .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .wrap-ok  { white-space:normal; word-break:break-word; }
 
-  /* Statuts / contrôles */
   .badge{
     display:inline-flex; align-items:center; justify-content:center;
     padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
@@ -68,7 +64,6 @@
 
   .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
   .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:150px;}
-  /* Sélecteur ETA compact */
   .etaSel{
     padding:6px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem;
     width:64px; min-width:64px; text-align:center; appearance:auto;
@@ -77,7 +72,7 @@
     appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
     padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem
   }
-  /* Bouton Voir très compact (2 lignes) */
+
   .btnView{
     white-space:normal; line-height:1.05; padding:6px 8px;
     min-width:72px; max-width:72px; text-align:center;
@@ -88,7 +83,6 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Modale */
   .mask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:16px; }
   .box{ width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line); margin-top:10px; }
   .bar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
@@ -109,13 +103,13 @@
     <label>Filtrer magasin :
       <select id="filterMag">
         <option value="">Tous</option>
-        <option>Gleizé</option><option>Miribel</option><option>Seynod</option><option>Annemasse</option>
+        <option>Annemasse</option><option>Bourgoin</option><option>Chasse sur Rhone</option><option>Chassieu</option><option>Gleize</option><option>La Motte Servolex</option><option>Miribel</option>
+		<option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
       </select>
     </label>
     <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
   </div>
 
-  <!-- Onglets années / mois -->
   <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
     <div class="yearTabs" role="tablist" aria-label="Années">
       <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
@@ -142,10 +136,10 @@
       <thead>
         <tr>
           <th class="nowrap">N°</th>
-          <th class="nowrap">Magasin</th>
+          <th class="wrap-ok">Magasin</th>
           <th class="nowrap">N° de compte</th>
-          <th class="nowrap">Client</th>
-          <th class="nowrap">Service</th>
+          <th class="truncate">Client</th>
+          <th class="truncate">Service</th>
           <th class="nowrap">Date</th>
           <th class="nowrap">Statut</th>
           <th class="th-eta">Estimation<br>Temps Travaux</th>
@@ -157,7 +151,6 @@
   </div>
 </div>
 
-<!-- Modale détails -->
 <div class="mask" id="mask" aria-hidden="true">
   <div class="box" role="dialog" aria-label="Dossier">
     <div class="bar">
@@ -172,7 +165,6 @@
 </div>
 
 <script>
-/* ---------- DOM refs ---------- */
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
 const $q      = document.getElementById("q");
@@ -183,7 +175,6 @@ const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
 const $legend = document.getElementById("legend");
 
-/* ---------- Helpers ---------- */
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
@@ -207,10 +198,9 @@ function parseDate(v){
 }
 function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—"; }
 
-/* ---------- Années / Mois ---------- */
 const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-let YEAR_FILTER = '';   // '2025' / '2026' / ''
-let MONTH_FILTER = '';  // '1'..'12' / 'all' / ''
+let YEAR_FILTER = '';
+let MONTH_FILTER = '';
 
 function buildMonths(year){
   const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
@@ -258,7 +248,6 @@ document.getElementById('months-2026').addEventListener('click', (e)=>{
   const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2026', b.dataset.month);
 });
 
-/* ---------- Données ---------- */
 let rows = [];
 function buildEstimateSelect(value){
   const v = Number(value) || "";
@@ -336,7 +325,12 @@ function draw(){
             body: JSON.stringify({ status, estimation })
           });
           if(!resp.ok){ alert("Erreur de mise à jour"); return; }
-          r.status = status; r.estimation = estimation;
+
+          r.status = status;
+          r.estimation = estimation;
+
+          const badgeCell = tr.querySelector(".col-statut");
+          if (badgeCell) badgeCell.innerHTML = badge(r.status);
         } finally{
           saveBtn.innerHTML = oldHtml;
           saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
@@ -354,44 +348,111 @@ function draw(){
   $legend.textContent = `${count} dossier(s) • ${ymText}`;
 }
 
-/* ---------- Détails (modale) ---------- */
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function openDetails(row){
   const h = (row.snapshot && row.snapshot.header) || {};
+  const cul = (row.snapshot && row.snapshot.culasse) || null;
+  const inj = (row.snapshot && row.snapshot.injecteur) || null;
   const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
-  const html = `
+
+  let opsHTML = "";
+  if (cul && Array.isArray(cul.operations) && cul.operations.length){
+    opsHTML = cul.operations.map(op=>{
+      const refs = Array.isArray(op.references) ? op.references.map(r=>{
+        const bits = [];
+        if (r.reference) bits.push(esc(r.reference));
+        if (r.libelleRef) bits.push(esc(r.libelleRef));
+        if (r.prixHT || r.prixHT===0) bits.push(`${esc(String(r.prixHT))} € HT`);
+        return `<div class="sub">- ${bits.join(" – ")}</div>`;
+      }).join("") : "";
+      return `<div class="bul">• ${esc(op.libelle || op.ligne)}</div>${refs}`;
+    }).join("");
+  }
+
+  const piecesHTML = (cul && Array.isArray(cul.piecesAFournir) && cul.piecesAFournir.length)
+    ? cul.piecesAFournir.map(p=>`<div class="bul">• ${esc(p)}</div>`).join("")
+    : "<div class='bul' style='opacity:.7'>Aucune pièce sélectionnée.</div>";
+
+  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
+  $modalContent.innerHTML = `
     <div class="grid2">
-      <div><span class="label">N° :</span> ${String(row.no).padStart(5,'0')}</div>
+      <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
       <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
-      <div><span class="label">Magasin :</span> ${h.magasin||row.magasin||""}</div>
-      <div><span class="label">Statut :</span> ${row.status||""}</div>
-      <div><span class="label">Client :</span> ${h.client||row.client||""}</div>
-      <div><span class="label">Compte :</span> ${h.compte||row.compte||""}</div>
-      <div><span class="label">Véhicule :</span> ${h.vehicule||""}</div>
-      <div><span class="label">Immat. :</span> ${h.immat||""}</div>
-      <div><span class="label">Service :</span> ${h.service||row.service||""}</div>
-      <div><span class="label">Estimation :</span> ${row.estimation || "—"}</div>
+      <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
+      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
+      <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
+      <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
+      <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
+      <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
+      <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
+      <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
+      <div><span class="label">Service :</span> ${esc(h.service||row.service||"")}</div>
+      <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
+      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
     </div>
-    ${com ? `<div class="section"><h3>Commentaires</h3><div class="area">${com}</div></div>` : ""}
+
+    ${h.service === "Rectification Culasse" && cul ? `
+      <div class="section">
+        <h3>Détails Rectification Culasse</h3>
+        ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
+        <div class="section">
+          <h3>Pièces à fournir</h3>
+          ${piecesHTML}
+        </div>
+      </div>
+    ` : ""}
+
+    ${(h.service === "Contrôle injection Diesel" || h.service === "Contrôle injection Essence") && inj ? `
+      <div class="section">
+        <h3>Détails Contrôle injection</h3>
+        <div class="grid2">
+          <div><span class="label">Type :</span> ${esc(inj.type||"")}</div>
+          <div><span class="label">Nb injecteurs :</span> ${esc(inj.nombre||"")}</div>
+        </div>
+      </div>
+    ` : ""}
+
+    ${com ? `
+      <div class="section">
+        <h3>Commentaires</h3>
+        <div class="area">${esc(com)}</div>
+      </div>
+    ` : ""}
   `;
-  document.getElementById("modalTitle").textContent = `Dossier ${String(row.no).padStart(5,'0')}`;
-  document.getElementById("modalContent").innerHTML = html;
   $mask.style.display = "flex";
   $mask.setAttribute("aria-hidden","false");
 }
 document.getElementById("btnClose").addEventListener("click", ()=>{
   $mask.style.display = "none";
   $mask.setAttribute("aria-hidden","true");
-  document.getElementById("modalContent").innerHTML = "";
+  $modalContent.innerHTML = "";
 });
 document.getElementById("btnPrint").addEventListener("click", ()=>{
   const w = window.open("", "_blank");
-  w.document.write(`<html><head><meta charset="utf-8"><title>Impression</title>
-  <style>body{font-family:system-ui,Arial,sans-serif;padding:20px} .label{font-weight:700}</style></head>
-  <body>${document.getElementById("modalContent").innerHTML}</body></html>`);
+  w.document.write(`
+    <html>
+      <head>
+        <title>${$modalTitle.textContent}</title>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
+          h3{color:#004080;margin-top:16px}
+          .label{font-weight:700}
+          .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
+          .section{margin-top:14px}
+          .bul{margin:6px 0}
+          .sub{margin:2px 0 0 18px}
+          .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
+        </style>
+      </head>
+      <body>
+        ${$modalContent.innerHTML}
+      </body>
+    </html>
+  `);
   w.document.close(); w.focus(); w.print(); w.close();
 });
 
-/* ---------- Chargement ---------- */
 function load(){
   setTableLoading("Chargement des dossiers…");
   fetch("/atelier/api/cases")
@@ -410,11 +471,8 @@ function load(){
           estimation: Number(x.estimation || "") || ""
         };
       });
-
-      buildMonths(2025);
-      buildMonths(2026);
-
-      const now = new Date(); const y = now.getFullYear(), m = now.getMonth()+1;
+      buildMonths(2025); buildMonths(2026);
+      const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1;
       if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
       else { YEAR_FILTER=''; MONTH_FILTER=''; draw(); }
     })
@@ -424,10 +482,8 @@ function load(){
       alert("Erreur de chargement.");
     });
 }
-
-document.getElementById("filterMag").addEventListener("change", draw);
+$filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
-
 load();
 </script>
 </body>
