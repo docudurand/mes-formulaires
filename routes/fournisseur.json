@@ -46,11 +46,32 @@
 	 "infoLivreur": "Ville : VENISSIEU Tournée 6"
   },
   {
+    "name": "BMW BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
     "name": "BOSAL",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEURBANE Tournée 5"
+  },
+  {
+    "name": "CARGO BULL",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
+  {
+    "name": "CASSE BOUVIER ",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : CESSIEU Tournée 3"
   },
   {
     "name": "CDAL",
@@ -62,7 +83,7 @@
   {
     "name": "CEMO",
     "magasin": "Miribel",
-    "recipients": [""],
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr"],
 	 "infoLivreur": "Ville : MONTANAY Tournée NORD"
   },
   {
@@ -71,6 +92,13 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "CHAVRIER",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : RUY Tournée 3"
   },
   {
     "name": "CLAS EQUIPPEMENT ",
@@ -88,7 +116,7 @@
   {
     "name": "COVERGUARD",
     "magasin": "Miribel",
-    "recipients": [""],
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr"],
 	 "infoLivreur": "Ville : MIONNAY Tournée NORD"
   },
   {
@@ -113,11 +141,25 @@
 	 "infoLivreur": "Ville : DECINES Tournée 5"
   },
   {
+    "name": "FIREM",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
     "name": "GIVEDIS",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "GROENEVELD",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : VAULX MILIEU Tournée 2"
   },
   {
     "name": "HPS",
@@ -126,11 +168,32 @@
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
   },
+    {
+    "name": "ISUZU",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "IWATA",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
   {
     "name": "KONIG",
     "magasin": "La Motte Servolex",
     "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
 	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
+  },
+  {
+    "name": "LECI TRAILER",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : SATOLAS Tournée 2"
   },
   {
     "name": "MAHLE",
@@ -145,6 +208,20 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : GENAS Tournée 8"
+  },
+  {
+    "name": "MAN VIALLE",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : ST DIDIER Tournée 3"
+  },
+  {
+    "name": "MERCEDES PL BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : NIVOLAS Tournée 1"
   },
   {
     "name": "MERCEDES PL GENAS",
@@ -170,7 +247,7 @@
   {
     "name": "MG ATTELAGE",
     "magasin": "Miribel",
-    "recipients": [""],
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr"],
 	 "infoLivreur": "Ville : DARDILLY Tournée OUEST"
   },
   {
@@ -222,10 +299,39 @@
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
   },
   {
-    "name": "RC SPORT",
+    "name": "RC SPORTS",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
-	 "infoLivreur": ""
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 4"
+  },
+  {
+    "name": "RENAULT TRUCK VAULX MILIEU",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : VAULX MILIEU Tournée 2"
+  },
+  {
+    "name": "SAINTHON",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBELIN Tournée 5"
+  },
+  {
+    "name": "SECTORIEL",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
+  {
+    "name": "SEDAIA",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : ST JEN BOURNAY Tournée 1"
   },
   {
     "name": "SILIM",
@@ -261,6 +367,13 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEURBANE Tournée 1"
+  },
+  {
+    "name": "VOLKSWAGEN BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
   },
   {
     "name": "VOLSWAGEN/AUDI ST FONS",
