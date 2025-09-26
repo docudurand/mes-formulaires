@@ -990,27 +990,7 @@ $arAdd.addEventListener('click', async ()=>{
   const du = $arDu.value;
   const au = $arAu.value;
   const slots = String(opt?.dataset?.slots||"Matin|A. Midi").split('|').map(s=>s.trim()).filter(Boolean);
-    try{
-      if (($arCode?.value||'') === 'CP'){
-        const mag = $arMag?.value || currentMagasin;
-        const opt = $arPers?.selectedOptions?.[0];
-        const du = $arDu?.value, au = $arAu?.value;
-        const slots = String(opt?.dataset?.slots||'Matin|A. Midi').split('|').filter(Boolean);
-        const d1 = new Date(du), d2 = new Date(au);
-        let workdays = 0;
-        for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
-          const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          const g = d.getDay();
-          if (g!==0 && g!==6 && !isHoliday(iso)) workdays++;
-        }
-        const delta = -0.5 * Math.max(1, slots.length) * workdays;
-        if (delta){
-          const nom = opt?.dataset?.nom||''; const prenom = opt?.dataset?.prenom||'';
-          await postAdjustConges({ magasin: mag, date: du, entries: [{ fullName: opt?.value||`${nom} ${prenom}`.trim(), nom, prenom, delta }] });
-        }
-      }
-    }catch(e){ console.warn('Admin CP adjust failed', e?.message||e); }
-
+   
   if(!magasin || !nom || !code || !du || !au){
     $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return;
   }
