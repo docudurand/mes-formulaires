@@ -250,8 +250,11 @@ document.getElementById('months-2026').addEventListener('click', (e)=>{
 
 let rows = [];
 function buildEstimateSelect(value){
-  const v = Number(value) || "";
-  let opts = ""; for (let i=1;i<=10;i++) opts += `<option value="${i}" ${v===i?"selected":""}>${i}</option>`;
+  const v = (value === "" || value === null || value === undefined) ? "" : Number(value);
+  let opts = `<option value="" ${v==="" ? "selected":""}></option>`;
+  for (let i=1;i<=10;i++){
+    opts += `<option value="${i}" ${v===i ? "selected":""}>${i}</option>`;
+  }
   return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
 }
 function matchesYearMonth(d){
@@ -307,35 +310,35 @@ function draw(){
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
 
-      tr.querySelector(".btnSave").addEventListener("click", async ()=>{
-        const statusSel = tr.querySelector(".statusSel");
-        const etaSel = tr.querySelector(".etaSel");
-        const saveBtn = tr.querySelector(".btnSave");
-        const oldHtml = saveBtn.innerHTML;
-        const status = statusSel.value;
-        const estimation = Number(etaSel.value);
+tr.querySelector(".btnSave").addEventListener("click", async ()=>{
+  const statusSel = tr.querySelector(".statusSel");
+  const etaSel = tr.querySelector(".etaSel");
+  const saveBtn = tr.querySelector(".btnSave");
+  const oldHtml = saveBtn.innerHTML;
+  const status = statusSel.value;
+  const estimation = etaSel.value ? Number(etaSel.value) : "";
 
-        try{
-          saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
-          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>…`;
+  try{
+    saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
+    saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>…`;
 
-          const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ status, estimation })
-          });
-          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+    const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ status, estimation })
+    });
+    if(!resp.ok){ alert("Erreur de mise à jour"); return; }
 
-          r.status = status;
-          r.estimation = estimation;
+    r.status = status;
+    r.estimation = estimation;
 
-          const badgeCell = tr.querySelector(".col-statut");
-          if (badgeCell) badgeCell.innerHTML = badge(r.status);
-        } finally{
-          saveBtn.innerHTML = oldHtml;
-          saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
-        }
-      });
+    const badgeCell = tr.querySelector(".col-statut");
+    if (badgeCell) badgeCell.innerHTML = badge(r.status);
+  } finally{
+    saveBtn.innerHTML = oldHtml;
+    saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
+  }
+});
 
       $tbody.appendChild(tr);
     });
@@ -460,17 +463,17 @@ function load(){
     .then(json=>{
       const data = (json && json.data) || [];
       rows = data.map(x=>{
-        const h = (x.snapshot && x.snapshot.header) || {};
-        return {
-          ...x,
-          magasin: x.magasin || (h && h.magasin) || "",
-          compte:  x.compte  || (h && h.compte)  || "",
-          client:  x.client  || (h && h.client)  || "",
-          service: x.service || (h && h.service) || "",
-          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
-          estimation: Number(x.estimation || "") || ""
-        };
-      });
+  const h = (x.snapshot && x.snapshot.header) || {};
+  return {
+    ...x,
+    magasin: x.magasin || (h && h.magasin) || "",
+    compte:  x.compte  || (h && h.compte)  || "",
+    client:  x.client  || (h && h.client)  || "",
+    service: x.service || (h && h.service) || "",
+    demandeDate: x.demandeDate || (h && h.dateDemande) || "",
+    estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
+  };
+});
       buildMonths(2025); buildMonths(2026);
       const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1;
       if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
