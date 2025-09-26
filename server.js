@@ -824,53 +824,57 @@ app.post("/conges/sign/:id", async (req, res) => {
     await client.uploadFrom(tmpPdf, remotePdf);
     try{ fs.unlinkSync(tmpPdf); }catch{}
 
-    const patch = { tokens: { ...tokens, [role]: null } };
-    if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
-    if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
+const patch = { tokens: { ...tokens, [role]: null } };
+if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
+if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
-    const both =
-      (patch.signedService || item.signedService) &&
-      (patch.signedSite || item.signedSite);
-    if (both) {
-      patch.status   = "accepted";
-      patch.statusFr = "validée";
-    }
-
-    arr[i] = { ...item, ...patch, pdfPath: remotePdf };
-    await upJSON(client, LEAVES_FILE, arr);
+// Les signatures ne valident PAS la demande : seule la décision côté Admin le fait.
+// On conserve 'both' uniquement pour savoir si on envoie le PDF final.
+const both =
+  (patch.signedService || item.signedService) &&
+  (patch.signedSite || item.signedSite);
 
     const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
     const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
     await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
 
     // Si tout signé -> mail final au responsable de site global (MAIL_CG)
-    if (both) {
-      try {
-        const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-        const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
-        if (GMAIL_USER && cleanedPass) {
-          const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
-          const tmp2 = tmpFile("final_"+id+".pdf");
-          await client.downloadTo(tmp2, remotePdf);
-          await transporter.sendMail({
-            to: SITE_RESP_EMAIL || "",
-            from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
-            subject: `Validation — ${String(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
-            html: `<p>La demande a été <b>validée</b> par les deux responsables.</p>
-                   <p>Employé : ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}<br>
-                      Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours||'?'} jour(s)</p>`,
-            attachments: [{
-              filename: `Demande-conges-${(arr[i].nom||'').toUpperCase()}_${arr[i].prenom||''}.pdf`,
-              path: tmp2
-            }]
-          });
-          try{ fs.unlinkSync(tmp2); }catch{}
-        }
-      } catch(e) {
-        console.warn("[CONGES] post-accept mail a échoué:", e?.message||e);
-      }
-    }
+if (both) {
+  try {
+    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
+    if (GMAIL_USER && cleanedPass) {
+      const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
+      const tmp2 = tmpFile("final_"+id+".pdf");
+      await client.downloadTo(tmp2, remotePdf);
 
+      // -> destinataires : responsable de site global + employé demandeur (si présent)
+      const demanderEmail = arr[i].email || item.email || "";
+      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
+
+      await transporter.sendMail({
+        to: recipients,
+        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
+        replyTo: demanderEmail || undefined,
+        subject: `PDF final — ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
+        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
+               <p>Employé : ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}<br>
+                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours||'?'} jour(s)</p>
+               <p>Signatures :<br>
+                  Service : ${(arr[i].signedService?.by||'—')} — ${arr[i].signedService?.at||''}<br>
+                  Site : ${(arr[i].signedSite?.by||'—')} — ${arr[i].signedSite?.at||''}
+               </p>`,
+        attachments: [{
+          filename: `Demande-conges-${(arr[i].nom||'').toUpperCase()}_${arr[i].prenom||''}.pdf`,
+          path: tmp2
+        }]
+      });
+      try{ fs.unlinkSync(tmp2); }catch{}
+    }
+  } catch(e) {
+    console.warn("[CONGES] mail final (double signature) a échoué:", e?.message||e);
+  }
+}
     res.json({ ok:true, accepted: both===true });
   } catch(e){
     console.error(e);
