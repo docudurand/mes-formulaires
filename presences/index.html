@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PrÃ©sences DSG</title>
+<title>Présences DSG</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{ --brand:#d21f3c; --bg:#f6f7f8; --text:#111; --muted:#666; --line:#e5e7eb; --ok:#1a7f37; --tabsH:48px; }
@@ -180,34 +180,41 @@ button.badge.code{border-radius:8px}
 </style>
 </head>
 <body>
+
+<script>
+window.GS_PRESENCES_URL = window.GS_PRESENCES_URL || (window.__GS_PRESENCES_URL__ || "");
+</script>
+<script>
+  window.GS_PRESENCES_URL = "https://script.google.com/macros/s/AKfycby74gtT7EH96m3gPSgZnHnDiWx4EGbEHUYPvpbRz3rwFD-V6PXuDc_hSkxoCRQtDgp-/exec";
+</script>
+
 <header class="app-header">
-  <h1>PrÃ©sences Durand Services</h1>
-  <div class="today">Aujourdâ€™hui : <span id="today"></span></div>
+  <h1>Présences Durand Services</h1>
+  <div class="today">Aujourd’hui : <span id="today"></span></div>
 </header>
 
 <main>
   <nav class="tabs">
     <button class="tab active" data-tab="magasins">Magasins</button>
     <button class="tab" data-tab="saisie">Saisie du jour</button>
-    <button class="tab" data-tab="resume">RÃ©sumÃ© du mois</button>
+    <button class="tab" data-tab="resume">Résumé du mois</button>
     <button class="tab" data-tab="leaves">Admin</button>
   </nav>
 
   <section id="tab-magasins" class="tab-panel active">
     <p class="hint">Choisissez un magasin :</p>
     <div id="magasin-buttons" class="grid-buttons"></div>
-    <div id="magasin-loading" class="loading" style="display:none">Chargement du personnelâ€¦</div>
+    <div id="magasin-loading" class="loading" style="display:none">Chargement du personnel…</div>
   </section>
 
   <section id="tab-saisie" class="tab-panel">
     <div class="saisie-stick">
       <div class="toolbar">
         <div class="row-top" style="width:100%">
-          <div><b>Magasin :</b> <span id="current-magasin">â€”</span></div>
+          <div><b>Magasin :</b> <span id="current-magasin">—</span></div>
           <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
           <button id="btn-save" class="primary">Enregistrer</button>
           <button id="btn-fill-all" class="badge">Tout mettre P</button>
-<span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrementâ€¦</span></span>
         </div>
       </div>
 
@@ -234,16 +241,16 @@ button.badge.code{border-radius:8px}
       <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input id="leaves-user" name="username" type="text" value="admin" autocomplete="username" style="display:none">
         <input id="leaves-pass" name="password" type="password" class="input-nice" placeholder="Mot de passe admin" autocomplete="current-password"/>
-        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="remember-pw"> MÃ©moriser</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="remember-pw"> Mémoriser</label>
         <button type="submit" id="btn-login" class="primary">Se connecter</button>
       </form>
     </div>
 
     <div id="admin-range" class="admin-box" style="display:none">
-      <div style="font-weight:800;margin-bottom:8px">Ajout par pÃ©riode</div>
+      <div style="font-weight:800;margin-bottom:8px">Ajout par période</div>
       <div class="admin-row">
         <select id="ar-magasin"></select>
-        <select id="ar-personnel"><option value="">â€” Personnel â€”</option></select>
+        <select id="ar-personnel"><option value="">— Personnel —</option></select>
         <select id="ar-code"></select>
         <input id="ar-du" type="date" />
         <input id="ar-au" type="date" />
@@ -279,57 +286,14 @@ const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
 const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const CODE_DEFS = [
-  {code:'P', label:'PrÃ©sent'},{code:'CP',label:'CongÃ© payÃ©'},{code:'AM',label:'ArrÃªt maladie'},
-  {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'CongÃ© exceptionnel'},
-  {code:'Ann',label:'Absence non motivÃ©e'},{code:'SS',label:'Sans solde'},{code:'E',label:'Ã‰cole'},
-  {code:'R', label:'RÃ©cup'},{code:'D', label:'DÃ©placement'},{code:'RI',label:'RÃ©cup inventaire'},
-  {code:'UST',label:'Un seul tour'},{code:'NP',label:'Non planifiÃ©'},
-  ...PSITE_CODES.map(c=>({code:c,label:'PrÃ©sence autre site'})),
+  {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
+  {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
+  {code:'Ann',label:'Absence non motivée'},{code:'SS',label:'Sans solde'},{code:'E',label:'École'},
+  {code:'R', label:'Récup'},{code:'D', label:'Déplacement'},{code:'RI',label:'Récup inventaire'},
+  {code:'UST',label:'Un seul tour'},{code:'NP',label:'Non planifié'},
+  ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
-// === AJOUT: snapshot & ajustement CP ===
-let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
-function keyFromLabel(label){ return String(label||'').trim().replace(/\s+/g,' ').toUpperCase(); }
-function takeSnapshotFromData(day){
-  try{
-    const map = new Map();
-    (day?.rows||[]).forEach(r=>{
-      const k = keyFromLabel(r.label||'');
-      const vals = Object.assign({}, r.values||{});
-      Object.keys(vals).forEach(s=> vals[s] = String(vals[s]||'').trim().toUpperCase());
-      if(k) map.set(k, vals);
-    });
-    LAST_DAY_SNAPSHOT = { byKey: map, date: $dateInput?.value || null };
-  }catch(e){}
-}
-function computeCpDeltaAgainstSnapshotFromDOM(){
-  const out=[];
-  document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
-    const label = tr.querySelector('.row-label')?.textContent || '';
-    const key = keyFromLabel(label);
-    const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
-    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
-    let delta = 0;
-    Object.keys(Object.assign({}, before, now)).forEach(slot=>{
-      const b = before[slot]||''; const a = now[slot]||'';
-      if (b!=='CP' && a==='CP') delta -= 0.5;
-      else if (b==='CP' && a!=='CP') delta += 0.5;
-    });
-    if (delta){
-      const parts = String(label).trim().split(/\s+/);
-      const nom = (parts[0]||'').toUpperCase();
-      const prenom = parts.slice(1).join(' ');
-      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
-    }
-  });
-  return out;
-}
-async function postAdjustConges(payload){
-  try{ return await fetchJSON('/adjust-conges', { method:'POST', body: JSON.stringify(payload) }); }
-  catch(e){ console.warn('[adjust-conges] erreur', e?.message||e); return null; }
-}
-
-
 const $today=document.getElementById('today');
 const $tabs=[...document.querySelectorAll('.tab')];
 const $panels={ magasins:document.getElementById('tab-magasins'), saisie:document.getElementById('tab-saisie'), resume:document.getElementById('tab-resume'), leaves:document.getElementById('tab-leaves') };
@@ -432,7 +396,7 @@ function buildGlobalCodesBar(){
 
   const clearBtn=document.createElement('button');
   clearBtn.className='badge'; clearBtn.textContent='Vider';
-  clearBtn.title='Effacer les cellules sÃ©lectionnÃ©es';
+  clearBtn.title='Effacer les cellules sélectionnées';
   clearBtn.addEventListener('click',()=>{
     const scope=[...selectedCells];
     if(!scope.length) return;
@@ -448,7 +412,7 @@ function buildGlobalCodesBar(){
 
   const addBtn=(code,label)=>{
     const b=document.createElement('button'); b.className='badge code'; b.dataset.code=code; b.textContent=code; b.title=`${code} ${label||''}`.trim();
-    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifiÃ© (fond noir)'; }
+    if(code==='NP'){ b.style.background='#000'; b.style.color='#fff'; b.style.borderColor='#000'; b.title='NP Non planifié (fond noir)'; }
     b.addEventListener('click',()=>{
       const scope=[...selectedCells];
       if(!scope.length) return;
@@ -475,7 +439,7 @@ function buildGlobalCodesBar(){
   MAIN_CODES.forEach(c => $codesBar.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
 
   const strip=document.createElement('div'); strip.className='psite-strip';
-  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'PrÃ©sence autre site')));
+  PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
   $codesBar.appendChild(strip);
 }
 
@@ -558,12 +522,12 @@ function buildSaisieUI(){
   $saisieContent.innerHTML=''; clearSelection();
   const sections=[];
   const empRows=(personnel?.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-  if(empRows.length) sections.push({title:"EMPLOYÃ‰S", rows:empRows});
+  if(empRows.length) sections.push({title:"EMPLOYÉS", rows:empRows});
   const intRows=(personnel?.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
-  if(intRows.length) sections.push({title:"INTÃ‰RIM", rows:intRows});
+  if(intRows.length) sections.push({title:"INTÉRIM", rows:intRows});
   Object.entries(personnel?.livreurs||{}).forEach(([g,slots])=>{
     const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
-    sections.push({title:`LIVREURS â€” ${g}`, rows});
+    sections.push({title:`LIVREURS — ${g}`, rows});
   });
 
   if (Array.isArray(HIST_ROWS_SAISIE) && HIST_ROWS_SAISIE.length){
@@ -579,6 +543,7 @@ async function prefillDay(){
   try{
     const day=$dateInput.value;
     const payload = await fetchJSON(`/day?magasin=${encodeURIComponent(currentMagasin)}&date=${day}`);
+    try{ takeSnapshotFromData(payload?.data||{}); }catch{}
 
     const labelsInDay = labelsFromDayData(payload?.data);
     const currentLabels = new Set(
@@ -628,6 +593,62 @@ function applyPrefill(data){
   });
   paintWeekendInSaisie();
 }
+// ===== CP delta snapshot (minimal, no UI change) =====
+
+function takeSnapshotFromData(day){
+  try{
+    const map = new Map();
+    (day?.rows||[]).forEach(r=>{
+      const k = norm(r.label||'');
+      const vals = Object.assign({}, r.values||{});
+      Object.keys(vals).forEach(s=> vals[s] = String(vals[s]||'').trim().toUpperCase());
+      if(k) map.set(k, vals);
+    });
+    LAST_DAY_SNAPSHOT = { byKey: map, date: document.getElementById('saisie-date')?.value || null };
+  }catch(e){}
+}
+
+let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
+function computeCpDeltaAgainstSnapshotFromDOM(){
+  const out=[];
+  document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
+    const label = tr.querySelector('.row-label')?.textContent || '';
+    const key = norm(label);
+    const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
+    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
+    let delta = 0;
+    Object.keys(Object.assign({}, before, now)).forEach(slot=>{
+      const b = before[slot]||''; const a = now[slot]||'';
+      if (b!=='CP' && a==='CP') delta -= 0.5;
+      else if (b==='CP' && a!=='CP') delta += 0.5;
+    });
+    if (delta){
+      const parts = String(label).trim().split(/\s+/);
+      const nom = (parts[0]||'').toUpperCase();
+      const prenom = parts.slice(1).join(' ');
+      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
+    }
+  });
+  return out;
+}
+
+async function postAdjustConges(payload){
+  const list = Array.isArray(payload?.entries) ? payload.entries : (Array.isArray(payload) ? payload : []);
+  if (!Array.isArray(list) || !list.length) return true;
+  const base = (window.GS_PRESENCES_URL || "").trim();
+  if (!base) { console.warn("[adjustcp] GS_PRESENCES_URL manquant"); return true; }
+  const url = base + (base.includes("?") ? "&" : "?") + "action=adjustcp";
+  const reqs = list.map(e => {
+    const full = String(e.fullName||"").trim();
+    const nom = (e.nom || (full.split(/\s+/)[0]||"")).trim();
+    const prenom = (e.prenom || (full.split(/\s+/).slice(1).join(" ")||"")).trim();
+    const body = JSON.stringify({ magasin: payload.magasin || e.magasin || "", nom, prenom, delta: Number(e.delta||0) });
+    return fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body }).then(r=>r.json()).catch(()=>({ok:false}));
+  });
+  await Promise.allSettled(reqs);
+  return true;
+}
+
 function applyHolidayDefaultsForDay(){
   const day = $dateInput.value;
   if(!day || !isHoliday(day)) return;
@@ -653,23 +674,22 @@ function collectData(){
   return {rows};
 }
 document.getElementById('btn-save').addEventListener('click', async ()=>{
-  const $busy=document.getElementById('save-busy'); if($busy) $busy.style.display='flex';
   if(!currentMagasin) return;
   const data=collectData(); $btnSave.disabled=true;
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
       const entries = computeCpDeltaAgainstSnapshotFromDOM(); // [{nom, prenom, fullName, delta}, ...]
-if (entries && entries.length){
+      if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         // resnapshot to new state to avoid double comptage
         takeSnapshotFromData(collectData());
       }
     }catch(e){ console.warn('postAdjustConges failed', e?.message||e); }
 
-    alert('EnregistrÃ© âœ”');
-  }catch{ alert("Ã‰chec de l'enregistrement"); }
-  finally{ $btnSave.disabled=false; const $busy=document.getElementById('save-busy'); if($busy) $busy.style.display='none'; }
+    alert('Enregistré ✔');
+  }catch{ alert("Échec de l'enregistrement"); }
+  finally{ $btnSave.disabled=false; }
 });
 $dateInput.addEventListener('change',async ()=>{
   await prefillDay();
@@ -690,13 +710,13 @@ const $resumeStoreSel=document.getElementById('resume-store');
 document.getElementById('btn-load-store').addEventListener('click', loadResumeForStore);
 async function loadResumeForStore(){
   $resumeError.style.display='none';
-  $resumeContent.innerHTML='<div class="loading">Chargement en coursâ€¦</div>';
+  $resumeContent.innerHTML='<div class="loading">Chargement en cours…</div>';
   const ym=$resumeMonth.value, mag=$resumeStore.value;
   try{
     const data = await fetchJSON(`/month-store?yyyymm=${ym}&magasin=${encodeURIComponent(mag)}`);
     renderOneStore(ym, mag, data);
   }catch(e){
-    $resumeError.textContent="Impossible de charger le rÃ©sumÃ©.";
+    $resumeError.textContent="Impossible de charger le résumé.";
     $resumeError.style.display='block';
     $resumeContent.innerHTML='';
   }
@@ -792,13 +812,13 @@ function renderOneStore(yyyymm, magasin, data){
   const histLabelsAll = labelsFromMonthFile(file);
   const histOld = uniqByNorm(histLabelsAll.filter(lbl => !knownNow.has(norm(lbl))));
 
-  const empSec = makeSection("EMPLOYÃ‰S", empLabels, ()=>["Matin","A. Midi"]);
+  const empSec = makeSection("EMPLOYÉS", empLabels, ()=>["Matin","A. Midi"]);
   if(empSec) wrap.appendChild(empSec);
 
   const sub = document.createElement('div');
   sub.className = 'section-sub';
   sub.style.marginTop = '14px';
-  sub.textContent = 'CongÃ©s restants (EMPLOYÃ‰S)';
+  sub.textContent = 'Congés restants (EMPLOYÉS)';
   wrap.appendChild(sub);
 
   const line = document.createElement('div');
@@ -826,21 +846,21 @@ function renderOneStore(yyyymm, magasin, data){
       badge.style.fontWeight = '700';
       badge.style.fontSize = '.9rem';
       const solde = Number(p.congeRestant||0);
-      badge.textContent = `${(p.nom||'').toUpperCase()} ${p.prenom||''} â€” ${solde} j`;
+      badge.textContent = `${(p.nom||'').toUpperCase()} ${p.prenom||''} — ${solde} j`;
       line.appendChild(badge);
     });
   } else {
     const empty = document.createElement('span');
-    empty.textContent = 'â€”';
+    empty.textContent = '—';
     line.appendChild(empty);
   }
   wrap.appendChild(line);
 
-  const intSec = makeSection("INTÃ‰RIM", intLabels, ()=>["Matin","A. Midi"]);
+  const intSec = makeSection("INTÉRIM", intLabels, ()=>["Matin","A. Midi"]);
   if(intSec) wrap.appendChild(intSec);
 
   Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
-    const sec = makeSection(`LIVREURS â€” ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
+    const sec = makeSection(`LIVREURS — ${g}`, [g], ()=> (slots&&slots.length? slots : ["Matin","A. Midi"]));
     if(sec) wrap.appendChild(sec);
   });
 
@@ -864,11 +884,11 @@ $arCode.innerHTML = '';
 const grpStd = document.createElement('optgroup');
 grpStd.label = 'Codes standards';
 CODE_DEFS.filter(d => MAIN_CODES.includes(d.code)).forEach(({ code, label }) => {
-  const o = document.createElement('option'); o.value = code; o.textContent = `${code} â€” ${label}`; grpStd.appendChild(o);
+  const o = document.createElement('option'); o.value = code; o.textContent = `${code} — ${label}`; grpStd.appendChild(o);
 });
 const grpPS = document.createElement('optgroup');
-grpPS.label = 'PrÃ©sence autre site (P1â€¦P20)';
-PSITE_CODES.forEach(code => { const o = document.createElement('option'); o.value = code; o.textContent = `${code} â€” PrÃ©sence autre site`; grpPS.appendChild(o); });
+grpPS.label = 'Présence autre site (P1…P20)';
+PSITE_CODES.forEach(code => { const o = document.createElement('option'); o.value = code; o.textContent = `${code} — Présence autre site`; grpPS.appendChild(o); });
 $arCode.appendChild(grpStd); $arCode.appendChild(grpPS);
 
 async function selectMagasin(mag,btn){
@@ -915,12 +935,12 @@ $loginForm.addEventListener('submit', (ev)=>{
 
 $arMag.addEventListener('change', loadAdminPersonnel);
 async function loadAdminPersonnel(){
-  $arPers.innerHTML = '<option value="">â€” Chargementâ€¦ â€”</option>';
+  $arPers.innerHTML = '<option value="">— Chargement… —</option>';
   $arPers.disabled = true;
 
   const mag = $arMag.value;
   if(!mag){
-    $arPers.innerHTML = '<option value="">â€” Personnel â€”</option>';
+    $arPers.innerHTML = '<option value="">— Personnel —</option>';
     $arPers.disabled = true;
     return;
   }
@@ -928,7 +948,7 @@ async function loadAdminPersonnel(){
     const pers = await fetchJSON(`/personnel?magasin=${encodeURIComponent(mag)}`);
     const defaultSlots = ["Matin","A. Midi"];
 
-    $arPers.innerHTML = '<option value="">â€” SÃ©lectionnez un personnel â€”</option>';
+    $arPers.innerHTML = '<option value="">— Sélectionnez un personnel —</option>';
 
     const add = (p)=>{ 
       const o=document.createElement('option'); 
@@ -946,7 +966,7 @@ async function loadAdminPersonnel(){
     Object.entries(pers.livreurs||{}).forEach(([g,slots])=>{
       const o = document.createElement('option');
       o.value = g;
-      o.textContent = `Livreur â€” ${g}`;
+      o.textContent = `Livreur — ${g}`;
       o.dataset.nom = g;
       o.dataset.prenom = "";
       o.dataset.slots = (Array.isArray(slots) && slots.length ? slots : defaultSlots).join('|');
@@ -955,33 +975,14 @@ async function loadAdminPersonnel(){
 
     $arPers.disabled = false;
   }catch{
-    $arPers.innerHTML = '<option value="">â€” Erreur rÃ©seau â€”</option>';
+    $arPers.innerHTML = '<option value="">— Erreur réseau —</option>';
     $arPers.disabled = true;
   }
 }
 
 $arAdd.addEventListener('click', async ()=>{
   const token = sessionStorage.getItem('leavesToken');
-    try{
-      if (($arCode?.value||'') === 'CP'){
-        const mag = $arMag?.value || currentMagasin;
-        const opt = $arPers?.selectedOptions?.[0];
-        const du = $arDu?.value, au = $arAu?.value;
-        const slots = String(opt?.dataset?.slots||'Matin|A. Midi').split('|').filter(Boolean);
-        const d1 = new Date(du), d2 = new Date(au);
-        let workdays = 0;
-        for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
-          const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          const g = d.getDay();
-          if (g!==0 && g!==6 && !isHoliday(iso)) workdays++;
-        }
-        const delta = -0.5 * Math.max(1, slots.length) * workdays;
-        if (delta){
-          const nom = opt?.dataset?.nom||''; const prenom = opt?.dataset?.prenom||'';
-          await postAdjustConges({ magasin: mag, date: du, entries: [{ fullName: opt?.value||`${nom} ${prenom}`.trim(), nom, prenom, delta }] });
-        }
-      }
-    }catch(e){ console.warn('Admin CP adjust failed', e?.message||e); }
+    
   if(!token){ alert("Connectez-vous d'abord."); return; }
 
   const magasin = $arMag.value;
@@ -1016,12 +1017,12 @@ $arAdd.addEventListener('click', async ()=>{
   if(!magasin || !nom || !code || !du || !au){
     $arMsg.textContent="Champs manquants."; $arMsg.style.color="#a40000"; return;
   }
-  $arAdd.disabled=true; $arMsg.textContent="Ajout en coursâ€¦"; $arMsg.style.color="#666";
+  $arAdd.disabled=true; $arMsg.textContent="Ajout en cours…"; $arMsg.style.color="#666";
   try{
     await fetchJSON('/range-mark', { method:'POST', body: JSON.stringify({ magasin, nom, prenom, code, dateDu:du, dateAu:au, slots }) });
-    $arMsg.textContent="Ajout effectuÃ© âœ” (jours ouvrÃ©s)"; $arMsg.style.color="#1a7f37";
+    $arMsg.textContent="Ajout effectué ✔ (jours ouvrés)"; $arMsg.style.color="#1a7f37";
   }catch(e){
-    $arMsg.textContent="Ã‰chec de lâ€™ajout."; $arMsg.style.color="#a40000";
+    $arMsg.textContent="Échec de l’ajout."; $arMsg.style.color="#a40000";
   }finally{ $arAdd.disabled=false; }
 });
 
@@ -1034,23 +1035,23 @@ async function loadLeaves(){
     return;
   }
   $leavesError.style.display='none';
-  $leavesContent.innerHTML = '<div class="loading">Chargement des demandesâ€¦</div>';
+  $leavesContent.innerHTML = '<div class="loading">Chargement des demandes…</div>';
   try{
     const data = await fetchJSON('/leaves?all=1', { headers:{} });
     const arr = Array.isArray(data.leaves) ? data.leaves : [];
-    if(!arr.length){ $leavesContent.innerHTML = '<div class="loading">Aucune demande trouvÃ©e.</div>'; return; }
+    if(!arr.length){ $leavesContent.innerHTML = '<div class="loading">Aucune demande trouvée.</div>'; return; }
     renderLeaves(arr);
   }catch(e){
-    const msg = (String(e?.message||'').includes('401')) ? "Mot de passe invalide (401)." : "Impossible de charger les demandes (mot de passe ou rÃ©seau).";
+    const msg = (String(e?.message||'').includes('401')) ? "Mot de passe invalide (401)." : "Impossible de charger les demandes (mot de passe ou réseau).";
     $leavesError.textContent = msg; $leavesError.style.display='block'; $leavesContent.innerHTML = '';
   }
 }
 function statusLabelFR(s){
   switch(String(s||"").toLowerCase()){
     case "pending":   return "en attente";
-    case "accepted":  return "validÃ©e";
-    case "rejected":  return "refusÃ©e";
-    case "cancelled": return "annulÃ©e";
+    case "accepted":  return "validée";
+    case "rejected":  return "refusée";
+    case "cancelled": return "annulée";
     default:          return String(s||"");
   }
 }
@@ -1064,18 +1065,18 @@ function renderLeaves(items){
     card.style.padding='10px'; card.style.margin='8px 0';
 
     const h = document.createElement('div');
-    h.innerHTML = `<b>${(it.nom||'').toUpperCase()} ${it.prenom||''}</b> â€” <span style="color:var(--muted)">${it.magasin||'?'}</span>`;
+    h.innerHTML = `<b>${(it.nom||'').toUpperCase()} ${it.prenom||''}</b> — <span style="color:var(--muted)">${it.magasin||'?'}</span>`;
     card.appendChild(h);
 
     const p = document.createElement('div');
     p.style.fontSize='.95rem';
-    p.innerHTML = `PÃ©riode: <b>${it.dateDu}</b> â†’ <b>${it.dateAu}</b> â€¢ ${it.nbJours||'?'} jour(s) â€¢ Service: ${it.service||'-'} â€¢ Email: ${it.email||''}`;
+    p.innerHTML = `Période: <b>${it.dateDu}</b> → <b>${it.dateAu}</b> • ${it.nbJours||'?'} jour(s) • Service: ${it.service||'-'} • Email: ${it.email||''}`;
     card.appendChild(p);
 
     const status = document.createElement('div');
     status.style.marginTop='6px';
     const lib = it.statusFr || statusLabelFR(it.status);
-    status.innerHTML = `Statut: <b>${lib}</b>` + (it.reason? ` â€” ${it.reason}`:'');
+    status.innerHTML = `Statut: <b>${lib}</b>` + (it.reason? ` — ${it.reason}`:'');
     card.appendChild(status);
 
     const actions = document.createElement('div'); actions.className='leaf-actions';
@@ -1083,7 +1084,7 @@ function renderLeaves(items){
 
     const loadingRow = document.createElement('div'); loadingRow.className='inline-loading';
     loadingRow.style.display='none';
-    loadingRow.innerHTML = '<span class="spinner"></span><span class="loading-text">Traitementâ€¦</span>';
+    loadingRow.innerHTML = '<span class="spinner"></span><span class="loading-text">Traitement…</span>';
     const setBusy = (busy, text) => {
       if(text) loadingRow.querySelector('.loading-text').textContent = text;
       actions.style.display = busy ? 'none' : 'flex';
@@ -1094,17 +1095,17 @@ function renderLeaves(items){
       const btnAccept = document.createElement('button');
       btnAccept.className='badge action btn-accept';
       btnAccept.textContent='Accepter';
-      btnAccept.addEventListener('click', ()=>{ setBusy(true, 'Validationâ€¦'); decideLeave(it.id,'accept',"",{ setBusy });});
+      btnAccept.addEventListener('click', ()=>{ setBusy(true, 'Validation…'); decideLeave(it.id,'accept',"",{ setBusy });});
       const btnReject = document.createElement('button');
       btnReject.className='badge action btn-reject';
       btnReject.textContent='Refuser';
-      btnReject.addEventListener('click', ()=>{ const r=prompt("Motif du refus ? (optionnel)",""); if(r===null) return; setBusy(true, 'Refusâ€¦'); decideLeave(it.id,'reject', r||"", { setBusy });});
+      btnReject.addEventListener('click', ()=>{ const r=prompt("Motif du refus ? (optionnel)",""); if(r===null) return; setBusy(true, 'Refus…'); decideLeave(it.id,'reject', r||"", { setBusy });});
       actions.appendChild(btnAccept); actions.appendChild(btnReject);
     } else if (String(it.status)==="accepted"){
       const btnCancel = document.createElement('button');
       btnCancel.className='badge action btn-cancel';
       btnCancel.textContent='Annuler';
-      btnCancel.addEventListener('click', ()=>{ if(!confirm("Annuler la validation et retirer les CP ajoutÃ©s ?")) return; setBusy(true, 'Annulationâ€¦'); cancelLeave(it.id, { setBusy });});
+      btnCancel.addEventListener('click', ()=>{ if(!confirm("Annuler la validation et retirer les CP ajoutés ?")) return; setBusy(true, 'Annulation…'); cancelLeave(it.id, { setBusy });});
       actions.appendChild(btnCancel);
     }
 
@@ -1118,21 +1119,21 @@ function renderLeaves(items){
 async function decideLeave(id, decision, reason="", ui){
   try{
     await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision, reason }) });
-    alert('DÃ©cision enregistrÃ©e.');
+    alert('Décision enregistrée.');
     loadLeaves();
   }catch(e){
     ui?.setBusy?.(false);
-    alert('Ã‰chec de la dÃ©cision: ' + (e?.message||''));
+    alert('Échec de la décision: ' + (e?.message||''));
   }
 }
 async function cancelLeave(id, ui){
   try{
     await fetchJSON('/leaves/decision', { method:'POST', body: JSON.stringify({ id, decision:'cancel' }) });
-    alert('Validation annulÃ©e et jours supprimÃ©s.');
+    alert('Validation annulée et jours supprimés.');
     loadLeaves();
   }catch(e){
     ui?.setBusy?.(false);
-    alert('Ã‰chec de lâ€™annulation: ' + (e?.message||''));
+    alert('Échec de l’annulation: ' + (e?.message||''));
   }
 }
 
@@ -1158,7 +1159,7 @@ document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
 </script>
 
-</script>
+
 
 </body>
 </html>
