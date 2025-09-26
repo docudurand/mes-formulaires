@@ -13,7 +13,6 @@ import PDFDocument from "pdfkit";
 import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 
-// --- modules existants de l'app ---
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
 import formulairePiece from "./formulaire-piece/index.js";
@@ -36,16 +35,15 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-// keep-alive utile derrière proxy
-app.use((_req, res, next) => { res.setHeader("Connection", "keep-alive"); next(); });
-
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
 
-// Emails responsables
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
+
 const SITE_RESP_NAME_DEFAULT = (process.env.SITE_RESP_NAME || "SITE_RESP_NAME").trim();
-const RESP_SITE_NAME_BY_MAGASIN = { "GLEIZE": "DAMIEN PICHARD" };
-const RESP_SERVICE_BY_MAGASIN = { "GLEIZE": "dampichard2007@gmail.com" };
+
+const RESP_SERVICE_BY_MAGASIN = {
+  "GLEIZE": "dampichard2007@gmail.com",
+};
 
 function siteRespNameFor(magasin) {
   const m = String(magasin || "").trim().toUpperCase();
@@ -56,127 +54,92 @@ function respServiceEmailFor(magasin) {
   return (RESP_SERVICE_BY_MAGASIN[m] || "").trim();
 }
 
-// ========= CONFIG FTP =========
-const FTP_HOST = process.env.FTP_HOST || "";
-const FTP_USER = process.env.FTP_USER || "";
-const FTP_PASSWORD = process.env.FTP_PASSWORD || "";
-const FTP_PORT = process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21;
-const FTP_SECURE = String(process.env.FTP_SECURE||"false")==="true";
-
-// Racines
-export const FTP_ROOT_BASE = process.env.FTP_ROOT_BASE || "/presence";
-export const PRES_ROOT     = process.env.PRES_ROOT     || `${FTP_ROOT_BASE}/data`;
-
-// Dossiers/Fichiers
-const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
-const UNITS_DIR     = `${PRES_ROOT}/units`;
-const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
-
-const PDF_DIR_PREFS = [
-  `${FTP_ROOT_BASE}/presence/leave`,
-  `${PRES_ROOT}/leave`,
-];
-
-const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
-// inclut FIN comme retryable
-const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425|FIN/i;
-
-function tlsOptions(){
-  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
-  const servername = FTP_HOST || undefined;
-  return { rejectUnauthorized, servername };
-}
-
-async function ftpClient(){
-  const client = new ftp.Client(45_000);
-  if (FTP_DEBUG) client.ftp.verbose = true;
-  client.prepareTransfer = ftp.enterPassiveModeIPv4;
-  await client.access({
-    host: FTP_HOST, user: FTP_USER, password: FTP_PASSWORD,
-    port: FTP_PORT, secure: FTP_SECURE, secureOptions: tlsOptions()
-  });
-  try { client.ftp.socket?.setKeepAlive?.(true, 10_000); client.ftp.timeout = 45_000; } catch {}
-  return client;
-}
-
-function tmpFile(name){ return path.join(os.tmpdir(), name); }
-
-// ====== FTP robustes (retry + reconnexion) ======
-async function dlJSON(client, remote){
-  const out = tmpFile("lv_"+Date.now()+".json");
-  for (let attempt=1; attempt<=4; attempt++){
-    try{
-      await client.downloadTo(out, remote);
-      const txt = fs.readFileSync(out, "utf8"); try{ fs.unlinkSync(out); }catch{}
-      return JSON.parse(txt);
-    }catch(e){
-      if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) { try{ fs.unlinkSync(out); }catch{}; return null; }
-      try{ client.close(); }catch{}; client = await ftpClient(); await new Promise(r=>setTimeout(r, 250*attempt));
-    }
-  }
-  return null;
-}
-
-async function upJSON(client, remote, obj){
-  const out = tmpFile("lv_up_"+Date.now()+".json"); fs.writeFileSync(out, JSON.stringify(obj));
-  const dir = path.posix.dirname(remote);
-  for (let attempt=1; attempt<=4; attempt++){
-    try{
-      await client.ensureDir(dir); await client.uploadFrom(out, remote); try{ fs.unlinkSync(out); }catch{}; return;
-    }catch(e){
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) { try{ fs.unlinkSync(out); }catch{}; console.error("[FTP upJSON] fail", {dir,remote,code:e?.code,msg:e?.message}); throw e; }
-      try{ client.close(); }catch{}; client = await ftpClient(); await new Promise(r=>setTimeout(r, 300*attempt));
-    }
-  }
-}
-
-async function upText(client, remote, buf){
-  const dir = path.posix.dirname(remote); const out = tmpFile("lv_file_"+Date.now()); fs.writeFileSync(out, buf);
-  for (let attempt=1; attempt<=4; attempt++){
-    try{ await client.ensureDir(dir); await client.uploadFrom(out, remote); try{ fs.unlinkSync(out); }catch{}; return; }
-    catch(e){
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) { try{ fs.unlinkSync(out); }catch{}; throw e; }
-      try{ client.close(); }catch{}; client = await ftpClient(); await new Promise(r=>setTimeout(r, 300*attempt));
-    }
-  }
-}
-
-async function uploadPdfToPreferredDir(client, localTmpPath, destName){
-  let lastErr;
-  for (let attempt=1; attempt<=4; attempt++){
-    for (const d of PDF_DIR_PREFS){
-      try{ await client.ensureDir(d); const remote = `${d}/${destName}`; await client.uploadFrom(localTmpPath, remote); if (FTP_DEBUG) console.log("[FTP] PDF uploaded:", remote); return remote; }
-      catch(e){ lastErr = e; }
-    }
-    const msg = String(lastErr?.message||"") + " " + String(lastErr?.code||"");
-    if (attempt === 4 || !FTP_RETRYABLE.test(msg)) throw lastErr;
-    try{ client.close(); }catch{}; client = await ftpClient(); await new Promise(r=>setTimeout(r, 350*attempt));
-  }
-  throw lastErr;
-}
-
-// ====== Utils ======
-function esc(str = "") {
-  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-function fmtFR(dateStr = "") {
-  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
-}
-
-// ====== Routes de l'app ======
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
+app.use("/presence", presences);
+const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
+const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
+const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
+
+async function appendJSONL(client, remotePath, obj){
+  const tmp = tmpFile("adj_"+Date.now()+".jsonl");
+  try{
+    try { await client.downloadTo(tmp, remotePath); } catch {}
+    const dir = path.posix.dirname(remotePath);
+    await client.ensureDir(dir);
+    fs.appendFileSync(tmp, JSON.stringify(obj) + "\n", "utf8");
+    await client.uploadFrom(tmp, remotePath);
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
+}
+
+app.post("/presence/adjust-conges", async (req, res) => {
+  try{
+    const { magasin, date, entries, adjustments } = req.body || {};
+    const list = Array.isArray(entries) ? entries : (Array.isArray(adjustments) ? adjustments : null);
+    if (!magasin || !Array.isArray(list)) {
+      return res.status(400).json({ ok:false, error:"bad_request" });
+    }
+
+    const stamp = new Date().toISOString();
+    const payload = { magasin, date: date || stamp.slice(0,10), entries: list, stamp, source:"front" };
+
+    try{
+      const client = await ftpClient();
+      await appendJSONL(client, ADJUST_LOG, payload);
+      try{ client.close(); }catch{}
+    }catch(e){
+      console.warn("[adjust-conges] persistence skipped:", e?.message||e);
+    }
+
+    const GS_URL = process.env.CP_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_URL || undefined;
+    const SUPPORTS_ADJUST = String(process.env.CP_GS_SUPPORTS_ADJUST || "0") === "1";
+
+    if (GS_URL) {
+      for (const e of list) {
+        const delta = Number(e.delta || 0);
+        if (!delta || !e) continue;
+
+        const full = String(e.fullName || "").trim();
+        const nom = (e.nom || (full.split(/\s+/)[0] || "")).trim();
+        const prenom = (e.prenom || (full.split(/\s+/).slice(1).join(" ") || "")).trim();
+
+        try {
+          if (SUPPORTS_ADJUST) {
+            await fetch(`${GS_URL}?action=adjustcp`, {
+              method:"POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({ magasin, nom, prenom, delta })
+            });
+          } else if (delta < 0) {
+            await fetch(`${GS_URL}?action=deccp`, {
+              method:"POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({ magasin, nom, prenom, nbJours: Math.abs(delta) })
+            });
+          }
+        } catch(err) {
+          console.warn("[adjust-conges] GS relay failed for", nom, prenom, delta, err?.message||err);
+        }
+      }
+    }
+
+    return res.json({ ok:true });
+  }catch(e){
+    console.error("[adjust-conges]", e);
+    return res.status(200).json({ ok:true, note:"no_persist" });
+  }
+});
+
+app.use("/presences", express.static(path.join(__dirname, "presences")));
 app.use("/public", express.static(path.join(process.cwd(), "public")));
 app.use("/api/ramasse", ramasseRouter);
-app.get("/ramasse", (_req, res) => res.redirect("/public/ramasse.html"));
+app.get("/ramasse", (req, res) => res.redirect("/public/ramasse.html"));
 
 app.use((req, res, next) => {
-  const url = req.originalUrl || req.url || ""; const method = req.method;
+  const url = req.originalUrl || req.url || "";
+  const method = req.method;
   res.on("finish", async () => {
     try {
       const success = res.statusCode >= 200 && res.statusCode < 300;
@@ -184,89 +147,195 @@ app.use((req, res, next) => {
       if (url.startsWith("/formulaire-piece"))        await stats.recordSubmission("piece");
       else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
       else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
-    } catch (e) { console.warn("[COMPTEUR] post-hook erreur:", e?.message || e); }
+    } catch (e) {
+      console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
+    }
   });
   next();
 });
 
-// === Proxy Apps Script générique ===
 const APPS_SCRIPT_URL =
-  process.env.CP_APPS_SCRIPT_URL ||
-  process.env.APPS_SCRIPT_URL    ||
   "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
 
 app.get("/api/sheets/televente", async (req, res) => {
   const tryOnce = async () =>
-    axios.get(APPS_SCRIPT_URL, { timeout: 12000, params: req.query, headers: { "User-Agent": "televente-proxy/1.0" } });
+    axios.get(APPS_SCRIPT_URL, {
+      timeout: 12000,
+      params: req.query,
+      headers: { "User-Agent": "televente-proxy/1.0" },
+    });
   try {
-    let r; try { r = await tryOnce(); } catch { await new Promise(t => setTimeout(t, 400)); r = await tryOnce(); }
+    let r;
+    try { r = await tryOnce(); }
+    catch { await new Promise(t => setTimeout(t, 400)); r = await tryOnce(); }
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json(r.data);
-  } catch (e) { res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" }); }
+  } catch (e) {
+    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
+  }
 });
 
-app.get("/stats/counters", async (_req, res) => { try { const data = await stats.getCounters(); res.json({ ok: true, data }); } catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); } });
-app.get("/admin/compteurs", async (_req, res) => { try { const data = await stats.getCounters(); res.json(data); } catch (e) { console.error("Erreur /admin/compteurs:", e); res.status(500).json({ error: "Erreur de lecture des compteurs" }); } });
-app.get("/compteur", (_req, res) => { res.sendFile(path.join(__dirname, "public", "compteur.html")); });
+app.get("/stats/counters", async (_req, res) => {
+  try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
+  catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); }
+});
+app.get("/admin/compteurs", async (_req, res) => {
+  try { const data = await stats.getCounters(); res.json(data); }
+  catch (e) { console.error("Erreur /admin/compteurs:", e); res.status(500).json({ error: "Erreur de lecture des compteurs" }); }
+});
+app.get("/compteur", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "compteur.html"));
+});
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
-// ====== Présences routeur existant ======
-app.use("/presence", presences);
-
-// === Endpoint pour ajustement CP (anti-CORS) ===
-app.post("/presence/adjust-conges", async (req, res) => {
-  try{
-    const { magasin, date, entries } = req.body || {};
-    if (!magasin || !Array.isArray(entries) || !entries.length) return res.status(400).json({ ok:false, error:"bad_request" });
-    const stamp = new Date().toISOString();
-    const payload = { magasin, date: date || stamp.slice(0,10), entries, stamp, source:"front" };
-
-    // journal FTP best-effort
-    try{
-      const client = await ftpClient();
-      const tmp = tmpFile(`adj_${Date.now()}.jsonl`);
-      let buf = "";
-      try{ const tmpRemote = tmpFile(`adj_remote_${Date.now()}.jsonl`); await client.downloadTo(tmpRemote, ADJUST_LOG); buf += fs.readFileSync(tmpRemote, "utf8"); try{ fs.unlinkSync(tmpRemote); }catch{} }catch{}
-      buf += JSON.stringify(payload)+"\n";
-      fs.writeFileSync(tmp, buf);
-      const dir = path.posix.dirname(ADJUST_LOG); await client.ensureDir(dir); await client.uploadFrom(tmp, ADJUST_LOG); try{ fs.unlinkSync(tmp); }catch{}
-      try{ client.close(); }catch{}
-    }catch(e){ console.warn("[adjust-conges] persistence skipped:", e?.message||e); }
-
-    // Relais Apps Script optionnel
-    const SUPPORTS_ADJUST = String(process.env.CP_GS_SUPPORTS_ADJUST||"1")==="1";
-    const GS_URL = process.env.CP_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_URL || "";
-    if (SUPPORTS_ADJUST && GS_URL) {
-      const agg = new Map();
-      for (const it of entries) {
-        const key = `${(it.nom||"").toUpperCase()}|${(it.prenom||"").toUpperCase()}`;
-        const cur = agg.get(key) || 0; agg.set(key, cur + Number(it.delta||0));
-      }
-      for (const [k, d] of agg.entries()) {
-        const [nomU, preU] = k.split("|");
-        const body = { magasin, nom:nomU, prenom:preU, delta: d };
-        try{
-          const r = await fetch(`${GS_URL}?action=adjustcp`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-          if(!r.ok){ console.warn("[adjust-conges] adjustcp failed:", await r.text()); }
-        }catch(e){ console.warn("[adjust-conges] adjustcp error:", e?.message||e); }
-      }
-    }
-    return res.json({ ok:true });
-  }catch(e){ console.error("[adjust-conges]", e); return res.status(200).json({ ok:true, note:"no_persist" }); }
-});
-
-// ====== Congés (UI publique) ======
 console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
 console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => { res.sendFile(path.join(__dirname, "public", "conges", "index.html")); });
 
-// ====== Métier congés ======
-async function appendLeave(payload) {
-  const leaveId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; // ID généré une seule fois
-  let lastErr;
+function esc(str = "") {
+  return String(str)
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+function fmtFR(dateStr = "") {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
+}
 
+const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
+const UNITS_DIR     = `${PRES_ROOT}/units`;
+
+const PDF_DIR_PREFS = [
+  `${FTP_ROOT_BASE}/presence/leave`,
+  `${PRES_ROOT}/leave`,
+];
+
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425/i;
+
+function tlsOptions(){
+  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
+  const servername = process.env.FTP_HOST || undefined;
+  return { rejectUnauthorized, servername };
+}
+
+async function ftpClient(){
+  const client = new ftp.Client(45_000);
+  if (FTP_DEBUG) client.ftp.verbose = true;
+
+  client.prepareTransfer = ftp.enterPassiveModeIPv4;
+
+  await client.access({
+    host: process.env.FTP_HOST,
+    user: process.env.FTP_USER,
+    password: process.env.FTP_PASSWORD,
+    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+    secure: String(process.env.FTP_SECURE||"false")==="true",
+    secureOptions: tlsOptions()
+  });
+
+  try {
+    client.ftp.socket?.setKeepAlive?.(true, 10_000);
+    client.ftp.timeout = 45_000;
+  } catch {}
+
+  return client;
+}
+
+function tmpFile(name){ return path.join(os.tmpdir(), name); }
+
+async function dlJSON(client, remote){
+  const out = tmpFile("lv_"+Date.now()+".json");
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.downloadTo(out, remote);
+      const txt = fs.readFileSync(out, "utf8");
+      try{ fs.unlinkSync(out); }catch{}
+      return JSON.parse(txt);
+    }catch(e){
+      if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}; return null;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 250*attempt));
+    }
+  }
+  return null;
+}
+
+async function upJSON(client, remote, obj){
+  const out = tmpFile("lv_up_"+Date.now()+".json");
+  fs.writeFileSync(out, JSON.stringify(obj));
+  const dir = path.posix.dirname(remote);
+
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
+  }
+}
+
+async function upText(client, remote, buf){
+  const dir = path.posix.dirname(remote);
+  const out = tmpFile("lv_file_"+Date.now());
+  fs.writeFileSync(out, buf);
+
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
+  }
+}
+
+async function uploadPdfToPreferredDir(client, localTmpPath, destName){
+  let lastErr;
+  for (const d of PDF_DIR_PREFS){
+    try{
+      await client.ensureDir(d);
+      const remote = `${d}/${destName}`;
+      await client.uploadFrom(localTmpPath, remote);
+      if (FTP_DEBUG) console.log("[FTP] PDF uploaded:", remote);
+      return remote;
+    }catch(e){
+      lastErr = e;
+      console.warn("[FTP] PDF upload failed in", d, "-", e?.code, e?.message);
+    }
+  }
+  throw lastErr;
+}
+
+async function appendLeave(payload) {
+  let lastErr;
   for (let i=0; i<3; i++){
     let client;
     try{
@@ -275,26 +344,76 @@ async function appendLeave(payload) {
       await client.ensureDir(UNITS_DIR);
 
       const arr = (await dlJSON(client, LEAVES_FILE)) || [];
-
-      // Ne pousser que si l'id n'existe pas déjà
-      let item = arr.find(x => x.id === leaveId);
-      if (!item) {
-        item = {
-          id: leaveId,
-          createdAt: new Date().toISOString(),
-          status: "pending",
-          statusFr: "en attente",
-          ...payload,
-        };
-        arr.push(item);
-      }
-
+      const item = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        statusFr: "en attente",
+        ...payload,
+      };
+      arr.push(item);
       await upJSON(client, LEAVES_FILE, arr);
 
       const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
       const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
       const remoteUnit = `${UNITS_DIR}/${base}`;
       await upText(client, remoteUnit, JSON.stringify(item, null, 2));
+	  
+	  const bothSigned =
+  (arr[i].signedService || patch.signedService) &&
+  (arr[i].signedSite    || patch.signedSite);
+
+if (bothSigned && !arr[i].finalMailSent) {
+  try {
+    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
+
+    if (GMAIL_USER && cleanedPass) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: GMAIL_USER, pass: cleanedPass }
+      });
+
+      const tmpFinal = tmpFile("final_" + id + ".pdf");
+      await client.downloadTo(tmpFinal, remotePdf);
+
+      const demanderEmail = arr[i].email || item.email || "";
+      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
+
+      await transporter.sendMail({
+        to: recipients,
+        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
+        replyTo: demanderEmail || undefined,
+        subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
+        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
+               <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
+                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
+               <p>Signatures :<br>
+                  Service : ${(arr[i].signedService?.by || patch.signedService?.by || "—")}
+                  — ${(arr[i].signedService?.at || patch.signedService?.at || "")}<br>
+                  Site : ${(arr[i].signedSite?.by || patch.signedSite?.by || "—")}
+                  — ${(arr[i].signedSite?.at || patch.signedSite?.at || "")}
+               </p>`,
+        attachments: [{
+          filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
+          path: tmpFinal
+        }]
+      });
+
+      try { fs.unlinkSync(tmpFinal); } catch {}
+
+      arr[i].finalMailSent = { at: new Date().toISOString(), to: recipients };
+      await upJSON(client, LEAVES_FILE, arr);
+      await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+
+      console.log("[CONGES] mail final envoyé à:", recipients);
+    } else {
+      console.warn("[CONGES] Mail final non envoyé (SMTP non configuré)");
+    }
+  } catch (e) {
+    console.warn("[CONGES] Envoi mail final (double signature) a échoué:", e?.message || e);
+  }
+}
 
       try { client.close(); } catch {}
       return item.id;
@@ -319,7 +438,8 @@ async function patchLeave(id, patch){
 
       const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
       const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
-      await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+      const unit = `${UNITS_DIR}/${base}`;
+      await upText(client, unit, JSON.stringify(arr[i], null, 2));
       return arr[i];
     }
     return null;
@@ -328,52 +448,115 @@ async function patchLeave(id, patch){
 
 async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du, au, signatureData }) {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
-  const chunks = []; doc.on("data", (c) => chunks.push(c));
+  const chunks = [];
+  doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  function drawCrossInBox(doc, x, y, size) { const pad = Math.max(2, Math.round(size * 0.2)); doc.save(); doc.lineWidth(1.5); doc.moveTo(x+pad,y+pad).lineTo(x+size-pad,y+size-pad).stroke(); doc.moveTo(x+size-pad,y+pad).lineTo(x+pad,y+size-pad).stroke(); doc.restore(); }
+  function drawCrossInBox(doc, x, y, size) {
+    const pad = Math.max(2, Math.round(size * 0.2));
+    doc.save();
+    doc.lineWidth(1.5);
+    doc.moveTo(x + pad, y + pad).lineTo(x + size - pad, y + size - pad).stroke();
+    doc.moveTo(x + size - pad, y + pad).lineTo(x + pad, y + size - pad).stroke();
+    doc.restore();
+  }
 
-  const pageLeft = 50, pageRight = 545, logoX = pageLeft, logoY = 40, logoW = 120;
-  const titleX = logoX + logoW + 20, titleWidth = pageRight - titleX;
+  const pageLeft = 50;
+  const pageRight = 545;
+  const logoX = pageLeft;
+  const logoY = 40;
+  const logoW = 120;
 
-  try { const resp = await fetch(logoUrl); const buf = Buffer.from(await resp.arrayBuffer()); doc.image(buf, logoX, logoY, { width: logoW }); }
-  catch (e) { console.warn("[CONGES][PDF] Logo non chargé:", e.message); }
+  const titleX = logoX + logoW + 20;
+  const titleWidth = pageRight - titleX;
 
-  doc.fontSize(18).font("Helvetica-Bold").text("DEMANDE DE JOURS DE CONGÉS", titleX, logoY + 45, { width: titleWidth, align: "left" });
+  try {
+    const resp = await fetch(logoUrl);
+    const buf = Buffer.from(await resp.arrayBuffer());
+    doc.image(buf, logoX, logoY, { width: logoW });
+  } catch (e) {
+    console.warn("[CONGES][PDF] Logo non chargé:", e.message);
+  }
+
+  const titleStr = "DEMANDE DE JOURS DE CONGÉS";
+  doc.fontSize(18).font("Helvetica-Bold").text(titleStr, titleX, logoY + 45, { width: titleWidth, align: "left" });
 
   let y = 180;
-  const bodySize = 13, labelGap = 32, rowGap = 38, afterServicesGap = 38, afterDemandGap = 26, afterPeriodGap = 36;
+
+  const bodySize = 13;
+  const labelGap = 32;
+  const rowGap = 38;
+  const afterServicesGap = 38;
+  const afterDemandGap = 26;
+  const afterPeriodGap = 36;
 
   doc.fontSize(bodySize).font("Helvetica-Bold").text("SITE :", pageLeft, y);
-  doc.font("Helvetica").text(magasin || "", pageLeft + 55, y); y += labelGap;
+  doc.font("Helvetica").text(magasin || "", pageLeft + 55, y);
+  y += labelGap;
 
-  const parts = String(nomPrenom || "").trim().split(/\s+/); const _nom = parts[0] || ""; const _prenom = parts.slice(1).join(" ");
+  const parts = String(nomPrenom || "").trim().split(/\s+/);
+  const _nom = parts[0] || "";
+  const _prenom = parts.slice(1).join(" ");
+
   doc.font("Helvetica").fontSize(bodySize);
-  doc.text("NOM :", pageLeft, y); doc.text(_nom, pageLeft + 55, y, { width: 250 }); y += rowGap;
-  doc.text("PRENOM :", pageLeft, y); doc.text(_prenom, pageLeft + 85, y, { width: 300 }); y += rowGap;
+  doc.text("NOM :", pageLeft, y);
+  doc.text(_nom, pageLeft + 55, y, { width: 250 });
+  y += rowGap;
 
-  const services = ["Magasin V.L","Magasin P.L","Industrie","Atelier V.L","Atelier P.L","Rectification","Administratif","Commercial","Matériel"];
+  doc.text("PRENOM :", pageLeft, y);
+  doc.text(_prenom, pageLeft + 85, y, { width: 300 });
+  y += rowGap;
+
+  const services = [
+    "Magasin V.L", "Magasin P.L", "Industrie",
+    "Atelier V.L", "Atelier P.L", "Rectification",
+    "Administratif", "Commercial", "Matériel"
+  ];
   const cols = 3, colW = (pageRight - pageLeft) / cols, box = 11, lh = 28;
+
   doc.fontSize(12);
-  services.forEach((s, i) => { const r = Math.floor(i/cols), c = i%cols; const x = pageLeft + c*colW; const yy = y + r*lh; doc.rect(x, yy, box, box).stroke(); if (service && s.toLowerCase() === String(service).toLowerCase()) drawCrossInBox(doc, x, yy, box); doc.font("Helvetica").text(s, x + box + 6, yy - 2); });
+  services.forEach((s, i) => {
+    const r  = Math.floor(i / cols), c = i % cols;
+    const x  = pageLeft + c * colW;
+    const yy = y + r * lh;
+    doc.rect(x, yy, box, box).stroke();
+    if (service && s.toLowerCase() === String(service).toLowerCase()) {
+      drawCrossInBox(doc, x, yy, box);
+    }
+    doc.font("Helvetica").text(s, x + box + 6, yy - 2);
+  });
+
   y += Math.ceil(services.length / cols) * lh + afterServicesGap;
 
-  doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y); y += afterDemandGap;
-  doc.text(`du ${du}`, pageLeft, y); y += 20; doc.text(`au ${au} inclus.`, pageLeft, y); y += afterPeriodGap;
+  doc.fontSize(bodySize).text(`Demande de pouvoir bénéficier de ${nbJours} jour(s) de congés`, pageLeft, y);
+  y += afterDemandGap;
 
-  // Signature employé
+  doc.text(`du ${du}`, pageLeft, y);
+  y += 20;
+  doc.text(`au ${au} inclus.`, pageLeft, y);
+  y += afterPeriodGap;
+
   doc.text("Signature de l’employé,", 370, y);
   if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
-    try { const b64 = signatureData.split(",")[1]; const sigBuf = Buffer.from(b64, "base64"); const sigY = y + 14; doc.image(sigBuf, 370, sigY, { width: 150 }); y = Math.max(y + 90, sigY + 90); }
-    catch { y += 70; }
+    try {
+      const b64 = signatureData.split(",")[1];
+      const sigBuf = Buffer.from(b64, "base64");
+      const sigY = y + 14;
+      doc.image(sigBuf, 370, sigY, { width: 150 });
+      y = Math.max(y + 90, sigY + 90);
+    } catch { y += 70; }
   } else { y += 70; }
 
-  const colLeft = 50, colRight = 330;
+  const colLeft = 50;
+  const colRight = 330;
   doc.font("Helvetica-Bold").text("RESPONSABLE DU SERVICE :", colLeft, y);
   doc.text("RESPONSABLE DE SITE :", colRight, y);
   y += 22; doc.font("Helvetica").fontSize(bodySize);
-  doc.text("NOM :", colLeft, y); doc.text("NOM :", colRight, y); y += 22;
-  doc.text("SIGNATURE :", colLeft, y); doc.text("SIGNATURE :", colRight, y);
+  doc.text("NOM :", colLeft, y);
+  doc.text("NOM :", colRight, y);
+  y += 22;
+  doc.text("SIGNATURE :", colLeft, y);
+  doc.text("SIGNATURE :", colRight, y);
 
   doc.end();
   return done;
@@ -388,11 +571,11 @@ const NAME_COORDS = {
   resp_site:    { page: 0, x: 390, y: 210, size: 12 },
 };
 
-// ====== API CONGÉS ======
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
     const errors = [];
+
     if (!magasin) errors.push("magasin");
     if (!service) errors.push("service");
     if (!email) errors.push("email");
@@ -420,30 +603,46 @@ app.post("/conges/api", async (req, res) => {
     if (!_nom) errors.push("nom");
     if (!_prenom) errors.push("prenom");
 
-    if (errors.length) return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
+    if (errors.length) {
+      return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
+    }
 
-    const leaveId = await appendLeave({ magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email });
+    const leaveId = await appendLeave({
+      magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email
+    });
 
-    const duFR = fmtFR(dateDu), auFR = fmtFR(dateAu);
+    const duFR = fmtFR(dateDu);
+    const auFR = fmtFR(dateAu);
     const nomPrenomStr = `${_nom.toUpperCase()} ${_prenom}`;
     const pdfBuffer = await makeLeavePdf({
       logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
-      magasin, nomPrenom: nomPrenomStr, service, nbJours: n, du: duFR, au: auFR, signatureData,
+      magasin,
+      nomPrenom: nomPrenomStr,
+      service,
+      nbJours: n,
+      du: duFR,
+      au: auFR,
+      signatureData,
     });
 
-    // Upload PDF (avec fallback)
     const clientUp = await ftpClient();
-    const tmp = tmpFile("leave_"+leaveId+".pdf"); fs.writeFileSync(tmp, pdfBuffer);
+    const tmp = tmpFile("leave_"+leaveId+".pdf");
+    fs.writeFileSync(tmp, pdfBuffer);
     let remotePdfPath;
-    try { remotePdfPath = await uploadPdfToPreferredDir(clientUp, tmp, `${leaveId}.pdf`); }
-    finally { try{ fs.unlinkSync(tmp); }catch{} try{ clientUp.close(); }catch{} }
+    try{
+      remotePdfPath = await uploadPdfToPreferredDir(clientUp, tmp, `${leaveId}.pdf`);
+    } finally {
+      try{ fs.unlinkSync(tmp); }catch{}
+      try{ clientUp.close(); }catch{}
+    }
 
-    // Jetons de signature
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
-    await patchLeave(leaveId, { pdfPath: remotePdfPath, tokens: { resp_service: tokenService, resp_site: tokenSite } });
+    await patchLeave(leaveId, {
+      pdfPath: remotePdfPath,
+      tokens: { resp_service: tokenService, resp_site: tokenSite },
+    });
 
-    // SMTP
     const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!GMAIL_USER || !GMAIL_PASS) {
       console.warn("[CONGES] smtp_not_configured:", { GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
@@ -486,8 +685,15 @@ app.post("/conges/api", async (req, res) => {
       to: toRecipients,
       from: `Demande jours de congés <${FROM_EMAIL || GMAIL_USER}>`,
       replyTo: email,
-      subject, html,
-      attachments: [{ filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
+      subject,
+      html,
+      attachments: [
+        {
+          filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
+      ],
     });
 
     console.log("[CONGES] email envoyé à:", toRecipients, "| reply-to:", email, "| magasin:", magasin);
@@ -502,20 +708,24 @@ app.get("/conges/sign/:id", async (req, res) => {
   const { id } = req.params;
   const role = String(req.query.role||"").trim();
   const token = String(req.query.token||"").trim();
-  if (!["resp_service","resp_site"].includes(role) || !token) return res.status(400).send("Lien invalide.");
+  if (!["resp_service","resp_site"].includes(role) || !token) {
+    return res.status(400).send("Lien invalide.");
+  }
 
-  // Pré-remplir nom resp site
   let prefillName = SITE_RESP_NAME_DEFAULT;
   try {
     const client = await ftpClient();
     const arr = (await dlJSON(client, LEAVES_FILE)) || [];
     const it = arr.find(x => x.id === id);
-    if (it && role === "resp_site") prefillName = siteRespNameFor(it.magasin);
+    if (it && role === "resp_site") {
+      prefillName = siteRespNameFor(it.magasin);
+    }
     try { client.close(); } catch {}
   } catch {}
 
   res.setHeader("Content-Type","text/html; charset=utf-8");
-  res.end(`<!doctype html><meta charset="utf-8"/>
+  res.end(`
+<!doctype html><meta charset="utf-8"/>
 <title>Signature – Validation congés</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
@@ -542,7 +752,8 @@ input{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
 const role=${JSON.stringify(role)}, token=${JSON.stringify(token)}, id=${JSON.stringify(id)};
 const prefillSiteName=${JSON.stringify(prefillName)};
 const c=document.getElementById('pad'), ctx=c.getContext('2d'); let draw=false, pts=[];
-function size(){ const img=new Image(); img.onload=()=>{ c.width=c.clientWidth; c.height=220; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height); }; img.src=c.toDataURL(); }
+function size(){ const img=new Image(); img.onload=()=>{ c.width=c.clientWidth; c.height=220; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height); }
+img.src=c.toDataURL(); }
 window.addEventListener('resize', size); size();
 if(role==="resp_site"){ document.getElementById('fullName').value=prefillSiteName; }
 function P(e){const r=c.getBoundingClientRect();const t=e.touches&&e.touches[0];return {x:(t?t.clientX:e.clientX)-r.left,y:(t?t.clientY:e.clientY)-r.top};}
@@ -558,7 +769,10 @@ document.getElementById('ok').onclick=async()=>{
   const fullName = document.getElementById('fullName').value.trim();
   if(!fullName) return alert("Merci d'indiquer votre nom/qualité.");
   const imageBase64 = c.toDataURL("image/png");
-  const r = await fetch("/conges/sign/"+id, { method:"POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ role, token, imageBase64, fullName }) });
+  const r = await fetch("/conges/sign/"+id, {
+    method:"POST", headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ role, token, imageBase64, fullName })
+  });
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert("Signature enregistrée. Merci !"); location.href = "about:blank"; }
   else alert("Erreur: " + (j.error||""));
@@ -569,8 +783,12 @@ document.getElementById('ok').onclick=async()=>{
 app.post("/conges/sign/:id", async (req, res) => {
   const { id } = req.params;
   const { role, token, imageBase64, fullName } = req.body || {};
-  if (!["resp_service","resp_site"].includes(String(role))) return res.status(400).json({ ok:false, error:"role_invalid" });
-  if (!imageBase64?.startsWith("data:image/png;base64,")) return res.status(400).json({ ok:false, error:"image_missing" });
+  if (!["resp_service","resp_site"].includes(String(role))) {
+    return res.status(400).json({ ok:false, error:"role_invalid" });
+  }
+  if (!imageBase64?.startsWith("data:image/png;base64,")) {
+    return res.status(400).json({ ok:false, error:"image_missing" });
+  }
   let client;
   try{
     client = await ftpClient();
@@ -581,13 +799,21 @@ app.post("/conges/sign/:id", async (req, res) => {
 
     const tokens = item.tokens || {};
     const expected = tokens[role];
-    if (!expected || expected !== token) return res.status(401).json({ ok:false, error:"token_invalid_or_used" });
+    if (!expected || expected !== token) {
+      return res.status(401).json({ ok:false, error:"token_invalid_or_used" });
+    }
 
     let remotePdf = item.pdfPath;
     if (!remotePdf) {
       for (const d of PDF_DIR_PREFS) {
         const candidate = `${d}/${id}.pdf`;
-        try { const tmpCheck = tmpFile("chk_"+id+".pdf"); await client.downloadTo(tmpCheck, candidate); try { fs.unlinkSync(tmpCheck); } catch {} remotePdf = candidate; break; } catch {}
+        try {
+          const tmpCheck = tmpFile("chk_"+id+".pdf");
+          await client.downloadTo(tmpCheck, candidate);
+          try { fs.unlinkSync(tmpCheck); } catch {}
+          remotePdf = candidate;
+          break;
+        } catch {}
       }
       if (!remotePdf) return res.status(404).json({ ok:false, error:"pdf_not_found" });
     }
@@ -623,79 +849,62 @@ app.post("/conges/sign/:id", async (req, res) => {
     await client.uploadFrom(tmpPdf, remotePdf);
     try{ fs.unlinkSync(tmpPdf); }catch{}
 
-    const patch = { tokens: { ...tokens, [role]: null } };
-    if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
-    if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
+const patch = { tokens: { ...tokens, [role]: null } };
+if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
+if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
-    arr[i] = { ...item, ...patch, pdfPath: remotePdf };
-    await upJSON(client, LEAVES_FILE, arr);
+const both =
+  (patch.signedService || item.signedService) &&
+  (patch.signedSite || item.signedSite);
 
     const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
     const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
     await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
 
-    // === Email final quand les deux signatures sont posées (sans impacter Admin) ===
-    const bothSigned =
-      (arr[i].signedService || patch.signedService) &&
-      (arr[i].signedSite    || patch.signedSite);
 
-    if (bothSigned && !arr[i].finalMailSent) {
-      try {
-        const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-        const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
 
-        if (GMAIL_USER && cleanedPass) {
-          const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: { user: GMAIL_USER, pass: cleanedPass }
-          });
+if (both) {
+  try {
+    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
+    if (GMAIL_USER && cleanedPass) {
+      const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
+      const tmp2 = tmpFile("final_"+id+".pdf");
+      await client.downloadTo(tmp2, remotePdf);
 
-          const tmpFinal = tmpFile("final_" + id + ".pdf");
-          await client.downloadTo(tmpFinal, remotePdf);
+      const demanderEmail = arr[i].email || item.email || "";
+      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
 
-          const demanderEmail = arr[i].email || item.email || "";
-          const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
-
-          await transporter.sendMail({
-            to: recipients,
-            from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
-            replyTo: demanderEmail || undefined,
-            subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
-            html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
-                   <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
-                      Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
-                   <p>Signatures :<br>
-                      Service : ${(arr[i].signedService?.by || patch.signedService?.by || "—")}
-                      — ${(arr[i].signedService?.at || patch.signedService?.at || "")}<br>
-                      Site : ${(arr[i].signedSite?.by || patch.signedSite?.by || "—")}
-                      — ${(arr[i].signedSite?.at || patch.signedSite?.at || "")}
-                   </p>`,
-            attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }]
-          });
-
-          try { fs.unlinkSync(tmpFinal); } catch {}
-
-          arr[i].finalMailSent = { at: new Date().toISOString(), to: recipients };
-          await upJSON(client, LEAVES_FILE, arr);
-          await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
-
-          console.log("[CONGES] mail final envoyé à:", recipients);
-        } else {
-          console.warn("[CONGES] Mail final non envoyé (SMTP non configuré)");
-        }
-      } catch (e) {
-        console.warn("[CONGES] Envoi mail final (double signature) a échoué:", e?.message || e);
-      }
+      await transporter.sendMail({
+        to: recipients,
+        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
+        replyTo: demanderEmail || undefined,
+        subject: `PDF final — ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
+        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
+               <p>Employé : ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}<br>
+                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours||'?'} jour(s)</p>
+               <p>Signatures :<br>
+                  Service : ${(arr[i].signedService?.by||'—')} — ${arr[i].signedService?.at||''}<br>
+                  Site : ${(arr[i].signedSite?.by||'—')} — ${arr[i].signedSite?.at||''}
+               </p>`,
+        attachments: [{
+          filename: `Demande-conges-${(arr[i].nom||'').toUpperCase()}_${arr[i].prenom||''}.pdf`,
+          path: tmp2
+        }]
+      });
+      try{ fs.unlinkSync(tmp2); }catch{}
     }
-
-    res.json({ ok:true, accepted: false, both: bothSigned });
+  } catch(e) {
+    console.warn("[CONGES] mail final (double signature) a échoué:", e?.message||e);
+  }
+}
+    res.json({ ok:true, accepted: both===true });
   } catch(e){
     console.error(e);
     return res.status(500).json({ ok:false, error:String(e?.message||e) });
   } finally { try{ client?.close(); }catch{} }
 });
 
-// ====== Divers ======
 app.get("/healthz", (_req, res) => res.sendStatus(200));
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
