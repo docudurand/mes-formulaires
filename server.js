@@ -39,15 +39,12 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.
 
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
 
-const SITE_RESP_NAME_DEFAULT = (process.env.SITE_RESP_NAME || "SITE_RESP_NAME").trim();
-
 const RESP_SERVICE_BY_MAGASIN = {
   "GLEIZE": "dampichard2007@gmail.com",
 };
 
-function siteRespNameFor(magasin) {
-  const m = String(magasin || "").trim().toUpperCase();
-  return (RESP_SITE_NAME_BY_MAGASIN[m] || SITE_RESP_NAME_DEFAULT).trim();
+function siteRespNameFor(_magasin) {
+ return "";
 }
 function respServiceEmailFor(magasin) {
   const m = String(magasin || "").trim().toUpperCase();
@@ -335,92 +332,43 @@ async function uploadPdfToPreferredDir(client, localTmpPath, destName){
 }
 
 async function appendLeave(payload) {
+
+  const leaveId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   let lastErr;
-  for (let i=0; i<3; i++){
+
+  for (let i = 0; i < 3; i++) {
     let client;
-    try{
+    try {
       client = await ftpClient();
       await client.ensureDir(PRES_ROOT);
       await client.ensureDir(UNITS_DIR);
 
       const arr = (await dlJSON(client, LEAVES_FILE)) || [];
-      const item = {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: new Date().toISOString(),
-        status: "pending",
-        statusFr: "en attente",
-        ...payload,
-      };
-      arr.push(item);
-      await upJSON(client, LEAVES_FILE, arr);
 
-      const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
-      const base = `${item.createdAt.slice(0, 10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
-      const remoteUnit = `${UNITS_DIR}/${base}`;
-      await upText(client, remoteUnit, JSON.stringify(item, null, 2));
-	  
-	  const bothSigned =
-  (arr[i].signedService || patch.signedService) &&
-  (arr[i].signedSite    || patch.signedSite);
+      let item = arr.find(x => x.id === leaveId);
+      if (!item) {
+        item = {
+          id: leaveId,
+          createdAt: new Date().toISOString(),
+          status: "pending",
+          statusFr: "en attente",
+          ...payload,
+        };
+        arr.push(item);
+        await upJSON(client, LEAVES_FILE, arr);
 
-if (bothSigned && !arr[i].finalMailSent) {
-  try {
-    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-    const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
-
-    if (GMAIL_USER && cleanedPass) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: GMAIL_USER, pass: cleanedPass }
-      });
-
-      const tmpFinal = tmpFile("final_" + id + ".pdf");
-      await client.downloadTo(tmpFinal, remotePdf);
-
-      const demanderEmail = arr[i].email || item.email || "";
-      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
-
-      await transporter.sendMail({
-        to: recipients,
-        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
-        replyTo: demanderEmail || undefined,
-        subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
-        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
-               <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
-                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
-               <p>Signatures :<br>
-                  Service : ${(arr[i].signedService?.by || patch.signedService?.by || "—")}
-                  — ${(arr[i].signedService?.at || patch.signedService?.at || "")}<br>
-                  Site : ${(arr[i].signedSite?.by || patch.signedSite?.by || "—")}
-                  — ${(arr[i].signedSite?.at || patch.signedSite?.at || "")}
-               </p>`,
-        attachments: [{
-          filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
-          path: tmpFinal
-        }]
-      });
-
-      try { fs.unlinkSync(tmpFinal); } catch {}
-
-      arr[i].finalMailSent = { at: new Date().toISOString(), to: recipients };
-      await upJSON(client, LEAVES_FILE, arr);
-      await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
-
-      console.log("[CONGES] mail final envoyé à:", recipients);
-    } else {
-      console.warn("[CONGES] Mail final non envoyé (SMTP non configuré)");
-    }
-  } catch (e) {
-    console.warn("[CONGES] Envoi mail final (double signature) a échoué:", e?.message || e);
-  }
-}
+        const safe = s => String(s || "")
+          .normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+        const base = `${item.createdAt.slice(0,10)}_${safe(item.magasin)}_${safe(item.nom)}_${safe(item.prenom)}_${item.id}.json`;
+        await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(item, null, 2));
+      }
 
       try { client.close(); } catch {}
       return item.id;
-    }catch(e){
+    } catch (e) {
       lastErr = e;
       try { client?.close(); } catch {}
-      await new Promise(t=>setTimeout(t, 400*(i+1)));
+      await new Promise(t => setTimeout(t, 400 * (i + 1)));
     }
   }
   throw lastErr;
@@ -578,7 +526,7 @@ app.post("/conges/api", async (req, res) => {
 
     if (!magasin) errors.push("magasin");
     if (!service) errors.push("service");
-    if (!email) errors.push("email");
+    if (!email)   errors.push("email");
 
     const n = Number(nbJours);
     if (!Number.isFinite(n) || n <= 0) errors.push("nbJours");
@@ -603,16 +551,13 @@ app.post("/conges/api", async (req, res) => {
     if (!_nom) errors.push("nom");
     if (!_prenom) errors.push("prenom");
 
-    if (errors.length) {
-      return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
-    }
+    if (errors.length) return res.status(400).json({ ok:false, error:"invalid_fields", fields:errors });
 
     const leaveId = await appendLeave({
       magasin, nom:_nom, prenom:_prenom, service, nbJours:n, dateDu, dateAu, email
     });
 
-    const duFR = fmtFR(dateDu);
-    const auFR = fmtFR(dateAu);
+    const duFR = fmtFR(dateDu), auFR = fmtFR(dateAu);
     const nomPrenomStr = `${_nom.toUpperCase()} ${_prenom}`;
     const pdfBuffer = await makeLeavePdf({
       logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
@@ -629,27 +574,30 @@ app.post("/conges/api", async (req, res) => {
     const tmp = tmpFile("leave_"+leaveId+".pdf");
     fs.writeFileSync(tmp, pdfBuffer);
     let remotePdfPath;
-    try{
+    try {
       remotePdfPath = await uploadPdfToPreferredDir(clientUp, tmp, `${leaveId}.pdf`);
     } finally {
-      try{ fs.unlinkSync(tmp); }catch{}
-      try{ clientUp.close(); }catch{}
+      try { fs.unlinkSync(tmp); } catch {}
+      try { clientUp.close(); } catch {}
     }
 
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
     await patchLeave(leaveId, {
       pdfPath: remotePdfPath,
-      tokens: { resp_service: tokenService, resp_site: tokenSite },
+      tokens: { resp_service: tokenService, resp_site: tokenSite }
     });
 
     const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!GMAIL_USER || !GMAIL_PASS) {
-      console.warn("[CONGES] smtp_not_configured:", { GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
-      return res.status(500).json({ ok: false, error: "smtp_not_configured" });
+      console.warn("[CONGES] smtp_not_configured");
+      return res.status(500).json({ ok:false, error:"smtp_not_configured" });
     }
     const cleanedPass = String(GMAIL_PASS).replace(/["\s]/g, "");
-    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: cleanedPass } });
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: cleanedPass }
+    });
 
     const linkService = `${PUBLIC_BASE_URL}/conges/sign/${leaveId}?role=resp_service&token=${tokenService}`;
     const linkSite    = `${PUBLIC_BASE_URL}/conges/sign/${leaveId}?role=resp_site&token=${tokenSite}`;
@@ -667,13 +615,9 @@ app.post("/conges/api", async (req, res) => {
       <hr/>
       <p><b>Validation :</b></p>
       <p>
-        <a href="${esc(linkService)}" style="display:inline-block;padding:10px 14px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none">
-          Signer (Responsable de service)
-        </a>
+        <a href="${esc(linkService)}" style="display:inline-block;padding:10px 14px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none">Signer (Responsable de service)</a>
         &nbsp;&nbsp;
-        <a href="${esc(linkSite)}" style="display:inline-block;padding:10px 14px;border-radius:8px;background:#0f766e;color:#fff;text-decoration:none">
-          Signer (Responsable de site)
-        </a>
+        <a href="${esc(linkSite)}" style="display:inline-block;padding:10px 14px;border-radius:8px;background:#0f766e;color:#fff;text-decoration:none">Signer (Responsable de site)</a>
       </p>
       <p style="color:#6b7280">Chaque lien est personnel et utilisable une seule fois.</p>
     `;
@@ -687,20 +631,17 @@ app.post("/conges/api", async (req, res) => {
       replyTo: email,
       subject,
       html,
-      attachments: [
-        {
-          filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf"
-        }
-      ],
+      attachments: [{
+        filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf"
+      }],
     });
 
-    console.log("[CONGES] email envoyé à:", toRecipients, "| reply-to:", email, "| magasin:", magasin);
-    res.json({ ok: true, id: leaveId });
+    res.json({ ok:true, id: leaveId });
   } catch (e) {
-    console.error("[CONGES] Erreur inattendue:", e);
-    res.status(500).json({ ok: false, error: "send_failed" });
+    console.error("[/conges/api] Erreur:", e);
+    res.status(500).json({ ok:false, error:"send_failed" });
   }
 });
 
@@ -712,16 +653,7 @@ app.get("/conges/sign/:id", async (req, res) => {
     return res.status(400).send("Lien invalide.");
   }
 
-  let prefillName = SITE_RESP_NAME_DEFAULT;
-  try {
-    const client = await ftpClient();
-    const arr = (await dlJSON(client, LEAVES_FILE)) || [];
-    const it = arr.find(x => x.id === id);
-    if (it && role === "resp_site") {
-      prefillName = siteRespNameFor(it.magasin);
-    }
-    try { client.close(); } catch {}
-  } catch {}
+  const prefillName = "";
 
   res.setHeader("Content-Type","text/html; charset=utf-8");
   res.end(`
@@ -838,7 +770,6 @@ app.post("/conges/sign/:id", async (req, res) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     let signerName = String(fullName || "").trim();
-    if (role === "resp_site" && !signerName) signerName = siteRespNameFor(item.magasin);
 
     pg.drawText(signerName, { x: namePos.x, y: namePos.y, size: namePos.size, font, color: rgb(0,0,0) });
     const auditTxt = `${dayjs().format("YYYY-MM-DD HH:mm")} • ${signerName} • ${role}`;
@@ -849,60 +780,77 @@ app.post("/conges/sign/:id", async (req, res) => {
     await client.uploadFrom(tmpPdf, remotePdf);
     try{ fs.unlinkSync(tmpPdf); }catch{}
 
-const patch = { tokens: { ...tokens, [role]: null } };
-if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
-if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
+    const patch = { tokens: { ...tokens, [role]: null } };
+    if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
+    if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
-const both =
-  (patch.signedService || item.signedService) &&
-  (patch.signedSite || item.signedSite);
+    arr[i] = { ...item, ...patch, pdfPath: remotePdf };
 
-    const safe = (s) => String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(0, 64);
+    await upJSON(client, LEAVES_FILE, arr);
+
+    const safe = s => String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
     const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
     await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
 
+    const bothSigned = !!(arr[i].signedService && arr[i].signedSite);
 
+    if (bothSigned && !arr[i].finalMailSent) {
+      try {
+        const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+        const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
 
-if (both) {
-  try {
-    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
-    const cleanedPass = String(GMAIL_PASS||"").replace(/["\s]/g, "");
-    if (GMAIL_USER && cleanedPass) {
-      const transporter = nodemailer.createTransport({ service: "gmail", auth:{ user:GMAIL_USER, pass:cleanedPass } });
-      const tmp2 = tmpFile("final_"+id+".pdf");
-      await client.downloadTo(tmp2, remotePdf);
+        if (GMAIL_USER && cleanedPass) {
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: { user: GMAIL_USER, pass: cleanedPass }
+          });
 
-      const demanderEmail = arr[i].email || item.email || "";
-      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
+          const tmpFinal = tmpFile("final_" + id + ".pdf");
+          await client.downloadTo(tmpFinal, remotePdf);
 
-      await transporter.sendMail({
-        to: recipients,
-        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
-        replyTo: demanderEmail || undefined,
-        subject: `PDF final — ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}`,
-        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
-               <p>Employé : ${(arr[i].nom||'').toUpperCase()} ${arr[i].prenom||''}<br>
-                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours||'?'} jour(s)</p>
-               <p>Signatures :<br>
-                  Service : ${(arr[i].signedService?.by||'—')} — ${arr[i].signedService?.at||''}<br>
-                  Site : ${(arr[i].signedSite?.by||'—')} — ${arr[i].signedSite?.at||''}
-               </p>`,
-        attachments: [{
-          filename: `Demande-conges-${(arr[i].nom||'').toUpperCase()}_${arr[i].prenom||''}.pdf`,
-          path: tmp2
-        }]
-      });
-      try{ fs.unlinkSync(tmp2); }catch{}
+          const demanderEmail = arr[i].email || "";
+          const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
+
+          await transporter.sendMail({
+            to: recipients,
+            from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
+            replyTo: demanderEmail || undefined,
+            subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
+            html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
+                   <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
+                      Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
+                   <p>Signatures :<br>
+                      Service : ${(arr[i].signedService?.by || "—")} — ${arr[i].signedService?.at || ""}<br>
+                      Site : ${(arr[i].signedSite?.by || "—")} — ${arr[i].signedSite?.at || ""}
+                   </p>`,
+            attachments: [{
+              filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
+              path: tmpFinal
+            }]
+          });
+
+          try { fs.unlinkSync(tmpFinal); } catch {}
+
+          arr[i].finalMailSent = { at: new Date().toISOString(), to: recipients };
+          await upJSON(client, LEAVES_FILE, arr);
+          await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+
+          console.log("[CONGES] mail final envoyé à:", recipients);
+        } else {
+          console.warn("[CONGES] Mail final non envoyé (SMTP non configuré)");
+        }
+      } catch (e) {
+        console.warn("[CONGES] Envoi mail final (double signature) a échoué:", e?.message || e);
+      }
     }
-  } catch(e) {
-    console.warn("[CONGES] mail final (double signature) a échoué:", e?.message||e);
-  }
-}
-    res.json({ ok:true, accepted: both===true });
+
+    return res.json({ ok: true, accepted: bothSigned });
   } catch(e){
     console.error(e);
     return res.status(500).json({ ok:false, error:String(e?.message||e) });
-  } finally { try{ client?.close(); }catch{} }
+  } finally {
+    try { client?.close(); } catch {}
+  }
 });
 
 app.get("/healthz", (_req, res) => res.sendStatus(200));
