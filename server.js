@@ -37,18 +37,10 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
 
-// Responsable de site (global) – reçoit toutes les demandes & le PDF final
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
 
-// Nom par défaut si on ne trouve pas le magasin
 const SITE_RESP_NAME_DEFAULT = (process.env.SITE_RESP_NAME || "SITE_RESP_NAME").trim();
 
-// Table de noms de responsables de site par magasin
-const RESP_SITE_NAME_BY_MAGASIN = {
-  "GLEIZE": "DAMIEN PICHARD",
-};
-
-// Table des emails responsables de service par magasin (reçoit la demande initiale)
 const RESP_SERVICE_BY_MAGASIN = {
   "GLEIZE": "dampichard2007@gmail.com",
 };
@@ -65,7 +57,6 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
-// === Base FTP paths (needed by ADJUST_LOG) ===
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
@@ -73,7 +64,6 @@ const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
 async function appendJSONL(client, remotePath, obj){
   const tmp = tmpFile("adj_"+Date.now()+".jsonl");
   try{
-    // Best-effort: récupérer l’existant
     try { await client.downloadTo(tmp, remotePath); } catch {}
     const dir = path.posix.dirname(remotePath);
     await client.ensureDir(dir);
@@ -86,7 +76,6 @@ async function appendJSONL(client, remotePath, obj){
 
 app.post("/presence/adjust-conges", async (req, res) => {
   try{
-    // On accepte { entries: [...] } ou { adjustments: [...] }
     const { magasin, date, entries, adjustments } = req.body || {};
     const list = Array.isArray(entries) ? entries : (Array.isArray(adjustments) ? adjustments : null);
     if (!magasin || !Array.isArray(list)) {
@@ -96,7 +85,6 @@ app.post("/presence/adjust-conges", async (req, res) => {
     const stamp = new Date().toISOString();
     const payload = { magasin, date: date || stamp.slice(0,10), entries: list, stamp, source:"front" };
 
-    // 1) Journal JSONL sur FTP (best-effort)
     try{
       const client = await ftpClient();
       await appendJSONL(client, ADJUST_LOG, payload);
@@ -105,8 +93,6 @@ app.post("/presence/adjust-conges", async (req, res) => {
       console.warn("[adjust-conges] persistence skipped:", e?.message||e);
     }
 
-    // 2) Relai Apps Script : si tu gardes 'deccp' seulement => on n’envoie que les deltas négatifs;
-    //    si tu ajoutes 'adjustcp' (patch ci-dessous), on enverra les deux sens (+/-).
     const GS_URL = process.env.CP_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_URL || undefined;
     const SUPPORTS_ADJUST = String(process.env.CP_GS_SUPPORTS_ADJUST || "0") === "1";
 
@@ -115,21 +101,18 @@ app.post("/presence/adjust-conges", async (req, res) => {
         const delta = Number(e.delta || 0);
         if (!delta || !e) continue;
 
-        // On normalise nom/prenom si absent mais fullName présent
         const full = String(e.fullName || "").trim();
         const nom = (e.nom || (full.split(/\s+/)[0] || "")).trim();
         const prenom = (e.prenom || (full.split(/\s+/).slice(1).join(" ") || "")).trim();
 
         try {
           if (SUPPORTS_ADJUST) {
-            // Nouveau handler Apps Script (ci-dessous) — gère +/-
             await fetch(`${GS_URL}?action=adjustcp`, {
               method:"POST",
               headers: { "Content-Type":"application/json" },
-              body: JSON.stringify({ magasin, nom, prenom, delta }) // delta peut être négatif (consomme) ou positif (rends)
+              body: JSON.stringify({ magasin, nom, prenom, delta })
             });
           } else if (delta < 0) {
-            // Ancien handler (décrément uniquement)
             await fetch(`${GS_URL}?action=deccp`, {
               method:"POST",
               headers: { "Content-Type":"application/json" },
@@ -171,7 +154,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// === (garder) proxy televente ===
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
 
@@ -212,7 +194,6 @@ console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirna
 app.get("/conges/ping", (_req, res) => res.status(200).send("pong"));
 app.get("/conges", (_req, res) => { res.sendFile(path.join(__dirname, "public", "conges", "index.html")); });
 
-// ====== Utils ======
 function esc(str = "") {
   return String(str)
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -223,7 +204,6 @@ function fmtFR(dateStr = "") {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : dateStr;
 }
 
-// ====== FTP config ======
 const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
 const UNITS_DIR     = `${PRES_ROOT}/units`;
 
@@ -245,7 +225,6 @@ async function ftpClient(){
   const client = new ftp.Client(45_000);
   if (FTP_DEBUG) client.ftp.verbose = true;
 
-  // Force PASV IPv4 pour éviter des coupures DATA derrière NAT/firewall
   client.prepareTransfer = ftp.enterPassiveModeIPv4;
 
   await client.access({
@@ -276,7 +255,6 @@ async function dlJSON(client, remote){
       try{ fs.unlinkSync(out); }catch{}
       return JSON.parse(txt);
     }catch(e){
-      // si fichier n'existe pas -> on retourne null
       if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
       const msg = String(e?.message||"") + " " + String(e?.code||"");
       if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
@@ -351,13 +329,11 @@ async function uploadPdfToPreferredDir(client, localTmpPath, destName){
     }catch(e){
       lastErr = e;
       console.warn("[FTP] PDF upload failed in", d, "-", e?.code, e?.message);
-      // on essaie le répertoire suivant
     }
   }
   throw lastErr;
 }
 
-// ====== Métier congés ======
 async function appendLeave(payload) {
   let lastErr;
   for (let i=0; i<3; i++){
@@ -504,7 +480,6 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   doc.text(`au ${au} inclus.`, pageLeft, y);
   y += afterPeriodGap;
 
-  // Signature employé
   doc.text("Signature de l’employé,", 370, y);
   if (signatureData && /^data:image\/png;base64,/.test(signatureData)) {
     try {
@@ -540,7 +515,6 @@ const NAME_COORDS = {
   resp_site:    { page: 0, x: 390, y: 210, size: 12 },
 };
 
-// ====== API ======
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -595,7 +569,6 @@ app.post("/conges/api", async (req, res) => {
       signatureData,
     });
 
-    // Upload PDF avec fallback de répertoires
     const clientUp = await ftpClient();
     const tmp = tmpFile("leave_"+leaveId+".pdf");
     fs.writeFileSync(tmp, pdfBuffer);
@@ -607,7 +580,6 @@ app.post("/conges/api", async (req, res) => {
       try{ clientUp.close(); }catch{}
     }
 
-    // Jetons de signature
     const tokenService = crypto.randomBytes(16).toString("hex");
     const tokenSite    = crypto.randomBytes(16).toString("hex");
     await patchLeave(leaveId, {
@@ -615,7 +587,6 @@ app.post("/conges/api", async (req, res) => {
       tokens: { resp_service: tokenService, resp_site: tokenSite },
     });
 
-    // SMTP
     const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
     if (!GMAIL_USER || !GMAIL_PASS) {
       console.warn("[CONGES] smtp_not_configured:", { GMAIL_USER: !!GMAIL_USER, GMAIL_PASS: !!GMAIL_PASS });
@@ -651,7 +622,6 @@ app.post("/conges/api", async (req, res) => {
       <p style="color:#6b7280">Chaque lien est personnel et utilisable une seule fois.</p>
     `;
 
-    // Envoi au responsable de site global + au responsable de service selon le magasin
     const toList = [ SITE_RESP_EMAIL, respServiceEmailFor(magasin) ].filter(Boolean);
     const toRecipients = toList.length ? toList.join(",") : email;
 
@@ -686,7 +656,6 @@ app.get("/conges/sign/:id", async (req, res) => {
     return res.status(400).send("Lien invalide.");
   }
 
-  // Pré-remplissage du nom du responsable de site selon le magasin
   let prefillName = SITE_RESP_NAME_DEFAULT;
   try {
     const client = await ftpClient();
@@ -828,8 +797,6 @@ const patch = { tokens: { ...tokens, [role]: null } };
 if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
 if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
-// Les signatures ne valident PAS la demande : seule la décision côté Admin le fait.
-// On conserve 'both' uniquement pour savoir si on envoie le PDF final.
 const both =
   (patch.signedService || item.signedService) &&
   (patch.signedSite || item.signedSite);
@@ -838,7 +805,66 @@ const both =
     const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
     await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
 
-    // Si tout signé -> mail final au responsable de site global (MAIL_CG)
+const bothSigned =
+  (arr[i].signedService || patch.signedService) &&
+  (arr[i].signedSite    || patch.signedSite);
+
+if (bothSigned && !arr[i].finalMailSent) {
+  try {
+    const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
+    const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
+
+    if (GMAIL_USER && cleanedPass) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: GMAIL_USER, pass: cleanedPass }
+      });
+
+      const tmpFinal = tmpFile("final_" + id + ".pdf");
+      await client.downloadTo(tmpFinal, remotePdf);
+
+      const demanderEmail = arr[i].email || item.email || "";
+      const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
+
+      await transporter.sendMail({
+        to: recipients,
+        from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
+        replyTo: demanderEmail || undefined,
+        subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
+        html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
+               <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
+                  Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
+               <p>Signatures :<br>
+                  Service : ${(arr[i].signedService?.by || patch.signedService?.by || "—")}
+                  — ${(arr[i].signedService?.at || patch.signedService?.at || "")}<br>
+                  Site : ${(arr[i].signedSite?.by || patch.signedSite?.by || "—")}
+                  — ${(arr[i].signedSite?.at || patch.signedSite?.at || "")}
+               </p>`,
+        attachments: [{
+          filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
+          path: tmpFinal
+        }]
+      });
+
+      try { fs.unlinkSync(tmpFinal); } catch {}
+
+      arr[i].finalMailSent = {
+        at: new Date().toISOString(),
+        to: recipients
+      };
+
+      await upJSON(client, LEAVES_FILE, arr);
+      await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+
+      console.log("[CONGES] mail final envoyé à:", recipients);
+    } else {
+      console.warn("[CONGES] Mail final non envoyé (SMTP non configuré)");
+    }
+  } catch (e) {
+    console.warn("[CONGES] Envoi mail final (double signature) a échoué:", e?.message || e);
+  }
+}
+
 if (both) {
   try {
     const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
@@ -848,7 +874,6 @@ if (both) {
       const tmp2 = tmpFile("final_"+id+".pdf");
       await client.downloadTo(tmp2, remotePdf);
 
-      // -> destinataires : responsable de site global + employé demandeur (si présent)
       const demanderEmail = arr[i].email || item.email || "";
       const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
 
@@ -882,7 +907,6 @@ if (both) {
   } finally { try{ client?.close(); }catch{} }
 });
 
-// ====== Divers ======
 app.get("/healthz", (_req, res) => res.sendStatus(200));
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 

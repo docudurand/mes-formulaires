@@ -287,7 +287,6 @@ const CODE_DEFS = [
   ...PSITE_CODES.map(c=>({code:c,label:'Présence autre site'})),
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
-// === AJOUT: snapshot & ajustement CP ===
 let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
 function keyFromLabel(label){ return String(label||'').trim().replace(/\s+/g,' ').toUpperCase(); }
 function takeSnapshotFromData(day){
@@ -659,10 +658,9 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   try{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
-      const entries = computeCpDeltaAgainstSnapshotFromDOM(); // [{nom, prenom, fullName, delta}, ...]
+      const entries = computeCpDeltaAgainstSnapshotFromDOM();
 if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
-        // resnapshot to new state to avoid double comptage
         takeSnapshotFromData(collectData());
       }
     }catch(e){ console.warn('postAdjustConges failed', e?.message||e); }
@@ -962,7 +960,26 @@ async function loadAdminPersonnel(){
 
 $arAdd.addEventListener('click', async ()=>{
   const token = sessionStorage.getItem('leavesToken');
-    
+    try{
+      if (($arCode?.value||'') === 'CP'){
+        const mag = $arMag?.value || currentMagasin;
+        const opt = $arPers?.selectedOptions?.[0];
+        const du = $arDu?.value, au = $arAu?.value;
+        const slots = String(opt?.dataset?.slots||'Matin|A. Midi').split('|').filter(Boolean);
+        const d1 = new Date(du), d2 = new Date(au);
+        let workdays = 0;
+        for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
+          const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const g = d.getDay();
+          if (g!==0 && g!==6 && !isHoliday(iso)) workdays++;
+        }
+        const delta = -0.5 * Math.max(1, slots.length) * workdays;
+        if (delta){
+          const nom = opt?.dataset?.nom||''; const prenom = opt?.dataset?.prenom||'';
+          await postAdjustConges({ magasin: mag, date: du, entries: [{ fullName: opt?.value||`${nom} ${prenom}`.trim(), nom, prenom, delta }] });
+        }
+      }
+    }catch(e){ console.warn('Admin CP adjust failed', e?.message||e); }
   if(!token){ alert("Connectez-vous d'abord."); return; }
 
   const magasin = $arMag.value;
