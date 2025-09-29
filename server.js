@@ -836,7 +836,7 @@ app.post("/conges/sign/:id", async (req, res) => {
             to: recipients,
             from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
             replyTo: demanderEmail || undefined,
-            subject: `PDF final — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
+            subject: `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
             html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
                    <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
                       Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
