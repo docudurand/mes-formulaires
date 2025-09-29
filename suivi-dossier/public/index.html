@@ -39,7 +39,7 @@
   tbody tr{background:#fff}
   tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff}
 
-  .col-no        { width: 5%  }
+  .col-no        { width: 4%  }
   .col-magasin   { width: 10% }
   .col-compte    { width: 8%  }
   .col-client    { width: 13% }
@@ -58,14 +58,13 @@
     padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
   }
   .btnSave{
-  min-width: 120px; text-wrap: nowrap;}
+  min-width: 110px; text-wrap: nowrap;}
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
   .s-4{background:var(--s4); color:var(--s4b)}
 
   .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
-  /* élargit la liste de statut pour voir tout le texte */
   .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:155px;}
   .etaSel{
     padding:6px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem;
@@ -77,7 +76,6 @@
     padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem
   }
 
-  /* groupe ETA + Voir dossier côte à côte (collé à la liste nombre) */
   .etaGroup{ display:flex; align-items:center; gap:15px; }
 
   .btnView{
@@ -467,35 +465,8 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
   w.document.close(); w.focus(); w.print(); w.close();
 });
 
-/* ===== DEMO – À supprimer quand l’API est ok ===== */
-const DEMO_ROW = {
-  no: 90001,
-  magasin: "Annemasse",
-  compte: "C001234",
-  client: "Client Démonstration",
-  service: "Rectification Culasse",
-  demandeDate: new Date(),
-  status: "Demande envoyé",
-  estimation: "",
-  snapshot: {
-    header:{
-      magasin:"Annemasse", client:"Client Démonstration", compte:"C001234",
-      service:"Rectification Culasse", dateDemande:new Date()
-    },
-    commentaires:"Exemple de dossier pour valider le rendu visuel."
-  }
-};
-/* ================================================== */
-
 function load(){
   setTableLoading("Chargement des dossiers…");
-
-  // Affichage immédiat avec la ligne de test
-  rows = [DEMO_ROW];
-  buildMonths(2025); buildMonths(2026);
-  const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1;
-  if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
-  else { YEAR_FILTER=''; MONTH_FILTER=''; draw(); }
 
   // Puis on charge les vraies données (si dispo) et on les ajoute
   fetch("/atelier/api/cases")
