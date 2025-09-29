@@ -468,7 +468,6 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
 function load(){
   setTableLoading("Chargement des dossiers…");
 
-  // Puis on charge les vraies données (si dispo) et on les ajoute
   fetch("/atelier/api/cases")
     .then(r=>r.json())
     .then(json=>{
@@ -485,12 +484,11 @@ function load(){
           estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
         };
       });
-      rows = [DEMO_ROW, ...fetched];
+      rows = fetched;
       draw();
     })
     .catch(e=>{
       console.error(e);
-      // On garde au moins la ligne DEMO visible
     });
 }
 $filter.addEventListener("change", draw);
