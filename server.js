@@ -35,6 +35,27 @@ app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
+function fmtFR(dt, { withTime = true } = {}) {
+  if (!dt) return "";
+  const raw = String(dt);
+  const d = new Date(raw);
+  if (!Number.isFinite(d.getTime())) {
+    return withTime ? raw.replace('T',' ').replace('Z','') : raw.split('T')[0];
+  }
+  if (withTime) {
+    return d.toLocaleString('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    }).replace(',', '');
+  } else {
+    return d.toLocaleDateString('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+  }
+}
+
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
 
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
@@ -820,9 +841,9 @@ app.post("/conges/sign/:id", async (req, res) => {
                    <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
                       Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
                    <p>Signatures :<br>
-                      Service : ${(arr[i].signedService?.by || "—")} — ${arr[i].signedService?.at || ""}<br>
-                      Site : ${(arr[i].signedSite?.by || "—")} — ${arr[i].signedSite?.at || ""}
-                   </p>`,
+					  Service : ${(arr[i].signedService?.by || "—")} — ${fmtFR(arr[i].signedService?.at, { withTime: false })}<br>
+					  Site : ${(arr[i].signedSite?.by || "—")} — ${fmtFR(arr[i].signedSite?.at, { withTime: false })}
+				   </p>`,
             attachments: [{
               filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
               path: tmpFinal
