@@ -57,8 +57,7 @@
     display:inline-flex; align-items:center; justify-content:center;
     padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
   }
-  .btnSave{
-  min-width: 110px; text-wrap: nowrap;}
+  .btnSave{ min-width:110px; text-wrap:nowrap; }
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
@@ -109,7 +108,7 @@
       <select id="filterMag">
         <option value="">Tous</option>
         <option>Annemasse</option><option>Bourgoin</option><option>Chasse sur Rhone</option><option>Chassieu</option><option>Gleize</option><option>La Motte Servolex</option><option>Miribel</option>
-		<option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
+        <option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
       </select>
     </label>
     <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
@@ -352,6 +351,10 @@ function draw(){
       $tbody.appendChild(tr);
     });
 
+  if (count === 0){
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">Aucun dossier trouvé.</td></tr>`;
+  }
+
   const ymText = YEAR_FILTER
     ? (MONTH_FILTER && MONTH_FILTER!=='all'
         ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
@@ -468,6 +471,18 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
 function load(){
   setTableLoading("Chargement des dossiers…");
 
+  buildMonths(2025);
+  buildMonths(2026);
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  if (y === 2025 || y === 2026) {
+    setMonthActive(String(y), String(m));
+  } else {
+    YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
+  }
+
   fetch("/atelier/api/cases")
     .then(r=>r.json())
     .then(json=>{
@@ -489,6 +504,7 @@ function load(){
     })
     .catch(e=>{
       console.error(e);
+      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
     });
 }
 $filter.addEventListener("change", draw);
