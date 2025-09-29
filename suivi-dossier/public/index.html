@@ -47,7 +47,7 @@
   .col-date      { width: 9%  }
   .col-statut    { width: 11% }
   .col-eta       { width: 15% }
-  .col-actions   { width: 15% }
+  .col-actions   { width: 12% }
 
   .nowrap   { white-space:nowrap; }
   .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -57,25 +57,32 @@
     display:inline-flex; align-items:center; justify-content:center;
     padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
   }
+  .btnSave{
+  min-width: 120px; text-wrap: nowrap;}
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
   .s-4{background:var(--s4); color:var(--s4b)}
 
   .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
-  .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:150px;}
+  /* élargit la liste de statut pour voir tout le texte */
+  .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:155px;}
   .etaSel{
     padding:6px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem;
-    width:64px; min-width:64px; text-align:center; appearance:auto;
+    width:54px; min-width:54px; text-align:center; appearance:auto;
   }
+
   button{
     appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
     padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem
   }
 
+  /* groupe ETA + Voir dossier côte à côte (collé à la liste nombre) */
+  .etaGroup{ display:flex; align-items:center; gap:15px; }
+
   .btnView{
     white-space:normal; line-height:1.05; padding:6px 8px;
-    min-width:72px; max-width:72px; text-align:center;
+    min-width:72px; max-width:84px; text-align:center;
   }
 
   .spinner{
@@ -296,10 +303,14 @@ function draw(){
         <td class="col-service truncate" title="${r.service||""}">${r.service||""}</td>
         <td class="col-date nowrap"      title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td class="col-statut nowrap">${badge(r.status)}</td>
-        <td class="col-eta nowrap">${buildEstimateSelect(r.estimation)}</td>
+        <td class="col-eta nowrap">
+          <div class="etaGroup">
+            ${buildEstimateSelect(r.estimation)}
+            <button class="btnView">Voir<br>dossier</button>
+          </div>
+        </td>
         <td class="col-actions nowrap">
           <div class="actions">
-            <button class="btnView">Voir<br>dossier</button>
             <select class="statusSel">
               ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
             </select>
@@ -310,35 +321,35 @@ function draw(){
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
 
-tr.querySelector(".btnSave").addEventListener("click", async ()=>{
-  const statusSel = tr.querySelector(".statusSel");
-  const etaSel = tr.querySelector(".etaSel");
-  const saveBtn = tr.querySelector(".btnSave");
-  const oldHtml = saveBtn.innerHTML;
-  const status = statusSel.value;
-  const estimation = etaSel.value ? Number(etaSel.value) : "";
+      tr.querySelector(".btnSave").addEventListener("click", async ()=>{
+        const statusSel = tr.querySelector(".statusSel");
+        const etaSel = tr.querySelector(".etaSel");
+        const saveBtn = tr.querySelector(".btnSave");
+        const oldHtml = saveBtn.innerHTML;
+        const status = statusSel.value;
+        const estimation = etaSel.value ? Number(etaSel.value) : "";
 
-  try{
-    saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
-    saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>…`;
+        try{
+          saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
+          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>…`;
 
-    const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ status, estimation })
-    });
-    if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+          const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ status, estimation })
+          });
+          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
 
-    r.status = status;
-    r.estimation = estimation;
+          r.status = status;
+          r.estimation = estimation;
 
-    const badgeCell = tr.querySelector(".col-statut");
-    if (badgeCell) badgeCell.innerHTML = badge(r.status);
-  } finally{
-    saveBtn.innerHTML = oldHtml;
-    saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
-  }
-});
+          const badgeCell = tr.querySelector(".col-statut");
+          if (badgeCell) badgeCell.innerHTML = badge(r.status);
+        } finally{
+          saveBtn.innerHTML = oldHtml;
+          saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
+        }
+      });
 
       $tbody.appendChild(tr);
     });
@@ -456,33 +467,59 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
   w.document.close(); w.focus(); w.print(); w.close();
 });
 
+/* ===== DEMO – À supprimer quand l’API est ok ===== */
+const DEMO_ROW = {
+  no: 90001,
+  magasin: "Annemasse",
+  compte: "C001234",
+  client: "Client Démonstration",
+  service: "Rectification Culasse",
+  demandeDate: new Date(),
+  status: "Demande envoyé",
+  estimation: "",
+  snapshot: {
+    header:{
+      magasin:"Annemasse", client:"Client Démonstration", compte:"C001234",
+      service:"Rectification Culasse", dateDemande:new Date()
+    },
+    commentaires:"Exemple de dossier pour valider le rendu visuel."
+  }
+};
+/* ================================================== */
+
 function load(){
   setTableLoading("Chargement des dossiers…");
+
+  // Affichage immédiat avec la ligne de test
+  rows = [DEMO_ROW];
+  buildMonths(2025); buildMonths(2026);
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1;
+  if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
+  else { YEAR_FILTER=''; MONTH_FILTER=''; draw(); }
+
+  // Puis on charge les vraies données (si dispo) et on les ajoute
   fetch("/atelier/api/cases")
     .then(r=>r.json())
     .then(json=>{
       const data = (json && json.data) || [];
-      rows = data.map(x=>{
-  const h = (x.snapshot && x.snapshot.header) || {};
-  return {
-    ...x,
-    magasin: x.magasin || (h && h.magasin) || "",
-    compte:  x.compte  || (h && h.compte)  || "",
-    client:  x.client  || (h && h.client)  || "",
-    service: x.service || (h && h.service) || "",
-    demandeDate: x.demandeDate || (h && h.dateDemande) || "",
-    estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
-  };
-});
-      buildMonths(2025); buildMonths(2026);
-      const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1;
-      if (y === 2025 || y === 2026) setMonthActive(String(y), String(m));
-      else { YEAR_FILTER=''; MONTH_FILTER=''; draw(); }
+      const fetched = data.map(x=>{
+        const h = (x.snapshot && x.snapshot.header) || {};
+        return {
+          ...x,
+          magasin: x.magasin || (h && h.magasin) || "",
+          compte:  x.compte  || (h && h.compte)  || "",
+          client:  x.client  || (h && h.client)  || "",
+          service: x.service || (h && h.service) || "",
+          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
+          estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
+        };
+      });
+      rows = [DEMO_ROW, ...fetched];
+      draw();
     })
     .catch(e=>{
       console.error(e);
-      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
-      alert("Erreur de chargement.");
+      // On garde au moins la ligne DEMO visible
     });
 }
 $filter.addEventListener("change", draw);
