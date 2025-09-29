@@ -177,6 +177,11 @@ button.badge.code{border-radius:8px}
 .admin-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .admin-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .admin-row>*{flex:1 1 180px}
+
+/* Cellule en libellé libre LL */
+.cell.LL { background:#e5e7eb !important; color:#111 !important; font-weight:700; }
+/* Bouton LL */
+.badge.code[data-code="LL"] { background:#e5e7eb; color:#111; border-color:#e5e7eb; }
 </style>
 </head>
 <body>
@@ -438,7 +443,7 @@ function buildGlobalCodesBar(){
     const we = isSaisieWeekend();
     scope.forEach(td=>{
       ALL_CODES.forEach(c=>td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
+      td.classList.remove('PSITE','FERIE','LL');
       td.textContent='';
       if(!we) td.classList.remove('weekend');
     });
@@ -455,7 +460,7 @@ function buildGlobalCodesBar(){
       const fer = isSaisieHoliday();
       scope.forEach(td=>{
         ALL_CODES.forEach(c=>td.classList.remove(c));
-        td.classList.remove('PSITE','FERIE');
+        td.classList.remove('PSITE','FERIE','LL');
         if(!we) td.classList.remove('weekend');
 
         td.textContent=code;
@@ -476,6 +481,31 @@ function buildGlobalCodesBar(){
   const strip=document.createElement('div'); strip.className='psite-strip';
   PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
   $codesBar.appendChild(strip);
+  // --- Bouton "LL" (Libellé Libre) ---
+  const btnLL = document.createElement('button');
+  btnLL.className = 'badge code';
+  btnLL.dataset.code = 'LL';
+  btnLL.textContent = 'LL';
+  btnLL.title = 'Libellé libre (texte au choix, fond gris)';
+
+  btnLL.addEventListener('click', ()=>{
+    const scope = [...selectedCells];
+    if (!scope.length) return;
+    const txt = prompt('Saisir le libellé libre (sera inscrit dans la cellule) :', '');
+    if (txt === null) return; // annulé
+    const value = String(txt).trim();
+    if (!value) return;
+
+    scope.forEach(td=>{
+      ALL_CODES.forEach(c=>td.classList.remove(c));
+      td.classList.remove('PSITE','FERIE','LL');
+      td.textContent = value;
+      td.classList.add('LL');
+    });
+  });
+
+  $codesBar.appendChild(btnLL);
+
 }
 
 function isSaisieWeekend(){
@@ -612,15 +642,22 @@ function applyPrefill(data){
     tr.querySelectorAll('td.cell').forEach(td => {
       const v = vals[td.dataset.slot] || '';
       ALL_CODES.forEach(c => td.classList.remove(c));
-      td.classList.remove('PSITE','FERIE');
+      td.classList.remove('PSITE','FERIE','LL');
       td.classList.remove('weekend');
       td.textContent = v;
       if (v) {
         if (v === 'NP') td.classList.add('weekend');
         else {
-          td.classList.add(v);
-          if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-          if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
+          const isKnown = ALL_CODES.includes(v);
+          if (isKnown) {
+            td.classList.add(v);
+            if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+            if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
+          } else if (/^P\d+$/.test(v)) {
+            td.classList.add(v, 'PSITE');
+          } else {
+            td.classList.add('LL');
+          }
         }
       }
     });
@@ -765,9 +802,16 @@ function renderOneStore(yyyymm, magasin, data){
           if(v){
             if (v === 'NP') td.classList.add('weekend');
             else {
-              td.classList.add(v);
-              if (/^P\d+$/.test(v)) td.classList.add('PSITE');
-              if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
+              const isKnown = ALL_CODES.includes(v);
+              if (isKnown) {
+                td.classList.add(v);
+                if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+                if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
+              } else if (/^P\d+$/.test(v)) {
+                td.classList.add(v, 'PSITE');
+              } else {
+                td.classList.add('LL');
+              }
             }
           }
           tr.appendChild(td);
@@ -865,7 +909,7 @@ CODE_DEFS.filter(d => MAIN_CODES.includes(d.code)).forEach(({ code, label }) => 
   const o = document.createElement('option'); o.value = code; o.textContent = `${code} — ${label}`; grpStd.appendChild(o);
 });
 const grpPS = document.createElement('optgroup');
-grpPS.label = 'Présence autre site (P1…P20)';
+grpPS.label = 'Présence autre site (P1…P19)';
 PSITE_CODES.forEach(code => { const o = document.createElement('option'); o.value = code; o.textContent = `${code} — Présence autre site`; grpPS.appendChild(o); });
 $arCode.appendChild(grpStd); $arCode.appendChild(grpPS);
 
@@ -1126,7 +1170,7 @@ document.addEventListener('keydown', (e) => {
   const we = isSaisieWeekend();
   scope.forEach(td => {
     ALL_CODES.forEach(c => td.classList.remove(c));
-    td.classList.remove('PSITE','FERIE');
+    td.classList.remove('PSITE','FERIE','LL');
     td.textContent = '';
     if(!we) td.classList.remove('weekend');
   });
