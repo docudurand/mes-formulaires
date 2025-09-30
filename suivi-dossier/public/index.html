@@ -57,7 +57,7 @@
     display:inline-flex; align-items:center; justify-content:center;
     padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
   }
-  .btnSave{ min-width:110px; text-wrap:nowrap; }
+  .btnSave{ display: inline-flex;  align-items: center;  justify-content: center;}
   .s-1{background:var(--s1); color:var(--s1b)}
   .s-2{background:var(--s2); color:var(--s2b)}
   .s-3{background:var(--s3); color:var(--s3b)}
@@ -328,7 +328,7 @@ function draw(){
 
         try{
           saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
-          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true" style="margin-right:6px"></span>…`;
+          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
 
           const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
