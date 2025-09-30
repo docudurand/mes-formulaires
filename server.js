@@ -72,12 +72,207 @@ function respServiceEmailFor(magasin) {
   return (RESP_SERVICE_BY_MAGASIN[m] || "").trim();
 }
 
-app.use("/atelier", atelier);
-app.use("/suivi-dossier", suiviDossier);
-app.use("/presence", presences);
+// ---- FTP + répertoires Présences ----
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;
+// Dossier export des PDF Résumé du mois
+const PRES_EXPORT_DIR = `${PRES_ROOT}/exports`;
+
+// --- helpers FTP déjà en place + compléments ---
+const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
+const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425/i;
+
+function tlsOptions(){
+  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
+  const servername = process.env.FTP_HOST || undefined;
+  return { rejectUnauthorized, servername };
+}
+
+async function ftpClient(){
+  const client = new ftp.Client(45_000);
+  if (FTP_DEBUG) client.ftp.verbose = true;
+  client.prepareTransfer = ftp.enterPassiveModeIPv4;
+  await client.access({
+    host: process.env.FTP_HOST,
+    user: process.env.FTP_USER,
+    password: process.env.FTP_PASSWORD,
+    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+    secure: String(process.env.FTP_SECURE||"false")==="true",
+    secureOptions: tlsOptions()
+  });
+  try {
+    client.ftp.socket?.setKeepAlive?.(true, 10_000);
+    client.ftp.timeout = 45_000;
+  } catch {}
+  return client;
+}
+
+function tmpFile(name){ return path.join(os.tmpdir(), name); }
+
+async function dlJSON(client, remote){
+  const out = tmpFile("lv_"+Date.now()+".json");
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.downloadTo(out, remote);
+      const txt = fs.readFileSync(out, "utf8");
+      try{ fs.unlinkSync(out); }catch{}
+      return JSON.parse(txt);
+    }catch(e){
+      if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}; return null;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 250*attempt));
+    }
+  }
+  return null;
+}
+
+async function upJSON(client, remote, obj){
+  const out = tmpFile("lv_up_"+Date.now()+".json");
+  fs.writeFileSync(out, JSON.stringify(obj));
+  const dir = path.posix.dirname(remote);
+
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
+  }
+}
+
+async function upText(client, remote, buf){
+  const dir = path.posix.dirname(remote);
+  const out = tmpFile("lv_file_"+Date.now());
+  fs.writeFileSync(out, buf);
+  for (let attempt=1; attempt<=4; attempt++){
+    try{
+      await client.ensureDir(dir);
+      await client.uploadFrom(out, remote);
+      try{ fs.unlinkSync(out); }catch{}
+      return;
+    }catch(e){
+      const msg = String(e?.message||"") + " " + String(e?.code||"");
+      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
+        try{ fs.unlinkSync(out); }catch{}
+        throw e;
+      }
+      try{ client.close(); }catch{}
+      client = await ftpClient();
+      await new Promise(r => setTimeout(r, 300*attempt));
+    }
+  }
+}
+
+async function uploadPdfToPreferredDir(client, localTmpPath, destName){
+  // utilisé pour les PDF "congés"
+  const PDF_DIR_PREFS = [
+    `${FTP_ROOT_BASE}/presence/leave`,
+    `${PRES_ROOT}/leave`,
+  ];
+  let lastErr;
+  for (const d of PDF_DIR_PREFS){
+    try{
+      await client.ensureDir(d);
+      const remote = `${d}/${destName}`;
+      await client.uploadFrom(localTmpPath, remote);
+      if (FTP_DEBUG) console.log("[FTP] PDF uploaded:", remote);
+      return remote;
+    }catch(e){
+      lastErr = e;
+      console.warn("[FTP] PDF upload failed in", d, "-", e?.code, e?.message);
+    }
+  }
+  throw lastErr;
+}
+
+// ----------- AJOUT: endpoints upload/lecture PDF Résumé Mois -----------
+
+/** Petit helper pour assainir le nom de fichier */
+function safeFilename(name = "") {
+  return String(name).normalize("NFKD").replace(/[^\w.\-]+/g, "_").slice(0, 128);
+}
+
+/**
+ * POST /presence/upload-pdf
+ * body: { filename: "Resume_2025-02.pdf", dataBase64: "JVBERi0x..." }
+ * -> push sur FTP: PRES_EXPORT_DIR/filename
+ * <- { url: "/presence/fetch-pdf?file=<remotePath>" }
+ */
+app.post("/presence/upload-pdf", async (req, res) => {
+  try {
+    let { filename, dataBase64 } = req.body || {};
+    if (!filename || !dataBase64) return res.status(400).json({ error: "missing_fields" });
+
+    filename = safeFilename(filename);
+    if (!filename.toLowerCase().endsWith(".pdf")) filename += ".pdf";
+
+    const buf = Buffer.from(String(dataBase64), "base64");
+    if (!buf || !buf.length) return res.status(400).json({ error: "bad_payload" });
+
+    let client;
+    try {
+      client = await ftpClient();
+      await client.ensureDir(PRES_EXPORT_DIR);
+      const remotePath = path.posix.join(PRES_EXPORT_DIR, filename);
+      await upText(client, remotePath, buf);
+      // renvoyer une URL interne (même origine) pour l’iframe
+      const url = `/presence/fetch-pdf?file=${encodeURIComponent(remotePath)}`;
+      return res.json({ ok: true, url });
+    } finally {
+      try { client?.close(); } catch {}
+    }
+  } catch (e) {
+    console.error("[upload-pdf] error:", e?.message || e);
+    return res.status(500).json({ ok: false, error: "upload_failed" });
+  }
+});
+
+/**
+ * GET /presence/fetch-pdf?file=<remotePath>
+ * Stream du PDF depuis le FTP vers le navigateur
+ */
+app.get("/presence/fetch-pdf", async (req, res) => {
+  const remotePath = String(req.query.file || "");
+  if (!remotePath || !remotePath.startsWith(FTP_ROOT_BASE)) {
+    return res.status(400).send("bad file");
+  }
+  let client;
+  try {
+    client = await ftpClient();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    // stream FTP -> HTTP response
+    await client.downloadTo(res, remotePath);
+  } catch (e) {
+    console.error("[fetch-pdf] error:", e?.message || e);
+    if (!res.headersSent) res.status(404).send("not found");
+  } finally {
+    try { client?.close(); } catch {}
+  }
+});
+
+// ----------------------------------------------------------------------
+
+app.use("/atelier", atelier);
+app.use("/suivi-dossier", suiviDossier);
+app.use("/presence", presences);
 
 async function appendJSONL(client, remotePath, obj){
   const tmp = tmpFile("adj_"+Date.now()+".jsonl");
@@ -225,132 +420,11 @@ function fmtDateFR(dateStr = "") {
 const LEAVES_FILE   = `${PRES_ROOT}/leaves.json`;
 const UNITS_DIR     = `${PRES_ROOT}/units`;
 
+// (pour PDF congés)
 const PDF_DIR_PREFS = [
   `${FTP_ROOT_BASE}/presence/leave`,
   `${PRES_ROOT}/leave`,
 ];
-
-const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG||"0")==="1";
-const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425/i;
-
-function tlsOptions(){
-  const rejectUnauthorized = String(process.env.FTP_TLS_REJECT_UNAUTH||"1")==="1";
-  const servername = process.env.FTP_HOST || undefined;
-  return { rejectUnauthorized, servername };
-}
-
-async function ftpClient(){
-  const client = new ftp.Client(45_000);
-  if (FTP_DEBUG) client.ftp.verbose = true;
-
-  client.prepareTransfer = ftp.enterPassiveModeIPv4;
-
-  await client.access({
-    host: process.env.FTP_HOST,
-    user: process.env.FTP_USER,
-    password: process.env.FTP_PASSWORD,
-    port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
-    secure: String(process.env.FTP_SECURE||"false")==="true",
-    secureOptions: tlsOptions()
-  });
-
-  try {
-    client.ftp.socket?.setKeepAlive?.(true, 10_000);
-    client.ftp.timeout = 45_000;
-  } catch {}
-
-  return client;
-}
-
-function tmpFile(name){ return path.join(os.tmpdir(), name); }
-
-async function dlJSON(client, remote){
-  const out = tmpFile("lv_"+Date.now()+".json");
-  for (let attempt=1; attempt<=4; attempt++){
-    try{
-      await client.downloadTo(out, remote);
-      const txt = fs.readFileSync(out, "utf8");
-      try{ fs.unlinkSync(out); }catch{}
-      return JSON.parse(txt);
-    }catch(e){
-      if (String(e?.code) === "550") { try{ fs.unlinkSync(out); }catch{}; return null; }
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
-        try{ fs.unlinkSync(out); }catch{}; return null;
-      }
-      try{ client.close(); }catch{}
-      client = await ftpClient();
-      await new Promise(r => setTimeout(r, 250*attempt));
-    }
-  }
-  return null;
-}
-
-async function upJSON(client, remote, obj){
-  const out = tmpFile("lv_up_"+Date.now()+".json");
-  fs.writeFileSync(out, JSON.stringify(obj));
-  const dir = path.posix.dirname(remote);
-
-  for (let attempt=1; attempt<=4; attempt++){
-    try{
-      await client.ensureDir(dir);
-      await client.uploadFrom(out, remote);
-      try{ fs.unlinkSync(out); }catch{}
-      return;
-    }catch(e){
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
-        try{ fs.unlinkSync(out); }catch{}
-        console.error("[FTP upJSON] fail", { dir, remote, code: e?.code, msg: e?.message });
-        throw e;
-      }
-      try{ client.close(); }catch{}
-      client = await ftpClient();
-      await new Promise(r => setTimeout(r, 300*attempt));
-    }
-  }
-}
-
-async function upText(client, remote, buf){
-  const dir = path.posix.dirname(remote);
-  const out = tmpFile("lv_file_"+Date.now());
-  fs.writeFileSync(out, buf);
-
-  for (let attempt=1; attempt<=4; attempt++){
-    try{
-      await client.ensureDir(dir);
-      await client.uploadFrom(out, remote);
-      try{ fs.unlinkSync(out); }catch{}
-      return;
-    }catch(e){
-      const msg = String(e?.message||"") + " " + String(e?.code||"");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) {
-        try{ fs.unlinkSync(out); }catch{}
-        throw e;
-      }
-      try{ client.close(); }catch{}
-      client = await ftpClient();
-      await new Promise(r => setTimeout(r, 300*attempt));
-    }
-  }
-}
-
-async function uploadPdfToPreferredDir(client, localTmpPath, destName){
-  let lastErr;
-  for (const d of PDF_DIR_PREFS){
-    try{
-      await client.ensureDir(d);
-      const remote = `${d}/${destName}`;
-      await client.uploadFrom(localTmpPath, remote);
-      if (FTP_DEBUG) console.log("[FTP] PDF uploaded:", remote);
-      return remote;
-    }catch(e){
-      lastErr = e;
-      console.warn("[FTP] PDF upload failed in", d, "-", e?.code, e?.message);
-    }
-  }
-  throw lastErr;
-}
 
 async function appendLeave(payload) {
 
@@ -805,17 +879,21 @@ app.post("/conges/sign/:id", async (req, res) => {
     if (role === "resp_service") patch.signedService = { at: new Date().toISOString(), by: signerName };
     if (role === "resp_site")    patch.signedSite    = { at: new Date().toISOString(), by: signerName };
 
-    arr[i] = { ...item, ...patch, pdfPath: remotePdf };
+    const arr2 = (await dlJSON(client, LEAVES_FILE)) || [];
+    const j = arr2.findIndex(x => x.id === id);
+    if (j >= 0) {
+      arr2[j] = { ...arr2[j], ...patch, pdfPath: remotePdf };
+      await upJSON(client, LEAVES_FILE, arr2);
 
-    await upJSON(client, LEAVES_FILE, arr);
+      const safe = s => String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
+      const base = `${arr2[j].createdAt.slice(0,10)}_${safe(arr2[j].magasin)}_${safe(arr2[j].nom)}_${safe(arr2[j].prenom)}_${arr2[j].id}.json`;
+      await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr2[j], null, 2));
+    }
 
-    const safe = s => String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
-    const base = `${arr[i].createdAt.slice(0,10)}_${safe(arr[i].magasin)}_${safe(arr[i].nom)}_${safe(arr[i].prenom)}_${arr[i].id}.json`;
-    await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+    const updated = j >= 0 ? (await dlJSON(client, LEAVES_FILE))[j] : null;
+    const bothSigned = !!(updated?.signedService && updated?.signedSite);
 
-    const bothSigned = !!(arr[i].signedService && arr[i].signedSite);
-
-    if (bothSigned && !arr[i].finalMailSent) {
+    if (bothSigned && !updated?.finalMailSent) {
       try {
         const { GMAIL_USER, GMAIL_PASS, FROM_EMAIL } = process.env;
         const cleanedPass = String(GMAIL_PASS || "").replace(/["\s]/g, "");
@@ -829,32 +907,39 @@ app.post("/conges/sign/:id", async (req, res) => {
           const tmpFinal = tmpFile("final_" + id + ".pdf");
           await client.downloadTo(tmpFinal, remotePdf);
 
-          const demanderEmail = arr[i].email || "";
+          const demanderEmail = updated?.email || "";
           const recipients = [ SITE_RESP_EMAIL, demanderEmail ].filter(Boolean).join(",");
 
           await transporter.sendMail({
             to: recipients,
             from: `Validation congés <${FROM_EMAIL || GMAIL_USER}>`,
             replyTo: demanderEmail || undefined,
-            subject: `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
+            subject: `Acceptation — ${(updated?.nom || "").toUpperCase()} ${updated?.prenom || ""}`,
             html: `<p>Le document PDF a été <b>signé par les deux responsables</b>.</p>
-                   <p>Employé : ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}<br>
-                      Période : ${arr[i].dateDu} → ${arr[i].dateAu} • ${arr[i].nbJours || "?"} jour(s)</p>
+                   <p>Employé : ${(updated?.nom || "").toUpperCase()} ${updated?.prenom || ""}<br>
+                      Période : ${updated?.dateDu} → ${updated?.dateAu} • ${updated?.nbJours || "?"} jour(s)</p>
                    <p>Signatures :<br>
-					  Service : ${(arr[i].signedService?.by || "—")} — ${fmtFR(arr[i].signedService?.at, { withTime: false })}<br>
-					  Site : ${(arr[i].signedSite?.by || "—")} — ${fmtFR(arr[i].signedSite?.at, { withTime: false })}
+					  Service : ${(updated?.signedService?.by || "—")} — ${fmtFR(updated?.signedService?.at, { withTime: false })}<br>
+					  Site : ${(updated?.signedSite?.by || "—")} — ${fmtFR(updated?.signedSite?.at, { withTime: false })}
 				   </p>`,
             attachments: [{
-              filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`,
+              filename: `Demande-conges-${(updated?.nom || "").toUpperCase()}_${updated?.prenom || ""}.pdf`,
               path: tmpFinal
             }]
           });
 
           try { fs.unlinkSync(tmpFinal); } catch {}
 
-          arr[i].finalMailSent = { at: new Date().toISOString(), to: recipients };
-          await upJSON(client, LEAVES_FILE, arr);
-          await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(arr[i], null, 2));
+          updated.finalMailSent = { at: new Date().toISOString(), to: recipients };
+          const arr3 = (await dlJSON(client, LEAVES_FILE)) || [];
+          const k = arr3.findIndex(x => x.id === id);
+          if (k >= 0) {
+            arr3[k] = updated;
+            await upJSON(client, LEAVES_FILE, arr3);
+            const safe = s => String(s||"").normalize("NFKD").replace(/[^\w.-]+/g,"_").slice(0,64);
+            const base = `${updated.createdAt.slice(0,10)}_${safe(updated.magasin)}_${safe(updated.nom)}_${safe(updated.prenom)}_${updated.id}.json`;
+            await upText(client, `${UNITS_DIR}/${base}`, JSON.stringify(updated, null, 2));
+          }
 
           console.log("[CONGES] mail final envoyé à:", recipients);
         } else {

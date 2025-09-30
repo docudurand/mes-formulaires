@@ -1042,11 +1042,9 @@ $expBtn.addEventListener('click', async ()=> {
       doc.setFont('helvetica','bold'); doc.setFontSize(18);
       doc.text(`Résumé — ${magasin} — ${yyyymm}`, 40, 50);
 
-      // charge les données du mois pour ce magasin
       const r = await fetch(`/presence/month-store?yyyymm=${yyyymm}&magasin=${encodeURIComponent(magasin)}`);
       const j = await r.json();
 
-      // fabrique une petite table compacte (exemple : juste EMPLOYÉS avec Matin/A. Midi)
       const days = (function daysOfMonth(ym){ const [y,m]=ym.split('-').map(Number); const out=[]; for(let d=1; d<=new Date(y,m,0).getDate(); d++) out.push(new Date(y, m-1, d)); return out; })(yyyymm);
       const file = j.file || {};
       const pers = j.personnel || {employes:[], interims:[], livreurs:{}};
@@ -1080,10 +1078,19 @@ $expBtn.addEventListener('click', async ()=> {
 
     }
 
-    const blob = doc.output('blob');
+const ab = await doc.output('arraybuffer');
+const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
 
-try { if ($pdfFrame.src) URL.revokeObjectURL($pdfFrame.src); } catch {}
-const url = URL.createObjectURL(blob);
+const fname = `Resume_${yyyymm}.pdf`;
+
+const resp = await fetch('/presence/upload-pdf', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ filename: fname, dataBase64: b64 })
+});
+if (!resp.ok) throw new Error('Upload PDF échoué');
+const { url } = await resp.json();
+
 $pdfFrame.src = url;
   }catch(e){
     alert('Erreur de génération PDF: '+(e?.message||e));
