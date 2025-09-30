@@ -180,11 +180,6 @@ button.badge.code{border-radius:8px}
 
 .cell.LL { background:#e5e7eb !important; color:#111 !important; font-weight:700; }
 .badge.code[data-code="LL"] { background:#e5e7eb; color:#111; border-color:#e5e7eb; }
-#pdfMask{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0007;z-index:9999;padding:20px;}
-#pdfCard{width:min(1100px,96vw);height:min(92vh,820px);background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;display:flex;flex-direction:column;box-shadow:0 12px 32px #0004}
-#pdfHead{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#f8fafc}
-#pdfBody{flex:1;display:flex;min-height:0}
-#pdfFrame{flex:1;width:100%;border:0}
 </style>
 </head>
 <body>
@@ -259,39 +254,13 @@ button.badge.code{border-radius:8px}
       </div>
       <div id="ar-msg" class="hint" style="margin-top:6px"></div>
     </div>
-	<div id="admin-export" class="admin-box" style="display:none">
-  <div style="font-weight:800;margin-bottom:8px">Export PDF du résumé du mois</div>
-  <div class="admin-row">
-    <select id="exp-month" aria-label="Mois"></select>
-    <select id="exp-year" aria-label="Année"></select>
-    <button id="exp-generate" class="primary">Générer le mois</button>
-    <span id="exp-busy" class="inline-loading" style="display:none">
-      <span class="spinner"></span><span>Génération du PDF…</span>
-    </span>
-  </div>
-  <div class="hint" style="margin-top:6px">Le PDF inclut tous les magasins, en mode paysage, et commence <b>chaque magasin sur une nouvelle page</b>.</div>
-</div>
 
     <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
   </section>
 </main>
-<div id="pdfMask" aria-hidden="true">
-  <div id="pdfCard">
-    <div id="pdfHead">
-      <div style="font-weight:800">Aperçu – Résumé du mois</div>
-      <div style="display:flex; gap:8px;">
-        <button id="pdfPrint" class="badge">Imprimer</button>
-        <button id="pdfClose" class="badge">Fermer</button>
-      </div>
-    </div>
-    <div id="pdfBody"><iframe id="pdfFrame" title="Aperçu PDF"></iframe></div>
-  </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-<script>
 
+<script>
 const pad=n=>n<10?`0${n}`:`${n}`;
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 const thisYM = ()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;}
@@ -384,25 +353,7 @@ const $rememberPw=document.getElementById('remember-pw');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 const $codesBar=document.getElementById('codes-bar');
-const $pdfMask  = document.getElementById('pdfMask');
-const $pdfFrame = document.getElementById('pdfFrame');
-const $pdfClose = document.getElementById('pdfClose');
-const $pdfPrint = document.getElementById('pdfPrint');
 
-function openPdfPreviewWithBlob(blob){
-  try { if($pdfFrame?.src) URL.revokeObjectURL($pdfFrame.src); } catch {}
-  const url = URL.createObjectURL(blob);
-  $pdfFrame.src = url;
-  $pdfMask.style.display = 'flex';
-}
-
-$pdfClose?.addEventListener('click', ()=>{
-  $pdfMask.style.display = 'none';
-  try { if($pdfFrame?.src) { URL.revokeObjectURL($pdfFrame.src); $pdfFrame.src = 'about:blank'; } } catch {}
-});
-$pdfPrint?.addEventListener('click', ()=>{
-  try { $pdfFrame?.contentWindow?.focus(); $pdfFrame?.contentWindow?.print(); } catch {}
-});
 const $arBox=document.getElementById('admin-range');
 const $arMag=document.getElementById('ar-magasin');
 const $arPers=document.getElementById('ar-personnel');
@@ -993,110 +944,11 @@ $loginForm.addEventListener('submit', (ev)=>{
   if(!pw){ alert('Mot de passe requis'); return; }
   sessionStorage.setItem('leavesToken', pw);
   if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
-
   $leavesError.style.display='none';
   $arBox.style.display='block';
-  $expBox.style.display='block';
-
   if(currentMagasin) $arMag.value = currentMagasin;
   loadAdminPersonnel();
   loadLeaves();
-});
-
-const $expBox   = document.getElementById('admin-export');
-const $expMonth = document.getElementById('exp-month');
-const $expYear  = document.getElementById('exp-year');
-const $expBtn   = document.getElementById('exp-generate');
-const $expBusy  = document.getElementById('exp-busy');
-
-$expBox.style.display = 'block';
-
-(function initExportSelectors(){
-  const mois = [['01','Janvier'],['02','Février'],['03','Mars'],['04','Avril'],['05','Mai'],['06','Juin'],['07','Juillet'],['08','Août'],['09','Septembre'],['10','Octobre'],['11','Novembre'],['12','Décembre']];
-  $expMonth.innerHTML = ''; mois.forEach(([v,lib])=>{ const o=document.createElement('option'); o.value=v; o.textContent=lib; $expMonth.appendChild(o); });
-  $expYear.innerHTML = ''; ['2025','2026'].forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; $expYear.appendChild(o); });
-  const now = new Date(); const curY = String(now.getFullYear()); const curM = String(now.getMonth()+1).padStart(2,'0');
-  if ([...$expYear.options].some(o=>o.value===curY)) $expYear.value = curY; $expMonth.value = curM;
-})();
-$expBtn.addEventListener('click', async ()=> {
-  const year  = $expYear.value, month = $expMonth.value;
-  if(!year || !month){ alert('Sélectionnez un mois et une année.'); return; }
-  const yyyymm = `${year}-${month}`;
-
-  $expBtn.disabled = true; 
-  $expBusy.style.display = 'flex';
-
-
-  $pdfMask.style.display = 'flex';
-  try { if ($pdfFrame.src) URL.revokeObjectURL($pdfFrame.src); } catch {}
-  $pdfFrame.src = 'about:blank';
-  $pdfFrame.src = 'about:blank';
-  try{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-	doc.setFont('helvetica','normal');
-    const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
-    for (let i=0; i<MAGASINS.length; i++){
-      const magasin = MAGASINS[i];
-      if (i>0) doc.addPage();
-      doc.setFont('helvetica','bold'); doc.setFontSize(18);
-      doc.text(`Résumé — ${magasin} — ${yyyymm}`, 40, 50);
-
-      const r = await fetch(`/presence/month-store?yyyymm=${yyyymm}&magasin=${encodeURIComponent(magasin)}`);
-      const j = await r.json();
-
-      const days = (function daysOfMonth(ym){ const [y,m]=ym.split('-').map(Number); const out=[]; for(let d=1; d<=new Date(y,m,0).getDate(); d++) out.push(new Date(y, m-1, d)); return out; })(yyyymm);
-      const file = j.file || {};
-      const pers = j.personnel || {employes:[], interims:[], livreurs:{}};
-      const empLabels = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
-
-      const cols = [{header:'Nom', dataKey:'__label'}];
-      days.forEach(d=>{ ['Matin','A. Midi'].forEach(s=> cols.push({ header: `${String(d.getDate()).padStart(2,'0')} ${s}`, dataKey:`${d.getDate()}_${s}`})); });
-
-      const rows = empLabels.map(lbl=>{
-        const row = { __label: lbl };
-        days.forEach(d=>{
-          const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          const rec = (file[dk]?.data?.rows||[]).find(x => String(x.label||'').trim().toUpperCase() === lbl.toUpperCase());
-          const v = rec?.values || {};
-          row[`${d.getDate()}_Matin`]  = v['Matin']  || '';
-          row[`${d.getDate()}_A. Midi`] = v['A. Midi'] || '';
-        });
-        return row;
-      });
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('EMPLOYÉS', 40, 78);
-      doc.autoTable({
-  startY: 90,
-  margin: { left: 40, right: 40 },
-  head: [ cols.map(c => c.header) ],
-  body: rows.map(r => cols.map(c => c.dataKey === '__label' ? r.__label : (r[c.dataKey] || ''))),
-  styles: { font: 'helvetica', fontStyle: 'normal', fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
-  headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle: 'bold' },
-  tableWidth: 'wrap'
-});
-
-    }
-
-const ab = await doc.output('arraybuffer');
-const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-
-const fname = `Resume_${yyyymm}.pdf`;
-
-const resp = await fetch('/presence/upload-pdf', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ filename: fname, dataBase64: b64 })
-});
-if (!resp.ok) throw new Error('Upload PDF échoué');
-const { url } = await resp.json();
-
-$pdfFrame.src = url;
-  }catch(e){
-    alert('Erreur de génération PDF: '+(e?.message||e));
-  }finally{
-    $expBtn.disabled=false; $expBusy.style.display='none';
-  }
 });
 
 $arMag.addEventListener('change', loadAdminPersonnel);
@@ -1197,7 +1049,6 @@ async function loadLeaves(){
     $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher les demandes.";
     $leavesError.style.display='block';
     $leavesContent.innerHTML = "";
-	$expBox.style.display='none';
     return;
   }
   $leavesError.style.display='none';
@@ -1323,6 +1174,8 @@ document.addEventListener('keydown', (e) => {
 
 document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
+</script>
+
 </script>
 
 </body>
