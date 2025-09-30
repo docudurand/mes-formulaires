@@ -1062,13 +1062,15 @@ $expBtn.addEventListener('click', async ()=> {
 
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('EMPLOYÉS', 40, 78);
       doc.autoTable({
-        startY: 90, margin:{ left: 40, right: 40 },
-        head: [ cols.map(c=>c.header) ],
-        body: rows.map(r => cols.map(c => c.dataKey==='__label' ? r.__label : (r[c.dataKey]||''))),
-        styles: { font: 'helvetica', fontStyle: 'normal', fontSize: 6, cellPadding: 2 },
-		headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle:'bold' }
-        tableWidth: 'wrap'
-      });
+  startY: 90,
+  margin: { left: 40, right: 40 },
+  head: [ cols.map(c => c.header) ],
+  body: rows.map(r => cols.map(c => c.dataKey === '__label' ? r.__label : (r[c.dataKey] || ''))),
+  styles: { font: 'helvetica', fontStyle: 'normal', fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
+  headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle: 'bold' },
+  tableWidth: 'wrap'
+});
+
     }
 
     // Ouvrir dans la pop-up (pas de téléchargement direct)
