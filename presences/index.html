@@ -1025,7 +1025,11 @@ $expBtn.addEventListener('click', async ()=> {
 
   $expBtn.disabled = true; 
   $expBusy.style.display = 'flex';
+
+
   $pdfMask.style.display = 'flex';
+  try { if ($pdfFrame.src) URL.revokeObjectURL($pdfFrame.src); } catch {}
+  $pdfFrame.src = 'about:blank';
   $pdfFrame.src = 'about:blank';
   try{
     const { jsPDF } = window.jspdf;
@@ -1077,7 +1081,10 @@ $expBtn.addEventListener('click', async ()=> {
     }
 
     const blob = doc.output('blob');
-    openPdfPreviewWithBlob(blob);
+
+try { if ($pdfFrame.src) URL.revokeObjectURL($pdfFrame.src); } catch {}
+const url = URL.createObjectURL(blob);
+$pdfFrame.src = url;
   }catch(e){
     alert('Erreur de génération PDF: '+(e?.message||e));
   }finally{
