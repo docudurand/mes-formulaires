@@ -210,7 +210,7 @@ button.badge.code{border-radius:8px}
           <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
           <button id="btn-save" class="primary">Enregistrer</button>
           <button id="btn-fill-all" class="badge">Tout mettre P</button>
-<span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrement…</span></span>
+          <span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrement…</span></span>
         </div>
       </div>
 
@@ -255,6 +255,18 @@ button.badge.code{border-radius:8px}
       <div id="ar-msg" class="hint" style="margin-top:6px"></div>
     </div>
 
+    <!-- === Export résumé du mois en PDF === -->
+    <div id="admin-export" class="admin-box" style="display:none">
+      <div style="font-weight:800;margin-bottom:8px">Export PDF du résumé du mois</div>
+      <div class="admin-row">
+        <select id="exp-month" aria-label="Mois"></select>
+        <select id="exp-year" aria-label="Année"></select>
+        <button id="exp-generate" class="primary">Générer le mois</button>
+        <span id="exp-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Génération du PDF…</span></span>
+      </div>
+      <div class="hint" style="margin-top:6px">Le PDF inclut tous les magasins, en mode paysage, et commence <b>chaque magasin sur une nouvelle page</b>.</div>
+    </div>
+
     <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
   </section>
@@ -280,7 +292,7 @@ const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
 const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
-const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
+const PSITE_CODES = Array.from({length:19}, (_,i)=>`P${i+1}`); // P1..P19 (P20 supprimé)
 const CODE_DEFS = [
   {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
   {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
@@ -363,6 +375,13 @@ const $arAu=document.getElementById('ar-au');
 const $arAdd=document.getElementById('ar-add');
 const $arMsg=document.getElementById('ar-msg');
 
+// Export PDF elements
+const $expBox   = document.getElementById('admin-export');
+const $expMonth = document.getElementById('exp-month');
+const $expYear  = document.getElementById('exp-year');
+const $expBtn   = document.getElementById('exp-generate');
+const $expBusy  = document.getElementById('exp-busy');
+
 $today.textContent=todayISO();
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -396,10 +415,12 @@ function switchTab(key){
       $leavesError.style.display='block';
       $leavesContent.innerHTML = "";
       $arBox.style.display='none';
+      $expBox.style.display='none';
       return;
     }
     $leavesError.style.display='none';
     $arBox.style.display='block';
+    $expBox.style.display='block';
     if(currentMagasin) $arMag.value = currentMagasin;
     loadAdminPersonnel();
     loadLeaves();
@@ -475,8 +496,10 @@ function buildGlobalCodesBar(){
     return b;
   };
 
+  // Codes standards (jusqu'à NP)
   MAIN_CODES.forEach(c => $codesBar.appendChild(addBtn(c, CODE_DEFS.find(d=>d.code===c)?.label)));
 
+  // Bouton LL entre NP et P1..
   const btnLL = document.createElement('button');
   btnLL.className = 'badge code';
   btnLL.dataset.code = 'LL';
@@ -499,6 +522,7 @@ function buildGlobalCodesBar(){
   });
   $codesBar.appendChild(btnLL);
 
+  // Strip P1..P19
   const strip=document.createElement('div'); strip.className='psite-strip';
   PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
   $codesBar.appendChild(strip);
@@ -692,7 +716,7 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
       const entries = computeCpDeltaAgainstSnapshotFromDOM();
-if (entries && entries.length){
+      if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         takeSnapshotFromData(collectData());
       }
@@ -946,6 +970,7 @@ $loginForm.addEventListener('submit', (ev)=>{
   if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
   $leavesError.style.display='none';
   $arBox.style.display='block';
+  $expBox.style.display='block';
   if(currentMagasin) $arMag.value = currentMagasin;
   loadAdminPersonnel();
   loadLeaves();
@@ -1174,9 +1199,218 @@ document.addEventListener('keydown', (e) => {
 
 document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
+
+/* ====== Export PDF (Résumé du mois) ====== */
+(function initExportSelectors(){
+  if(!$expMonth || !$expYear) return;
+  const mois = [
+    ['01','Janvier'],['02','Février'],['03','Mars'],['04','Avril'],
+    ['05','Mai'],['06','Juin'],['07','Juillet'],['08','Août'],
+    ['09','Septembre'],['10','Octobre'],['11','Novembre'],['12','Décembre']
+  ];
+  $expMonth.innerHTML = '';
+  mois.forEach(([v,lib])=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=lib; $expMonth.appendChild(o);
+  });
+  $expYear.innerHTML = '';
+  ['2025','2026'].forEach(y=>{
+    const o=document.createElement('option'); o.value=y; o.textContent=y; $expYear.appendChild(o);
+  });
+  const now = new Date();
+  const curY = String(now.getFullYear());
+  const curM = String(now.getMonth()+1).padStart(2,'0');
+  if ([...$expYear.options].some(o=>o.value===curY)) $expYear.value = curY;
+  $expMonth.value = curM;
+})();
+
+function daysOfMonthFromYM(yyyymm){
+  const [y,m] = yyyymm.split('-').map(Number);
+  const out=[]; for(let d=1; d<=new Date(y,m,0).getDate(); d++) out.push(new Date(y, m-1, d));
+  return out;
+}
+function ymFromParts(y, m){ return `${y}-${String(m).padStart(2,'0')}`; }
+function buildColumns(days, slotsOrder){
+  const cols = [{ header:'Nom / Ligne', dataKey:'__label' }];
+  days.forEach(d=>{
+    const dd = String(d.getDate()).padStart(2,'0');
+    slotsOrder.forEach(s=>{
+      cols.push({ header: `${dd} ${s}`, dataKey: `${dd}_${s}` });
+    });
+  });
+  return cols;
+}
+function buildRowsForLabels(labels, days, file, slotsOrder){
+  const rows=[];
+  const toNorm = s => String(s||'').trim().replace(/\s+/g,' ').toUpperCase();
+
+  labels.forEach(lbl=>{
+    const r = { __label: lbl };
+    days.forEach(d=>{
+      const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const rec = (file[dk]?.data?.rows||[]).find(x => toNorm(x.label)===toNorm(lbl));
+      const values = rec?.values || {};
+      slotsOrder.forEach(s=>{
+        const key = `${String(d.getDate()).padStart(2,'0')}_${s}`;
+        const val = String(values[s]||'').trim();
+        r[key] = val;
+      });
+    });
+    rows.push(r);
+  });
+  return rows;
+}
+function resolveSlotsOrder(labels, file){
+  const toNorm = s => String(s||'').trim().replace(/\s+/g,' ').toUpperCase();
+  const set = new Set(); const order=[];
+  labels.forEach(lbl=>{
+    const k = toNorm(lbl);
+    Object.values(file||{}).forEach(day=>{
+      const found = (day?.data?.rows||[]).find(r=> toNorm(r.label)===k);
+      if(found){
+        Object.keys(found.values||{}).forEach(s=>{ if(!set.has(s)){ set.add(s); order.push(s); } });
+      }
+    });
+  });
+  if (!order.length) return ['Matin','A. Midi'];
+  return order;
+}
+function labelsForSection(pers, file){
+  const emp = (pers.employes||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const inter= (pers.interims||[]).map(p=>`${p.nom} ${p.prenom||""}`.trim());
+  const livGroups = Object.keys(pers.livreurs||{});
+  const toNorm = s => String(s||'').trim().replace(/\s+/g,' ').toUpperCase();
+  const byNorm = new Map();
+  Object.values(file||{}).forEach(rec=>{
+    (rec?.data?.rows||[]).forEach(r=>{
+      const raw = String(r.label||'').trim(); if(!raw) return;
+      const k = toNorm(raw); if(!byNorm.has(k)) byNorm.set(k, raw.toUpperCase());
+    });
+  });
+  const known = new Set([...emp, ...inter, ...livGroups].map(toNorm));
+  const histOld = [...byNorm.values()].filter(lbl => !known.has(toNorm(lbl)));
+  return { emp, inter, livGroups, histOld };
+}
+
+$expBtn.addEventListener('click', async ()=>{
+  const year = $expYear.value, month = $expMonth.value;
+  if(!year || !month){ alert('Sélectionnez un mois et une année.'); return; }
+  const yyyymm = ymFromParts(year, month);
+
+  $expBtn.disabled=true; $expBusy.style.display='flex';
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+    const MAGASINS_ALL = MAGASINS.slice();
+    const days = daysOfMonthFromYM(yyyymm);
+
+    for (let idx=0; idx<MAGASINS_ALL.length; idx++){
+      const magasin = MAGASINS_ALL[idx];
+      if (idx > 0) doc.addPage();
+
+      let data;
+      try{
+        data = await fetchJSON(`/month-store?yyyymm=${yyyymm}&magasin=${encodeURIComponent(magasin)}`);
+      }catch(e){
+        doc.setFont('helvetica','bold'); doc.setFontSize(18);
+        doc.text(`Résumé — ${magasin} — ${yyyymm}`, 40, 50);
+        doc.setFont('helvetica',''); doc.setFontSize(12);
+        doc.text('Erreur de chargement des données.', 40, 80);
+        continue;
+      }
+
+      const file = data.file || {};
+      const pers = data.personnel || { employes:[], interims:[], livreurs:{} };
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(18);
+      doc.text(`Résumé — ${magasin} — ${yyyymm}`, 40, 50);
+      doc.setFont('helvetica',''); doc.setFontSize(10);
+
+      const { emp, inter, livGroups, histOld } = labelsForSection(pers, file);
+
+      if (emp.length){
+        const slotsEmp = resolveSlotsOrder(emp, file);
+        const columns  = buildColumns(days, slotsEmp);
+        const body     = buildRowsForLabels(emp, days, file, slotsEmp);
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('EMPLOYÉS', 40, 78);
+        doc.autoTable({
+          startY: 90, margin:{ left: 40, right: 40 },
+          head: [ columns.map(c=>c.header) ],
+          body: body.map(row => columns.map(c => c.dataKey==='__label'? row.__label : (row[c.dataKey]||''))),
+          styles: { font: 'helvetica', fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle:'bold' },
+        });
+      }
+
+      const soldeY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? (doc.lastAutoTable.finalY + 16) : 90;
+      const arrSolde = (pers.employes||[]).slice().sort((a,b)=> (a.nom||'').localeCompare(b.nom||'') || (a.prenom||'').localeCompare(b.prenom||''));
+      if (arrSolde.length){
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Congés restants (EMPLOYÉS)', 40, soldeY);
+        doc.setFont('helvetica',''); doc.setFontSize(9);
+        const line = arrSolde.map(p => `${(p.nom||'').toUpperCase()} ${p.prenom||''} — ${Number(p.congeRestant||0)} j`).join('   •   ');
+        doc.text(line, 40, soldeY+14, { maxWidth: (842-80) });
+      }
+
+      if (inter.length){
+        const yStart = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? (doc.lastAutoTable.finalY + 44) : (soldeY + 44);
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('INTÉRIM', 40, yStart);
+        const slotsInt = resolveSlotsOrder(inter, file);
+        const columns  = buildColumns(days, slotsInt);
+        const body     = buildRowsForLabels(inter, days, file, slotsInt);
+        doc.autoTable({
+          startY: yStart + 12, margin:{ left: 40, right: 40 },
+          head: [ columns.map(c=>c.header) ],
+          body: body.map(row => columns.map(c => c.dataKey==='__label'? row.__label : (row[c.dataKey]||''))),
+          styles: { font: 'helvetica', fontSize: 6, cellPadding: 2 },
+          headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle:'bold' },
+        });
+      }
+
+      for (const g of livGroups){
+        const labels = [g];
+        const slots  = resolveSlotsOrder(labels, file);
+        const columns= buildColumns(days, slots);
+        const body   = buildRowsForLabels(labels, days, file, slots);
+        const yStart = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? (doc.lastAutoTable.finalY + 28) : 120;
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(`LIVREURS — ${g}`, 40, yStart);
+        doc.autoTable({
+          startY: yStart + 12, margin:{ left: 40, right: 40 },
+          head: [ columns.map(c=>c.header) ],
+          body: body.map(row => columns.map(c => c.dataKey==='__label'? row.__label : (row[c.dataKey]||''))),
+          styles: { font: 'helvetica', fontSize: 6, cellPadding: 2 },
+          headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle:'bold' },
+        });
+      }
+
+      if (histOld.length){
+        const yStart = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? (doc.lastAutoTable.finalY + 28) : 120;
+        const slots  = resolveSlotsOrder(histOld, file);
+        const columns= buildColumns(days, slots);
+        const body   = buildRowsForLabels(histOld, days, file, slots);
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('ANCIENNE TRAME', 40, yStart);
+        doc.autoTable({
+          startY: yStart + 12, margin:{ left: 40, right: 40 },
+          head: [ columns.map(c=>c.header) ],
+          body: body.map(row => columns.map(c => c.dataKey==='__label'? row.__label : (row[c.dataKey]||''))),
+          styles: { font: 'helvetica', fontSize: 6, cellPadding: 2 },
+          headStyles: { fillColor: [250,250,250], textColor: 0, fontStyle:'bold' },
+        });
+      }
+    }
+
+    const fname = `Resume_${yyyymm}.pdf`;
+    doc.save(fname);
+  }catch(e){
+    console.error('[export mois]', e);
+    alert('Échec de la génération du PDF.');
+  }finally{
+    $expBtn.disabled=false; $expBusy.style.display='none';
+  }
+});
 </script>
 
-</script>
-
+<!-- jsPDF + autoTable -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>
