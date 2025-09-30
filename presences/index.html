@@ -1023,7 +1023,10 @@ $expBtn.addEventListener('click', async ()=> {
   if(!year || !month){ alert('Sélectionnez un mois et une année.'); return; }
   const yyyymm = `${year}-${month}`;
 
-  $expBtn.disabled = true; $expBusy.style.display = 'flex';
+  $expBtn.disabled = true; 
+  $expBusy.style.display = 'flex';
+  $pdfMask.style.display = 'flex';
+  $pdfFrame.src = 'about:blank';
   try{
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -1073,7 +1076,6 @@ $expBtn.addEventListener('click', async ()=> {
 
     }
 
-    // Ouvrir dans la pop-up (pas de téléchargement direct)
     const blob = doc.output('blob');
     openPdfPreviewWithBlob(blob);
   }catch(e){
