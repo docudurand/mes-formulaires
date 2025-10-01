@@ -31,34 +31,17 @@ textarea {
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
   box-shadow: 0 1px 0 rgba(0,0,0,.02);
 }
-#tab-resume .section-title {
-  margin-top: 22px;
-  margin-bottom: 8px;
-}
-#tab-resume .section-title:first-child {
-  margin-top: 6px;
-}
-
-#tab-resume .section-sub {
-  margin-top: 24px;
-  margin-bottom: 8px;
-  font-weight: 800;
-  color: var(--brand);
-}
+#tab-resume .section-title { margin-top: 22px; margin-bottom: 8px; }
+#tab-resume .section-title:first-child { margin-top: 6px; }
+#tab-resume .section-sub { margin-top: 24px; margin-bottom: 8px; font-weight: 800; color: var(--brand); }
 textarea { min-height: 90px; resize: vertical; }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
   border-color: #93c5fd;
   box-shadow: 0 0 0 3px rgba(59,130,246,.15);
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #94a3b8;
-  opacity: 1;
-}
+input::placeholder, textarea::placeholder { color: #94a3b8; opacity: 1; }
 
 select {
   padding-right: 36px;
@@ -117,6 +100,38 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .psite-strip::-webkit-scrollbar{ height:6px; }
 .psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
 
+/* Sticky bandeau pour Résumé (toolbar + légende) */
+.resume-stick{position:sticky;top:var(--tabsH);z-index:4;display:grid;gap:8px}
+/* Légende non cliquable — même taille & police que les boutons Saisie (.badge.code) */
+.legend-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;
+}
+.chip{
+  display:inline-block;border:1px solid var(--line);background:#fff;border-radius:8px;
+  padding:6px 10px;font-weight:700;font-size:1rem;line-height:1;user-select:none;
+}
+/* Couleurs équivalentes aux boutons Saisie */
+.chip.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
+.chip.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
+.chip.code[data-code="AM"] {background:#fee2e2;color:#b91c1c}
+.chip.code[data-code="UST"]{background:#fef3c7;color:#92400e}
+.chip.code[data-code="AT"] {background:#dcfce7;color:#15803d}
+.chip.code[data-code="F"]  {background:#ccfbf1;color:#0f766e}
+.chip.code[data-code="Cep"]{background:#ffedd5;color:#b45309}
+.chip.code[data-code="Ann"]{background:#fce7f3;color:#be185d}
+.chip.code[data-code="SS"] {background:#ffe4e6;color:#be123c}
+.chip.code[data-code="E"]  {background:#ecfccb;color:#65a30d}
+.chip.code[data-code="R"]  {background:#dcfce7;color:#15803d}
+.chip.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
+.chip.code[data-code="RI"] {background:#fef9c3;color:#a16207}
+.chip.code[data-code="NP"] {background:#000;color:#fff;border-color:#000}
+/* P1..P22 */
+.chip.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
+.legend-psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+.legend-psite-strip::-webkit-scrollbar{ height:6px; }
+.legend-psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
+
 button.primary{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 button.badge{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer}
 button.badge.code{border-radius:8px}
@@ -161,6 +176,26 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
+/* LÉGENDE — Résumé du mois (compact + gras) */
+#tab-resume .legend-bar { 
+  gap: 6px; 
+  padding: 6px 8px; 
+}
+
+#tab-resume .legend-bar .chip{
+  padding: 4px 8px;   /* compact */
+  font-size: .90rem;  /* plus petit */
+  font-weight: 700;   /* GRAS */
+  border-radius: 8px;
+}
+
+/* Optionnel : encore plus compact sur mobile */
+@media (max-width: 900px){
+  #tab-resume .legend-bar .chip{
+    font-size: .85rem;
+    padding: 3px 7px;
+  }
+}
 
 .hint,.legend{color:#666;font-size:.9rem}
 .error{color:#a40000;font-weight:700}
@@ -210,7 +245,7 @@ button.badge.code{border-radius:8px}
           <div><b>Date :</b> <input id="saisie-date" type="date"/></div>
           <button id="btn-save" class="primary">Enregistrer</button>
           <button id="btn-fill-all" class="badge">Tout mettre P</button>
-<span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrement…</span></span>
+          <span id="save-busy" class="inline-loading" style="display:none"><span class="spinner"></span><span>Enregistrement…</span></span>
         </div>
       </div>
 
@@ -223,10 +258,14 @@ button.badge.code{border-radius:8px}
   </section>
 
   <section id="tab-resume" class="tab-panel">
-    <div class="toolbar">
-      <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
-      <div><b>Magasin :</b> <select id="resume-store"></select></div>
-      <button id="btn-load-store" class="primary">Charger</button>
+    <div class="resume-stick">
+      <div class="toolbar">
+        <div><b>Mois :</b> <input id="resume-month" type="month"/></div>
+        <div><b>Magasin :</b> <select id="resume-store"></select></div>
+        <button id="btn-load-store" class="primary">Charger</button>
+      </div>
+      <!-- Légende sticky (non cliquable) : pastilles même taille que boutons Saisie -->
+      <div id="resume-legend" class="legend-bar" aria-label="Légende des codes"></div>
     </div>
     <div id="resume-content"></div>
     <p id="resume-error" class="error" style="display:none"></p>
@@ -267,7 +306,7 @@ const thisYM = ()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMon
 const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const daysOfMonth = ym=>{ const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d=>["D","L","M","M","J","V","S"][d.getDay()];
-const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+const norm = s => String(s||"").trim().replace(/\\s+/g," ").toUpperCase();
 function union(...arrs){ return [...new Set(arrs.flat().filter(Boolean))]; }
 
 const FERIES = new Set([
@@ -280,7 +319,7 @@ const apiBase = '/presence';
 const MAGASINS = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
 const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','UST','NP'];
-const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
+const PSITE_CODES = Array.from({length:22}, (_,i)=>`P${i+1}`);
 const CODE_DEFS = [
   {code:'P', label:'Présent'},{code:'CP',label:'Congé payé'},{code:'AM',label:'Arrêt maladie'},
   {code:'AT',label:'Accident travail'},{code:'F',label:'Formation'},{code:'Cep',label:'Congé exceptionnel'},
@@ -291,7 +330,7 @@ const CODE_DEFS = [
 ];
 const ALL_CODES = CODE_DEFS.map(d=>d.code);
 let LAST_DAY_SNAPSHOT = { byKey: new Map(), date: null };
-function keyFromLabel(label){ return String(label||'').trim().replace(/\s+/g,' ').toUpperCase(); }
+function keyFromLabel(label){ return String(label||'').trim().replace(/\\s+/g,' ').toUpperCase(); }
 function takeSnapshotFromData(day){
   try{
     const map = new Map();
@@ -318,7 +357,7 @@ function computeCpDeltaAgainstSnapshotFromDOM(){
       else if (b==='CP' && a!=='CP') delta += 0.5;
     });
     if (delta){
-      const parts = String(label).trim().split(/\s+/);
+      const parts = String(label).trim().split(/\\s+/);
       const nom = (parts[0]||'').toUpperCase();
       const prenom = parts.slice(1).join(' ');
       out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
@@ -353,6 +392,7 @@ const $rememberPw=document.getElementById('remember-pw');
 const $leavesContent=document.getElementById('leaves-content');
 const $leavesError=document.getElementById('leaves-error');
 const $codesBar=document.getElementById('codes-bar');
+const $resumeLegend=document.getElementById('resume-legend');
 
 const $arBox=document.getElementById('admin-range');
 const $arMag=document.getElementById('ar-magasin');
@@ -404,6 +444,7 @@ function switchTab(key){
     loadAdminPersonnel();
     loadLeaves();
   }
+  if(key==="resume"){ buildResumeLegend(); }
 }
 
 let currentMagasin=null, personnel=null, selectedCells=new Set();
@@ -467,7 +508,7 @@ function buildGlobalCodesBar(){
           td.classList.add('weekend');
         }else{
           td.classList.add(code);
-          if(/^P\d+$/.test(code)) td.classList.add('PSITE');
+          if(/^P\\d+$/.test(code)) td.classList.add('PSITE');
           if(fer && code==='F') td.classList.add('FERIE');
         }
       });
@@ -502,6 +543,53 @@ function buildGlobalCodesBar(){
   const strip=document.createElement('div'); strip.className='psite-strip';
   PSITE_CODES.forEach(c=> strip.appendChild(addBtn(c,'Présence autre site')));
   $codesBar.appendChild(strip);
+}
+
+function buildResumeLegend(){
+  const wrap = document.getElementById('resume-legend');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+
+  const addChip = (code, label, titleExtra='')=>{
+    const s = document.createElement('span');
+    s.className = 'chip code';
+    s.dataset.code = code;
+    s.textContent = code;
+    const lib = label ? ` — ${label}` : '';
+    s.title = `${code}${lib}${titleExtra ? ' — ' + titleExtra : ''}`;
+    wrap.appendChild(s);
+  };
+
+  MAIN_CODES.forEach(c=>{
+    const def = CODE_DEFS.find(d=>d.code===c);
+    addChip(c, def?.label || '');
+  });
+
+  const chipLL = document.createElement('span');
+  chipLL.className = 'chip code';
+  chipLL.dataset.code = 'LL';
+  chipLL.textContent = 'LL';
+  chipLL.title = 'Libellé libre (texte écrit dans la cellule, fond gris)';
+  wrap.appendChild(chipLL);
+
+  // Bande PSITE P1..P22
+  const label = document.createElement('span');
+  label.className = 'hint';
+  label.style.fontWeight = '800';
+  label.textContent = '';
+  wrap.appendChild(label);
+
+  const strip = document.createElement('div');
+  strip.className = 'legend-psite-strip';
+  PSITE_CODES.forEach(c=>{
+    const s = document.createElement('span');
+    s.className = 'chip code';
+    s.dataset.code = c;
+    s.textContent = c;
+    s.title = 'Présence autre site';
+    strip.appendChild(s);
+  });
+  wrap.appendChild(strip);
 }
 
 function isSaisieWeekend(){
@@ -647,9 +735,9 @@ function applyPrefill(data){
           const isKnown = ALL_CODES.includes(v);
           if (isKnown) {
             td.classList.add(v);
-            if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+            if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
             if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
-          } else if (/^P\d+$/.test(v)) {
+          } else if (/^P\\d+$/.test(v)) {
             td.classList.add(v, 'PSITE');
           } else {
             td.classList.add('LL');
@@ -692,7 +780,7 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
     await fetchJSON('/save',{method:'POST',body:JSON.stringify({magasin:currentMagasin,date:$dateInput.value,data})});
     try{
       const entries = computeCpDeltaAgainstSnapshotFromDOM();
-if (entries && entries.length){
+      if (entries && entries.length){
         await postAdjustConges({ magasin: currentMagasin, date: $dateInput?.value || todayISO(), entries });
         takeSnapshotFromData(collectData());
       }
@@ -801,9 +889,9 @@ function renderOneStore(yyyymm, magasin, data){
               const isKnown = ALL_CODES.includes(v);
               if (isKnown) {
                 td.classList.add(v);
-                if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+                if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
                 if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
-              } else if (/^P\d+$/.test(v)) {
+              } else if (/^P\\d+$/.test(v)) {
                 td.classList.add(v, 'PSITE');
               } else {
                 td.classList.add('LL');
@@ -905,7 +993,7 @@ CODE_DEFS.filter(d => MAIN_CODES.includes(d.code)).forEach(({ code, label }) => 
   const o = document.createElement('option'); o.value = code; o.textContent = `${code} — ${label}`; grpStd.appendChild(o);
 });
 const grpPS = document.createElement('optgroup');
-grpPS.label = 'Présence autre site (P1…P19)';
+grpPS.label = 'Présence autre site (P1…P22)';
 PSITE_CODES.forEach(code => { const o = document.createElement('option'); o.value = code; o.textContent = `${code} — Présence autre site`; grpPS.appendChild(o); });
 $arCode.appendChild(grpStd); $arCode.appendChild(grpPS);
 
@@ -926,12 +1014,6 @@ async function loadPersonnel(){
   try{ personnel = await fetchJSON(`/personnel?magasin=${encodeURIComponent(currentMagasin)}`); }
   catch{ personnel = { employes:[], interims:[], livreurs:{} }; }
 }
-
-$btnFillAll.addEventListener('click', ()=>{
-  document.querySelectorAll('#saisie-content td.cell').forEach(td=>{
-    if (!td.textContent.trim()) { td.textContent='P'; td.classList.add('P'); }
-  });
-});
 
 $dateInput.addEventListener('change',async ()=>{
   await prefillDay();
@@ -1174,8 +1256,7 @@ document.addEventListener('keydown', (e) => {
 
 document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
-</script>
-
+buildResumeLegend();
 </script>
 
 </body>
