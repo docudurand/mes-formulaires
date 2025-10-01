@@ -100,9 +100,8 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .psite-strip::-webkit-scrollbar{ height:6px; }
 .psite-strip::-webkit-scrollbar-thumb{ background:#ddd; border-radius:999px; }
 
-/* Sticky bandeau pour Résumé (toolbar + légende) */
 .resume-stick{position:sticky;top:var(--tabsH);z-index:4;display:grid;gap:8px}
-/* Légende non cliquable — même taille & police que les boutons Saisie (.badge.code) */
+
 .legend-bar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;
@@ -111,7 +110,7 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   display:inline-block;border:1px solid var(--line);background:#fff;border-radius:8px;
   padding:6px 10px;font-weight:700;font-size:1rem;line-height:1;user-select:none;
 }
-/* Couleurs équivalentes aux boutons Saisie */
+
 .chip.code[data-code="P"]  {background:#e8f5ec;color:#1a7f37;border-color:#d9f0e1}
 .chip.code[data-code="CP"] {background:#efe6ff;color:#6b21a8;border-color:#e7ddff}
 .chip.code[data-code="AM"] {background:#fee2e2;color:#b91c1c}
@@ -126,7 +125,7 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .chip.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .chip.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .chip.code[data-code="NP"] {background:#000;color:#fff;border-color:#000}
-/* P1..P22 */
+
 .chip.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
 .legend-psite-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
 .legend-psite-strip::-webkit-scrollbar{ height:6px; }
@@ -176,20 +175,19 @@ button.badge.code{border-radius:8px}
 .badge.code[data-code="D"]  {background:#dbeafe;color:#1d4ed8}
 .badge.code[data-code="RI"] {background:#fef9c3;color:#a16207}
 .badge.code[data-code^="P"]:not([data-code="P"]){background:#f5d0aa;color:#6b3e00}
-/* LÉGENDE — Résumé du mois (compact + gras) */
+
 #tab-resume .legend-bar { 
   gap: 6px; 
   padding: 6px 8px; 
 }
 
 #tab-resume .legend-bar .chip{
-  padding: 4px 8px;   /* compact */
-  font-size: .90rem;  /* plus petit */
-  font-weight: 700;   /* GRAS */
+  padding: 4px 8px;
+  font-size: .90rem;
+  font-weight: 700;
   border-radius: 8px;
 }
 
-/* Optionnel : encore plus compact sur mobile */
 @media (max-width: 900px){
   #tab-resume .legend-bar .chip{
     font-size: .85rem;
@@ -572,7 +570,6 @@ function buildResumeLegend(){
   chipLL.title = 'Libellé libre (texte écrit dans la cellule, fond gris)';
   wrap.appendChild(chipLL);
 
-  // Bande PSITE P1..P22
   const label = document.createElement('span');
   label.className = 'hint';
   label.style.fontWeight = '800';
