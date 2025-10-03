@@ -344,10 +344,17 @@ function takeSnapshotFromData(day){
 function computeCpDeltaAgainstSnapshotFromDOM(){
   const out=[];
   document.querySelectorAll('#saisie-content tbody tr').forEach(tr=>{
+    if ((tr.dataset.type||'') !== 'EMP') return;
+
     const label = tr.querySelector('.row-label')?.textContent || '';
     const key = keyFromLabel(label);
     const before = LAST_DAY_SNAPSHOT.byKey.get(key) || {};
-    const now={}; tr.querySelectorAll('td.cell').forEach(td=>{ now[td.dataset.slot||'']= (td.textContent||'').trim().toUpperCase(); });
+
+    const now={};
+    tr.querySelectorAll('td.cell').forEach(td=>{
+      now[td.dataset.slot||''] = (td.textContent||'').trim().toUpperCase();
+    });
+
     let delta = 0;
     Object.keys(Object.assign({}, before, now)).forEach(slot=>{
       const b = before[slot]||''; const a = now[slot]||'';
@@ -355,10 +362,16 @@ function computeCpDeltaAgainstSnapshotFromDOM(){
       else if (b==='CP' && a!=='CP') delta += 0.5;
     });
     if (delta){
-      const parts = String(label).trim().split(/\\s+/);
-      const nom = (parts[0]||'').toUpperCase();
-      const prenom = parts.slice(1).join(' ');
-      out.push({ fullName: label.trim(), nom, prenom, delta: Number(delta.toFixed(2)) });
+      const nom = (tr.dataset.nom||'').trim();
+      const prenom = (tr.dataset.prenom||'').trim();
+      if (nom){ 
+        out.push({
+          fullName: label.trim(),
+          nom,
+          prenom,
+          delta: Number(delta.toFixed(2))
+        });
+      }
     }
   });
   return out;
@@ -624,7 +637,15 @@ function buildSection(title, rows){
   const tbody=document.createElement('tbody');
   rows.forEach(r=>{
     const tr=document.createElement('tr');
-    const nameTd=document.createElement('td'); nameTd.className='row-label'; nameTd.textContent=r.label; tr.appendChild(nameTd);
+    if (r.type) tr.dataset.type = r.type;
+    if (r._nom != null) tr.dataset.nom = r._nom;
+    if (r._prenom != null) tr.dataset.prenom = r._prenom;
+
+    const nameTd=document.createElement('td');
+    nameTd.className='row-label';
+    nameTd.textContent=r.label;
+    tr.appendChild(nameTd);
+
     headerSlots.forEach(slot=>{
       const td=document.createElement('td'); td.className='cell'; td.dataset.slot=slot;
       td.addEventListener('click',ev=>handleCellClick(ev,td));
@@ -667,16 +688,35 @@ function labelsFromDayData(dayData){
 function buildSaisieUI(){
   $saisieContent.innerHTML=''; clearSelection();
   const sections=[];
-  const empRows=(personnel?.employes||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+  const empRows=(personnel?.employes||[]).map(p=>({
+    label:`${p.nom} ${p.prenom||""}`.trim(),
+    slots:["Matin","A. Midi"],
+    _nom: p.nom || "",
+    _prenom: p.prenom || "",
+    type: "EMP"
+  }));
   if(empRows.length) sections.push({title:"EMPLOYÉS", rows:empRows});
-  const intRows=(personnel?.interims||[]).map(p=>({label:`${p.nom} ${p.prenom||""}`.trim(), slots:["Matin","A. Midi"]}));
+
+  const intRows=(personnel?.interims||[]).map(p=>({
+    label:`${p.nom} ${p.prenom||""}`.trim(),
+    slots:["Matin","A. Midi"],
+    _nom: p.nom || "",
+    _prenom: p.prenom || "",
+    type: "INT"
+  }));
   if(intRows.length) sections.push({title:"INTÉRIM", rows:intRows});
+
   Object.entries(personnel?.livreurs||{}).forEach(([g,slots])=>{
-    const rows=[{label:g, slots: (slots&&slots.length)? slots : ["Matin","A. Midi"]}];
+    const rows=[{
+      label:g,
+      slots: (Array.isArray(slots) && slots.length) ? slots : ["Matin","A. Midi"],
+      type: "LIV"
+    }];
     sections.push({title:`LIVREURS — ${g}`, rows});
   });
 
   if (Array.isArray(HIST_ROWS_SAISIE) && HIST_ROWS_SAISIE.length){
+    HIST_ROWS_SAISIE = HIST_ROWS_SAISIE.map(r => Object.assign({ type: "" }, r));
     sections.push({ title:"HISTORIQUE (ce jour)", rows: HIST_ROWS_SAISIE });
   }
 
