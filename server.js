@@ -77,8 +77,6 @@ app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 
-
-// ===== Export mensuel (Excel) =====
 const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
 const pad2 = n => String(n).padStart(2,'0');
@@ -97,7 +95,7 @@ async function fetchMonthStoreJSON(req, ym, magasin){
 }
 
 app.get('/presence/export-month', async (req, res) => {
-  try{
+  try {
     const ym = String(req.query.yyyymm||'').trim();
     if(!/^\d{4}-\d{2}$/.test(ym)) return res.status(400).json({ error:'Paramètre yyyymm invalide' });
 
@@ -105,6 +103,16 @@ app.get('/presence/export-month', async (req, res) => {
     wb.creator = 'Présences DSG';
     wb.created = new Date();
     const days = daysOfMonth(ym);
+
+    const COLORS = {
+      'P': 'bcd9ff',
+      'CP': 'a7f3d0',
+      'R': 'fde68a',
+      'AB': 'fecaca',
+      'AT': 'fbcfe8',
+      'F': 'ddd6fe',
+      '': 'ffffff'
+    };
 
     for (const mag of MAGASINS_EXPORT){
       const { file = {}, personnel = { employes:[], interims:[], livreurs:{} } } = await fetchMonthStoreJSON(req, ym, mag);
@@ -139,11 +147,25 @@ app.get('/presence/export-month', async (req, res) => {
         if(!labels.length) return;
         ws.addRow([title]).font = { bold:true }; ws.addRow([]);
 
-        const h1 = ['Nom / Ligne']; days.forEach(d => h1.push(...Array(slots.length).fill(dowLetter(d))));
+        const h1 = ['Nom / Ligne'];
+        days.forEach(d => h1.push(...Array(slots.length).fill(dowLetter(d))));
         const h2 = ['']; days.forEach(d => h2.push(...Array(slots.length).fill(d.getDate())));
         const h3 = ['']; days.forEach(() => slots.forEach(s => h3.push(s)));
 
-        [h1,h2,h3].forEach(arr => { const r=ws.addRow(arr); r.eachCell(c=>Object.assign(c,{style:th})); });
+        [h1,h2,h3].forEach((arr,i) => {
+          const r = ws.addRow(arr);
+          r.eachCell((c,idx)=>{
+            Object.assign(c,{style:th});
+            if(idx>1){
+              const dayIdx = Math.ceil((idx-1)/slots.length)-1;
+              const d = days[dayIdx];
+              if(d && (d.getDay()===0 || d.getDay()===6)){
+                c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'333333' } };
+                c.font = { color:{argb:'ffffff'}, bold:true };
+              }
+            }
+          });
+        });
 
         labels.forEach(lbl=>{
           const row=[lbl];
@@ -158,7 +180,16 @@ app.get('/presence/export-month', async (req, res) => {
           });
           const rr = ws.addRow(row);
           rr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
-          rr.eachCell((c,idx)=>{ if(idx>1) Object.assign(c,{style:td}); });
+          rr.getCell(1).font = { bold:true };
+
+          rr.eachCell((c,idx)=>{
+            if(idx>1){
+              const val = String(c.value||'').trim().toUpperCase();
+              const color = COLORS[val] || 'ffffff';
+              c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: color.startsWith('FF') ? color : 'FF'+color } };
+              Object.assign(c,{style:td});
+            }
+          });
         });
 
         ws.addRow([]);
@@ -180,6 +211,7 @@ app.get('/presence/export-month', async (req, res) => {
     res.status(500).json({ error:'Export impossible' });
   }
 });
+
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;

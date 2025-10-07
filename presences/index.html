@@ -935,25 +935,26 @@ function renderOneStore(yyyymm, magasin, data){
         order.forEach(slot=>{
           const td=document.createElement('td'); td.className='cell';
           if(isWE(d)) td.classList.add('weekend');
-          let v = values[slot] || '';
-          if(!v && isHoliday(dk)) v = 'F';
+let v = String(values[slot] || '').trim().toUpperCase();
+if (!v && isHoliday(dk)) v = 'F';
 
-          td.textContent = v;
-          if(v){
-            if (v === 'NP') td.classList.add('weekend');
-            else {
-              const isKnown = ALL_CODES.includes(v);
-              if (isKnown) {
-                td.classList.add(v);
-                if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
-                if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
-              } else if (/^P\\d+$/.test(v)) {
-                td.classList.add(v, 'PSITE');
-              } else {
-                td.classList.add('LL');
-              }
-            }
-          }
+td.textContent = v;
+
+if (v) {
+  if (v === 'NP') {
+    td.classList.add('weekend');
+  } else {
+    if (ALL_CODES.includes(v)) {
+      td.classList.add(v);
+      if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+      if (isHoliday(dk) && v === 'F') td.classList.add('FERIE');
+    } else if (/^P\d+$/.test(v)) {
+      td.classList.add('PSITE');
+    } else {
+      td.classList.add('LL');
+    }
+  }
+}
           tr.appendChild(td);
         });
       });
