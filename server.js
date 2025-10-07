@@ -12,6 +12,7 @@ import dayjs from "dayjs";
 import PDFDocument from "pdfkit";
 import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
+import ExcelJS from "exceljs";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -75,6 +76,110 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
+
+
+// ===== Export mensuel (Excel) =====
+const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
+
+const pad2 = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const daysOfMonth = (ym) => { const [y,m] = ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
+const dowLetter = d => ["D","L","M","M","J","V","S"][d.getDay()];
+
+async function fetchMonthStoreJSON(req, ym, magasin){
+  const base = `${req.protocol}://${req.get('host')}`;
+  const url  = `${base}/presence/month-store?yyyymm=${encodeURIComponent(ym)}&magasin=${encodeURIComponent(magasin)}`;
+  const headers = {};
+  const tok = req.get('X-Admin-Token');
+  if (tok) headers['X-Admin-Token'] = tok;
+  const { data } = await axios.get(url, { headers, timeout: 30000 });
+  return data || {};
+}
+
+app.get('/presence/export-month', async (req, res) => {
+  try{
+    const ym = String(req.query.yyyymm||'').trim();
+    if(!/^\d{4}-\d{2}$/.test(ym)) return res.status(400).json({ error:'Paramètre yyyymm invalide' });
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Présences DSG';
+    wb.created = new Date();
+    const days = daysOfMonth(ym);
+
+    for (const mag of MAGASINS_EXPORT){
+      const { file = {}, personnel = { employes:[], interims:[], livreurs:{} } } = await fetchMonthStoreJSON(req, ym, mag);
+
+      const emp = Array.isArray(personnel.employes) ? personnel.employes : [];
+      const ints = Array.isArray(personnel.interims) ? personnel.interims : [];
+
+      const labelsEmp = emp.map(p => `${(p.nom||'').toUpperCase()} ${p.prenom||''}`.trim()).filter(Boolean);
+      const labelsInt = ints.map(p => `${(p.nom||'').toUpperCase()} ${p.prenom||''}`.trim()).filter(Boolean);
+
+      const collectSlots = (labels) => {
+        const set = new Set(); const order=[];
+        labels.forEach(lbl=>{
+          const key = String(lbl||'').trim().toUpperCase();
+          Object.values(file).forEach(day=>{
+            const rows = (day?.data?.rows)||[];
+            const found = rows.find(r=> String(r.label||'').trim().toUpperCase() === key);
+            if(found){ Object.keys(found.values||{}).forEach(s=>{ if(!set.has(s)){ set.add(s); order.push(s); } }); }
+          });
+        });
+        return order.length ? order : ['Matin','A. Midi'];
+      };
+
+      const slotsEmp = collectSlots(labelsEmp);
+      const slotsInt = collectSlots(labelsInt);
+
+      const ws = wb.addWorksheet(mag.substring(0,31));
+      const th = { bold:true, alignment:{ horizontal:'center', vertical:'middle' }, border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} } };
+      const td = { alignment:{ horizontal:'center', vertical:'middle' }, border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} } };
+
+      const addSection = (title, labels, slots) => {
+        if(!labels.length) return;
+        ws.addRow([title]).font = { bold:true }; ws.addRow([]);
+
+        const h1 = ['Nom / Ligne']; days.forEach(d => h1.push(...Array(slots.length).fill(dowLetter(d))));
+        const h2 = ['']; days.forEach(d => h2.push(...Array(slots.length).fill(d.getDate())));
+        const h3 = ['']; days.forEach(() => slots.forEach(s => h3.push(s)));
+
+        [h1,h2,h3].forEach(arr => { const r=ws.addRow(arr); r.eachCell(c=>Object.assign(c,{style:th})); });
+
+        labels.forEach(lbl=>{
+          const row=[lbl];
+          days.forEach(d=>{
+            const rec = file[ ymd(d) ];
+            let values = {};
+            if (rec?.data?.rows){
+              const found = rec.data.rows.find(r => String(r.label||'').trim().toUpperCase() === String(lbl).trim().toUpperCase());
+              values = found?.values || {};
+            }
+            slots.forEach(s => row.push(values[s] || ''));
+          });
+          const rr = ws.addRow(row);
+          rr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+          rr.eachCell((c,idx)=>{ if(idx>1) Object.assign(c,{style:td}); });
+        });
+
+        ws.addRow([]);
+      };
+
+      addSection('EMPLOYÉS', labelsEmp, slotsEmp);
+      addSection('INTÉRIM', labelsInt, slotsInt);
+
+      const maxNameLen = Math.max(12, ...ws.getColumn(1).values.map(v=>String(v||'').length));
+      ws.getColumn(1).width = Math.min(40, Math.max(18, maxNameLen+2));
+    }
+
+    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Presences_${ym}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  }catch(err){
+    console.error('export-month failed', err?.message||err);
+    res.status(500).json({ error:'Export impossible' });
+  }
+});
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const PRES_ROOT     = `${FTP_ROOT_BASE}/presences`;
 const ADJUST_LOG    = `${PRES_ROOT}/adjust_conges.jsonl`;

@@ -291,6 +291,20 @@ button.badge.code{border-radius:8px}
       </div>
       <div id="ar-msg" class="hint" style="margin-top:6px"></div>
     </div>
+    <div id="admin-export" class="admin-box" style="display:none">
+      <div style="font-weight:800;margin-bottom:8px">Export mensuel (Excel)</div>
+      <div class="admin-row">
+        <input id="ex-month" type="month" />
+        <button id="ex-run" class="primary">Exporter le mois</button>
+        <span id="ex-busy" class="inline-loading" style="display:none">
+          <span class="spinner"></span><span>Génération du fichier…</span>
+        </span>
+      </div>
+      <div class="hint" style="margin-top:6px">
+        Le fichier contient une feuille par magasin (EMPLOYÉS + INTÉRIM). Les livreurs ne sont pas exportés.
+      </div>
+    </div>
+
 
     <div id="leaves-content"></div>
     <p id="leaves-error" class="error" style="display:none"></p>
@@ -414,6 +428,11 @@ const $arAu=document.getElementById('ar-au');
 const $arAdd=document.getElementById('ar-add');
 const $arMsg=document.getElementById('ar-msg');
 
+const $exBox=document.getElementById('admin-export');
+const $exMonth=document.getElementById('ex-month');
+const $exRun=document.getElementById('ex-run');
+const $exBusy=document.getElementById('ex-busy');
+
 $today.textContent=todayISO();
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -446,11 +465,11 @@ function switchTab(key){
       $leavesError.textContent = "Veuillez vous connecter avec le mot de passe admin pour afficher et agir.";
       $leavesError.style.display='block';
       $leavesContent.innerHTML = "";
-      $arBox.style.display='none';
+      $arBox.style.display='none'; if($exBox) $exBox.style.display='none';
       return;
     }
     $leavesError.style.display='none';
-    $arBox.style.display='block';
+    $arBox.style.display='block'; if($exBox) $exBox.style.display='block'; if($exMonth && !$exMonth.value){ $exMonth.value=thisYM(); }
     if(currentMagasin) $arMag.value = currentMagasin;
     loadAdminPersonnel();
     loadLeaves();
@@ -1064,7 +1083,7 @@ $loginForm.addEventListener('submit', (ev)=>{
   sessionStorage.setItem('leavesToken', pw);
   if($rememberPw.checked){ try{ localStorage.setItem('leavesToken', pw); }catch{} }
   $leavesError.style.display='none';
-  $arBox.style.display='block';
+  $arBox.style.display='block'; if($exBox) $exBox.style.display='block'; if($exMonth && !$exMonth.value){ $exMonth.value=thisYM(); }
   if(currentMagasin) $arMag.value = currentMagasin;
   loadAdminPersonnel();
   loadLeaves();
@@ -1294,6 +1313,32 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('today').textContent = todayISO();
 document.getElementById('resume-month').value=thisYM();
 buildResumeLegend();
+
+if ($exRun){
+  $exRun.addEventListener('click', async ()=>{
+    const ym = $exMonth?.value;
+    if(!ym){ alert('Choisissez un mois.'); return; }
+    const token = sessionStorage.getItem('leavesToken') || '';
+    try{
+      $exRun.disabled = true; $exBusy.style.display='flex';
+      const r = await fetch('/presence/export-month?yyyymm='+encodeURIComponent(ym), {
+        headers: token ? {'X-Admin-Token': token} : {}
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Presences_${ym}.xlsx`;
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    }catch(e){
+      alert("Échec de l'export : " + (e?.message||''));
+    }finally{
+      $exRun.disabled = false; $exBusy.style.display='none';
+    }
+  });
+}
 </script>
 
 </body>
