@@ -115,79 +115,103 @@ app.get('/presence/export-month', async (req, res) => {
       BLACK: 'FF000000',
       WHITE: 'FFFFFFFF',
       P:  'FFE8F5EC',
-      CP: 'FFA7F3D0',
-      R:  'FFFDE68A',
+      CP: 'FFEFE6FF',
+      R:  'FFDCFCE7',
       AB: 'FFFECACA',
-      AM: 'FFFBCFE8',
-      F:  'FFDDD6FE',
+      AM: 'FFFEE2E2',
+      F:  'FFCCFBF1',
       EMPTY: 'FFFFFFFF'
     };
-
     const codeFill = (val) => {
       const v = String(val || '').trim().toUpperCase();
       if (!v) return { fgColor: { argb: C.EMPTY } };
-      if (C[v])   return { fgColor: { argb: C[v] } };
+      if (C[v]) return { fgColor: { argb: C[v] } };
       if (/^P\d+$/.test(v)) return { fgColor: { argb: C.P } };
       return { fgColor: { argb: C.EMPTY } };
     };
 
-    const thStyle = {
-      font: { bold: true, color: { argb: C.WHITE }},
+    const thHeader = {
+      font: { bold: true, color: { argb: C.BLACK } },
       alignment: { horizontal: 'center', vertical: 'middle' },
-      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} },
-      fill: { type:'pattern', pattern:'solid', fgColor:{ argb: C.BLACK } }
+      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
     };
     const tdStyle = {
       alignment: { horizontal: 'center', vertical: 'middle' },
       border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
     };
 
-    for (const mag of MAGASINS_EXPORT) {
-      const { file = {}, personnel = { employes: [], interims: [], livreurs: {} } } =
-        await fetchMonthStoreJSON(req, ym, mag);
+    const buildNames = (arr, fallbackFromFile, excludeSet = new Set()) => {
+      const listFromArray = (items) => items
+        .map(p => {
+          if (typeof p === 'string') return p.trim();
+          const nom = (p?.nom ?? '').toString().toUpperCase();
+          const prenom = (p?.prenom ?? '').toString();
+          const s = `${nom} ${prenom}`.trim();
+          return s || (p?.label || '').toString().trim();
+        })
+        .filter(Boolean);
 
-      const emp = Array.isArray(personnel.employes) ? personnel.employes : [];
-      const ints = Array.isArray(personnel.interims) ? personnel.interims : [];
+      let names = Array.isArray(arr) ? listFromArray(arr) : [];
+      if (!names.length && arr && typeof arr === 'object') {
+        Object.values(arr).forEach(v => {
+          if (Array.isArray(v)) names.push(...listFromArray(v));
+          else if (typeof v === 'string') names.push(v.trim());
+          else if (v && typeof v === 'object') {
+            const s = `${(v.nom||'').toString().toUpperCase()} ${(v.prenom||'')}`.trim();
+            if (s) names.push(s);
+          }
+        });
+        names = names.filter(Boolean);
+      }
 
-      const buildNames = (arr) => {
-        const byPersonnel = arr
-          .map(p => `${String(p.nom||'').toUpperCase()} ${String(p.prenom||'')}`.trim())
-          .filter(Boolean);
-        if (byPersonnel.length) return byPersonnel;
-
+      if (!names.length && fallbackFromFile) {
         const set = new Set();
-        Object.values(file).forEach(d => {
+        Object.values(fallbackFromFile).forEach(d => {
           const rows = (d?.data?.rows) || [];
           rows.forEach(r => {
             const lbl = String(r.label || '').trim();
-            if (lbl) set.add(lbl);
+            if (lbl && !excludeSet.has(lbl.toUpperCase())) set.add(lbl);
           });
         });
-        return Array.from(set);
-      };
+        names = Array.from(set);
+      }
 
-      const labelsEmp = buildNames(emp);
-      const labelsInt = buildNames(ints);
+      const seen = new Set();
+      return names.filter(n => {
+        const k = n.toUpperCase();
+        if (excludeSet.has(k) || seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    };
 
-      const collectSlots = (labels) => {
-        const set = new Set(); const order = [];
-        labels.forEach(lbl => {
-          const key = String(lbl).trim().toUpperCase();
-          Object.values(file).forEach(day => {
-            const rows = (day?.data?.rows) || [];
-            const found = rows.find(r => String(r.label||'').trim().toUpperCase() === key);
-            if (found) {
-              Object.keys(found.values || {}).forEach(s => {
-                if (!set.has(s)) { set.add(s); order.push(s); }
-              });
-            }
-          });
+    const collectSlots = (labels, file) => {
+      const set = new Set(); const order = [];
+      labels.forEach(lbl => {
+        const key = String(lbl).trim().toUpperCase();
+        Object.values(file).forEach(day => {
+          const rows = (day?.data?.rows) || [];
+          const found = rows.find(r => String(r.label||'').trim().toUpperCase() === key);
+          if (found) Object.keys(found.values || {}).forEach(s => { if (!set.has(s)) { set.add(s); order.push(s); } });
         });
-        return order.length ? order : ['Matin', 'A. Midi'];
-      };
+      });
+      return order.length ? order : ['Matin', 'A. Midi'];
+    };
 
-      const slotsEmp = collectSlots(labelsEmp);
-      const slotsInt = collectSlots(labelsInt);
+    for (const mag of MAGASINS_EXPORT) {
+      const { file = {}, personnel = { employes: [], interims: [], livreurs: [] } } =
+        await fetchMonthStoreJSON(req, ym, mag);
+
+      const labelsEmp = buildNames(personnel.employes, file);
+      const setEmp = new Set(labelsEmp.map(s => s.toUpperCase()));
+
+      const labelsInt = buildNames(personnel.interims, file, setEmp);
+      const setEmpInt = new Set([...setEmp, ...labelsInt.map(s => s.toUpperCase())]);
+
+      const labelsLiv = buildNames(personnel.livreurs, file, setEmpInt);
+
+      const slotsEmp = collectSlots(labelsEmp, file);
+      const slotsInt = collectSlots(labelsInt, file);
+      const slotsLiv = collectSlots(labelsLiv, file);
 
       const ws = wb.addWorksheet(mag.substring(0, 31));
 
@@ -210,21 +234,7 @@ app.get('/presence/export-month', async (req, res) => {
         const r2 = ws.addRow(h2);
         const r3 = ws.addRow(h3);
 
-        [r1, r2, r3].forEach(r => {
-          r.eachCell((c, idx) => {
-            if (idx === 1) {
-              c.style = thStyle;
-              return;
-            }
-            const dayIdx = Math.floor((idx - 2) / slots.length);
-            const d = days[dayIdx];
-            if (d && isWE(d)) {
-              c.style = thStyle;
-            } else {
-              c.style = thStyle;
-            }
-          });
-        });
+        [r1, r2, r3].forEach(r => r.eachCell((c) => Object.assign(c, { style: thHeader })));
 
         labels.forEach(lbl => {
           const rowVals = [lbl];
@@ -241,13 +251,13 @@ app.get('/presence/export-month', async (req, res) => {
 
           const rr = ws.addRow(rowVals);
 
-          rr.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-          rr.getCell(1).font = { bold: true };
-          rr.getCell(1).border = tdStyle.border;
+          const c1 = rr.getCell(1);
+          c1.alignment = { horizontal: 'left', vertical: 'middle' };
+          c1.font = { bold: true, color: { argb: C.BLACK } };
+          c1.border = tdStyle.border;
 
           rr.eachCell((c, idx) => {
             if (idx === 1) return;
-
             c.alignment = tdStyle.alignment;
             c.border = tdStyle.border;
 
@@ -257,13 +267,12 @@ app.get('/presence/export-month', async (req, res) => {
             if (d && isWE(d)) {
               c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.BLACK } };
               c.font = { color: { argb: C.WHITE }, bold: true };
-              return;
+            } else {
+              const v = String(c.value || '').trim().toUpperCase();
+              const fill = codeFill(v);
+              c.fill = { type: 'pattern', pattern: 'solid', ...fill };
+              c.font = { color: { argb: C.BLACK } };
             }
-
-            const v = String(c.value || '').trim().toUpperCase();
-            const fill = codeFill(v);
-            c.fill = { type: 'pattern', pattern: 'solid', ...fill };
-            c.font = { color: { argb: C.BLACK } };
           });
         });
 
@@ -271,10 +280,13 @@ app.get('/presence/export-month', async (req, res) => {
       };
 
       writeSection('EMPLOYÉS', labelsEmp, slotsEmp);
-      writeSection('INTÉRIM', labelsInt, slotsInt);
+      writeSection('INTÉRIM',  labelsInt, slotsInt);
+      writeSection('LIVREURS', labelsLiv, slotsLiv);
 
-      const maxNameLen = Math.max(12, ...ws.getColumn(1).values.map(v => String(v || '').length));
-      ws.getColumn(1).width = Math.min(42, Math.max(18, maxNameLen + 2));
+      const colA = ws.getColumn(1);
+      colA.hidden = false;
+      const maxNameLen = Math.max(12, ...colA.values.map(v => String(v || '').length));
+      colA.width = Math.min(42, Math.max(18, maxNameLen + 2));
     }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
