@@ -108,152 +108,131 @@ app.get('/presence/export-month', async (req, res) => {
     wb.creator = 'Présences DSG';
     wb.created = new Date();
 
+    const daysOfMonth = (ym) => { const [y,m]=ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dowLetter = d => ["D","L","M","M","J","V","S"][d.getDay()];
     const days = daysOfMonth(ym);
     const isWE = d => d.getDay() === 0 || d.getDay() === 6;
 
     const C = {
-      BLACK: 'FF000000',
-      WHITE: 'FFFFFFFF',
-      P:  'FFE8F5EC',
-      CP: 'FFEFE6FF',
-      R:  'FFDCFCE7',
-      AB: 'FFFECACA',
-      AM: 'FFFEE2E2',
-      F:  'FFCCFBF1',
-      EMPTY: 'FFFFFFFF'
+      BLACK:'FF000000', WHITE:'FFFFFFFF',
+      P:'FFE8F5EC', CP:'FFA7F3D0', R:'FFFDE68A', AB:'FFFECACA', AM:'FFFBCFE8', F:'FFDDD6FE',
+      EMPTY:'FFFFFFFF', PSITE:'FFF5D0AA'
     };
     const codeFill = (val) => {
-      const v = String(val || '').trim().toUpperCase();
-      if (!v) return { fgColor: { argb: C.EMPTY } };
-      if (C[v]) return { fgColor: { argb: C[v] } };
-      if (/^P\d+$/.test(v)) return { fgColor: { argb: C.P } };
-      return { fgColor: { argb: C.EMPTY } };
-    };
+  const v = String(val||'').trim().toUpperCase();
+  if (!v) return { fgColor:{ argb:C.EMPTY } };
+  if (C[v]) return { fgColor:{ argb:C[v] } };
+  if (/^P\d+$/.test(v)) return { fgColor:{ argb:C.PSITE } };
+  return { fgColor:{ argb:C.EMPTY } };
+};
 
     const thHeader = {
-      font: { bold: true, color: { argb: C.BLACK } },
-      alignment: { horizontal: 'center', vertical: 'middle' },
-      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
+      font:{ bold:true, color:{ argb:C.BLACK } },
+      alignment:{ horizontal:'center', vertical:'middle' },
+      border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
     };
     const tdStyle = {
-      alignment: { horizontal: 'center', vertical: 'middle' },
-      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
+      alignment:{ horizontal:'center', vertical:'middle' },
+      border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
     };
 
-    const buildNames = (arr, fallbackFromFile, excludeSet = new Set()) => {
+    const fetchMonthStoreJSON = async (req, ym, magasin) => {
+      const base = `${req.protocol}://${req.get('host')}`;
+      const url = `${base}/presence/month-store?yyyymm=${encodeURIComponent(ym)}&magasin=${encodeURIComponent(magasin)}`;
+      const headers = {}; const tok = req.get('X-Admin-Token'); if (tok) headers['X-Admin-Token']=tok;
+      const { data } = await axios.get(url, { headers, timeout: 30000 });
+      return data || {};
+    };
+
+    const MAGASINS_EXPORT = [
+      "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
+      "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
+      "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+    ];
+
+    const buildNames = (arr, file, excludeSet = new Set()) => {
       const listFromArray = (items) => items
         .map(p => {
           if (typeof p === 'string') return p.trim();
           const nom = (p?.nom ?? '').toString().toUpperCase();
           const prenom = (p?.prenom ?? '').toString();
           const s = `${nom} ${prenom}`.trim();
-          return s || (p?.label || '').toString().trim();
+          return s || (p?.label||'').toString().trim();
         })
         .filter(Boolean);
-
       let names = Array.isArray(arr) ? listFromArray(arr) : [];
-      if (!names.length && arr && typeof arr === 'object') {
-        Object.values(arr).forEach(v => {
-          if (Array.isArray(v)) names.push(...listFromArray(v));
-          else if (typeof v === 'string') names.push(v.trim());
-          else if (v && typeof v === 'object') {
-            const s = `${(v.nom||'').toString().toUpperCase()} ${(v.prenom||'')}`.trim();
-            if (s) names.push(s);
-          }
-        });
-        names = names.filter(Boolean);
-      }
-
-      if (!names.length && fallbackFromFile) {
+      if (!names.length && file) {
         const set = new Set();
-        Object.values(fallbackFromFile).forEach(d => {
-          const rows = (d?.data?.rows) || [];
-          rows.forEach(r => {
-            const lbl = String(r.label || '').trim();
-            if (lbl && !excludeSet.has(lbl.toUpperCase())) set.add(lbl);
-          });
+        Object.values(file).forEach(d => {
+          const rows = (d?.data?.rows)||[];
+          rows.forEach(r => { const lbl=String(r.label||'').trim(); if (lbl) set.add(lbl); });
         });
         names = Array.from(set);
       }
-
       const seen = new Set();
       return names.filter(n => {
         const k = n.toUpperCase();
-        if (excludeSet.has(k) || seen.has(k)) return false;
-        seen.add(k); return true;
+        if (excludeSet.has(k) || seen.has(k)) return false; seen.add(k); return true;
       });
     };
 
     const collectSlots = (labels, file) => {
-      const set = new Set(); const order = [];
-      labels.forEach(lbl => {
+      const set = new Set(); const order=[];
+      labels.forEach(lbl=>{
         const key = String(lbl).trim().toUpperCase();
-        Object.values(file).forEach(day => {
-          const rows = (day?.data?.rows) || [];
+        Object.values(file).forEach(day=>{
+          const rows = (day?.data?.rows)||[];
           const found = rows.find(r => String(r.label||'').trim().toUpperCase() === key);
-          if (found) Object.keys(found.values || {}).forEach(s => { if (!set.has(s)) { set.add(s); order.push(s); } });
+          if (found) Object.keys(found.values||{}).forEach(s => { if(!set.has(s)){ set.add(s); order.push(s); } });
         });
       });
-      return order.length ? order : ['Matin', 'A. Midi'];
+      return order.length ? order : ['Matin','A. Midi'];
     };
 
     for (const mag of MAGASINS_EXPORT) {
-      const { file = {}, personnel = { employes: [], interims: [], livreurs: [] } } =
+      const { file = {}, personnel = { employes:[], interims:[] } } =
         await fetchMonthStoreJSON(req, ym, mag);
 
       const labelsEmp = buildNames(personnel.employes, file);
       const setEmp = new Set(labelsEmp.map(s => s.toUpperCase()));
-
       const labelsInt = buildNames(personnel.interims, file, setEmp);
-      const setEmpInt = new Set([...setEmp, ...labelsInt.map(s => s.toUpperCase())]);
-
-      const labelsLiv = buildNames(personnel.livreurs, file, setEmpInt);
 
       const slotsEmp = collectSlots(labelsEmp, file);
       const slotsInt = collectSlots(labelsInt, file);
-      const slotsLiv = collectSlots(labelsLiv, file);
 
-      const ws = wb.addWorksheet(mag.substring(0, 31));
+      const ws = wb.addWorksheet(mag.substring(0,31), { properties:{ defaultColWidth: 12 } });
+
+      ws.getColumn(1).hidden = false;
+      ws.getColumn(1).width = 30;
 
       const writeSection = (title, labels, slots) => {
         if (!labels.length) return;
 
-        ws.addRow([title]).font = { bold: true };
+        ws.addRow([title]).font = { bold:true };
         ws.addRow([]);
 
-        const h1 = ['Nom / Ligne'];
-        const h2 = [''];
-        const h3 = [''];
-        days.forEach(d => {
-          h1.push(...Array(slots.length).fill(dowLetter(d)));
-          h2.push(...Array(slots.length).fill(d.getDate()));
-          h3.push(...slots);
-        });
+        const h1=['Nom / Ligne'], h2=[''], h3=[''];
+        days.forEach(d => { h1.push(...Array(slots.length).fill(dowLetter(d))); h2.push(...Array(slots.length).fill(d.getDate())); h3.push(...slots); });
+        [ws.addRow(h1), ws.addRow(h2), ws.addRow(h3)].forEach(r => r.eachCell(c => Object.assign(c,{ style: thHeader })));
 
-        const r1 = ws.addRow(h1);
-        const r2 = ws.addRow(h2);
-        const r3 = ws.addRow(h3);
-
-        [r1, r2, r3].forEach(r => r.eachCell((c) => Object.assign(c, { style: thHeader })));
-
-        labels.forEach(lbl => {
-          const rowVals = [lbl];
-          days.forEach(d => {
-            const key = ymd(d);
-            const rec = file[key];
-            let values = {};
-            if (rec?.data?.rows) {
+        labels.forEach(lbl=>{
+          const rowVals=[lbl];
+          days.forEach(d=>{
+            const rec = file[ymd(d)];
+            let values={};
+            if (rec?.data?.rows){
               const found = rec.data.rows.find(r => String(r.label||'').trim().toUpperCase() === String(lbl).trim().toUpperCase());
               values = found?.values || {};
             }
-            slots.forEach(s => rowVals.push(String(values[s] || '').trim().toUpperCase()));
+            slots.forEach(s => rowVals.push(String(values[s]||'').trim().toUpperCase()));
           });
 
           const rr = ws.addRow(rowVals);
 
           const c1 = rr.getCell(1);
-          c1.alignment = { horizontal: 'left', vertical: 'middle' };
-          c1.font = { bold: true, color: { argb: C.BLACK } };
+          c1.alignment = { horizontal:'left', vertical:'middle' };
+          c1.font = { bold:true, color:{ argb:C.BLACK } };
           c1.border = tdStyle.border;
 
           rr.eachCell((c, idx) => {
@@ -265,13 +244,13 @@ app.get('/presence/export-month', async (req, res) => {
             const d = days[dayIdx];
 
             if (d && isWE(d)) {
-              c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.BLACK } };
-              c.font = { color: { argb: C.WHITE }, bold: true };
+              c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:C.BLACK } };
+              c.font = { color:{ argb:C.WHITE }, bold:true };
             } else {
-              const v = String(c.value || '').trim().toUpperCase();
+              const v = String(c.value||'').trim().toUpperCase();
               const fill = codeFill(v);
-              c.fill = { type: 'pattern', pattern: 'solid', ...fill };
-              c.font = { color: { argb: C.BLACK } };
+              c.fill = { type:'pattern', pattern:'solid', ...fill };
+              c.font = { color:{ argb:C.BLACK } };
             }
           });
         });
@@ -281,15 +260,12 @@ app.get('/presence/export-month', async (req, res) => {
 
       writeSection('EMPLOYÉS', labelsEmp, slotsEmp);
       writeSection('INTÉRIM',  labelsInt, slotsInt);
-      writeSection('LIVREURS', labelsLiv, slotsLiv);
 
-      const colA = ws.getColumn(1);
-      colA.hidden = false;
-      const maxNameLen = Math.max(12, ...colA.values.map(v => String(v || '').length));
-      colA.width = Math.min(42, Math.max(18, maxNameLen + 2));
+      ws.getColumn(1).hidden = false;
+      if (!ws.getColumn(1).width || ws.getColumn(1).width < 20) ws.getColumn(1).width = 30;
     }
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="Presences_${ym}.xlsx"`);
     await wb.xlsx.write(res);
     res.end();
