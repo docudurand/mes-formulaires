@@ -96,119 +96,194 @@ async function fetchMonthStoreJSON(req, ym, magasin){
 
 app.get('/presence/export-month', async (req, res) => {
   try {
-    const ym = String(req.query.yyyymm||'').trim();
-    if(!/^\d{4}-\d{2}$/.test(ym)) return res.status(400).json({ error:'Paramètre yyyymm invalide' });
+    const ym = String(req.query.yyyymm || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(ym)) return res.status(400).json({ error: 'Paramètre yyyymm invalide' });
+
+    const ADMIN_PASS = process.env.PRESENCES_LEAVES_PASSWORD;
+    if (ADMIN_PASS && req.get('X-Admin-Token') !== ADMIN_PASS) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Présences DSG';
     wb.created = new Date();
-    const days = daysOfMonth(ym);
 
-    const COLORS = {
-      'P': 'bcd9ff',
-      'CP': 'a7f3d0',
-      'R': 'fde68a',
-      'AB': 'fecaca',
-      'AT': 'fbcfe8',
-      'F': 'ddd6fe',
-      '': 'ffffff'
+    const days = daysOfMonth(ym);
+    const isWE = d => d.getDay() === 0 || d.getDay() === 6;
+
+    const C = {
+      BLACK: 'FF000000',
+      WHITE: 'FFFFFFFF',
+      P:  'FFE8F5EC',
+      CP: 'FFA7F3D0',
+      R:  'FFFDE68A',
+      AB: 'FFFECACA',
+      AM: 'FFFBCFE8',
+      F:  'FFDDD6FE',
+      EMPTY: 'FFFFFFFF'
     };
 
-    for (const mag of MAGASINS_EXPORT){
-      const { file = {}, personnel = { employes:[], interims:[], livreurs:{} } } = await fetchMonthStoreJSON(req, ym, mag);
+    const codeFill = (val) => {
+      const v = String(val || '').trim().toUpperCase();
+      if (!v) return { fgColor: { argb: C.EMPTY } };
+      if (C[v])   return { fgColor: { argb: C[v] } };
+      if (/^P\d+$/.test(v)) return { fgColor: { argb: C.P } };
+      return { fgColor: { argb: C.EMPTY } };
+    };
+
+    const thStyle = {
+      font: { bold: true, color: { argb: C.WHITE }},
+      alignment: { horizontal: 'center', vertical: 'middle' },
+      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} },
+      fill: { type:'pattern', pattern:'solid', fgColor:{ argb: C.BLACK } }
+    };
+    const tdStyle = {
+      alignment: { horizontal: 'center', vertical: 'middle' },
+      border: { top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} }
+    };
+
+    for (const mag of MAGASINS_EXPORT) {
+      const { file = {}, personnel = { employes: [], interims: [], livreurs: {} } } =
+        await fetchMonthStoreJSON(req, ym, mag);
 
       const emp = Array.isArray(personnel.employes) ? personnel.employes : [];
       const ints = Array.isArray(personnel.interims) ? personnel.interims : [];
 
-      const labelsEmp = emp.map(p => `${(p.nom||'').toUpperCase()} ${p.prenom||''}`.trim()).filter(Boolean);
-      const labelsInt = ints.map(p => `${(p.nom||'').toUpperCase()} ${p.prenom||''}`.trim()).filter(Boolean);
+      const buildNames = (arr) => {
+        const byPersonnel = arr
+          .map(p => `${String(p.nom||'').toUpperCase()} ${String(p.prenom||'')}`.trim())
+          .filter(Boolean);
+        if (byPersonnel.length) return byPersonnel;
 
-      const collectSlots = (labels) => {
-        const set = new Set(); const order=[];
-        labels.forEach(lbl=>{
-          const key = String(lbl||'').trim().toUpperCase();
-          Object.values(file).forEach(day=>{
-            const rows = (day?.data?.rows)||[];
-            const found = rows.find(r=> String(r.label||'').trim().toUpperCase() === key);
-            if(found){ Object.keys(found.values||{}).forEach(s=>{ if(!set.has(s)){ set.add(s); order.push(s); } }); }
+        const set = new Set();
+        Object.values(file).forEach(d => {
+          const rows = (d?.data?.rows) || [];
+          rows.forEach(r => {
+            const lbl = String(r.label || '').trim();
+            if (lbl) set.add(lbl);
           });
         });
-        return order.length ? order : ['Matin','A. Midi'];
+        return Array.from(set);
+      };
+
+      const labelsEmp = buildNames(emp);
+      const labelsInt = buildNames(ints);
+
+      const collectSlots = (labels) => {
+        const set = new Set(); const order = [];
+        labels.forEach(lbl => {
+          const key = String(lbl).trim().toUpperCase();
+          Object.values(file).forEach(day => {
+            const rows = (day?.data?.rows) || [];
+            const found = rows.find(r => String(r.label||'').trim().toUpperCase() === key);
+            if (found) {
+              Object.keys(found.values || {}).forEach(s => {
+                if (!set.has(s)) { set.add(s); order.push(s); }
+              });
+            }
+          });
+        });
+        return order.length ? order : ['Matin', 'A. Midi'];
       };
 
       const slotsEmp = collectSlots(labelsEmp);
       const slotsInt = collectSlots(labelsInt);
 
-      const ws = wb.addWorksheet(mag.substring(0,31));
-      const th = { bold:true, alignment:{ horizontal:'center', vertical:'middle' }, border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} } };
-      const td = { alignment:{ horizontal:'center', vertical:'middle' }, border:{ top:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} } };
+      const ws = wb.addWorksheet(mag.substring(0, 31));
 
-      const addSection = (title, labels, slots) => {
-        if(!labels.length) return;
-        ws.addRow([title]).font = { bold:true }; ws.addRow([]);
+      const writeSection = (title, labels, slots) => {
+        if (!labels.length) return;
+
+        ws.addRow([title]).font = { bold: true };
+        ws.addRow([]);
 
         const h1 = ['Nom / Ligne'];
-        days.forEach(d => h1.push(...Array(slots.length).fill(dowLetter(d))));
-        const h2 = ['']; days.forEach(d => h2.push(...Array(slots.length).fill(d.getDate())));
-        const h3 = ['']; days.forEach(() => slots.forEach(s => h3.push(s)));
+        const h2 = [''];
+        const h3 = [''];
+        days.forEach(d => {
+          h1.push(...Array(slots.length).fill(dowLetter(d)));
+          h2.push(...Array(slots.length).fill(d.getDate()));
+          h3.push(...slots);
+        });
 
-        [h1,h2,h3].forEach((arr,i) => {
-          const r = ws.addRow(arr);
-          r.eachCell((c,idx)=>{
-            Object.assign(c,{style:th});
-            if(idx>1){
-              const dayIdx = Math.ceil((idx-1)/slots.length)-1;
-              const d = days[dayIdx];
-              if(d && (d.getDay()===0 || d.getDay()===6)){
-                c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'333333' } };
-                c.font = { color:{argb:'ffffff'}, bold:true };
-              }
+        const r1 = ws.addRow(h1);
+        const r2 = ws.addRow(h2);
+        const r3 = ws.addRow(h3);
+
+        [r1, r2, r3].forEach(r => {
+          r.eachCell((c, idx) => {
+            if (idx === 1) {
+              c.style = thStyle;
+              return;
+            }
+            const dayIdx = Math.floor((idx - 2) / slots.length);
+            const d = days[dayIdx];
+            if (d && isWE(d)) {
+              c.style = thStyle;
+            } else {
+              c.style = thStyle;
             }
           });
         });
 
-        labels.forEach(lbl=>{
-          const row=[lbl];
-          days.forEach(d=>{
-            const rec = file[ ymd(d) ];
+        labels.forEach(lbl => {
+          const rowVals = [lbl];
+          days.forEach(d => {
+            const key = ymd(d);
+            const rec = file[key];
             let values = {};
-            if (rec?.data?.rows){
+            if (rec?.data?.rows) {
               const found = rec.data.rows.find(r => String(r.label||'').trim().toUpperCase() === String(lbl).trim().toUpperCase());
               values = found?.values || {};
             }
-            slots.forEach(s => row.push(values[s] || ''));
+            slots.forEach(s => rowVals.push(String(values[s] || '').trim().toUpperCase()));
           });
-          const rr = ws.addRow(row);
-          rr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
-          rr.getCell(1).font = { bold:true };
 
-          rr.eachCell((c,idx)=>{
-            if(idx>1){
-              const val = String(c.value||'').trim().toUpperCase();
-              const color = COLORS[val] || 'ffffff';
-              c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: color.startsWith('FF') ? color : 'FF'+color } };
-              Object.assign(c,{style:td});
+          const rr = ws.addRow(rowVals);
+
+          rr.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+          rr.getCell(1).font = { bold: true };
+          rr.getCell(1).border = tdStyle.border;
+
+          rr.eachCell((c, idx) => {
+            if (idx === 1) return;
+
+            c.alignment = tdStyle.alignment;
+            c.border = tdStyle.border;
+
+            const dayIdx = Math.floor((idx - 2) / slots.length);
+            const d = days[dayIdx];
+
+            if (d && isWE(d)) {
+              c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.BLACK } };
+              c.font = { color: { argb: C.WHITE }, bold: true };
+              return;
             }
+
+            const v = String(c.value || '').trim().toUpperCase();
+            const fill = codeFill(v);
+            c.fill = { type: 'pattern', pattern: 'solid', ...fill };
+            c.font = { color: { argb: C.BLACK } };
           });
         });
 
         ws.addRow([]);
       };
 
-      addSection('EMPLOYÉS', labelsEmp, slotsEmp);
-      addSection('INTÉRIM', labelsInt, slotsInt);
+      writeSection('EMPLOYÉS', labelsEmp, slotsEmp);
+      writeSection('INTÉRIM', labelsInt, slotsInt);
 
-      const maxNameLen = Math.max(12, ...ws.getColumn(1).values.map(v=>String(v||'').length));
-      ws.getColumn(1).width = Math.min(40, Math.max(18, maxNameLen+2));
+      const maxNameLen = Math.max(12, ...ws.getColumn(1).values.map(v => String(v || '').length));
+      ws.getColumn(1).width = Math.min(42, Math.max(18, maxNameLen + 2));
     }
 
-    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="Presences_${ym}.xlsx"`);
     await wb.xlsx.write(res);
     res.end();
-  }catch(err){
-    console.error('export-month failed', err?.message||err);
-    res.status(500).json({ error:'Export impossible' });
+  } catch (err) {
+    console.error('export-month failed', err?.message || err);
+    res.status(500).json({ error: 'Export impossible' });
   }
 });
 
