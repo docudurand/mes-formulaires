@@ -116,16 +116,17 @@ app.get('/presence/export-month', async (req, res) => {
 
     const C = {
       BLACK:'FF000000', WHITE:'FFFFFFFF',
-      P:'FFE8F5EC', CP:'FFA7F3D0', R:'FFFDE68A', AB:'FFFECACA', AM:'FFFBCFE8', F:'FFDDD6FE',
-      EMPTY:'FFFFFFFF', PSITE:'FFF5D0AA'
+      P:'FFE8F5EC', CP:'FFAE6FC9', R:'FF97F7D6', AB:'FFFECACA', AM:'FFDE5D5F', F:'FF5DDEC6',
+      PSITE:'FFEBB926',
+      EMPTY:'FFFFFFFF', NP:'FF000000'
     };
     const codeFill = (val) => {
-  const v = String(val||'').trim().toUpperCase();
-  if (!v) return { fgColor:{ argb:C.EMPTY } };
-  if (C[v]) return { fgColor:{ argb:C[v] } };
-  if (/^P\d+$/.test(v)) return { fgColor:{ argb:C.PSITE } };
-  return { fgColor:{ argb:C.EMPTY } };
-};
+      const v = String(val||'').trim().toUpperCase();
+      if (!v) return { fgColor:{ argb:C.EMPTY } };
+      if (C[v]) return { fgColor:{ argb:C[v] } };
+      if (/^P\d+$/.test(v)) return { fgColor:{ argb:C.PSITE } };
+      return { fgColor:{ argb:C.EMPTY } };
+    };
 
     const thHeader = {
       font:{ bold:true, color:{ argb:C.BLACK } },
@@ -151,6 +152,21 @@ app.get('/presence/export-month', async (req, res) => {
       "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
     ];
 
+    const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
+
+    const labelsFromMonthFile = (file) => {
+      const byNorm = new Map();
+      Object.values(file || {}).forEach(rec=>{
+        (rec?.data?.rows || []).forEach(r=>{
+          const raw = String(r.label || "").trim();
+          if (!raw) return;
+          const k = norm(raw);
+          if (!byNorm.has(k)) byNorm.set(k, raw.toUpperCase());
+        });
+      });
+      return [...byNorm.values()];
+    };
+
     const buildNames = (arr, file, excludeSet = new Set()) => {
       const listFromArray = (items) => items
         .map(p => {
@@ -161,6 +177,7 @@ app.get('/presence/export-month', async (req, res) => {
           return s || (p?.label||'').toString().trim();
         })
         .filter(Boolean);
+
       let names = Array.isArray(arr) ? listFromArray(arr) : [];
       if (!names.length && file) {
         const set = new Set();
@@ -191,15 +208,25 @@ app.get('/presence/export-month', async (req, res) => {
     };
 
     for (const mag of MAGASINS_EXPORT) {
-      const { file = {}, personnel = { employes:[], interims:[] } } =
+      const { file = {}, personnel = { employes:[], interims:[], livreurs:{} } } =
         await fetchMonthStoreJSON(req, ym, mag);
 
       const labelsEmp = buildNames(personnel.employes, file);
       const setEmp = new Set(labelsEmp.map(s => s.toUpperCase()));
+
       const labelsInt = buildNames(personnel.interims, file, setEmp);
+      const setEmpInt = new Set([...setEmp, ...labelsInt.map(s => s.toUpperCase())]);
+
+      const knownNow = new Set([
+        ...Array.from(setEmpInt.values()),
+        ...Object.keys(personnel.livreurs||{}).map(norm)
+      ]);
+      const histAll = labelsFromMonthFile(file);
+      const labelsOld = histAll.filter(lbl => !knownNow.has(norm(lbl)));
 
       const slotsEmp = collectSlots(labelsEmp, file);
       const slotsInt = collectSlots(labelsInt, file);
+      const slotsOld = collectSlots(labelsOld, file);
 
       const ws = wb.addWorksheet(mag.substring(0,31), { properties:{ defaultColWidth: 12 } });
 
@@ -260,6 +287,7 @@ app.get('/presence/export-month', async (req, res) => {
 
       writeSection('EMPLOYÉS', labelsEmp, slotsEmp);
       writeSection('INTÉRIM',  labelsInt, slotsInt);
+      writeSection('ANCIENNE TRAME', labelsOld, slotsOld);
 
       ws.getColumn(1).hidden = false;
       if (!ws.getColumn(1).width || ws.getColumn(1).width < 20) ws.getColumn(1).width = 30;
