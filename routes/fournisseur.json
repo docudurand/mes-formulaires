@@ -1,9 +1,21 @@
 [
+{
+    "name": "ACCUS AJS",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville :  Tournée 2"
+  },
   {
     "name": "AIR PN",
     "magasin": "La Motte Servolex",
     "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
 	 "infoLivreur": "Ville : MURS ET GELIGNIEUX Tournée AIN"
+  },
+  {
+    "name": "ALDER",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : BEAUVALLON Tournée 6"
   },
   {
     "name": "ALGI",
@@ -58,6 +70,12 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEURBANE Tournée 5"
+  },
+    {
+    "name": "CAPVI",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS Tournée 4"
   },
   {
     "name": "CARGO BULL",
@@ -146,6 +164,12 @@
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+    {
+    "name": "FORD GIVORS",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : GIVORS Tournée 6"
   },
   {
     "name": "GIVEDIS",
@@ -289,7 +313,7 @@
     "name": "PLANET LINE",
     "magasin": "Chasse sur Rhône",
     "recipients": ["receptionchasse@durandservices.fr"],
-	 "infoLivreur": ""
+	 "infoLivreur": "Ville : ESTRABLIN Tournée 3"
   },
   {
     "name": "RAMS",
@@ -312,12 +336,30 @@
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : VAULX MILIEU Tournée 2"
   },
+    {
+    "name": "REY FRERE",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : PONT-EVEQUE Tournée 3"
+  },
   {
     "name": "SAINTHON",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : CORBELIN Tournée 5"
+  },
+    {
+    "name": "SAMPA",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS Tournée 4"
+  },
+    {
+    "name": "SCANIA CHAPONNAY",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : CHAPONNAY Tournée 4"
   },
   {
     "name": "SECTORIEL",
@@ -394,5 +436,11 @@
     "magasin": "Gleize",
     "recipients": ["magvl4gleize@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
+  },
+    {
+    "name": "VOLVO CHAPONNAY",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	 "infoLivreur": "Ville : CHAPONNAY Tournée 4"
   }
 ]
