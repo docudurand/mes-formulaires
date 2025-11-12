@@ -515,6 +515,364 @@ function load(){
       console.error(e);
       $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
     });
+<script>
+const API_BASE =
+  (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
+    ? "https://mes-formulaires.onrender.com"
+    : location.origin.replace(/\/$/, "");
+
+let IS_LOADING = true;
+
+const $tbody = document.querySelector("#tab tbody");
+const $filter = document.getElementById("filterMag");
+const $q      = document.getElementById("q");
+const $mask   = document.getElementById("mask");
+const $btnClose = document.getElementById("btnClose");
+const $btnPrint = document.getElementById("btnPrint");
+const $modalTitle = document.getElementById("modalTitle");
+const $modalContent = document.getElementById("modalContent");
+const $legend = document.getElementById("legend");
+
+function setTableLoading(msg){
+  $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
+    <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement en cours…"}
+  </td></tr>`;
+}
+
+const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
+function badge(status){
+  const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
+  return `<span class="badge ${m}">${status}</span>`;
+}
+function p2(n){ return String(n).padStart(2,"0"); }
+function parseDate(v){
+  if (!v && v!==0) return null;
+  const d = new Date(v);
+  if (!isNaN(d)) return d;
+  const m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m1) { const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
+  const m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
+  return null;
+}
+function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—"; }
+
+const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+let YEAR_FILTER = '';
+let MONTH_FILTER = '';
+
+function buildMonths(year){
+  const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
+  ctn.innerHTML = '';
+  MONTHS_FULL.forEach((label, idx)=>{
+    const m = idx+1;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'monthBtn';
+    btn.dataset.month = String(m); btn.dataset.year = String(year);
+    btn.textContent = label; ctn.appendChild(btn);
+  });
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button'; allBtn.className = 'monthBtn';
+  allBtn.dataset.month = 'all'; allBtn.dataset.year = String(year);
+  allBtn.textContent = 'Tout'; ctn.appendChild(allBtn);
+}
+function setYearActive(year){
+  YEAR_FILTER = String(year||'') || ''; MONTH_FILTER = '';
+  document.querySelectorAll('.yearBtn').forEach(b=>{
+    const on = String(b.dataset.year)===String(year);
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on?'true':'false');
+  });
+  document.querySelectorAll('.months').forEach(div=>{
+    div.classList.toggle('active', div.id===`months-${year}`);
+  });
+  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove('active'));
+  draw();
+}
+function setMonthActive(year, month){
+  if(String(YEAR_FILTER)!==String(year)) setYearActive(year);
+  MONTH_FILTER = String(month||'');
+  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=>{
+    b.classList.toggle('active', String(b.dataset.month)===String(month));
+  });
+  draw();
+}
+document.querySelector('.yearTabs').addEventListener('click', (e)=>{
+  const b = e.target.closest('.yearBtn'); if(!b) return; setYearActive(b.dataset.year);
+});
+document.getElementById('months-2025').addEventListener('click', (e)=>{
+  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2025', b.dataset.month);
+});
+document.getElementById('months-2026').addEventListener('click', (e)=>{
+  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2026', b.dataset.month);
+});
+
+let rows = [];
+function buildEstimateSelect(value){
+  const v = (value === "" || value === null || value === undefined) ? "" : Number(value);
+  let opts = `<option value="" ${v==="" ? "selected":""}></option>`;
+  for (let i=1;i<=10;i++){
+    opts += `<option value="${i}" ${v===i ? "selected":""}>${i}</option>`;
+  }
+  return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
+}
+function matchesYearMonth(d){
+  if (!YEAR_FILTER) return true;
+  if (!d) return false;
+  if (String(d.getFullYear()) !== String(YEAR_FILTER)) return false;
+  if (!MONTH_FILTER || MONTH_FILTER==='all') return true;
+  return (d.getMonth()+1) === Number(MONTH_FILTER);
+}
+
+function draw(){
+  if (IS_LOADING){
+    setTableLoading("Chargement en cours…");
+    return;
+  }
+
+  const mag = $filter.value.trim().toLowerCase();
+  const q = $q.value.trim().toLowerCase();
+
+  const list = [...rows].sort((a,b)=>{
+    const da = parseDate(a.demandeDate), db = parseDate(b.demandeDate);
+    return (db?db.getTime():0) - (da?da.getTime():0);
+  });
+
+  let count = 0;
+  $tbody.innerHTML = "";
+  list
+    .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
+    .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
+    .filter(r => {
+      if (!q) return true;
+      const s = [String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service, fmtJJMMYYYYdash(r.demandeDate)]
+        .join(' ').toLowerCase();
+      return s.includes(q);
+    })
+    .forEach(r => {
+      count++;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="col-no nowrap"        title="${String(r.no)}">${String(r.no).padStart(5,'0')}</td>
+        <td class="col-magasin wrap-ok"  title="${r.magasin||""}">${r.magasin||""}</td>
+        <td class="col-compte nowrap"    title="${r.compte||""}">${r.compte||""}</td>
+        <td class="col-client truncate"  title="${r.client||""}">${r.client||""}</td>
+        <td class="col-service truncate" title="${r.service||""}">${r.service||""}</td>
+        <td class="col-date nowrap"      title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
+        <td class="col-statut nowrap">${badge(r.status)}</td>
+        <td class="col-eta nowrap">
+          <div class="etaGroup">
+            ${buildEstimateSelect(r.estimation)}
+            <button class="btnView">Voir<br>dossier</button>
+          </div>
+        </td>
+        <td class="col-actions nowrap">
+          <div class="actions">
+            <select class="statusSel">
+              ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
+            </select>
+            <button class="btnSave">Valider</button>
+          </div>
+        </td>
+      `;
+
+      tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
+
+      tr.querySelector(".btnSave").addEventListener("click", async ()=>{
+        const statusSel = tr.querySelector(".statusSel");
+        const etaSel = tr.querySelector(".etaSel");
+        const saveBtn = tr.querySelector(".btnSave");
+        const oldHtml = saveBtn.innerHTML;
+        const status = statusSel.value;
+        const estimation = etaSel.value ? Number(etaSel.value) : "";
+
+        try{
+          saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
+          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
+
+          const resp = await fetch(`${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ status, estimation })
+          });
+          if(!resp.ok){
+            alert(`Erreur de mise à jour (${resp.status})`);
+            return;
+          }
+
+          r.status = status;
+          r.estimation = estimation;
+
+          const badgeCell = tr.querySelector(".col-statut");
+          if (badgeCell) badgeCell.innerHTML = badge(r.status);
+        } finally{
+          saveBtn.innerHTML = oldHtml;
+          saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
+        }
+      });
+
+      $tbody.appendChild(tr);
+    });
+
+  if (count === 0){
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">Aucun dossier.</td></tr>`;
+  }
+
+  const ymText = YEAR_FILTER
+    ? (MONTH_FILTER && MONTH_FILTER!=='all'
+        ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
+        : `Tout ${YEAR_FILTER}`)
+    : 'Toutes années';
+  $legend.textContent = `${count} dossier(s) • ${ymText}`;
+}
+
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function openDetails(row){
+  const h = (row.snapshot && row.snapshot.header) || {};
+  const cul = (row.snapshot && row.snapshot.culasse) || null;
+  const inj = (row.snapshot && row.snapshot.injecteur) || null;
+  const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
+
+  let opsHTML = "";
+  if (cul && Array.isArray(cul.operations) && cul.operations.length){
+    opsHTML = cul.operations.map(op=>{
+      const refs = Array.isArray(op.references) ? op.references.map(r=>{
+        const bits = [];
+        if (r.reference) bits.push(esc(r.reference));
+        if (r.libelleRef)  bits.push(esc(r.libelleRef));
+        if (r.prixHT || r.prixHT===0) bits.push(`${esc(String(r.prixHT))} € HT`);
+        return `<div class="sub">- ${bits.join(" – ")}</div>`;
+      }).join("") : "";
+      return `<div class="bul">• ${esc(op.libelle || op.ligne)}</div>${refs}`;
+    }).join("");
+  }
+
+  const piecesHTML = (cul && Array.isArray(cul.piecesAFournir) && cul.piecesAFournir.length)
+    ? cul.piecesAFournir.map(p=>`<div class="bul">• ${esc(p)}</div>`).join("")
+    : "<div class='bul' style='opacity:.7'>Aucune pièce sélectionnée.</div>";
+
+  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
+  $modalContent.innerHTML = `
+    <div class="grid2">
+      <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
+      <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
+      <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
+      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
+      <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
+      <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
+      <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
+      <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
+      <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
+      <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
+      <div><span class="label">Service :</span> ${esc(h.service||row.service||"")}</div>
+      <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
+      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
+    </div>
+
+    ${h.service === "Rectification Culasse" && cul ? `
+      <div class="section">
+        <h3>Détails Rectification Culasse</h3>
+        ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
+        <div class="section">
+          <h3>Pièces à fournir</h3>
+          ${piecesHTML}
+        </div>
+      </div>
+    ` : ""}
+
+    ${(h.service === "Contrôle injection Diesel" || h.service === "Contrôle injection Essence") && inj ? `
+      <div class="section">
+        <h3>Détails Contrôle injection</h3>
+        <div class="grid2">
+          <div><span class="label">Type :</span> ${esc(inj.type||"")}</div>
+          <div><span class="label">Nb injecteurs :</span> ${esc(inj.nombre||"")}</div>
+        </div>
+      </div>
+    ` : ""}
+
+    ${com ? `
+      <div class="section">
+        <h3>Commentaires</h3>
+        <div class="area">${esc(com)}</div>
+      </div>
+    ` : ""}
+  `;
+  $mask.style.display = "flex";
+  $mask.setAttribute("aria-hidden","false");
+}
+document.getElementById("btnClose").addEventListener("click", ()=>{
+  $mask.style.display = "none";
+  $mask.setAttribute("aria-hidden","true");
+  $modalContent.innerHTML = "";
+});
+document.getElementById("btnPrint").addEventListener("click", ()=>{
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <html>
+      <head>
+        <title>${$modalTitle.textContent}</title>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
+          h3{color:#004080;margin-top:16px}
+          .label{font-weight:700}
+          .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
+          .section{margin-top:14px}
+          .bul{margin:6px 0}
+          .sub{margin:2px 0 0 18px}
+          .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
+        </style>
+      </head>
+      <body>
+        ${$modalContent.innerHTML}
+      </body>
+    </html>
+  `);
+  w.document.close(); w.focus(); w.print(); w.close();
+});
+
+function load(){
+  IS_LOADING = true;
+  setTableLoading("Chargement en cours…");
+
+  buildMonths(2025);
+  buildMonths(2026);
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  if (y === 2025 || y === 2026) {
+    setMonthActive(String(y), String(m));
+  } else {
+    YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
+  }
+
+  fetch(`${API_BASE}/atelier/api/cases`)
+    .then(r=>r.json())
+    .then(json=>{
+      const data = (json && json.data) || [];
+      const fetched = data.map(x=>{
+        const h = (x.snapshot && x.snapshot.header) || {};
+        return {
+          ...x,
+          magasin: x.magasin || (h && h.magasin) || "",
+          compte:  x.compte  || (h && h.compte)  || "",
+          client:  x.client  || (h && h.client)  || "",
+          service: x.service || (h && h.service) || "",
+          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
+          estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
+        };
+      });
+      rows = fetched;
+    })
+    .catch(e=>{
+      console.error(e);
+      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
+    })
+    .finally(()=>{
+      IS_LOADING = false;
+      draw();
+    });
 }
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
