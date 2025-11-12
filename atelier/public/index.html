@@ -10,6 +10,10 @@
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#fff; color:var(--ink)}
     .wrap{max-width:960px; margin:24px auto; padding:16px}
     h1{margin:0 0 12px; font-size:1.4rem; color:#004080}
+    .notice{
+      margin:10px 0 14px; padding:10px 12px; border:1px solid #eab308; border-radius:10px;
+      background:#fef9c3; color:#713f12; font-weight:700;
+    }
     form{background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,.04)}
     .grid{display:grid; gap:14px}
     @media(min-width:720px){ .grid-2{grid-template-columns:1fr 1fr} }
@@ -53,16 +57,12 @@
 }
     .pdfBar{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff; }
     #pdfFrame{ flex:1; width:100%; height:100%; border:0; }
-	.notice{
-  margin:10px 0 14px; padding:10px 12px; border:1px solid #eab308; border-radius:10px;
-  background:#fef9c3; color:#713f12; font-weight:700;
-}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Demande d’intervention</h1>
-	<div class="notice" role="alert">Projet en test : l’envoi est temporairement désactivé.</div>
+    <div class="notice" role="alert">Projet en test : l’envoi est temporairement désactivé.</div>
 
     <form id="form-atelier">
       <div class="grid grid-2">
@@ -219,12 +219,10 @@
       </div>
 
       <div class="actions">
-  <button id="btnSubmit" type="submit" class="primary" style="display:none">Envoyer</button>
-
-  <button type="reset" class="ghost">Réinitialiser</button>
-  <button type="button" class="ghost" disabled title="L'envoi est désactivé">Envoi désactivé</button>
-  <span id="statusMsg" style="margin-left:auto; font-weight:700;"></span>
-</div>
+        <button id="btnSubmit" type="submit" class="primary" style="display:none">Envoyer</button>
+        <button type="reset" class="ghost">Réinitialiser</button>
+        <span id="statusMsg" style="margin-left:auto; font-weight:700;"></span>
+      </div>
     </form>
   </div>
 
@@ -246,9 +244,9 @@
   </form>
 
   <script src="/atelier/config.js"></script>
-<script>
+
+  <script>
   const APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
-  const ENVOI_ACTIF = true;
 
   let LIGNES = [], REGLES = [];
   const el = id => document.getElementById(id);
@@ -257,7 +255,9 @@
 
   async function loadConfig(){
     try{
-      if (!APPSCRIPT_URL) throw new Error("GS_ATELIER_URL non défini côté serveur");
+      if (!APPSCRIPT_URL) {
+        throw new Error("GS_ATELIER_URL non défini côté serveur");
+      }
       const r = await fetch(APPSCRIPT_URL, { cache:"no-store" });
       const data = await r.json();
       LIGNES = (data.lignes||[]).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
@@ -290,18 +290,33 @@
       const vlpl = String(r.vl_pl || r['vl/pl'] || r.vlpl || '').trim().toUpperCase();
       const segU = String(seg||'').toUpperCase();
       let s = 0;
+
       s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === '*' ? 0 : -999);
-      if (String(soup || '') !== '') s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
+
+      if (String(soup || '') === '') {
+      } else {
+        s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
+      }
+
       s += (String(r.carburant).toLowerCase() === String(carb).toLowerCase()) ? 1 : (r.carburant === '*' ? 0 : -999);
+
       s += (vlpl === '' || vlpl === '*' || vlpl === segU) ? 1 : -999;
+
       return s;
     };
-    return cand.map(r => ({ r, s: score(r) })).filter(x => x.s >= 0).sort((a,b) => b.s - a.s).map(x => x.r);
+    return cand
+      .map(r => ({ r, s: score(r) }))
+      .filter(x => x.s >= 0)
+      .sort((a,b) => b.s - a.s)
+      .map(x => x.r);
   }
 
   function refreshReferences(){
     if (el('service').value !== 'Rectification Culasse') return;
-    const seg = el('segment').value, cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+    const seg = el('segment').value,
+          cyl = el('cylindre').value,
+          soup = el('soupapes').value,
+          carb = el('carburant').value;
     const ready = allCulasseChosen();
     LIGNES.forEach(l=>{
       const holder = el('refs_'+l.ligne), cb = el('input_'+l.ligne);
@@ -310,13 +325,15 @@
       const regles = matchRegles('culasse', cyl, soup, carb, seg, l.ligne);
       if(!regles.length){ holder.textContent=''; return; }
       holder.innerHTML = '<ul style="margin:6px 0 0; padding-left:18px;">' +
-        regles.map(r => `<li><strong>${r.reference||''}</strong>${r.libelleref? ' – '+r.libelleref : ''}${(r.prixht||r.prixht===0)?' ('+String(r.prixht)+' € HT)':''}</li>`).join('') +
-        '</ul>';
+        regles.map(r =>
+          `<li><strong>${r.reference||''}</strong>${r.libelleref? ' – '+r.libelleref : ''}${(r.prixht||r.prixht===0)?' ('+String(r.prixht)+' € HT)':''}</li>`
+        ).join('') + '</ul>';
     });
   }
 
   function toggleCulasseFields(){
     const service = el('service').value;
+
     const isC = service === 'Rectification Culasse';
     const blocC = el('section-culasse');
     blocC.classList.toggle('hidden', !isC);
@@ -333,9 +350,8 @@
     el('nbInjecteurs').required = isInj;
   }
 
-  document.getElementById('form-atelier').addEventListener('keydown', (e)=>{
-    if (!ENVOI_ACTIF && e.key === 'Enter') e.preventDefault();
-  });
+  el('service').addEventListener('change', toggleCulasseFields);
+  ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
   const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
         $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
@@ -359,17 +375,9 @@
   $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
-    if (!ENVOI_ACTIF) {
-      e.preventDefault();
-      const $status = document.getElementById("statusMsg");
-      $status.style.color = "#b91c1c";
-      $status.textContent = "L’envoi est désactivé pour le moment.";
-      return;
-    }
+    if(!e.target.reportValidity()){ return; }
 
-    if (!e.target.reportValidity()) return;
     e.preventDefault();
-
     const $status = document.getElementById("statusMsg");
     const $btn = document.getElementById("btnSubmit");
     $btn.disabled = true;
@@ -383,7 +391,11 @@
     const ops = [];
     const service = el('service').value;
     if (service === 'Rectification Culasse') {
-      const seg = el('segment').value, cyl = el('cylindre').value, soup = el('soupapes').value, carb = el('carburant').value;
+      const seg = el('segment').value,
+            cyl = el('cylindre').value,
+            soup = el('soupapes').value,
+            carb = el('carburant').value;
+
       LIGNES.forEach(l=>{
         const cb = el('input_'+l.ligne);
         if (cb && cb.checked) {
@@ -440,6 +452,7 @@
       } : null
     };
 
+    let no = "";
     try{
       const r = await fetch("/atelier/api/submit", {
         method:"POST",
@@ -447,38 +460,32 @@
         body: JSON.stringify({ payload })
       });
       const js = await r.json();
-      if(!r.ok || !js.ok) throw new Error("submit_failed");
-      const no = js.no;
-
+      if(!r.ok || !js.ok){
+        $status.style.color = "#b91c1c";
+        $status.textContent = "Erreur d'enregistrement ❌";
+        $btn.disabled = false;
+        return;
+      }
+      no = js.no;
       $status.style.color = "#16a34a";
       $status.textContent = "Demande envoyée avec succès ✅";
-
-      openPrintPreview({ ...payload, no });
     }catch(err){
       console.error(err);
       $status.style.color = "#b91c1c";
-      $status.textContent = "Erreur lors de l'enregistrement ❌";
-    }finally{
+      $status.textContent = "Erreur réseau lors de l'enregistrement ❌";
       $btn.disabled = false;
+      return;
     }
+
+    const payloadForPrint = { ...payload, no };
+    openPrintPreview(payloadForPrint);
+    setTimeout(()=>{ $btn.disabled = false; }, 1500);
   });
 
   window.addEventListener('DOMContentLoaded', () => {
     toggleCulasseFields();
     loadConfig();
-    const btn = document.getElementById('btnSubmit');
-    if (btn) btn.style.display = ENVOI_ACTIF ? 'inline-block' : 'none';
-    if (!ENVOI_ACTIF) {
-      const $status = document.getElementById("statusMsg");
-      $status.style.color = "#b91c1c";
-      $status.textContent = "L’envoi est désactivé pour le moment.";
-	  const disabledBtn = document.querySelector('button[title="L\'envoi est désactivé"]');
-const notice = document.querySelector('.notice');
-if (ENVOI_ACTIF) {
-  if (disabledBtn) disabledBtn.style.display = 'none';
-  if (notice) notice.style.display = 'none';
-    }
   });
-</script>
+  </script>
 </body>
 </html>
