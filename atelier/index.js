@@ -10,9 +10,25 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Config env
+// ───────────────────────────────────────────────────────────────────────────────
 const GS_URL   = process.env.GS_ATELIER_URL || "";
 const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
+if (!GS_URL) {
+  console.warn("[ATELIER] ⚠️ GS_ATELIER_URL est vide. Les opérations Sheets/Apps Script échoueront.");
+}
+
+// Client axios commun (timeouts + UA)
+const http = axios.create({
+  timeout: 20000,
+  headers: { "User-Agent": "atelier-api/1.1 (+render)" }
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Expose une petite config front si besoin
+// ───────────────────────────────────────────────────────────────────────────────
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -24,6 +40,9 @@ router.get("/config.js", (_req, res) => {
   );
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
+// CSP pour intégration Wix (iframe)
+// ───────────────────────────────────────────────────────────────────────────────
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 router.use((req, res, next) => {
@@ -32,6 +51,9 @@ router.use((req, res, next) => {
   next();
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Parsing + Static
+// ───────────────────────────────────────────────────────────────────────────────
 router.use(express.json({ limit: "2mb" }));
 router.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
@@ -50,6 +72,9 @@ router.get("/", (_req, res) => {
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Petites utilitaires
+// ───────────────────────────────────────────────────────────────────────────────
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
 function fmtJJMMYYYYdash(v){
   if (!v) return "";
@@ -58,13 +83,24 @@ function fmtJJMMYYYYdash(v){
   const p2 = (n) => String(n).padStart(2,"0");
   return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
 }
-
 function siteLabelForService(service = ""){
   if (service === "Contrôle injection Essence") return "ST EGREVE";
   if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
   return "";
 }
 
+// estimation: retourne undefined si vide (pour ne pas envoyer NaN/null côté Apps Script)
+function sanitizeEstimation(v){
+  if (v === 0 || v === "0") return "0";
+  if (v === undefined || v === null) return undefined;
+  const s = String(v).trim();
+  if (!s) return undefined;
+  return s; // on laisse Apps Script enregistrer tel quel
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Stockage local compteur (fallback)
+// ───────────────────────────────────────────────────────────────────────────────
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const COUNTER_FILE = path.join(dataDir, "counter.json");
@@ -80,48 +116,12 @@ function writeJsonSafe(file, obj) {
   try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
 }
 
-async function gsListCases() {
-  if (!GS_URL) return { ok: true, data: [] };
-  const r = await axios.get(GS_URL, {
-    params: { action: "list_cases", sheet: GS_SHEET },
-    timeout: 15000,
-    headers: { "User-Agent": "atelier-api/1.0" }
-  });
-  return r.data;
-}
-async function gsAppendCase(entry) {
-  if (!GS_URL) return { ok: false, error: "no_gs_url" };
-  const r = await axios.post(GS_URL, {
-    action: "save_case",
-    sheet: GS_SHEET,
-    entry
-  }, { timeout: 15000 });
-  return r.data;
-}
-async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
-  if (!GS_URL) return { ok: false, error: "no_gs_url" };
-  const r = await axios.post(GS_URL, {
-    action: "update_status",
-    sheet: GS_SHEET,
-    no,
-    status,
-    dateStatus: dateStatusISO,
-    estimation
-  }, { timeout: 15000 });
-  return r.data;
-}
-
 async function nextDossierNumber(){
-  const cn = readJsonSafe(COUNTER_FILE, null);
-  let current = (cn && Number.isFinite(cn.value)) ? Number(cn.value) : null;
+  let current = readJsonSafe(COUNTER_FILE, null)?.value ?? null;
 
   if (current === null && GS_URL) {
     try {
-      const r = await axios.get(GS_URL, {
-        params: { action: "list_cases", sheet: GS_SHEET },
-        timeout: 15000,
-        headers: { "User-Agent": "atelier-api/1.0" }
-      });
+      const r = await http.get(GS_URL, { params: { action: "list_cases", sheet: GS_SHEET } });
       const list = (r.data && r.data.data) || [];
       const maxNo = list.reduce((m, x) => {
         const n = parseInt(String(x.no||'').replace(/\D/g,''), 10);
@@ -134,11 +134,50 @@ async function nextDossierNumber(){
   }
 
   if (current === null) current = 0;
-  const next = current + 1;
+  const next = Number(current) + 1;
   writeJsonSafe(COUNTER_FILE, { value: next });
   return String(next).padStart(5, "0");
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Accès Apps Script
+// ───────────────────────────────────────────────────────────────────────────────
+async function gsListCases() {
+  if (!GS_URL) return { ok: true, data: [] };
+  const r = await http.get(GS_URL, {
+    params: { action: "list_cases", sheet: GS_SHEET }
+  });
+  // Attendu: { ok:true, data:[...] }
+  const json = r.data;
+  if (json && Array.isArray(json.data)) return { ok:true, data: json.data };
+  if (json && json.ok && Array.isArray(json.data)) return json;
+  // fallback si Apps Script renvoie un format inattendu
+  return { ok:true, data: [] };
+}
+async function gsAppendCase(entry) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const r = await http.post(GS_URL, { action: "save_case", sheet: GS_SHEET, entry });
+  return r.data;
+}
+async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
+  if (!GS_URL) return { ok: false, error: "no_gs_url" };
+  const body = {
+    action: "update_status",
+    sheet: GS_SHEET,
+    no,
+    status,
+    dateStatus: dateStatusISO
+  };
+  const est = sanitizeEstimation(estimation);
+  if (est !== undefined) body.estimation = est;
+
+  const r = await http.post(GS_URL, body);
+  return r.data;
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Emails
+// ───────────────────────────────────────────────────────────────────────────────
 function gmailTransport() {
   const user = process.env.GMAIL_USER;
   const pass = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
@@ -257,6 +296,9 @@ async function sendClientStatusMail(no, entry) {
   }
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Impression HTML
+// ───────────────────────────────────────────────────────────────────────────────
 function renderPrintHTML(payload = {}, no = ""){
   const meta   = payload.meta   || {};
   const header = payload.header || {};
@@ -396,6 +438,15 @@ router.post("/api/print-html", (req, res) => {
   }
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
+// API: création et lecture des dossiers
+// ───────────────────────────────────────────────────────────────────────────────
+
+// Pré-requêtes CORS (si jamais le cors() global n’est pas appliqué)
+router.options("/api/submit", (_req, res) => res.status(204).end());
+router.options("/api/cases", (_req, res) => res.status(204).end());
+router.options("/api/cases/:no/status", (_req, res) => res.status(204).end());
+
 router.post("/api/submit", async (req, res) => {
   try {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
@@ -418,8 +469,14 @@ router.post("/api/submit", async (req, res) => {
       demandeDate: h.dateDemande || ""
     };
 
-    await gsAppendCase(entry);
-    await sendServiceMail(no, data);
+    const up = await gsAppendCase(entry);
+    if (!up || up.ok !== true) {
+      console.error("[ATELIER] Apps Script save_case a répondu:", up);
+      return res.status(502).json({ ok:false, error:"upstream_save_failed", upstream: up });
+    }
+
+    // email atelier (best-effort)
+    try { await sendServiceMail(no, data); } catch (e) { console.warn("[ATELIER] mail atelier KO:", e?.message || e); }
 
     res.json({ ok: true, no });
   } catch (e) {
@@ -431,11 +488,12 @@ router.post("/api/submit", async (req, res) => {
 router.get("/api/cases", async (_req, res) => {
   try {
     const r = await gsListCases();
-    if (r && r.ok && Array.isArray(r.data)) return res.json({ ok:true, data: r.data });
-    return res.json({ ok:true, data: [] });
+    // On renvoie toujours { data: [...] } (le front lit json.data)
+    const data = (r && Array.isArray(r.data)) ? r.data : [];
+    return res.json({ ok:true, data });
   } catch (e) {
     console.error("[ATELIER][CASES][GET] erreur:", e);
-    res.status(500).json({ ok: false, error: "cases_read_failed" });
+    res.status(500).json({ ok: false, data: [] });
   }
 });
 
@@ -446,16 +504,22 @@ router.post("/api/cases/:no/status", async (req, res) => {
     if (!no || !status) return res.status(400).json({ ok:false, error:"bad_request" });
 
     const dateStatus = new Date().toISOString();
-    await gsUpdateStatus(no, String(status), dateStatus, Number(estimation));
+    const up = await gsUpdateStatus(no, String(status), dateStatus, sanitizeEstimation(estimation));
+    if (!up || up.ok !== true) {
+      console.error("[ATELIER] Apps Script update_status a répondu:", up);
+      return res.status(502).json({ ok:false, error:"upstream_update_failed", upstream: up });
+    }
 
-
-    const st = String(status).toLowerCase();
-    if (st === "renvoyé" || st === "renvoye") {
+    // Mail client quand "Renvoyé"
+    const st = String(status).normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase(); // renvoye / renvoyé
+    if (st === "renvoye") {
       try {
         const r = await gsListCases();
         const hit = (r && r.data || []).find(x => String(x.no) === String(no));
         if (hit) await sendClientStatusMail(no, hit);
-      } catch {}
+      } catch (e) {
+        console.warn("[ATELIER] mail client KO:", e?.message || e);
+      }
     }
 
     res.json({ ok:true });

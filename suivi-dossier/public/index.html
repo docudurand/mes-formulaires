@@ -169,6 +169,11 @@
 </div>
 
 <script>
+const API_BASE =
+  (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
+    ? "https://mes-formulaires.onrender.com"
+    : location.origin.replace(/\/$/, "");
+
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
 const $q      = document.getElementById("q");
@@ -184,6 +189,7 @@ function setTableLoading(msg){
     <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
   </td></tr>`;
 }
+
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
 function badge(status){
   const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
@@ -330,12 +336,15 @@ function draw(){
           saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
           saveBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
 
-          const resp = await fetch(`${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`, { ... })
+          const resp = await fetch(`${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ status, estimation })
           });
-          if(!resp.ok){ alert("Erreur de mise à jour"); return; }
+          if(!resp.ok){
+            alert(`Erreur de mise à jour (${resp.status})`);
+            return;
+          }
 
           r.status = status;
           r.estimation = estimation;
@@ -352,7 +361,7 @@ function draw(){
     });
 
   if (count === 0){
-    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">Chargement en cours ...</td></tr>`;
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">Aucun dossier pour ce filtre.</td></tr>`;
   }
 
   const ymText = YEAR_FILTER
@@ -483,8 +492,7 @@ function load(){
     YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
   }
 
- const API_BASE = "https://mes-formulaires.onrender.com/suivi-dossier";
-fetch(`${API_BASE}/atelier/api/cases`)
+  fetch(`${API_BASE}/atelier/api/cases`)
     .then(r=>r.json())
     .then(json=>{
       const data = (json && json.data) || [];
