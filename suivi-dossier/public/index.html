@@ -330,7 +330,7 @@ function draw(){
           saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
           saveBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
 
-          const resp = await fetch(`/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
+          const resp = await fetch(`${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`, { ... })
             method:"POST",
             headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ status, estimation })
@@ -483,7 +483,8 @@ function load(){
     YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
   }
 
-  fetch("/atelier/api/cases")
+ const API_BASE = "https://mes-formulaires.onrender.com/suivi-dossier";
+fetch(`${API_BASE}/atelier/api/cases`)
     .then(r=>r.json())
     .then(json=>{
       const data = (json && json.data) || [];
