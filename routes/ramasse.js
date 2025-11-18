@@ -373,14 +373,15 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
-      to: recipients.join(", "),
-      cc: cc.length ? cc.join(", ") : undefined,
-      subject,
-      html,
-      attachments,
-    });
+await transporter.sendMail({
+  from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+  to: recipients.join(", "),
+  cc: cc.length ? cc.join(", ") : undefined,
+  subject,
+  html,
+  attachments,
+  replyTo: email,
+});
 
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -426,12 +427,12 @@ router.get("/ack", async (req, res) => {
     const sendNow = shouldSendAckOnce(String(sig));
 
     if (sendNow) {
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: String(email),
-        subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-        html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
-      });
+await transporter.sendMail({
+  from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+  to: String(email),
+  subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
+  html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+});
     }
 
     res
