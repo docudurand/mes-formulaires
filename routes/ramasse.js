@@ -27,6 +27,7 @@ const FOURNISSEUR_PATHS = [
   path.resolve(__dirname, "fournisseur.json"),
   path.resolve(__dirname, "../fournisseur.json"),
 ];
+
 const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
   path.resolve(__dirname, "../magasins.json"),
@@ -61,7 +62,9 @@ function loadJsonFrom(paths, fallback) {
         const raw = fs.readFileSync(p, "utf8");
         return JSON.parse(raw);
       }
-    } catch {  }
+    } catch {
+      // ignore
+    }
   }
   return fallback;
 }
@@ -75,11 +78,17 @@ function loadMagasins() {
   const data = loadJsonFrom(MAGASINS_PATHS, []);
   if (Array.isArray(data) && data.length) {
     return Array.from(
-      new Set(data.map(x => (typeof x === "string" ? x : (x?.name || ""))).filter(Boolean))
+      new Set(
+        data
+          .map(x => (typeof x === "string" ? x : (x?.name || "")))
+          .filter(Boolean)
+      )
     );
   }
   const set = new Set();
-  for (const f of loadFournisseurs()) if (f.magasin) set.add(String(f.magasin));
+  for (const f of loadFournisseurs()) {
+    if (f.magasin) set.add(String(f.magasin));
+  }
   return Array.from(set);
 }
 
@@ -92,12 +101,13 @@ function findFournisseur(name) {
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
 }
+
 function uniqEmails(arr) {
   const flat = [];
 
   for (const x of arr || []) {
     String(x || "")
-      .split(/[;,]/)           // on coupe sur , ou ;
+      .split(/[;,]/) // on coupe sur , ou ;
       .map(s => s.trim())
       .filter(Boolean)
       .forEach(e => flat.push(e));
@@ -108,15 +118,23 @@ function uniqEmails(arr) {
 
 function esc(t = "") {
   return String(t).replace(/[&<>"']/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c])
   );
 }
 
 function oneLine(s) {
-  return String(s ?? "")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim() || "—";
+  return (
+    String(s ?? "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim() || "—"
+  );
 }
 
 function formatParisNow() {
@@ -146,8 +164,11 @@ async function buildPdf({
   demandeurNomPrenom,
   infoLivreur,
 }) {
-  const safe = (s) => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
-  const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
+  const safe = s => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
+  const pdfPath = path.join(
+    TMP_DIR,
+    `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`
+  );
   const doc = new PDFDocument({ size: "A4", margin: 56 });
   const stream = fs.createWriteStream(pdfPath);
   doc.pipe(stream);
@@ -164,17 +185,21 @@ async function buildPdf({
   const pageLeft  = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
 
-  const GAP_AFTER_TITLE = 28;
+  const GAP_AFTER_TITLE    = 28;
   const GAP_AFTER_INFO_HDR = 22;
-  const ROW_GAP = 24;
-  const COMMENT_TOP_GAP = 14;
-  const COMMENT_LINE_GAP = 3;
+  const ROW_GAP            = 24;
+  const COMMENT_TOP_GAP    = 14;
+  const COMMENT_LINE_GAP   = 3;
 
   try {
-    const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
+    const resp = await fetch(
+      "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+    );
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
-  } catch {}
+  } catch {
+    // pas bloquant si le logo ne charge pas
+  }
 
   const titleY = 140;
   doc
@@ -193,48 +218,104 @@ async function buildPdf({
   doc.fontSize(SECTION_FS).fillColor(blue).text("Informations", pageLeft, y);
   y = doc.y + GAP_AFTER_INFO_HDR;
 
-  const labelW = 160;
-  const valX   = pageLeft + labelW + 10;
-  const valW   = (pageRight - valX);
+  const labelW    = 160;
+  const valX      = pageLeft + labelW + 10;
+  const valW      = pageRight - valX;
   const labelOpts = { width: labelW, lineBreak: false };
   const valOpts   = { width: valW, lineBreak: false };
 
   const { dateStr, timeStr } = formatParisNow();
-  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Date de demande :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(`${dateStr} ${timeStr}`, valX, y, valOpts);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(LABEL_FS)
+    .fillColor(gray)
+    .text("Date de demande :", pageLeft, y, labelOpts);
+  doc
+    .font("Helvetica")
+    .fontSize(VALUE_FS)
+    .fillColor("#000")
+    .text(`${dateStr} ${timeStr}`, valX, y, valOpts);
   y += ROW_GAP;
 
-  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Fournisseur :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(fournisseur), valX, y, valOpts);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(LABEL_FS)
+    .fillColor(gray)
+    .text("Fournisseur :", pageLeft, y, labelOpts);
+  doc
+    .font("Helvetica")
+    .fontSize(VALUE_FS)
+    .fillColor("#000")
+    .text(oneLine(fournisseur), valX, y, valOpts);
   y += ROW_GAP;
 
   if (infoLivreur && String(infoLivreur).trim()) {
-    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Info livreur :", pageLeft, y, labelOpts);
-    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(infoLivreur), valX, y, valOpts);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(LABEL_FS)
+      .fillColor(gray)
+      .text("Info livreur :", pageLeft, y, labelOpts);
+    doc
+      .font("Helvetica")
+      .fontSize(VALUE_FS)
+      .fillColor("#000")
+      .text(oneLine(infoLivreur), valX, y, valOpts);
     y += ROW_GAP;
   }
 
-  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Références :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(pieces), valX, y, valOpts);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(LABEL_FS)
+    .fillColor(gray)
+    .text("Références :", pageLeft, y, labelOpts);
+  doc
+    .font("Helvetica")
+    .fontSize(VALUE_FS)
+    .fillColor("#000")
+    .text(oneLine(pieces), valX, y, valOpts);
   y += ROW_GAP;
 
-  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
-  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(magasinDest), valX, y, valOpts);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(LABEL_FS)
+    .fillColor(gray)
+    .text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
+  doc
+    .font("Helvetica")
+    .fontSize(VALUE_FS)
+    .fillColor("#000")
+    .text(oneLine(magasinDest), valX, y, valOpts);
   y += ROW_GAP;
 
   if (demandeurNomPrenom && String(demandeurNomPrenom).trim()) {
-    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Nom Prénom du demandeur :", pageLeft, y, labelOpts);
-    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(demandeurNomPrenom), valX, y, valOpts);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(LABEL_FS)
+      .fillColor(gray)
+      .text("Nom Prénom du demandeur :", pageLeft, y, labelOpts);
+    doc
+      .font("Helvetica")
+      .fontSize(VALUE_FS)
+      .fillColor("#000")
+      .text(oneLine(demandeurNomPrenom), valX, y, valOpts);
     y += ROW_GAP;
   }
 
   if (commentaire && String(commentaire).trim()) {
     y += COMMENT_TOP_GAP;
-    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Commentaire :", pageLeft, y);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(LABEL_FS)
+      .fillColor(gray)
+      .text("Commentaire :", pageLeft, y);
     y = doc.y + COMMENT_LINE_GAP;
-    doc.font("Helvetica").fontSize(COMMENT_FS).fillColor("#000").text(String(commentaire), pageLeft, y, {
-      width: pageRight - pageLeft,
-    });
+    doc
+      .font("Helvetica")
+      .fontSize(COMMENT_FS)
+      .fillColor("#000")
+      .text(String(commentaire), pageLeft, y, {
+        width: pageRight - pageLeft,
+      });
   }
 
   doc.end();
@@ -244,14 +325,36 @@ async function buildPdf({
   });
 }
 
-function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, ackUrl, demandeurNomPrenom }) {
+function buildMailHtml({
+  fournisseur,
+  magasinDest,
+  email,
+  pieces,
+  commentaire,
+  ackUrl,
+  demandeurNomPrenom,
+}) {
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
     <p>Bonjour,</p>
-    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(pieces || "—")}</em>.</p>
-    <p><strong>Destinataire(s) magasin :</strong> ${esc(magasinDest || "—")}<br/>
-       <strong>Demandeur :</strong> ${esc(email)}${demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""}</p>
-    ${commentaire ? `<p><strong>Commentaire :</strong><br/>${esc(String(commentaire)).replace(/\n/g,"<br/>")}</p>` : ""}
+    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(
+      fournisseur
+    )}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(
+      pieces || "—"
+    )}</em>.</p>
+    <p><strong>Destinataire(s) magasin :</strong> ${esc(
+      magasinDest || "—"
+    )}<br/>
+       <strong>Demandeur :</strong> ${esc(email)}${
+         demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""
+       }</p>
+    ${
+      commentaire
+        ? `<p><strong>Commentaire :</strong><br/>${esc(
+            String(commentaire)
+          ).replace(/\n/g, "<br/>")}</p>`
+        : ""
+    }
     <p>
       <a href="${ackUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700">Accuser de réception</a>
     </p>
@@ -261,7 +364,7 @@ function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, a
 function signAck(params) {
   const h = crypto.createHmac("sha256", RAMASSE_SECRET);
   const keys = Object.keys(params).sort();
-  const base = keys.map((k) => `${k}=${params[k]}`).join("&");
+  const base = keys.map(k => `${k}=${params[k]}`).join("&");
   h.update(base);
   return h.digest("hex");
 }
@@ -285,7 +388,10 @@ async function ftpUpload(localPath, remoteDir) {
       user: process.env.FTP_USER,
       password: process.env.FTP_PASSWORD,
       secure: String(process.env.FTP_SECURE || "false") === "true",
-      secureOptions: { rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0" },
+      secureOptions: {
+        rejectUnauthorized:
+          String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
+      },
     });
     const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
     const targetDir = `${root}/${remoteDir}`.replace(/\/+/g, "/");
@@ -295,15 +401,19 @@ async function ftpUpload(localPath, remoteDir) {
   } catch (e) {
     console.error("[RAMASSE][FTP] upload error:", e.message);
   } finally {
-    try { client.close(); } catch {}
+    try {
+      client.close();
+    } catch {
+      // ignore
+    }
   }
 }
 
-const ackRecent = new Map();
-const ACK_TTL_MS = 60 * 1000;
+const ackRecent   = new Map();
+const ACK_TTL_MS  = 60 * 1000;
 
 function shouldSendAckOnce(sig) {
-  const now = Date.now();
+  const now  = Date.now();
   const last = ackRecent.get(sig);
 
   for (const [k, t] of ackRecent) {
@@ -315,7 +425,9 @@ function shouldSendAckOnce(sig) {
 }
 
 router.get("/fournisseurs", (_req, res) => {
-  const out = loadFournisseurs().map(({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur }));
+  const out = loadFournisseurs().map(
+    ({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur })
+  );
   res.json(out);
 });
 
@@ -325,22 +437,37 @@ router.get("/magasins", (_req, res) => {
 
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    const { fournisseur, magasin, email, pieces, commentaire, magasinDest, demandeurNomPrenom } = req.body;
+    const {
+      fournisseur,
+      magasin,
+      email,
+      pieces,
+      commentaire,
+      magasinDest,
+      demandeurNomPrenom,
+    } = req.body;
+
     if (!fournisseur || !email || !pieces) {
-      return res.status(400).json({ error: "Champs requis manquants (fournisseur, email, pièces)." });
+      return res.status(400).json({
+        error: "Champs requis manquants (fournisseur, email, pièces).",
+      });
     }
 
     const four = findFournisseur(fournisseur);
     if (!four) {
-      return res.status(400).json({ error: "Fournisseur inconnu dans fournisseur.json" });
+      return res
+        .status(400)
+        .json({ error: "Fournisseur inconnu dans fournisseur.json" });
     }
 
-    const mg = four?.magasin || magasin || "";
+    const mg         = four?.magasin || magasin || "";
     const recipients = uniqEmails(four?.recipients || []);
-    const cc = uniqEmails(four?.cc || []);
+    const cc         = uniqEmails(four?.cc || []);
 
     if (!recipients.length) {
-      return res.status(500).json({ error: "Aucun destinataire configuré pour ce fournisseur (fournisseur.json)." });
+      return res.status(500).json({
+        error: "Aucun destinataire configuré pour ce fournisseur (fournisseur.json).",
+      });
     }
 
     const ackPayload = {
@@ -364,7 +491,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
-    const html = buildMailHtml({
+    const html    = buildMailHtml({
       fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
       email,
@@ -374,46 +501,64 @@ router.post("/", upload.single("file"), async (req, res) => {
       demandeurNomPrenom,
     });
 
-    const attachments = [{ filename: path.basename(pdfPath), path: pdfPath, contentType: "application/pdf" }];
+    const attachments = [
+      {
+        filename: path.basename(pdfPath),
+        path: pdfPath,
+        contentType: "application/pdf",
+      },
+    ];
+
     if (req.file) {
       attachments.push({
         filename: req.file.originalname,
         path: req.file.path,
-        contentType: req.file.mimetype || mime.lookup(req.file.originalname) || "application/octet-stream",
+        contentType:
+          req.file.mimetype ||
+          mime.lookup(req.file.originalname) ||
+          "application/octet-stream",
       });
     }
 
-await transporter.sendMail({
-  from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
-  to: recipients.join(", "),
-  cc: cc.length ? cc.join(", ") : undefined,
-  subject,
-  html,
-  attachments,
-  replyTo: email,
-});
+    await transporter.sendMail({
+      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      to: recipients.join(", "),
+      cc: cc.length ? cc.join(", ") : undefined,
+      subject,
+      html,
+      attachments,
+      replyTo: email,
+    });
 
-    const d = new Date();
+    const d    = new Date();
     const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const mm   = String(d.getMonth() + 1).padStart(2, "0");
     await ftpUpload(pdfPath, `ramasse/${yyyy}/${mm}`);
 
     setTimeout(() => {
-      try { fs.unlinkSync(pdfPath); } catch {}
-      try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
+      try {
+        fs.unlinkSync(pdfPath);
+      } catch {}
+      try {
+        if (req.file) fs.unlinkSync(req.file.path);
+      } catch {}
     }, 15_000);
 
     res.json({ ok: true });
   } catch (e) {
     console.error("[RAMASSE] POST error:", e);
-    res.status(500).json({ error: "Échec de l'envoi. Vérifiez la config Gmail / PDF / FTP." });
+    res.status(500).json({
+      error: "Échec de l'envoi. Vérifiez la config Gmail / PDF / FTP.",
+    });
   }
 });
 
 router.get("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
-    if (!email || !fournisseur || !ts || !nonce || !sig) return res.status(400).send("Lien incomplet");
+    if (!email || !fournisseur || !ts || !nonce || !sig) {
+      return res.status(400).send("Lien incomplet");
+    }
 
     const params = {
       email: String(email),
@@ -425,8 +570,12 @@ router.get("/ack", async (req, res) => {
     };
 
     const expected = signAck(params);
-    const ok = (expected.length === String(sig).length)
-      && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
+    const ok =
+      expected.length === String(sig).length &&
+      crypto.timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(String(sig))
+      );
     if (!ok) return res.status(400).send("Signature invalide");
 
     const age = Date.now() - Number(ts);
@@ -437,17 +586,27 @@ router.get("/ack", async (req, res) => {
     const sendNow = shouldSendAckOnce(String(sig));
 
     if (sendNow) {
-await transporter.sendMail({
-  from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
-  to: String(email),
-  subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-  html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
-});
+      await transporter.sendMail({
+        from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+        to: String(email),
+        subject: `Accusé de réception – Demande de ramasse (${String(
+          fournisseur
+        )})`,
+        html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(
+          fournisseur
+        )}</strong> concernant <em>${esc(
+          pieces || "—"
+        )}</em> a bien été prise en compte par le magasin <strong>${esc(
+          magasin || "—"
+        )}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+      });
     }
 
     res
       .status(200)
-      .send(`<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`);
+      .send(
+        `<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`
+      );
   } catch (e) {
     console.error("[RAMASSE] ACK error:", e);
     res.status(400).send("Lien invalide ou erreur d'envoi.");
