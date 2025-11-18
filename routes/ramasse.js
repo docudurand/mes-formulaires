@@ -93,7 +93,17 @@ function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
 }
 function uniqEmails(arr) {
-  return Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(isValidEmail)));
+  const flat = [];
+
+  for (const x of arr || []) {
+    String(x || "")
+      .split(/[;,]/)           // on coupe sur , ou ;
+      .map(s => s.trim())
+      .filter(Boolean)
+      .forEach(e => flat.push(e));
+  }
+
+  return Array.from(new Set(flat.filter(isValidEmail)));
 }
 
 function esc(t = "") {
