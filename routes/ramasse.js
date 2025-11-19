@@ -490,7 +490,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
-    const html    = buildMailHtml({
+    const htmlMagasin = buildMailHtml({
       fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
       email,
@@ -500,7 +500,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       demandeurNomPrenom,
     });
 
-    const attachments = [
+    const attachmentsMagasin = [
       {
         filename: path.basename(pdfPath),
         path: pdfPath,
@@ -509,7 +509,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     ];
 
     if (req.file) {
-      attachments.push({
+      attachmentsMagasin.push({
         filename: req.file.originalname,
         path: req.file.path,
         contentType:
@@ -524,15 +524,27 @@ router.post("/", upload.single("file"), async (req, res) => {
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
-      html,
-      attachments,
+      html: htmlMagasin,
+      attachments: attachmentsMagasin,
       replyTo: email,
     });
+
+    const attachmentsUser = [];
+    if (req.file) {
+      attachmentsUser.push({
+        filename: req.file.originalname,
+        path: req.file.path,
+        contentType:
+          req.file.mimetype ||
+          mime.lookup(req.file.originalname) ||
+          "application/octet-stream",
+      });
+    }
 
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: String(email),
-      subject: "Votre demande de ramasse a bien été reçue",
+      subject: "Votre demande de ramasse a bien été envoye",
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -540,15 +552,32 @@ router.post("/", upload.single("file"), async (req, res) => {
             <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
           </div>
           <p>Bonjour,</p>
-          <p>Nous avons bien reçu votre demande de ramasse.</p>
+          <p>Votre demande de ramasse a bien été envoyée.</p>
           <p>Nous la traiterons dans les plus brefs délais.</p>
           <p style="margin-top:16px;"><strong>Résumé de votre demande :</strong></p>
-          <div style="margin-top:8px;padding:12px 16px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;">
-            ${html}
-          </div>
+          <ul style="margin-top:8px;padding-left:18px;">
+            <li><strong>Fournisseur :</strong> ${esc(four?.name || fournisseur)}</li>
+            <li><strong>Magasin destinataire :</strong> ${esc(magasinDest || mg || "—")}</li>
+            <li><strong>Références :</strong> ${esc(pieces || "—")}</li>
+            ${
+              demandeurNomPrenom
+                ? `<li><strong>Demandeur :</strong> ${esc(demandeurNomPrenom)}</li>`
+                : ""
+            }
+            ${
+              commentaire
+                ? `<li><strong>Commentaire :</strong> ${esc(
+                    String(commentaire)
+                  )}</li>`
+                : ""
+            }
+          </ul>
+          <p style="margin-top:16px;">
+            Vous trouverez en pièce jointe une copie du document que vous avez ajouté à votre demande.
+          </p>
         </div>
       `,
-      attachments,
+      attachments: attachmentsUser,
     });
 
     const d    = new Date();
