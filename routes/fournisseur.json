@@ -4,7 +4,7 @@
     "magasin": "Chasse sur Rhone",
     "recipients": ["receptionchasse@durandservices.fr"],
 	"cc": ["magvl5chasse@durandservices.fr"],
-	 "infoLivreur": "Ville :  Tournée 2"
+	 "infoLivreur": "Ville VIENNE :  Tournée 2"
   },
   {
     "name": "AIR PN",
@@ -16,6 +16,7 @@
     "name": "ALDER",
     "magasin": "Chasse sur Rhone",
     "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr"],
 	 "infoLivreur": "Ville : BEAUVALLON Tournée 6"
   },
   {
@@ -27,7 +28,8 @@
   {
     "name": "AGRA",
     "magasin": "Chassieu",
-    "recipients": ["respmagchassieu@durandservices.fr"],
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
   },
     {
@@ -50,6 +52,13 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "BATTERIE CENTER",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : SMH Tournée 6"
   },
   {
     "name": "BG DIFF",
@@ -154,6 +163,13 @@
 	 "infoLivreur": "Ville : DECINES Tournée 5"
   },
   {
+    "name": "DAUPHINE POIDS LOURD",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : ST EGREVE Tournée 1"
+  },
+  {
     "name": "DENUZIERE",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -166,6 +182,13 @@
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "FORD FONTAINE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTAINE Tournée 3"
   },
     {
     "name": "FORD GIVORS",
@@ -180,6 +203,13 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "GMT GRENOBLE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : SEYSSINS Tournée 1"
   },
   {
     "name": "GROENEVELD",
@@ -221,6 +251,13 @@
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : SATOLAS Tournée 2"
+  },
+  {
+    "name": "LESCHLER",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : VEUREY Tournée 1"
   },
   {
     "name": "MAHLE",
@@ -299,6 +336,13 @@
 	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
   },
   {
+    "name": "OPTYMHA",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLARD BONNOT Tournée 7"
+  },
+  {
     "name": "PAP SUD",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -332,6 +376,20 @@
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : BOURGOIN Tournée 4"
+  },
+  {
+    "name": "RCE NOVE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : SEYSSINET Tournée 1"
+  },
+  {
+    "name": "RENAULT TRUCKS FONTANIL",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTANIL Tournée 1"
   },
   {
     "name": "RENAULT TRUCK VAULX MILIEU",
@@ -404,6 +462,13 @@
 	 "infoLivreur": "Ville : LA TALUIDIERE Tournée ST ETIENNE OU MONTBRISON"
   },
   {
+    "name": "TOYOTA ECHIROLLES",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : ECHIROLLES Tournée 3"
+  },
+  {
     "name": "TOYOTA MEYZIEU",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -432,6 +497,13 @@
 	 "infoLivreur": "Ville : ST FONS Tournée 6"
   },
   {
+    "name": "VOLSWAGEN JEAN LAIN",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTAINE Tournée 3"
+  },
+  {
     "name": "VOLTEO SAINT PRIEST",
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
@@ -450,5 +522,12 @@
     "recipients": ["receptionchasse@durandservices.fr"],
 	"cc": ["magvl5chasse@durandservices.fr"],
 	 "infoLivreur": "Ville : CHAPONNAY Tournée 4"
+  },
+  {
+    "name": "VOLVO TRUCKS VEUREY",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr"],
+	 "infoLivreur": "Ville : VEUREY Tournée 1"
   }
 ]
