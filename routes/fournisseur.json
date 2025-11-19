@@ -85,7 +85,7 @@
 	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
   },
   {
-    "name": "CASSE BOUVIER ",
+    "name": "CASSE BOUVIER",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
@@ -119,7 +119,7 @@
 	 "infoLivreur": "Ville : RUY Tournée 3"
   },
   {
-    "name": "CLAS EQUIPPEMENT ",
+    "name": "CLAS EQUIPPEMENT",
     "magasin": "La Motte Servolex",
     "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
 	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
