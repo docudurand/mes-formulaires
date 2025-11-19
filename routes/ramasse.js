@@ -603,8 +603,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     try {
-  const mgForStats = four?.magasin || mg || "Inconnu";
-  incrementRamasseMagasin(mgForStats);
+  incrementRamasseMagasin(mg || "Inconnu");
 } catch (e) {
   console.error("[RAMASSE] Erreur compteur ramasse :", e);
 }
