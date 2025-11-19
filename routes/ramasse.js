@@ -603,11 +603,11 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     try {
-      const mgForStats = magasinDest || mg || "Inconnu";
-      incrementRamasseMagasin(mgForStats);
-    } catch (e) {
-      console.error("[RAMASSE] Erreur compteur ramasse :", e);
-    }
+  const mgForStats = four?.magasin || mg || "Inconnu";
+  incrementRamasseMagasin(mgForStats);
+} catch (e) {
+  console.error("[RAMASSE] Erreur compteur ramasse :", e);
+}
 
     const d    = new Date();
     const yyyy = d.getFullYear();
