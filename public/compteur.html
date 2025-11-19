@@ -71,7 +71,7 @@
 <body>
   <header>
     <div class="wrap">
-      <h1>Compteurs des formulaires <span class="chip">/piece · /piecepl · /pneu (Date début 26 Aout 2025)</span></h1>
+      <h1>Compteurs des formulaires <span class="chip">/piece · /piecepl · /pneu · Ramasse</span></h1>
       <p class="sub">Totaux annuels et cumuls, mis à jour automatiquement à chaque envoi.</p>
     </div>
   </header>
@@ -85,7 +85,7 @@
     <section class="grid" id="cards">
     </section>
 
-    <h2 style="margin: 26px 0 10px;">Récapitulatif par année</h2>
+    <h2 style="margin: 26px 0 10px;">Récapitulatif par année (création de référence)</h2>
     <div style="overflow-x:auto;">
       <table id="table">
         <thead>
@@ -109,30 +109,62 @@
         </tfoot>
       </table>
     </div>
+
+    <h2 style="margin: 32px 0 10px;">Demandes de ramasse par magasin</h2>
+    <p class="hint">Basé sur les magasins configurés dans <code>fournisseur.json</code> et les formulaires envoyés.</p>
+    <div style="overflow-x:auto;">
+      <table id="ramasseTable">
+        <thead>
+          <tr>
+            <th>Magasin</th>
+            <th>Année sélectionnée</th>
+            <th>Nb demandes année</th>
+            <th>Total cumulé</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td id="ram_year_label"></td>
+            <td id="ram_t_year">0</td>
+            <td id="ram_t_total">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </main>
 
   <script>
-    const API = "/stats/counters";
+    const API_COUNTERS = "/stats/counters";
+    const API_RAMASSE  = "/api/ramasse/stats";
 
     async function loadData() {
-      const res = await fetch(API, { cache: "no-store" });
+      const res = await fetch(API_COUNTERS, { cache: "no-store" });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Erreur API");
+      if (!json.ok) throw new Error(json.error || "Erreur API /stats/counters");
       return json.data;
     }
 
-    function fillYearSelect(years) {
+    async function loadRamasse() {
+      const res = await fetch(API_RAMASSE, { cache: "no-store" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API /api/ramasse/stats");
+      return json.data;
+    }
+
+    function fillYearSelect(allYears) {
       const sel = document.getElementById("yearSelect");
       sel.innerHTML = "";
       const current = String(new Date().getFullYear());
-      const set = new Set(years);
-      if (!set.has(current)) years = [current, ...years];
-      for (const y of years) {
+      const set = new Set(allYears);
+      if (!set.has(current)) allYears = [current, ...allYears];
+      allYears.forEach(y => {
         const opt = document.createElement("option");
         opt.value = y;
         opt.textContent = y;
         sel.appendChild(opt);
-      }
+      });
       sel.value = current;
     }
 
@@ -168,8 +200,6 @@
       const tbody = document.querySelector("#table tbody");
       tbody.innerHTML = "";
 
-      let sumPiece = 0, sumPiecepl = 0, sumPneu = 0;
-
       years.forEach(y => {
         const p  = getYearCount(counters.piece.byYear, y);
         const pp = getYearCount(counters.piecepl.byYear, y);
@@ -183,25 +213,72 @@
           <td>${p + pp + pn}</td>
         `;
         tbody.appendChild(row);
-        sumPiece += p; sumPiecepl += pp; sumPneu += pn;
       });
 
-      document.getElementById("t_piece").textContent = counters.piece.total;
+      document.getElementById("t_piece").textContent   = counters.piece.total;
       document.getElementById("t_piecepl").textContent = counters.piecepl.total;
-      document.getElementById("t_pneu").textContent = counters.pneu.total;
-      document.getElementById("t_all").textContent = counters.piece.total + counters.piecepl.total + counters.pneu.total;
+      document.getElementById("t_pneu").textContent    = counters.pneu.total;
+      document.getElementById("t_all").textContent     = counters.piece.total + counters.piecepl.total + counters.pneu.total;
+    }
+
+    function renderRamasse(ramasseData, yearSelected) {
+      const tbody = document.querySelector("#ramasseTable tbody");
+      if (!tbody) return;
+
+      const magasins = ramasseData.magasins || {};
+      const names = Object.keys(magasins).sort((a, b) =>
+        a.localeCompare(b, "fr", { sensitivity: "base" })
+      );
+
+      tbody.innerHTML = "";
+      let sumYear = 0;
+      let sumTotal = 0;
+
+      names.forEach(name => {
+        const data  = magasins[name] || {};
+        const total = Number(data.total || 0);
+        const yearCount = Number((data.byYear && data.byYear[yearSelected]) || 0);
+
+        sumYear  += yearCount;
+        sumTotal += total;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td>${yearSelected}</td>
+          <td>${yearCount}</td>
+          <td>${total}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const yearLabel = document.getElementById("ram_year_label");
+      if (yearLabel) yearLabel.textContent = yearSelected;
+      document.getElementById("ram_t_year").textContent  = sumYear;
+      document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
     async function main() {
       try {
-        const { years, counters } = await loadData();
-        fillYearSelect(years);
+        const [{ years, counters }, ramasseData] = await Promise.all([
+          loadData(),
+          loadRamasse(),
+        ]);
+
+        const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
+        const allYears = Array.from(setYears).sort();
+
+        fillYearSelect(allYears);
         const current = document.getElementById("yearSelect").value;
+
         renderCards(counters, current);
-        renderTable(years, counters);
+        renderTable(allYears, counters);
+        renderRamasse(ramasseData, current);
 
         document.getElementById("yearSelect").addEventListener("change", (e) => {
-          renderCards(counters, e.target.value);
+          const y = e.target.value;
+          renderCards(counters, y);
+          renderRamasse(ramasseData, y);
         });
       } catch (e) {
         alert("Impossible de charger les compteurs : " + e.message);

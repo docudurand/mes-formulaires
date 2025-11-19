@@ -32,6 +32,11 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
+const RAMASSE_STATS_PATHS = [
+  path.resolve(__dirname, "ramasse_stats.json"),
+  path.resolve(process.cwd(), "ramasse_stats.json"),
+];
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -153,6 +158,40 @@ function formatParisNow() {
   }).format(d);
   const timeStr = time24.replace(":", "H");
   return { dateStr, timeStr };
+}
+
+function loadRamasseStats() {
+  const data = loadJsonFrom(RAMASSE_STATS_PATHS, null) || {};
+  if (!Array.isArray(data.years)) data.years = [];
+  if (!data.magasins || typeof data.magasins !== "object") data.magasins = {};
+  return data;
+}
+
+function saveRamasseStats(stats) {
+  const p = RAMASSE_STATS_PATHS[0];
+  try {
+    fs.writeFileSync(p, JSON.stringify(stats, null, 2), "utf8");
+  } catch (e) {
+    console.error("[RAMASSE][STATS] write error:", e.message);
+  }
+}
+
+function incrementRamasseCounter(magasinRaw) {
+  const magasin = (String(magasinRaw || "Inconnu").trim() || "Inconnu");
+  const year = String(new Date().getFullYear());
+  const stats = loadRamasseStats();
+
+  if (!stats.years.includes(year)) {
+    stats.years.push(year);
+    stats.years.sort();
+  }
+
+  const current = stats.magasins[magasin] || { total: 0, byYear: {} };
+  current.total = Number(current.total || 0) + 1;
+  current.byYear[year] = Number(current.byYear[year] || 0) + 1;
+  stats.magasins[magasin] = current;
+
+  saveRamasseStats(stats);
 }
 
 async function buildPdf({
@@ -433,6 +472,16 @@ router.get("/magasins", (_req, res) => {
   res.json(loadMagasins());
 });
 
+router.get("/stats", (_req, res) => {
+  try {
+    const stats = loadRamasseStats();
+    res.json({ ok: true, data: stats });
+  } catch (e) {
+    console.error("[RAMASSE][STATS] error:", e);
+    res.status(500).json({ ok: false, error: "Erreur lecture stats ramasse" });
+  }
+});
+
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     const {
@@ -479,6 +528,8 @@ router.post("/", upload.single("file"), async (req, res) => {
     };
     const ackUrl = buildAckUrl(req, ackPayload);
 
+    incrementRamasseCounter(mg);
+
     const pdfPath = await buildPdf({
       fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
@@ -489,7 +540,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       infoLivreur: four?.infoLivreur || "",
     });
 
-    const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
+    const subject    = `Demande de ramasse – ${four?.name || fournisseur}`;
     const htmlMagasin = buildMailHtml({
       fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
@@ -544,16 +595,15 @@ router.post("/", upload.single("file"), async (req, res) => {
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: String(email),
-      subject: "Votre demande de ramasse a bien été envoyée",
+      subject: "Votre demande de ramasse a bien été envoye",
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
             <span style="font-size:28px;">✔</span>
-            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Ramasse demandée</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
           </div>
           <p>Bonjour,</p>
           <p>Votre demande de ramasse a bien été envoyée.</p>
-		  <p>Un accusé de réception vous sera envoyé dès la prise en charge de la ramasse par le magasin.</p>
           <p>Nous la traiterons dans les plus brefs délais.</p>
           <p style="margin-top:16px;"><strong>Résumé de votre demande :</strong></p>
           <ul style="margin-top:8px;padding-left:18px;">
