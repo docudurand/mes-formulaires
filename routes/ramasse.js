@@ -549,10 +549,11 @@ router.post("/", upload.single("file"), async (req, res) => {
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
             <span style="font-size:28px;">✔</span>
-            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Ramasse envoyée</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Ramasse demandée</span>
           </div>
           <p>Bonjour,</p>
           <p>Votre demande de ramasse a bien été envoyée.</p>
+		  <p>Un accusé de réception vous sera envoyé dès la prise en charge de la ramasse par le magasin.</p>
           <p>Nous la traiterons dans les plus brefs délais.</p>
           <p style="margin-top:16px;"><strong>Résumé de votre demande :</strong></p>
           <ul style="margin-top:8px;padding-left:18px;">
