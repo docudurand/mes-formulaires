@@ -144,12 +144,6 @@
 	 "infoLivreur": "Ville : DECINES Tournée 5"
   },
   {
-    "name": "COFRISET",
-    "magasin": "ST EGREVE",
-    "recipients": ["froidste@durandservices.fr"],
-	 "infoLivreur": "Ville : EYBENS"
-  },
-  {
     "name": "COVERGUARD",
     "magasin": "Miribel",
     "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr"],
@@ -182,12 +176,6 @@
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : DECINES Tournée 5"
-  },
-  {
-    "name": "ESRA",
-    "magasin": "ST EGREVE",
-    "recipients": ["froidste@durandservices.fr"],
-	 "infoLivreur": "Ville : GENAS"
   },
   {
     "name": "FIREM",
@@ -473,12 +461,6 @@
     "recipients": ["magvl5sjb@durandservices.fr"],
 	"cc": ["respmagsjb@durandservices.fr"],
 	 "infoLivreur": "Ville : LA TALUIDIERE Tournée ST ETIENNE OU MONTBRISON"
-  },
-  {
-    "name": "THERMO KING Froid & Services Rhône Alpes",
-    "magasin": "ST EGREVE",
-    "recipients": ["froidste@durandservices.fr"],
-	 "infoLivreur": "Ville : CHASSE SUR RHONE"
   },
   {
     "name": "TOYOTA ECHIROLLES",

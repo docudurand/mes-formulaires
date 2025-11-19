@@ -9,8 +9,6 @@ import PDFDocument from "pdfkit";
 import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 
-import { incrementRamasseMagasin, getCompteurs } from "./compteur.js";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
@@ -435,26 +433,6 @@ router.get("/magasins", (_req, res) => {
   res.json(loadMagasins());
 });
 
-router.get("/stats", (_req, res) => {
-  try {
-    const all = getCompteurs();
-    const src = all.ramasseMagasins || {};
-    const yearsSet = new Set();
-
-    for (const m of Object.values(src)) {
-      if (m && typeof m === "object" && m.byYear) {
-        for (const y of Object.keys(m.byYear)) yearsSet.add(String(y));
-      }
-    }
-
-    const years = Array.from(yearsSet).sort();
-    res.json({ ok: true, data: { years, magasins: src } });
-  } catch (e) {
-    console.error("[RAMASSE][STATS] error:", e);
-    res.status(500).json({ ok: false, error: "Erreur lecture stats ramasse" });
-  }
-});
-
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     const {
@@ -511,7 +489,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       infoLivreur: four?.infoLivreur || "",
     });
 
-    const subject     = `Demande de ramasse – ${four?.name || fournisseur}`;
+    const subject = `Demande de ramasse – ${four?.name || fournisseur}`;
     const htmlMagasin = buildMailHtml({
       fournisseur: four?.name || fournisseur,
       magasinDest: magasinDest || mg,
@@ -566,7 +544,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: String(email),
-      subject: "Votre demande de ramasse a bien été envoye",
+      subject: "Votre demande de ramasse a bien été envoyée",
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -575,7 +553,7 @@ router.post("/", upload.single("file"), async (req, res) => {
           </div>
           <p>Bonjour,</p>
           <p>Votre demande de ramasse a bien été envoyée.</p>
-          <p>Un accusé de réception vous sera envoyé dès la prise en charge de la ramasse par le magasin.</p>
+		  <p>Un accusé de réception vous sera envoyé dès la prise en charge de la ramasse par le magasin.</p>
           <p>Nous la traiterons dans les plus brefs délais.</p>
           <p style="margin-top:16px;"><strong>Résumé de votre demande :</strong></p>
           <ul style="margin-top:8px;padding-left:18px;">
@@ -602,13 +580,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       `,
       attachments: attachmentsUser,
     });
-
-    try {
-      const mgForStats = magasinDest || mg || "Inconnu";
-      incrementRamasseMagasin(mgForStats);
-    } catch (e) {
-      console.error("[RAMASSE] Erreur compteur ramasse :", e);
-    }
 
     const d    = new Date();
     const yyyy = d.getFullYear();
