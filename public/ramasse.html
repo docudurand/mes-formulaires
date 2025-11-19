@@ -31,7 +31,10 @@
       border: 2px dashed #aaa; padding: 15px; margin-top: 10px; border-radius: 6px;
       text-align: center; color: #555; background: #fafafa;
     }
-    button[type="submit"] { margin-top: 20px; background: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; }
+    button[type="submit"] {
+      margin-top: 20px; background: #007bff; color: white;
+      border: none; padding: 12px; border-radius: 4px; cursor: pointer;
+    }
     .status { margin-top: 15px; font-weight: bold; }
   </style>
 </head>
@@ -40,7 +43,9 @@
     <h2>🧰 Demande de ramasse de pièces</h2>
 
     <form id="ramasseForm" enctype="multipart/form-data">
-      <script>window.RAMASSE_API_BASE = window.RAMASSE_API_BASE || 'https://mes-formulaires.onrender.com';</script>
+      <script>
+        window.RAMASSE_API_BASE = window.RAMASSE_API_BASE || 'https://mes-formulaires.onrender.com';
+      </script>
 
       <label for="fournisseur">Fournisseur</label>
       <select id="fournisseur" name="fournisseur" required></select>
@@ -89,7 +94,7 @@
     const emailsList = document.getElementById('emailsList');
     const LS_KEY = 'emails_history';
 
-    (function fillEmailSuggestions(){
+    (function fillEmailSuggestions() {
       const stored = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
       stored.forEach(addr => {
         const opt = document.createElement('option');
@@ -99,7 +104,7 @@
       if (stored.length === 1) emailInput.value = stored[0];
     })();
 
-    function saveEmail(addr){
+    function saveEmail(addr) {
       const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
       if (!arr.includes(addr)) {
         arr.push(addr);
@@ -107,18 +112,19 @@
       }
     }
 
-    async function loadFournisseurs(){
+    async function loadFournisseurs() {
       const res = await fetch(`${API_BASE}/api/ramasse/fournisseurs`);
-      if(!res.ok) throw new Error('Impossible de charger les fournisseurs');
-      return res.json();
-    }
-    async function loadMagasins(){
-      const res = await fetch(`${API_BASE}/api/ramasse/magasins`);
-      if(!res.ok) throw new Error('Impossible de charger les magasins');
+      if (!res.ok) throw new Error('Impossible de charger les fournisseurs');
       return res.json();
     }
 
-    function setMagasin(magasin){
+    async function loadMagasins() {
+      const res = await fetch(`${API_BASE}/api/ramasse/magasins`);
+      if (!res.ok) throw new Error('Impossible de charger les magasins');
+      return res.json();
+    }
+
+    function setMagasin(magasin) {
       const display = magasin && magasin !== '—' ? magasin : '—';
       const hiddenVal = magasin && magasin !== '—' ? magasin : '';
       document.getElementById('magasinCharge').textContent = display;
@@ -130,8 +136,17 @@
         const [fournisseurs, magasins] = await Promise.all([loadFournisseurs(), loadMagasins()]);
 
         const selF = document.getElementById('fournisseur');
-        selF.innerHTML = '<option value="" disabled selected>— Choisir —</option>' +
-          fournisseurs.map(f => `<option value="${f.name.replaceAll('"','&quot;')}" data-magasin="${(f.magasin||'').replaceAll('"','&quot;')}">${f.name}</option>`).join('');
+        selF.innerHTML =
+          '<option value="" disabled selected>— Choisir —</option>' +
+          fournisseurs
+            .map(f => {
+              const name = (f.name || '').trim();
+              const magasin = (f.magasin || '').trim();
+              return `<option value="${name.replaceAll('"','&quot;')}"
+                              data-magasin="${magasin.replaceAll('"','&quot;')}">${name}</option>`;
+            })
+            .join('');
+
         selF.addEventListener('change', () => {
           const opt = selF.selectedOptions[0];
           setMagasin(opt?.getAttribute('data-magasin') || '');
@@ -140,9 +155,17 @@
         });
 
         const selM = document.getElementById('magasinDest');
-        selM.innerHTML = '<option value="" disabled selected>— Choisir —</option>' +
-          magasins.map(m => `<option value="${String(m).replaceAll('"','&quot;')}">${m}</option>`).join('');
-      } catch(e){ console.error(e); }
+        selM.innerHTML =
+          '<option value="" disabled selected>— Choisir —</option>' +
+          magasins
+            .map(m => {
+              const val = String(m || '').trim();
+              return `<option value="${val.replaceAll('"','&quot;')}">${val}</option>`;
+            })
+            .join('');
+      } catch (e) {
+        console.error(e);
+      }
     })();
 
     const fileInput   = document.getElementById('file');
@@ -150,10 +173,16 @@
     const pasteZone   = document.getElementById('pasteZone');
     let pastedFile = null;
 
-    function renderPreview(){
+    function renderPreview() {
       filePreview.innerHTML = '';
       const file = fileInput.files?.[0] || pastedFile;
-      if(!file) return;
+
+      if (!file) {
+        fileInput.required = true;
+        return;
+      }
+
+      fileInput.required = false;
 
       const div = document.createElement('div');
       div.className = 'file-item';
@@ -167,19 +196,26 @@
         <button type="button" id="btnRemove">X</button>
       `;
       filePreview.appendChild(div);
-      div.querySelector('#btnRemove').addEventListener('click', ()=>{
-        pastedFile = null; fileInput.value = ''; renderPreview();
+      div.querySelector('#btnRemove').addEventListener('click', () => {
+        pastedFile = null;
+        fileInput.value = '';
+        renderPreview();
       });
     }
 
-    fileInput.addEventListener('change', renderPreview);
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files[0]) {
+        pastedFile = null;
+      }
+      renderPreview();
+    });
 
-    pasteZone.addEventListener('paste', (ev)=>{
+    pasteZone.addEventListener('paste', (ev) => {
       const items = ev.clipboardData?.items || [];
-      for(const item of items){
-        if(item.kind === 'file'){
+      for (const item of items) {
+        if (item.kind === 'file') {
           const f = item.getAsFile();
-          if(f){
+          if (f) {
             pastedFile = new File([f], f.name || 'capture.png', { type: f.type || 'image/png' });
           }
         }
@@ -191,13 +227,13 @@
     const statusEl = document.getElementById('status');
     const selF = document.getElementById('fournisseur');
 
-    form.addEventListener('submit', async (e)=>{
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       statusEl.textContent = '⏳ Envoi en cours...';
       statusEl.style.color = 'black';
 
       const mgVal = document.getElementById('magasin').value.trim();
-      if(!mgVal){
+      if (!mgVal) {
         selF.setCustomValidity('Veuillez choisir un fournisseur valide (magasin en charge manquant).');
         selF.reportValidity();
         statusEl.textContent = '❌ Veuillez choisir un fournisseur valide (magasin en charge manquant).';
@@ -208,25 +244,41 @@
       }
 
       const fd = new FormData(form);
-      const cleaned = (fd.get('pieces')||'').toString()
-        .split(/\n|,/).map(s=>s.trim()).filter(Boolean).join(', ');
-      fd.set('pieces', cleaned);
 
-      const f = pastedFile || (fileInput.files && fileInput.files[0]);
-      if(f){ fd.set('file', f, f.name); }
+      const fournisseurClean = selF.value.trim();
+      fd.set('fournisseur', fournisseurClean);
+
+      const cleanedPieces = (fd.get('pieces') || '').toString()
+        .split(/\n|,/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .join(', ');
+      fd.set('pieces', cleanedPieces);
+
+      const file = pastedFile || (fileInput.files && fileInput.files[0]);
+      if (!file) {
+        statusEl.textContent = '❌ Veuillez joindre une pièce (fichier ou capture d’écran).';
+        statusEl.style.color = 'red';
+        return;
+      }
+      fd.set('file', file, file.name);
 
       try {
-        const res = await fetch(`${API_BASE}/api/ramasse`, { method:'POST', body: fd });
-        const out = await res.json().catch(()=>({}));
-        if(!res.ok) throw new Error(out.error || 'Erreur inconnue');
+        const res = await fetch(`${API_BASE}/api/ramasse`, { method: 'POST', body: fd });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(out.error || 'Erreur inconnue');
 
         statusEl.textContent = '✅ Demande envoyée. Vous recevrez un accusé dès prise en charge.';
         statusEl.style.color = 'green';
 
-        if(emailInput.value) saveEmail(emailInput.value.trim());
+        if (emailInput.value) saveEmail(emailInput.value.trim());
 
-        form.reset(); pastedFile = null; renderPreview(); setMagasin('—');
-      } catch(err){
+        form.reset();
+        pastedFile = null;
+        fileInput.required = true;
+        renderPreview();
+        setMagasin('—');
+      } catch (err) {
         statusEl.textContent = '❌ ' + err.message;
         statusEl.style.color = 'red';
       }
