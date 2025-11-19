@@ -27,7 +27,6 @@ const FOURNISSEUR_PATHS = [
   path.resolve(__dirname, "fournisseur.json"),
   path.resolve(__dirname, "../fournisseur.json"),
 ];
-
 const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
   path.resolve(__dirname, "../magasins.json"),
@@ -63,7 +62,6 @@ function loadJsonFrom(paths, fallback) {
         return JSON.parse(raw);
       }
     } catch {
-      // ignore
     }
   }
   return fallback;
@@ -95,7 +93,9 @@ function loadMagasins() {
 function findFournisseur(name) {
   const list = loadFournisseurs();
   const n = String(name || "").trim().toLowerCase();
-  return list.find(s => String(s.name || "").toLowerCase() === n);
+  return list.find(
+    s => String(s.name || "").trim().toLowerCase() === n
+  );
 }
 
 function isValidEmail(e) {
@@ -107,7 +107,7 @@ function uniqEmails(arr) {
 
   for (const x of arr || []) {
     String(x || "")
-      .split(/[;,]/) // on coupe sur , ou ;
+      .split(/[;,]/)
       .map(s => s.trim())
       .filter(Boolean)
       .forEach(e => flat.push(e));
@@ -198,7 +198,6 @@ async function buildPdf({
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
   } catch {
-    // pas bloquant si le logo ne charge pas
   }
 
   const titleY = 140;
@@ -346,8 +345,8 @@ function buildMailHtml({
       magasinDest || "—"
     )}<br/>
        <strong>Demandeur :</strong> ${esc(email)}${
-         demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""
-       }</p>
+    demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""
+  }</p>
     ${
       commentaire
         ? `<p><strong>Commentaire :</strong><br/>${esc(
@@ -404,7 +403,6 @@ async function ftpUpload(localPath, remoteDir) {
     try {
       client.close();
     } catch {
-      // ignore
     }
   }
 }
@@ -466,7 +464,8 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     if (!recipients.length) {
       return res.status(500).json({
-        error: "Aucun destinataire configuré pour ce fournisseur (fournisseur.json).",
+        error:
+          "Aucun destinataire configuré pour ce fournisseur (fournisseur.json).",
       });
     }
 
@@ -528,6 +527,28 @@ router.post("/", upload.single("file"), async (req, res) => {
       html,
       attachments,
       replyTo: email,
+    });
+
+    await transporter.sendMail({
+      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      to: String(email),
+      subject: "Votre demande de ramasse a bien été reçue",
+      html: `
+        <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
+          <div style="text-align:center;margin:24px 0 32px;">
+            <span style="font-size:28px;">✔</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+          </div>
+          <p>Bonjour,</p>
+          <p>Nous avons bien reçu votre demande de ramasse.</p>
+          <p>Nous la traiterons dans les plus brefs délais.</p>
+          <p style="margin-top:16px;"><strong>Résumé de votre demande :</strong></p>
+          <div style="margin-top:8px;padding:12px 16px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;">
+            ${html}
+          </div>
+        </div>
+      `,
+      attachments,
     });
 
     const d    = new Date();
@@ -592,13 +613,23 @@ router.get("/ack", async (req, res) => {
         subject: `Accusé de réception – Demande de ramasse (${String(
           fournisseur
         )})`,
-        html: `<p>Bonjour,<br/>Votre demande de ramasse pour <strong>${esc(
-          fournisseur
-        )}</strong> concernant <em>${esc(
+        html: `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
+            <div style="text-align:center;margin:24px 0 32px;">
+              <span style="font-size:28px;">✔</span>
+              <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+            </div>
+            <p>Bonjour,</p>
+            <p>Votre demande de ramasse pour <strong>${esc(
+              fournisseur
+            )}</strong> concernant <em>${esc(
           pieces || "—"
         )}</em> a bien été prise en compte par le magasin <strong>${esc(
           magasin || "—"
-        )}</strong>.<br/><br/>Cordialement,<br/>L'équipe Ramasse</p>`,
+        )}</strong>.</p>
+            <p>Cordialement,<br/>L'équipe Ramasse</p>
+          </div>
+        `,
       });
     }
 
