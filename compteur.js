@@ -5,7 +5,7 @@ const compteurFile = path.join(process.cwd(), "compteurs.json");
 
 function loadCompteurs() {
   if (!fs.existsSync(compteurFile)) {
-    fs.writeFileSync(compteurFile, JSON.stringify({}, null, 2));
+    fs.writeFileSync(compteurFile, JSON.stringify({}));
   }
   return JSON.parse(fs.readFileSync(compteurFile, "utf8"));
 }
@@ -22,25 +22,6 @@ export function incrementCompteur(formulaire) {
   if (!data[formulaire][year]) data[formulaire][year] = 0;
 
   data[formulaire][year] += 1;
-  saveCompteurs(data);
-}
-
-export function incrementRamasseMagasin(magasin) {
-  const data = loadCompteurs();
-  const year = new Date().getFullYear();
-  const key = String(magasin || "Inconnu").trim() || "Inconnu";
-
-  if (!data.ramasseMagasins) {
-    data.ramasseMagasins = {};
-  }
-  if (!data.ramasseMagasins[key]) {
-    data.ramasseMagasins[key] = { total: 0, byYear: {} };
-  }
-
-  const entry = data.ramasseMagasins[key];
-  entry.total = Number(entry.total || 0) + 1;
-  entry.byYear[year] = Number(entry.byYear[year] || 0) + 1;
-
   saveCompteurs(data);
 }
 
