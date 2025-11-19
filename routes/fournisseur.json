@@ -70,7 +70,7 @@
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
-	 "infoLivreur": "Ville : VILLEURBANE Tournée 5"
+	 "infoLivreur": "Ville : VILLEURBANNE Tournée 5"
   },
     {
     "name": "CAPVI",
@@ -380,7 +380,7 @@
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
     "cc": ["magasin5bourgoin@durandservices.fr"],
-	 "infoLivreur": "Ville : ST JEN BOURNAY Tournée 1"
+	 "infoLivreur": "Ville : ST JEAN BOURNAY Tournée 1"
   },
   {
     "name": "SILIM",
@@ -392,14 +392,14 @@
   {
     "name": "ST-FONS-PLAISANCE",
     "magasin": "St Jean Bonnefonds",
-    "recipients": ["magvl5sjb@durandservices.fr,"],
+    "recipients": ["magvl5sjb@durandservices.fr"],
 	"cc": ["respmagsjb@durandservices.fr"],
 	 "infoLivreur": "Ville : ST PRIEST 42 Tournée ST ETIENNE OU MONTBRISON"
   },
   {
     "name": "TEXA",
     "magasin": "St Jean Bonnefonds",
-    "recipients": ["magvl5sjb@durandservices.fr,"],
+    "recipients": ["magvl5sjb@durandservices.fr"],
 	"cc": ["respmagsjb@durandservices.fr"],
 	 "infoLivreur": "Ville : LA TALUIDIERE Tournée ST ETIENNE OU MONTBRISON"
   },
@@ -415,7 +415,7 @@
     "magasin": "Chassieu",
     "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
     "cc": ["respmagchassieu@durandservices.fr"],
-	 "infoLivreur": "Ville : VILLEURBANE Tournée 1"
+	 "infoLivreur": "Ville : VILLEURBANNE Tournée 1"
   },
   {
     "name": "VOLKSWAGEN BOURGOIN",
