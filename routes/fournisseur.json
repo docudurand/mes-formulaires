@@ -334,13 +334,6 @@
 	 "infoLivreur": "Ville : BOURGOIN Tournée 4"
   },
   {
-    "name": "RC SPORTS",
-    "magasin": "Bourgoin",
-    "recipients": ["receptionbourgoin@durandservices.fr"],
-    "cc": ["magasin5bourgoin@durandservices.fr"],
-	 "infoLivreur": "Ville : BOURGOIN Tournée 4"
-  },
-  {
     "name": "RENAULT TRUCK VAULX MILIEU",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
