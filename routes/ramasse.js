@@ -544,12 +544,12 @@ router.post("/", upload.single("file"), async (req, res) => {
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: String(email),
-      subject: "Votre demande de ramasse a bien été envoye",
+      subject: "Votre demande de ramasse a bien été envoyée",
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
             <span style="font-size:28px;">✔</span>
-            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Ramasse envoyée</span>
           </div>
           <p>Bonjour,</p>
           <p>Votre demande de ramasse a bien été envoyée.</p>
