@@ -15,11 +15,11 @@ router.get('/healthz', (_req, res) => {
 });
 
 const salesMap = {
-  'Casti Jeremy':   'magvl4gleize@durandservices.fr',
-  'Trenti Anthony': 'magvl4gleize@durandservices.fr',
-  'Bazoge Ilona':   'magvl4gleize@durandservices.fr',
-  'Barret Olivier': 'magvl4gleize@durandservices.fr',
-  'Remond Nicolas': 'magvl4gleize@durandservices.fr',
+  'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
+  'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
+  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Remond Nicolas': 'nremond@durandservices.fr,magvl4gleize@durandservices.fr',
 };
 
 function getFromName(formOriginRaw) {
