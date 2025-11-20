@@ -15,11 +15,11 @@ router.get('/healthz', (_req, res) => {
 });
 
 const salesMap = {
-  'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
-  'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
+  'Casti Jeremy':   'magvl4gleize@durandservices.fr',
+  'Trenti Anthony': 'magvl4gleize@durandservices.fr',
+  'Bazoge Ilona':   'magvl4gleize@durandservices.fr',
   'Barret Olivier': 'magvl4gleize@durandservices.fr',
-  'Remond Nicolas': 'nremond@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Remond Nicolas': 'magvl4gleize@durandservices.fr',
 };
 
 function getFromName(formOriginRaw) {
@@ -31,8 +31,8 @@ function getFromName(formOriginRaw) {
 
 function getSubjectPrefix(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
-  if (s.includes('bosch')) return 'BDC - BOSCH';
-  if (s.includes('lub'))   return 'BDC - LUB';
+  if (s.includes('bosch')) return 'BOSCH JANVIER 2026';
+  if (s.includes('lub'))   return 'LUB 2026';
   return 'BDC';
 }
 
