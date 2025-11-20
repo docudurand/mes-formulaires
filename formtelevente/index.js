@@ -18,14 +18,14 @@ const salesMap = {
   'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
   'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
   'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr,respmagchassieu@durandservices.fr,magvl5chassieu@durandservices.fr',
-  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
+  'Barret Olivier': 'magvl4gleize@durandservices.fr',
   'Remond Nicolas': 'nremond@durandservices.fr,magvl4gleize@durandservices.fr',
 };
 
 function getFromName(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
-  if (s.includes('bosch')) return 'Bon de Commande BOSCH';
-  if (s.includes('lub'))   return 'Bon de Commande LUB';
+  if (s.includes('bosch')) return 'Bon de Commande BOSCH Janvier 2026';
+  if (s.includes('lub'))   return 'Bon de Commande LUB 2026';
   return 'Bon de Commande';
 }
 
