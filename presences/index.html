@@ -538,7 +538,7 @@ function buildGlobalCodesBar(){
           td.classList.add('weekend');
         }else{
           td.classList.add(code);
-          if(/^P\\d+$/.test(code)) td.classList.add('PSITE');
+          if (/^P\d+$/.test(code)) td.classList.add('PSITE');
           if(fer && code==='F') td.classList.add('FERIE');
         }
       });
@@ -790,14 +790,14 @@ function applyPrefill(data){
         else {
           const isKnown = ALL_CODES.includes(v);
           if (isKnown) {
-            td.classList.add(v);
-            if (/^P\\d+$/.test(v)) td.classList.add('PSITE');
-            if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
-          } else if (/^P\\d+$/.test(v)) {
-            td.classList.add(v, 'PSITE');
-          } else {
-            td.classList.add('LL');
-          }
+  td.classList.add(v);
+  if (/^P\d+$/.test(v)) td.classList.add('PSITE');
+  if (isSaisieHoliday() && v === 'F') td.classList.add('FERIE');
+} else if (/^P\d+$/.test(v)) {
+  td.classList.add(v, 'PSITE');
+} else {
+  td.classList.add('LL');
+}
         }
       }
     });
