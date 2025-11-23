@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Saisie kilométrage tournée</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      padding: 20px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      max-width: 420px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 8px 0;
+      text-align: center;
+    }
+    .sub {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .info {
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #f0f4ff;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+    input[type="date"],
+    input[type="number"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 10px 0;
+      border-radius: 999px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .msg.ok {
+      color: #15803d;
+    }
+    .msg.err {
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Kilométrage tournée</h1>
+    <div class="sub">Merci de saisir le kilométrage de la journée</div>
+
+    <div id="infoBloc" class="info">
+      Chargement des informations de tournée...
+    </div>
+
+    <form id="kmForm">
+      <label for="date">Date de la journée</label>
+      <input type="date" id="date" name="date" required />
+
+      <label for="km">Kilométrage du jour (km)</label>
+      <input type="number" id="km" name="km" min="0" step="0.1" required />
+
+      <label for="commentaire">Commentaire (optionnel)</label>
+      <textarea id="commentaire" name="commentaire" placeholder="Ex : tournée modifiée, détour, etc."></textarea>
+
+      <button type="submit" id="submitBtn">Valider</button>
+    </form>
+
+    <div id="message" class="msg"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    const agence = params.get("agence") || "";
+    const codeAgence = params.get("codeAgence") || agence;
+    const tournee = params.get("tournee") || "";
+    const codeTournee = params.get("codeTournee") || "";
+    const chauffeur = params.get("chauffeur") || "";
+    const codeChauffeur = params.get("codeChauffeur") || "";
+
+    const infoBloc = document.getElementById("infoBloc");
+    const messageEl = document.getElementById("message");
+    const form = document.getElementById("kmForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const dateInput = document.getElementById("date");
+
+    // Date du jour par défaut
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+
+    // Affichage infos tournée
+    function buildInfo() {
+      const lines = [];
+      if (agence || codeAgence) {
+        lines.push(`<strong>Agence :</strong> ${agence || codeAgence}`);
+      }
+      if (tournee || codeTournee) {
+        lines.push(`<strong>Tournée :</strong> ${tournee || codeTournee}`);
+      }
+      if (chauffeur || codeChauffeur) {
+        lines.push(`<strong>Chauffeur :</strong> ${chauffeur || codeChauffeur}`);
+      }
+      if (!lines.length) {
+        infoBloc.innerHTML =
+          "Les paramètres de la tournée ne sont pas dans l'URL. Scanne bien le QR code fourni.";
+      } else {
+        infoBloc.innerHTML = lines.join("<br>");
+      }
+    }
+
+    buildInfo();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      messageEl.textContent = "";
+      messageEl.className = "msg";
+
+      const dateValue = dateInput.value;
+      const kmValue = document.getElementById("km").value;
+      const commentaireValue = document.getElementById("commentaire").value;
+
+      if (!codeTournee) {
+        messageEl.textContent =
+          "Erreur : code tournée manquant. Vérifie le QR code.";
+        messageEl.classList.add("err");
+        return;
+      }
+      if (!dateValue) {
+        messageEl.textContent = "Merci de choisir une date.";
+        messageEl.classList.add("err");
+        return;
+      }
+      if (kmValue === "" || isNaN(Number(kmValue))) {
+        messageEl.textContent = "Merci de saisir un kilométrage valide.";
+        messageEl.classList.add("err");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Enregistrement...";
+
+      try {
+        const res = await fetch("/api/kilometrage/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            agence,
+            codeAgence,
+            tournee,
+            codeTournee,
+            chauffeur,
+            codeChauffeur,
+            date: dateValue,
+            km: Number(kmValue),
+            commentaire: commentaireValue
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || "Erreur serveur");
+        }
+
+        messageEl.textContent = "Kilométrage enregistré 👍";
+        messageEl.classList.add("ok");
+        form.reset();
+        // On remet la date du jour après reset
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+      } catch (err) {
+        console.error(err);
+        messageEl.textContent =
+          "Erreur lors de l'enregistrement. Réessaie ou contacte le responsable.";
+        messageEl.classList.add("err");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Valider";
+      }
+    });
+  </script>
+</body>
+</html>
