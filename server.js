@@ -24,6 +24,7 @@ import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
+import kilometrageRouter from "./routes/kilometrage.js";
 
 dotenv.config();
 
@@ -76,6 +77,7 @@ function respServiceEmailFor(magasin) {
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
+app.use("/api/kilometrage", kilometrageRouter);
 
 const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
