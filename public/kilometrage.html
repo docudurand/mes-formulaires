@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Suivi kilométrique agences</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f3f4f6;
+    }
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    header h1 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+    .year-select {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+    .year-select select {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 0.9rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px 10px;
+      background: #1f2937;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      color: #e5e7eb;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: #f97316;
+      color: #111827;
+      font-weight: 600;
+    }
+    main {
+      padding: 10px;
+    }
+    .info-line {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: #4b5563;
+    }
+    .months-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 10px;
+    }
+    .month-card {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      padding: 10px;
+      overflow: auto;
+      max-height: 380px;
+    }
+    .month-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .month-title small {
+      font-weight: 400;
+      color: #6b7280;
+      font-size: 0.8rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.8rem;
+      min-width: 420px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 2px 4px;
+      text-align: center;
+    }
+    th {
+      background: #f3f4f6;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    th:first-child, td:first-child {
+      position: sticky;
+      left: 0;
+      background: #f9fafb;
+      text-align: left;
+      min-width: 110px;
+      max-width: 140px;
+      white-space: nowrap;
+    }
+    td.km {
+      background: #ecfdf3;
+    }
+    td.km-zero {
+      background: #ffffff;
+    }
+    .status {
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      color: #6b7280;
+    }
+    .status span {
+      font-weight: 600;
+    }
+    .loader {
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Suivi kilométrique des tournées</h1>
+    <div class="year-select">
+      <span>Année :</span>
+      <select id="yearSelect"></select>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabsContainer"></div>
+
+  <main>
+    <div class="info-line" id="infoLine"></div>
+    <div class="status" id="status"></div>
+    <div id="monthsContainer" class="months-grid"></div>
+  </main>
+
+  <script>
+    // Ajuste les codes agences ici selon ta réalité
+    const AGENCES = [
+      "VL1", "VL2", "VL3", "VL4", "VL5", "VL6",
+      "VL7", "VL8", "VL9", "VL10", "VL11", "VL12"
+    ];
+
+    const monthNames = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+
+    const tabsContainer = document.getElementById("tabsContainer");
+    const yearSelect = document.getElementById("yearSelect");
+    const infoLine = document.getElementById("infoLine");
+    const statusEl = document.getElementById("status");
+    const monthsContainer = document.getElementById("monthsContainer");
+
+    let currentAgence = AGENCES[0] || "";
+    let currentYear = new Date().getFullYear();
+
+    function initYearSelect() {
+      const minYear = currentYear - 1;
+      const maxYear = currentYear + 1;
+      for (let y = minYear; y <= maxYear; y++) {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      }
+    }
+
+    function buildTabs() {
+      tabsContainer.innerHTML = "";
+      AGENCES.forEach((agence) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tab" + (agence === currentAgence ? " active" : "");
+        btn.textContent = agence;
+        btn.addEventListener("click", () => {
+          if (currentAgence !== agence) {
+            currentAgence = agence;
+            updateTabsActive();
+            loadData();
+          }
+        });
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    function updateTabsActive() {
+      const buttons = tabsContainer.querySelectorAll(".tab");
+      buttons.forEach((btn) => {
+        if (btn.textContent === currentAgence) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
+
+    async function loadData() {
+      if (!currentAgence) return;
+
+      statusEl.textContent = "";
+      monthsContainer.innerHTML = "";
+      infoLine.textContent = `Agence : ${currentAgence} – Année : ${currentYear}`;
+      const loader = document.createElement("div");
+      loader.className = "loader";
+      loader.textContent = "Chargement des données...";
+      monthsContainer.appendChild(loader);
+
+      try {
+        const res = await fetch(
+          `/api/kilometrage/data?agence=${encodeURIComponent(
+            currentAgence
+          )}&year=${encodeURIComponent(currentYear)}`
+        );
+
+        const data = await res.json().catch(() => []);
+        monthsContainer.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          statusEl.innerHTML =
+            `Aucune donnée de kilométrage trouvée pour <span>${currentAgence}</span> en <span>${currentYear}</span>.`;
+          buildMonthsTables({});
+          return;
+        }
+
+        statusEl.innerHTML = `Données récupérées : <span>${data.length}</span> enregistrements.`;
+
+        // Regroupement : mois -> tournée -> jour -> km
+        const grouped = {}; // { [monthIndex:1..12]: { [tourneeKey]: { [day]: km } } }
+
+        data.forEach((row) => {
+          if (!row.date) return;
+          const d = new Date(row.date);
+          if (isNaN(d)) return;
+
+          const monthIndex = d.getMonth() + 1;
+          const day = d.getDate();
+
+          const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
+
+          if (!grouped[monthIndex]) grouped[monthIndex] = {};
+          if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
+
+          // Si plusieurs saisies pour la même journée/tournée, on additionne
+          const km = Number(row.km || 0);
+          grouped[monthIndex][tourneeKey][day] =
+            (grouped[monthIndex][tourneeKey][day] || 0) + km;
+        });
+
+        buildMonthsTables(grouped);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent =
+          "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
+      }
+    }
+
+    function buildMonthsTables(grouped) {
+      monthsContainer.innerHTML = "";
+      for (let month = 1; month <= 12; month++) {
+        const monthData = grouped[month] || {};
+
+        const card = document.createElement("div");
+        card.className = "month-card";
+
+        const title = document.createElement("div");
+        title.className = "month-title";
+        title.innerHTML = `
+          <span>${monthNames[month - 1]}</span>
+          <small>${currentAgence} – ${currentYear}</small>
+        `;
+        card.appendChild(title);
+
+        const table = document.createElement("table");
+
+        // Entête
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        const firstTh = document.createElement("th");
+        firstTh.textContent = "Tournée / Jour";
+        headerRow.appendChild(firstTh);
+
+        // 31 colonnes de jours (on ne gère pas le nombre réel de jours, c'est un affichage simple)
+        for (let day = 1; day <= 31; day++) {
+          const th = document.createElement("th");
+          th.textContent = day;
+          headerRow.appendChild(th);
+        }
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        const tourneeNames = Object.keys(monthData).sort();
+
+        if (tourneeNames.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 32;
+          cell.textContent = "Aucun kilométrage saisi pour ce mois.";
+          cell.style.textAlign = "center";
+          row.appendChild(cell);
+          tbody.appendChild(row);
+        } else {
+          tourneeNames.forEach((tournee) => {
+            const row = document.createElement("tr");
+            const labelCell = document.createElement("td");
+            labelCell.textContent = tournee;
+            row.appendChild(labelCell);
+
+            const daysKm = monthData[tournee];
+
+            for (let day = 1; day <= 31; day++) {
+              const td = document.createElement("td");
+              const km = daysKm[day] || 0;
+              if (km > 0) {
+                td.textContent = km;
+                td.className = "km";
+              } else {
+                td.textContent = "";
+                td.className = "km-zero";
+              }
+              row.appendChild(td);
+            }
+
+            tbody.appendChild(row);
+          });
+        }
+
+        table.appendChild(tbody);
+        card.appendChild(table);
+        monthsContainer.appendChild(card);
+      }
+    }
+
+    yearSelect.addEventListener("change", () => {
+      currentYear = parseInt(yearSelect.value, 10);
+      loadData();
+    });
+
+    // Init
+    initYearSelect();
+    buildTabs();
+    loadData();
+  </script>
+</body>
+</html>
