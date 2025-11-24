@@ -118,22 +118,22 @@
             <input id="baseUrl" type="text"
                    value="https://mes-formulaires.onrender.com/kilometrage-saisie.html" />
             <div class="muted">
-              Change-la si tu utilises un autre domaine (Wix proxy, etc.).
+              
             </div>
           </div>
 
           <div class="field">
-            <label for="agence">Agence (depuis PARAMS)</label>
+            <label for="agence">Agence</label>
             <select id="agence">
               <option value="">— Sélectionne une agence —</option>
             </select>
             <div class="muted">
-              La liste est alimentée par l’onglet <strong>PARAMS</strong> du fichier Google Sheets.
+              
             </div>
           </div>
 
           <div class="field">
-            <label for="tourneePreset">Tournée / Transporteur (depuis PARAMS)</label>
+            <label for="tourneePreset">Tournée / Transporteur</label>
             <select id="tourneePreset">
               <option value="">— Choisir une tournée —</option>
             </select>
@@ -150,7 +150,7 @@
           <div class="field">
             <label for="codeTransporteur">Code transporteur</label>
             <input id="codeTransporteur" type="text" placeholder="Ex : WARNING" />
-            <div class="muted">Par défaut, on reprend le nom en majuscules sans espaces.</div>
+            <div class="muted"></div>
           </div>
 
           <div class="field">
@@ -161,7 +161,7 @@
           <div class="field">
             <label for="codeTournee">Code tournée</label>
             <input id="codeTournee" type="text" placeholder="Ex : T1" />
-            <div class="muted">Servira comme identifiant dans le Google Sheet.</div>
+            <div class="muted"></div>
           </div>
 
           <button id="btnGenerate">Générer le QR code</button>
@@ -320,7 +320,6 @@
       return url;
     }
 
-    // Génération du QR
     $btnGenerate.addEventListener("click", () => {
       const url = buildUrl();
       if (!url) return;
@@ -341,7 +340,6 @@
       }, 200);
     });
 
-    // Téléchargement : utilisation du cadre QRKILOMETRAGE.png
     $btnDownload.addEventListener("click", () => {
       const qrCanvas = $qrcode.querySelector("canvas");
       if (!qrCanvas) return;
@@ -364,34 +362,28 @@
         canvas.height = h;
         const ctx = canvas.getContext("2d");
 
-        // cadre
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        // -------- Zone QR : fond blanc + QR centré dedans ----------
-        const qrSize = Math.min(w * 0.68, h * 0.55);
+        const qrSize = Math.min(w * 0.78, h * 0.60);
         const qrX = (w - qrSize) / 2;
         const qrY = h * 0.35;
 
-        // fond blanc derrière le QR (évite le fond noir)
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
-        // on laisse une marge blanche autour du QR
-        const innerPad = qrSize * 0.08;
+        const innerPad = qrSize * 0.04;
         const innerSize = qrSize - innerPad * 2;
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
-        // -------- Texte dans la barre bleue ----------
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft = w * 0.30;     // laisse la place au logo
-        const textCenterY = h * 0.10;  // zone centrale du bandeau
-        const maxWidth = qrSize;       // largeur max = largeur du QR
+        const textLeft = w * 0.30 + 10;
+        const textCenterY = h * 0.10;
+        const maxWidth = qrSize * 0.90;
 
-        // taille de police adaptée à la plus longue des deux lignes
-        let fontSize = 26;
+        let fontSize = 24;
         let width1, width2, maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui";
@@ -416,12 +408,11 @@
       };
 
       frameImg.onerror = () => {
-        // fallback : simple QR + 2 lignes de texte
         console.error("Impossible de charger QRKILOMETRAGE.png, fallback simple.");
 
         const qrSize = qrCanvas.width;
         const padding = 8;
-        const textAreaHeight = 50; // 2 lignes
+        const textAreaHeight = 50;
         const canvas = document.createElement("canvas");
         canvas.width = qrSize;
         canvas.height = qrSize + textAreaHeight + padding * 2;

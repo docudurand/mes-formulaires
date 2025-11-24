@@ -24,40 +24,32 @@
       font-size: 1.1rem;
       margin: 0;
     }
-    .year-select {
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .year-select,
+    .agency-select {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 0.9rem;
     }
-    .year-select select {
+
+    .year-select select,
+    .agency-select select {
       padding: 4px 8px;
       border-radius: 999px;
       border: 1px solid #e5e7eb;
       font-size: 0.9rem;
-    }
-    .tabs {
-      display: flex;
-      gap: 4px;
-      padding: 8px 10px;
-      background: #073763;
-      overflow-x: auto;
-    }
-    .tab {
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      border: none;
-      cursor: pointer;
-      color: #e5e7eb;
-      background: transparent;
-      white-space: nowrap;
-    }
-    .tab.active {
-      background: #f97316;
+      background: #f9fafb;
       color: #111827;
-      font-weight: 600;
     }
+
     main {
       padding: 10px;
     }
@@ -222,7 +214,6 @@
         print-color-adjust: exact;
       }
       header,
-      .tabs,
       main {
         display: none !important;
       }
@@ -239,13 +230,17 @@
 <body>
   <header>
     <h1>Suivi kilométrique des tournées</h1>
-    <div class="year-select">
-      <span>Année :</span>
-      <select id="yearSelect"></select>
+    <div class="filters">
+      <div class="agency-select">
+        <span>Magasin :</span>
+        <select id="agencySelect"></select>
+      </div>
+      <div class="year-select">
+        <span>Année :</span>
+        <select id="yearSelect"></select>
+      </div>
     </div>
   </header>
-
-  <div class="tabs" id="tabsContainer"></div>
 
   <main>
     <div class="info-line" id="infoLine"></div>
@@ -254,6 +249,13 @@
   </main>
 
   <div id="printContainer"></div>
+
+  <img
+    id="printLogoTemplate"
+    src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+    alt="Durand Services"
+    style="display:none"
+  />
 
   <script>
     const AGENCES = [
@@ -275,14 +277,15 @@
       "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ];
 
-    const tabsContainer = document.getElementById("tabsContainer");
     const yearSelect = document.getElementById("yearSelect");
+    const agencySelect = document.getElementById("agencySelect");
     const infoLine = document.getElementById("infoLine");
     const statusEl = document.getElementById("status");
     const monthsContainer = document.getElementById("monthsContainer");
     const printContainer = document.getElementById("printContainer");
+    const logoTemplate = document.getElementById("printLogoTemplate");
 
-    let currentAgence = AGENCES[0] || "";
+    let currentAgence = "";
     let currentYear = new Date().getFullYear();
 
     const YEARS = [2025, 2026];
@@ -301,33 +304,17 @@
       });
     }
 
-    function buildTabs() {
-      tabsContainer.innerHTML = "";
-      AGENCES.forEach((agence) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "tab" + (agence === currentAgence ? " active" : "");
-        btn.textContent = agence;
-        btn.addEventListener("click", () => {
-          if (currentAgence !== agence) {
-            currentAgence = agence;
-            updateTabsActive();
-            loadData();
-          }
-        });
-        tabsContainer.appendChild(btn);
+    function initAgencySelect() {
+      agencySelect.innerHTML = "";
+      const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
+      sorted.forEach((ag) => {
+        const opt = document.createElement("option");
+        opt.value = ag;
+        opt.textContent = ag;
+        agencySelect.appendChild(opt);
       });
-    }
-
-    function updateTabsActive() {
-      const buttons = tabsContainer.querySelectorAll(".tab");
-      buttons.forEach((btn) => {
-        if (btn.textContent === currentAgence) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
+      currentAgence = sorted[0] || "";
+      agencySelect.value = currentAgence;
     }
 
     async function loadData() {
@@ -595,22 +582,40 @@
 
       const header = document.createElement("div");
       header.className = "print-header";
-      header.innerHTML = `
-        <div class="print-header-top">
-          <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
-               alt="Durand Services" class="print-logo">
-          <div class="print-header-text">
-            <h1>Suivi kilométrique – ${currentAgence}</h1>
-            <div class="print-subtitle">${monthNames[monthIndex - 1]} ${currentYear}</div>
-          </div>
-        </div>
-      `;
+
+      const top = document.createElement("div");
+      top.className = "print-header-top";
+
+      const logo = logoTemplate.cloneNode(true);
+      logo.style.display = "block";
+      logo.classList.add("print-logo");
+      logo.removeAttribute("id");
+
+      const textBox = document.createElement("div");
+      textBox.className = "print-header-text";
+
+      const title = document.createElement("h1");
+      title.textContent = "Suivi kilométrique – " + currentAgence;
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "print-subtitle";
+      subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
+
+      textBox.appendChild(title);
+      textBox.appendChild(subtitle);
+      top.appendChild(logo);
+      top.appendChild(textBox);
+      header.appendChild(top);
 
       wrapper.appendChild(header);
       wrapper.appendChild(clone);
       printContainer.appendChild(wrapper);
 
-      window.print();
+      if (!logo.complete) {
+        logo.onload = () => window.print();
+      } else {
+        window.print();
+      }
     }
 
     yearSelect.addEventListener("change", () => {
@@ -618,8 +623,13 @@
       loadData();
     });
 
+    agencySelect.addEventListener("change", () => {
+      currentAgence = agencySelect.value;
+      loadData();
+    });
+
     initYearSelect();
-    buildTabs();
+    initAgencySelect();
     loadData();
   </script>
 </body>
