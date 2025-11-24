@@ -79,6 +79,7 @@
       color: #4b5563;
     }
 
+    /* mois en colonne */
     .months-grid {
       display: flex;
       flex-direction: column;
@@ -108,7 +109,7 @@
       border-collapse: collapse;
       width: 100%;
       font-size: 0.8rem;
-      min-width: 600px;
+      min-width: 650px;
     }
     th, td {
       border: 1px solid #e5e7eb;
@@ -124,6 +125,11 @@
       white-space: nowrap;
       min-width: 140px;
       max-width: 200px;
+    }
+    th.total-col,
+    td.total-cell {
+      font-weight: 600;
+      background: #e5e7eb;
     }
     td.km {
       background: #ecfdf3;
@@ -273,12 +279,10 @@
             const d2 = new Date(row.timestamp);
             if (!isNaN(d2)) d = d2;
           }
-          if (!d) {
-            return;
-          }
+          if (!d) return;
 
-          const monthIndex = d.getMonth() + 1; // 1..12
-          const day = d.getDate(); // 1..31
+          const monthIndex = d.getMonth() + 1;
+          const day = d.getDate();
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
           const km = Number(row.km || 0);
@@ -332,6 +336,11 @@
           headerRow.appendChild(th);
         }
 
+        const totalTh = document.createElement("th");
+        totalTh.textContent = "Total";
+        totalTh.className = "total-col";
+        headerRow.appendChild(totalTh);
+
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
@@ -341,7 +350,7 @@
         if (tourneeNames.length === 0) {
           const row = document.createElement("tr");
           const cell = document.createElement("td");
-          cell.colSpan = 32;
+          cell.colSpan = 33; // 1 (titre) + 31 jours + 1 total
           cell.textContent = "Aucun kilométrage saisi pour ce mois.";
           cell.style.textAlign = "center";
           row.appendChild(cell);
@@ -354,6 +363,7 @@
             row.appendChild(labelCell);
 
             const daysKm = monthData[tournee] || {};
+            let total = 0;
 
             for (let day = 1; day <= 31; day++) {
               const td = document.createElement("td");
@@ -361,12 +371,18 @@
               if (km > 0) {
                 td.textContent = km;
                 td.className = "km";
+                total += km;
               } else {
                 td.textContent = "";
                 td.className = "km-zero";
               }
               row.appendChild(td);
             }
+
+            const totalTd = document.createElement("td");
+            totalTd.className = "total-cell";
+            totalTd.textContent = total > 0 ? total : "";
+            row.appendChild(totalTd);
 
             tbody.appendChild(row);
           });

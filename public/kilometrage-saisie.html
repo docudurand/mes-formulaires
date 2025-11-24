@@ -23,16 +23,24 @@
       max-width: 420px;
       width: 100%;
     }
+    .logo {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .logo img {
+      max-width: 160px;
+      height: auto;
+    }
     h1 {
-      font-size: 1.4rem;
-      margin: 0 0 8px 0;
+      font-size: 1.3rem;
+      margin: 0 0 4px 0;
       text-align: center;
     }
     .sub {
       font-size: 0.9rem;
       color: #666;
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .info {
       font-size: 0.9rem;
@@ -49,7 +57,6 @@
     }
     input[type="date"],
     input[type="number"],
-    input[type="text"],
     textarea {
       width: 100%;
       box-sizing: border-box;
@@ -93,8 +100,12 @@
 </head>
 <body>
   <div class="card">
-    <h1>Kilométrage tournée</h1>
-    <div class="sub">Merci de saisir le kilométrage de la journée</div>
+    <div class="logo">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand Services" />
+    </div>
+
+    <h1>Kilométrage de la journée</h1>
+    <div class="sub">Merci de saisir le kilométrage total journalier</div>
 
     <div id="infoBloc" class="info">
       Chargement des informations de tournée...
@@ -108,7 +119,7 @@
       <input type="number" id="km" name="km" min="0" step="0.1" required />
 
       <label for="commentaire">Commentaire (optionnel)</label>
-      <textarea id="commentaire" name="commentaire" placeholder="Ex : tournée modifiée, détour, etc."></textarea>
+      <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
 
       <button type="submit" id="submitBtn">Valider</button>
     </form>
@@ -132,14 +143,12 @@
     const submitBtn = document.getElementById("submitBtn");
     const dateInput = document.getElementById("date");
 
-    // Date du jour par défaut
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
     dateInput.value = `${yyyy}-${mm}-${dd}`;
 
-    // Affichage infos tournée
     function buildInfo() {
       const lines = [];
       if (agence || codeAgence) {
@@ -149,7 +158,7 @@
         lines.push(`<strong>Tournée :</strong> ${tournee || codeTournee}`);
       }
       if (chauffeur || codeChauffeur) {
-        lines.push(`<strong>Chauffeur :</strong> ${chauffeur || codeChauffeur}`);
+        lines.push(`<strong>Transporteur :</strong> ${chauffeur || codeChauffeur}`);
       }
       if (!lines.length) {
         infoBloc.innerHTML =
@@ -218,7 +227,6 @@
         messageEl.textContent = "Kilométrage enregistré 👍";
         messageEl.classList.add("ok");
         form.reset();
-        // On remet la date du jour après reset
         dateInput.value = `${yyyy}-${mm}-${dd}`;
       } catch (err) {
         console.error(err);
