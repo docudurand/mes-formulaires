@@ -349,7 +349,8 @@
       const agence = $agence.value || "AGENCE";
       const tourneeName = $tournee.value || "TOURNÉE";
       const tourneeCode = slugify(tourneeName);
-      const labelText = agence + " - " + tourneeName;
+      const labelTop = agence;
+      const labelBottom = tourneeName;
 
       const frameImg = new Image();
       frameImg.crossOrigin = "anonymous";
@@ -363,37 +364,49 @@
         canvas.height = h;
         const ctx = canvas.getContext("2d");
 
-        // dessiner le cadre
+        // cadre
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        // zone QR dans le cadre (approx : au centre, sous la bulle)
-        const qrSize = Math.min(w * 0.7, h * 0.55);
+        // -------- Zone QR : fond blanc + QR centré dedans ----------
+        const qrSize = Math.min(w * 0.68, h * 0.55);
         const qrX = (w - qrSize) / 2;
-        const qrY = h * 0.35; // sous le triangle/bulle
+        const qrY = h * 0.35;
 
-        ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+        // fond blanc derrière le QR (évite le fond noir)
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
-        // texte en blanc dans la barre bleue, à droite du logo
+        // on laisse une marge blanche autour du QR
+        const innerPad = qrSize * 0.08;
+        const innerSize = qrSize - innerPad * 2;
+        ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
+
+        // -------- Texte dans la barre bleue ----------
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        // position approximative du centre de la zone texte
-        const textLeft = w * 0.30;      // laisse la place au logo
-        const textCenterY = h * 0.10;   // bandeau supérieur
-        const maxWidth = qrSize;        // ne doit pas dépasser la largeur du QR
+        const textLeft = w * 0.30;     // laisse la place au logo
+        const textCenterY = h * 0.10;  // zone centrale du bandeau
+        const maxWidth = qrSize;       // largeur max = largeur du QR
 
-        // ajustement de la taille pour que ça ne dépasse pas maxWidth
+        // taille de police adaptée à la plus longue des deux lignes
         let fontSize = 26;
-        let measuredWidth;
+        let width1, width2, maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui";
-          measuredWidth = ctx.measureText(labelText).width;
+          width1 = ctx.measureText(labelTop).width;
+          width2 = ctx.measureText(labelBottom).width;
+          maxW = Math.max(width1, width2);
           fontSize--;
-        } while (measuredWidth > maxWidth && fontSize > 10);
+        } while (maxW > maxWidth && fontSize > 10);
 
-        // texte (aligné à gauche, mais on garde une petite marge)
-        ctx.fillText(labelText, textLeft, textCenterY);
+        const lineGap = fontSize + 4;
+        const firstY = textCenterY - lineGap / 2;
+        const secondY = textCenterY + lineGap / 2;
+
+        ctx.fillText(labelTop,    textLeft, firstY);
+        ctx.fillText(labelBottom, textLeft, secondY);
 
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
@@ -403,11 +416,12 @@
       };
 
       frameImg.onerror = () => {
-        // fallback : si le cadre ne charge pas, on retombe sur un simple QR + texte
-        console.error("Impossible de charger le cadre QRKILOMETRAGE.png, fallback simple.");
+        // fallback : simple QR + 2 lignes de texte
+        console.error("Impossible de charger QRKILOMETRAGE.png, fallback simple.");
+
         const qrSize = qrCanvas.width;
         const padding = 8;
-        const textAreaHeight = 30;
+        const textAreaHeight = 50; // 2 lignes
         const canvas = document.createElement("canvas");
         canvas.width = qrSize;
         canvas.height = qrSize + textAreaHeight + padding * 2;
@@ -416,20 +430,23 @@
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        let fontSize = 20;
-        const text = labelText;
+        let fontSize = 18;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        let textWidth;
+        let maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui";
-          textWidth = ctx.measureText(text).width;
+          const w1 = ctx.measureText(labelTop).width;
+          const w2 = ctx.measureText(labelBottom).width;
+          maxW = Math.max(w1, w2);
           fontSize--;
-        } while (textWidth > canvas.width - 16 && fontSize > 8);
+        } while (maxW > canvas.width - 16 && fontSize > 8);
 
+        const midY = padding + textAreaHeight / 2;
+        const lineGap = fontSize + 4;
         ctx.fillStyle = "#000000";
-        const textY = padding + textAreaHeight / 2;
-        ctx.fillText(text, canvas.width / 2, textY);
+        ctx.fillText(labelTop, canvas.width / 2, midY - lineGap / 2);
+        ctx.fillText(labelBottom, canvas.width / 2, midY + lineGap / 2);
 
         const qrY = padding * 2 + textAreaHeight;
         ctx.drawImage(qrCanvas, 0, qrY, qrSize, qrSize);
