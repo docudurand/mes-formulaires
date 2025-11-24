@@ -293,6 +293,13 @@
     "cc": ["magasin5bourgoin@durandservices.fr"],
 	 "infoLivreur": "Ville : ST DIDIER Tournée 3"
   },
+    {
+    "name": "M.D.H",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
+	 "infoLivreur": "Ville : ST LAURENT DE MURE"
+  },
   {
     "name": "MERCEDES PL BOURGOIN",
     "magasin": "Bourgoin",
