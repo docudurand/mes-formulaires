@@ -201,22 +201,21 @@
 
       try {
         const res = await fetch("/api/kilometrage/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            agence,
-            codeAgence,
-            tournee,
-            codeTournee,
-            chauffeur,
-            codeChauffeur,
-            date: dateValue,
-            km: Number(kmValue),
-            commentaire: commentaireValue
-          })
-        });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    agence,
+    codeAgence,
+    tournee,
+    codeTournee,
+    chauffeur,
+    codeChauffeur,
+    date: dateValue,
+    km: Number(kmValue),
+    commentaire: commentaireValue
+  })
+});
+
 
         const data = await res.json().catch(() => ({}));
 

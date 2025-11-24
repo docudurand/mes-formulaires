@@ -11,7 +11,7 @@
       background: #f3f4f6;
     }
     header {
-      background: #111827;
+      background: #004080;
       color: #f9fafb;
       padding: 10px 16px;
       display: flex;
@@ -40,7 +40,7 @@
       display: flex;
       gap: 4px;
       padding: 8px 10px;
-      background: #1f2937;
+      background: #073763;
       overflow-x: auto;
     }
     .tab {
@@ -276,16 +276,20 @@
     let currentAgence = AGENCES[0] || "";
     let currentYear = new Date().getFullYear();
 
+    const YEARS = [2025, 2026];
+
     function initYearSelect() {
-      const minYear = currentYear - 1;
-      const maxYear = currentYear + 1;
-      for (let y = minYear; y <= maxYear; y++) {
+      yearSelect.innerHTML = "";
+      if (!YEARS.includes(currentYear)) {
+        currentYear = YEARS[0];
+      }
+      YEARS.forEach((y) => {
         const opt = document.createElement("option");
         opt.value = y;
         opt.textContent = y;
         if (y === currentYear) opt.selected = true;
         yearSelect.appendChild(opt);
-      }
+      });
     }
 
     function buildTabs() {
