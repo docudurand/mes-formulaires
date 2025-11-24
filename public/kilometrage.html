@@ -98,12 +98,30 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
     .month-title small {
       font-weight: 400;
       color: #6b7280;
       font-size: 0.8rem;
     }
+    .month-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .print-btn {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #e5e7eb;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .print-btn:hover {
+      background: #d1d5db;
+    }
+
     table {
       border-collapse: collapse;
       width: 100%;
@@ -136,6 +154,55 @@
     td.km-zero {
       background: #ffffff;
     }
+
+    .weekend {
+      background: #000000 !important;
+      color: #ffffff !important;
+    }
+
+    #printContainer {
+      display: none;
+    }
+    .print-page {
+      font-size: 0.9rem;
+    }
+    .print-header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .print-header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    .print-header .print-subtitle {
+      margin-top: 2px;
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
+    @media print {
+      @page {
+        size: landscape;
+        margin: 10mm;
+      }
+      body {
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      header,
+      .tabs,
+      main {
+        display: none !important;
+      }
+      #printContainer {
+        display: block;
+        padding: 0;
+      }
+      .print-btn {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -154,6 +221,8 @@
     <div class="status" id="status"></div>
     <div id="monthsContainer" class="months-grid"></div>
   </main>
+
+  <div id="printContainer"></div>
 
   <script>
     const AGENCES = [
@@ -181,6 +250,7 @@
     const infoLine = document.getElementById("infoLine");
     const statusEl = document.getElementById("status");
     const monthsContainer = document.getElementById("monthsContainer");
+    const printContainer = document.getElementById("printContainer");
 
     let currentAgence = AGENCES[0] || "";
     let currentYear = new Date().getFullYear();
@@ -300,6 +370,12 @@
       }
     }
 
+    function isWeekend(year, monthIndex, day) {
+      const d = new Date(year, monthIndex - 1, day);
+      const dow = d.getDay();
+      return dow === 0 || dow === 6;
+    }
+
     function buildMonthsTables(grouped) {
       monthsContainer.innerHTML = "";
 
@@ -307,17 +383,32 @@
         const monthData = grouped[month] || {};
         const card = document.createElement("div");
         card.className = "month-card";
+        card.dataset.month = String(month);
 
         const title = document.createElement("div");
         title.className = "month-title";
-        title.innerHTML =
-          "<span>" +
-          monthNames[month - 1] +
-          "</span><small>" +
-          currentAgence +
-          " – " +
-          currentYear +
-          "</small>";
+
+        const leftTitle = document.createElement("span");
+        leftTitle.textContent = monthNames[month - 1];
+
+        const rightPart = document.createElement("div");
+        rightPart.className = "month-actions";
+        const smallInfo = document.createElement("small");
+        smallInfo.textContent = currentAgence + " – " + currentYear;
+
+        const printBtn = document.createElement("button");
+        printBtn.type = "button";
+        printBtn.className = "print-btn";
+        printBtn.textContent = "Imprimer";
+        printBtn.addEventListener("click", () => {
+          printMonth(month, card);
+        });
+
+        rightPart.appendChild(smallInfo);
+        rightPart.appendChild(printBtn);
+
+        title.appendChild(leftTitle);
+        title.appendChild(rightPart);
         card.appendChild(title);
 
         const table = document.createElement("table");
@@ -328,9 +419,18 @@
         firstTh.textContent = "Tournée / Jour";
         headerRow.appendChild(firstTh);
 
-        for (let day = 1; day <= 31; day++) {
+        const daysInMonth = new Date(currentYear, month, 0).getDate();
+        const weekendDays = [];
+
+        for (let day = 1; day <= daysInMonth; day++) {
           const th = document.createElement("th");
           th.textContent = day;
+
+          if (isWeekend(currentYear, month, day)) {
+            th.classList.add("weekend");
+            weekendDays.push(day);
+          }
+
           headerRow.appendChild(th);
         }
 
@@ -348,7 +448,7 @@
         if (tourneeNames.length === 0) {
           const row = document.createElement("tr");
           const cell = document.createElement("td");
-          cell.colSpan = 33; // 1 (titre) + 31 jours + 1 total
+          cell.colSpan = 2 + daysInMonth;
           cell.textContent = "Aucun kilométrage saisi pour ce mois.";
           cell.style.textAlign = "center";
           row.appendChild(cell);
@@ -363,9 +463,10 @@
             const daysKm = monthData[tournee] || {};
             let total = 0;
 
-            for (let day = 1; day <= 31; day++) {
+            for (let day = 1; day <= daysInMonth; day++) {
               const td = document.createElement("td");
               const km = daysKm[day] || 0;
+
               if (km > 0) {
                 td.textContent = km;
                 td.className = "km";
@@ -374,6 +475,11 @@
                 td.textContent = "";
                 td.className = "km-zero";
               }
+
+              if (weekendDays.includes(day)) {
+                td.classList.add("weekend");
+              }
+
               row.appendChild(td);
             }
 
@@ -390,6 +496,29 @@
         card.appendChild(table);
         monthsContainer.appendChild(card);
       }
+    }
+
+    function printMonth(monthIndex, monthCard) {
+      printContainer.innerHTML = "";
+
+      const clone = monthCard.cloneNode(true);
+      clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "print-page";
+
+      const header = document.createElement("div");
+      header.className = "print-header";
+      header.innerHTML = `
+        <h1>Suivi kilométrique – ${currentAgence}</h1>
+        <div class="print-subtitle">${monthNames[monthIndex - 1]} ${currentYear}</div>
+      `;
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(clone);
+      printContainer.appendChild(wrapper);
+
+      window.print();
     }
 
     yearSelect.addEventListener("change", () => {
