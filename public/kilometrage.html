@@ -306,6 +306,11 @@
 
     function initAgencySelect() {
       agencySelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "— Sélectionner un magasin —";
+      agencySelect.appendChild(placeholder);
+
       const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
       sorted.forEach((ag) => {
         const opt = document.createElement("option");
@@ -313,12 +318,18 @@
         opt.textContent = ag;
         agencySelect.appendChild(opt);
       });
-      currentAgence = sorted[0] || "";
-      agencySelect.value = currentAgence;
+
+      currentAgence = "";
+      agencySelect.value = "";
     }
 
     async function loadData() {
-      if (!currentAgence) return;
+      if (!currentAgence) {
+        infoLine.textContent = "";
+        statusEl.textContent = "";
+        monthsContainer.innerHTML = "";
+        return;
+      }
 
       infoLine.textContent = "Agence : " + currentAgence + " – Année : " + currentYear;
       statusEl.textContent = "";
@@ -630,7 +641,7 @@
 
     initYearSelect();
     initAgencySelect();
-    loadData();
+
   </script>
 </body>
 </html>

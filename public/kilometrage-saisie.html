@@ -55,6 +55,7 @@
       margin-top: 10px;
       margin-bottom: 4px;
     }
+
     input[type="date"],
     input[type="number"],
     textarea {
@@ -64,7 +65,17 @@
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 0.95rem;
+      font-family: inherit;
+      background-color: #ffffff;
+      -webkit-appearance: none;
+      appearance: none;
     }
+    input[type="date"],
+    input[type="number"] {
+      height: 44px;
+      line-height: 1.2;
+    }
+
     textarea {
       resize: vertical;
       min-height: 60px;
@@ -201,21 +212,20 @@
 
       try {
         const res = await fetch("/api/kilometrage/save", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    agence,
-    codeAgence,
-    tournee,
-    codeTournee,
-    chauffeur,
-    codeChauffeur,
-    date: dateValue,
-    km: Number(kmValue),
-    commentaire: commentaireValue
-  })
-});
-
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agence,
+            codeAgence,
+            tournee,
+            codeTournee,
+            chauffeur,
+            codeChauffeur,
+            date: dateValue,
+            km: Number(kmValue),
+            commentaire: commentaireValue
+          })
+        });
 
         const data = await res.json().catch(() => ({}));
 
