@@ -3,7 +3,6 @@ import axios from "axios";
 
 const router = express.Router();
 
-// JSON pour cette route si jamais ce n'est pas global
 router.use(express.json({ limit: "5mb" }));
 
 function getApiUrl() {
@@ -14,12 +13,13 @@ function getApiUrl() {
   return url;
 }
 
-// Enregistrement d'un kilométrage
 router.post("/save", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
     if (!apiUrl) {
-      return res.status(500).json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
     const {
@@ -34,7 +34,7 @@ router.post("/save", async (req, res) => {
       commentaire
     } = req.body || {};
 
-    if (!codeTournee || !date || (km === undefined || km === null || km === "")) {
+    if (!codeTournee || !date || km === undefined || km === null || km === "") {
       return res.status(400).json({
         success: false,
         error: "Champs obligatoires manquants (codeTournee, date, km)"
@@ -67,21 +67,20 @@ router.post("/save", async (req, res) => {
   }
 });
 
-// Récupération des données pour une agence + année
 router.get("/data", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
     if (!apiUrl) {
-      return res.status(500).json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
     const { agence, year } = req.query;
 
     const url =
       apiUrl +
-      `?mode=list&agence=${encodeURIComponent(agence || "")}&year=${encodeURIComponent(
-        year || ""
-      )}`;
+      `?agence=${encodeURIComponent(agence || "")}&year=${encodeURIComponent(year || "")}`;
 
     const response = await axios.get(url, { timeout: 10000 });
 
@@ -91,6 +90,33 @@ router.get("/data", async (req, res) => {
     return res
       .status(500)
       .json({ success: false, error: "Erreur lors de la récupération des données" });
+  }
+});
+
+router.get("/params", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    const { agence } = req.query;
+
+    const url =
+      apiUrl +
+      `?mode=params` +
+      (agence ? `&agence=${encodeURIComponent(agence)}` : "");
+
+    const response = await axios.get(url, { timeout: 10000 });
+
+    return res.json(response.data || []);
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/params :", err.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erreur lors de la récupération des paramètres" });
   }
 });
 

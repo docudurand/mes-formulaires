@@ -121,23 +121,23 @@
           </div>
 
           <div class="field">
-            <label for="agence">Agence</label>
+            <label for="agence">Agence (depuis PARAMS)</label>
             <select id="agence">
               <option value="">— Sélectionne une agence —</option>
-              <option>ANNEMASSE</option>
-              <option>BOURGOIN</option>
-              <option>CHASSE SUR RHONE</option>
-              <option>CHASSIEU</option>
-              <option>GLEIZE</option>
-              <option>LA MOTTE SERVOLEX</option>
-              <option>MIRIBEL</option>
-              <option>PAVI</option>
-              <option>RENAGE</option>
-              <option>RIVES</option>
-              <option>SEYNOD</option>
-              <option>ST EGREVE</option>
-              <option>ST-JEAN-BONNEFONDS</option>
             </select>
+            <div class="muted">
+              La liste est alimentée par l’onglet <strong>PARAMS</strong> du fichier Google Sheets.
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="tourneePreset">Tournée / Transporteur (depuis PARAMS)</label>
+            <select id="tourneePreset">
+              <option value="">— Choisir une tournée —</option>
+            </select>
+            <div class="muted">
+              Choisis une tournée pour pré-remplir les champs ci-dessous. Tu peux ensuite les modifier.
+            </div>
           </div>
 
           <div class="field">
@@ -188,6 +188,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     const $agence = document.getElementById("agence");
+    const $tourneePreset = document.getElementById("tourneePreset");
     const $transporteur = document.getElementById("transporteur");
     const $codeTransporteur = document.getElementById("codeTransporteur");
     const $tournee = document.getElementById("tournee");
@@ -199,6 +200,7 @@
     const $qrcode = document.getElementById("qrcode");
 
     let qrInstance = null;
+    let allParams = [];
 
     function slugify(str) {
       return (str || "")
@@ -208,6 +210,82 @@
         .replace(/^_+|_+$/g, "")
         .toUpperCase();
     }
+
+    async function loadParams() {
+      try {
+        const res = await fetch("/api/kilometrage/params");
+        const data = await res.json().catch(() => []);
+        if (!Array.isArray(data)) {
+          console.error("PARAMS inattendus :", data);
+          return;
+        }
+        allParams = data;
+
+        const setAgences = new Set();
+        allParams.forEach(p => {
+          const ag = p.agence || p.codeAgence;
+          if (ag) setAgences.add(ag);
+        });
+
+        $agence.innerHTML = '<option value="">— Sélectionne une agence —</option>';
+        Array.from(setAgences).sort().forEach(ag => {
+          const opt = document.createElement("option");
+          opt.value = ag;
+          opt.textContent = ag;
+          $agence.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Erreur chargement PARAMS :", err);
+      }
+    }
+
+    function refreshTourneesForAgence() {
+      const ag = $agence.value;
+      $tourneePreset.innerHTML = '<option value="">— Choisir une tournée —</option>';
+
+      if (!ag) return;
+
+      const filtered = allParams.filter(p => {
+        const a = p.agence || p.codeAgence;
+        return a === ag;
+      });
+
+      filtered.forEach((p, index) => {
+        const opt = document.createElement("option");
+        opt.value = String(index);
+        opt.textContent = (p.tournee || "Tournée") + " – " + (p.transporteur || p.codeTransporteur || "Transporteur");
+        opt.dataset.index = String(index);
+        $tourneePreset.appendChild(opt);
+      });
+    }
+
+    $agence.addEventListener("change", () => {
+      refreshTourneesForAgence();
+      $transporteur.value = "";
+      $codeTransporteur.value = "";
+      $tournee.value = "";
+      $codeTournee.value = "";
+    });
+
+    $tourneePreset.addEventListener("change", () => {
+      const ag = $agence.value;
+      if (!ag) return;
+
+      const filtered = allParams.filter(p => {
+        const a = p.agence || p.codeAgence;
+        return a === ag;
+      });
+
+      const idxStr = $tourneePreset.value;
+      const idx = parseInt(idxStr, 10);
+      if (isNaN(idx) || !filtered[idx]) return;
+
+      const p = filtered[idx];
+      $transporteur.value = p.transporteur || "";
+      $codeTransporteur.value = p.codeTransporteur || slugify(p.transporteur || "");
+      $tournee.value = p.tournee || "";
+      $codeTournee.value = p.codeTournee || "";
+    });
 
     function buildUrl() {
       const base = ($baseUrl.value || "").trim();
@@ -270,6 +348,8 @@
       a.download = `QR_${agence}_${tournee}.png`;
       a.click();
     });
+
+    loadParams();
   </script>
 </body>
 </html>
