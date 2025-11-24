@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Suivi kilométrique agences</title>
+  <title>Suivi kilométrique des tournées</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -63,26 +63,33 @@
     }
     .info-line {
       font-size: 0.9rem;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       color: #4b5563;
     }
+    .status {
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      color: #6b7280;
+    }
+    .status span {
+      font-weight: 600;
+    }
+    .loader {
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
     .months-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.month-card {
-  max-height: none;
-}
-
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
     .month-card {
       background: #ffffff;
       border-radius: 10px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       padding: 10px;
-      overflow: auto;
-      max-height: 380px;
+      overflow-x: auto;
     }
     .month-title {
       font-size: 0.95rem;
@@ -101,7 +108,7 @@
       border-collapse: collapse;
       width: 100%;
       font-size: 0.8rem;
-      min-width: 420px;
+      min-width: 600px;
     }
     th, td {
       border: 1px solid #e5e7eb;
@@ -110,36 +117,19 @@
     }
     th {
       background: #f3f4f6;
-      position: sticky;
-      top: 0;
-      z-index: 1;
     }
-    th:first-child, td:first-child {
-      position: sticky;
-      left: 0;
-      background: #f9fafb;
+    th:first-child,
+    td:first-child {
       text-align: left;
-      min-width: 110px;
-      max-width: 140px;
       white-space: nowrap;
+      min-width: 140px;
+      max-width: 200px;
     }
     td.km {
       background: #ecfdf3;
     }
     td.km-zero {
       background: #ffffff;
-    }
-    .status {
-      font-size: 0.85rem;
-      margin-bottom: 8px;
-      color: #6b7280;
-    }
-    .status span {
-      font-weight: 600;
-    }
-    .loader {
-      font-size: 0.9rem;
-      color: #4b5563;
     }
   </style>
 </head>
@@ -161,21 +151,21 @@
   </main>
 
   <script>
-   const AGENCES = [
-  "ANNEMASSE",
-  "BOURGOIN",
-  "CHASSE SUR RHONE",
-  "CHASSIEU",
-  "GLEIZE",
-  "LA MOTTE SERVOLEX",
-  "MIRIBEL",
-  "PAVI",
-  "RENAGE",
-  "RIVES",
-  "SEYNOD",
-  "ST EGREVE",
-  "ST-JEAN-BONNEFONDS"
-];
+    const AGENCES = [
+      "ANNEMASSE",
+      "BOURGOIN",
+      "CHASSE SUR RHONE",
+      "CHASSIEU",
+      "GLEIZE",
+      "LA MOTTE SERVOLEX",
+      "MIRIBEL",
+      "PAVI",
+      "RENAGE",
+      "RIVES",
+      "SEYNOD",
+      "ST EGREVE",
+      "ST-JEAN-BONNEFONDS"
+    ];
 
     const monthNames = [
       "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -235,9 +225,10 @@
     async function loadData() {
       if (!currentAgence) return;
 
+      infoLine.textContent = "Agence : " + currentAgence + " – Année : " + currentYear;
       statusEl.textContent = "";
       monthsContainer.innerHTML = "";
-      infoLine.textContent = `Agence : ${currentAgence} – Année : ${currentYear}`;
+
       const loader = document.createElement("div");
       loader.className = "loader";
       loader.textContent = "Chargement des données...";
@@ -245,72 +236,89 @@
 
       try {
         const res = await fetch(
-          `/api/kilometrage/data?agence=${encodeURIComponent(
-            currentAgence
-          )}&year=${encodeURIComponent(currentYear)}`
+          "/api/kilometrage/data?agence=" +
+            encodeURIComponent(currentAgence) +
+            "&year=" +
+            encodeURIComponent(currentYear)
         );
 
         const data = await res.json().catch(() => []);
+        console.log("Données kilométrage reçues :", data);
         monthsContainer.innerHTML = "";
 
         if (!Array.isArray(data) || data.length === 0) {
           statusEl.innerHTML =
-            `Aucune donnée de kilométrage trouvée pour <span>${currentAgence}</span> en <span>${currentYear}</span>.`;
+            'Aucune donnée de kilométrage trouvée pour <span>' +
+            currentAgence +
+            "</span> en <span>" +
+            currentYear +
+            "</span>.";
           buildMonthsTables({});
           return;
         }
 
-        statusEl.innerHTML = `Données récupérées : <span>${data.length}</span> enregistrements.`;
+        statusEl.innerHTML =
+          "Données récupérées : <span>" + data.length + "</span> enregistrements.";
 
-        // Regroupement : mois -> tournée -> jour -> km
-        const grouped = {}; // { [monthIndex:1..12]: { [tourneeKey]: { [day]: km } } }
+        const grouped = {};
 
         data.forEach((row) => {
-          if (!row.date) return;
-          const d = new Date(row.date);
-          if (isNaN(d)) return;
+          let d = null;
 
-          const monthIndex = d.getMonth() + 1;
-          const day = d.getDate();
+          if (row.date) {
+            const d1 = new Date(row.date);
+            if (!isNaN(d1)) d = d1;
+          }
+          if (!d && row.timestamp) {
+            const d2 = new Date(row.timestamp);
+            if (!isNaN(d2)) d = d2;
+          }
+          if (!d) {
+            return;
+          }
+
+          const monthIndex = d.getMonth() + 1; // 1..12
+          const day = d.getDate(); // 1..31
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
+          const km = Number(row.km || 0);
 
           if (!grouped[monthIndex]) grouped[monthIndex] = {};
           if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
-
-          // Si plusieurs saisies pour la même journée/tournée, on additionne
-          const km = Number(row.km || 0);
           grouped[monthIndex][tourneeKey][day] =
             (grouped[monthIndex][tourneeKey][day] || 0) + km;
         });
 
         buildMonthsTables(grouped);
       } catch (err) {
-        console.error(err);
+        console.error("Erreur lors du chargement des données kilométriques :", err);
         statusEl.textContent =
           "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
+        buildMonthsTables({});
       }
     }
 
     function buildMonthsTables(grouped) {
       monthsContainer.innerHTML = "";
+
       for (let month = 1; month <= 12; month++) {
         const monthData = grouped[month] || {};
-
         const card = document.createElement("div");
         card.className = "month-card";
 
         const title = document.createElement("div");
         title.className = "month-title";
-        title.innerHTML = `
-          <span>${monthNames[month - 1]}</span>
-          <small>${currentAgence} – ${currentYear}</small>
-        `;
+        title.innerHTML =
+          "<span>" +
+          monthNames[month - 1] +
+          "</span><small>" +
+          currentAgence +
+          " – " +
+          currentYear +
+          "</small>";
         card.appendChild(title);
 
         const table = document.createElement("table");
-
-        // Entête
         const thead = document.createElement("thead");
         const headerRow = document.createElement("tr");
 
@@ -318,7 +326,6 @@
         firstTh.textContent = "Tournée / Jour";
         headerRow.appendChild(firstTh);
 
-        // 31 colonnes de jours (on ne gère pas le nombre réel de jours, c'est un affichage simple)
         for (let day = 1; day <= 31; day++) {
           const th = document.createElement("th");
           th.textContent = day;
@@ -329,7 +336,6 @@
         table.appendChild(thead);
 
         const tbody = document.createElement("tbody");
-
         const tourneeNames = Object.keys(monthData).sort();
 
         if (tourneeNames.length === 0) {
@@ -347,7 +353,7 @@
             labelCell.textContent = tournee;
             row.appendChild(labelCell);
 
-            const daysKm = monthData[tournee];
+            const daysKm = monthData[tournee] || {};
 
             for (let day = 1; day <= 31; day++) {
               const td = document.createElement("td");
@@ -377,7 +383,6 @@
       loadData();
     });
 
-    // Init
     initYearSelect();
     buildTabs();
     loadData();
