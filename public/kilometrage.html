@@ -155,9 +155,31 @@
       background: #ffffff;
     }
 
+    .has-comment {
+      background: #fed7aa !important;
+      color: #000000 !important;
+    }
+
     .weekend {
       background: #000000 !important;
       color: #ffffff !important;
+    }
+
+    .comments-legend {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #374151;
+    }
+    .comments-legend .legend-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .comments-legend ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+    }
+    .comments-legend li {
+      margin-bottom: 2px;
     }
 
     #printContainer {
@@ -231,7 +253,6 @@
       "CHASSE SUR RHONE",
       "CHASSIEU",
       "GLEIZE",
-      "LA MOTTE SERVOLEX",
       "MIRIBEL",
       "RENAGE",
       "RIVES",
@@ -354,11 +375,18 @@
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
           const km = Number(row.km || 0);
+          const commentaire = (row.commentaire || "").trim();
 
           if (!grouped[monthIndex]) grouped[monthIndex] = {};
           if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
-          grouped[monthIndex][tourneeKey][day] =
-            (grouped[monthIndex][tourneeKey][day] || 0) + km;
+          if (!grouped[monthIndex][tourneeKey][day]) {
+            grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
+          }
+
+          grouped[monthIndex][tourneeKey][day].km += km;
+          if (commentaire) {
+            grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
+          }
         });
 
         buildMonthsTables(grouped);
@@ -445,6 +473,8 @@
         const tbody = document.createElement("tbody");
         const tourneeNames = Object.keys(monthData).sort();
 
+        const legendItems = [];
+
         if (tourneeNames.length === 0) {
           const row = document.createElement("tr");
           const cell = document.createElement("td");
@@ -460,12 +490,15 @@
             labelCell.textContent = tournee;
             row.appendChild(labelCell);
 
-            const daysKm = monthData[tournee] || {};
+            const daysByDay = monthData[tournee] || {};
             let total = 0;
 
             for (let day = 1; day <= daysInMonth; day++) {
               const td = document.createElement("td");
-              const km = daysKm[day] || 0;
+              const dayObj = daysByDay[day];
+              const km = dayObj ? (dayObj.km || 0) : 0;
+              const commentaires = dayObj && dayObj.commentaires ? dayObj.commentaires : [];
+              const hasComment = commentaires.length > 0;
 
               if (km > 0) {
                 td.textContent = km;
@@ -478,6 +511,24 @@
 
               if (weekendDays.includes(day)) {
                 td.classList.add("weekend");
+              }
+
+              if (hasComment) {
+                td.classList.add("has-comment");
+                td.title = commentaires.join(" / ");
+                const dateStr =
+                  String(day).padStart(2, "0") +
+                  "/" +
+                  String(month).padStart(2, "0") +
+                  "/" +
+                  currentYear;
+                commentaires.forEach((c) => {
+                  legendItems.push({
+                    date: dateStr,
+                    tournee,
+                    commentaire: c
+                  });
+                });
               }
 
               row.appendChild(td);
@@ -494,6 +545,28 @@
 
         table.appendChild(tbody);
         card.appendChild(table);
+
+        if (legendItems.length > 0) {
+          const legendDiv = document.createElement("div");
+          legendDiv.className = "comments-legend";
+
+          const legendTitle = document.createElement("div");
+          legendTitle.className = "legend-title";
+          legendTitle.textContent = "Commentaires du mois :";
+          legendDiv.appendChild(legendTitle);
+
+          const ul = document.createElement("ul");
+          legendItems.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent =
+              item.date + " – " + item.tournee + " : " + item.commentaire;
+            ul.appendChild(li);
+          });
+
+          legendDiv.appendChild(ul);
+          card.appendChild(legendDiv);
+        }
+
         monthsContainer.appendChild(card);
       }
     }
