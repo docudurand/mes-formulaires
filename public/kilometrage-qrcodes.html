@@ -176,10 +176,10 @@
         <div>
           <div id="qrcode">Le QR code apparaîtra ici</div>
           <button id="btnDownload" class="secondary" style="width:100%;margin-top:8px;" disabled>
-            Télécharger le QR (PNG)
+            Télécharger la fiche (PNG)
           </button>
           <div class="muted">
-            Le fichier téléchargé contient le QR code avec, au-dessus, le nom du magasin et de la tournée.
+            Le fichier téléchargé utilise le cadre Durand avec le nom du magasin et de la tournée.
           </div>
         </div>
       </div>
@@ -201,6 +201,8 @@
     const $qrcode = document.getElementById("qrcode");
 
     let allParams = [];
+
+    const FRAME_URL = "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/QRKILOMETRAGE.png";
 
     function slugify(str) {
       return (str || "")
@@ -318,6 +320,7 @@
       return url;
     }
 
+    // Génération du QR
     $btnGenerate.addEventListener("click", () => {
       const url = buildUrl();
       if (!url) return;
@@ -338,6 +341,7 @@
       }, 200);
     });
 
+    // Téléchargement : utilisation du cadre QRKILOMETRAGE.png
     $btnDownload.addEventListener("click", () => {
       const qrCanvas = $qrcode.querySelector("canvas");
       if (!qrCanvas) return;
@@ -345,43 +349,99 @@
       const agence = $agence.value || "AGENCE";
       const tourneeName = $tournee.value || "TOURNÉE";
       const tourneeCode = slugify(tourneeName);
+      const labelText = agence + " - " + tourneeName;
 
-      const qrSize = qrCanvas.width;
-      const text = agence + " - " + tourneeName;
+      const frameImg = new Image();
+      frameImg.crossOrigin = "anonymous";
 
-      const padding = 8;
-      const textAreaHeight = 30;
-      const canvas = document.createElement("canvas");
-      canvas.width = qrSize;
-      canvas.height = qrSize + textAreaHeight + padding * 2;
+      frameImg.onload = () => {
+        const w = frameImg.width;
+        const h = frameImg.height;
 
-      const ctx = canvas.getContext("2d");
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // dessiner le cadre
+        ctx.drawImage(frameImg, 0, 0, w, h);
 
-      let fontSize = 20;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      let textWidth;
-      do {
-        ctx.font = "bold " + fontSize + "px system-ui";
-        textWidth = ctx.measureText(text).width;
-        fontSize--;
-      } while (textWidth > canvas.width - 16 && fontSize > 8);
+        // zone QR dans le cadre (approx : au centre, sous la bulle)
+        const qrSize = Math.min(w * 0.7, h * 0.55);
+        const qrX = (w - qrSize) / 2;
+        const qrY = h * 0.35; // sous le triangle/bulle
 
-      ctx.fillStyle = "#000000";
-      const textY = padding + textAreaHeight / 2;
-      ctx.fillText(text, canvas.width / 2, textY);
+        ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-      const qrY = padding * 2 + textAreaHeight;
-      ctx.drawImage(qrCanvas, 0, qrY, qrSize, qrSize);
+        // texte en blanc dans la barre bleue, à droite du logo
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
 
-      const dataUrl = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `QR_${agence}_${tourneeCode}.png`;
-      a.click();
+        // position approximative du centre de la zone texte
+        const textLeft = w * 0.30;      // laisse la place au logo
+        const textCenterY = h * 0.10;   // bandeau supérieur
+        const maxWidth = qrSize;        // ne doit pas dépasser la largeur du QR
+
+        // ajustement de la taille pour que ça ne dépasse pas maxWidth
+        let fontSize = 26;
+        let measuredWidth;
+        do {
+          ctx.font = "bold " + fontSize + "px system-ui";
+          measuredWidth = ctx.measureText(labelText).width;
+          fontSize--;
+        } while (measuredWidth > maxWidth && fontSize > 10);
+
+        // texte (aligné à gauche, mais on garde une petite marge)
+        ctx.fillText(labelText, textLeft, textCenterY);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `QR_${agence}_${tourneeCode}.png`;
+        a.click();
+      };
+
+      frameImg.onerror = () => {
+        // fallback : si le cadre ne charge pas, on retombe sur un simple QR + texte
+        console.error("Impossible de charger le cadre QRKILOMETRAGE.png, fallback simple.");
+        const qrSize = qrCanvas.width;
+        const padding = 8;
+        const textAreaHeight = 30;
+        const canvas = document.createElement("canvas");
+        canvas.width = qrSize;
+        canvas.height = qrSize + textAreaHeight + padding * 2;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let fontSize = 20;
+        const text = labelText;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        let textWidth;
+        do {
+          ctx.font = "bold " + fontSize + "px system-ui";
+          textWidth = ctx.measureText(text).width;
+          fontSize--;
+        } while (textWidth > canvas.width - 16 && fontSize > 8);
+
+        ctx.fillStyle = "#000000";
+        const textY = padding + textAreaHeight / 2;
+        ctx.fillText(text, canvas.width / 2, textY);
+
+        const qrY = padding * 2 + textAreaHeight;
+        ctx.drawImage(qrCanvas, 0, qrY, qrSize, qrSize);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `QR_${agence}_${tourneeCode}.png`;
+        a.click();
+      };
+
+      frameImg.src = FRAME_URL;
     });
 
     loadParams();
