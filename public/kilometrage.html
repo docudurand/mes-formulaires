@@ -67,10 +67,15 @@
       color: #4b5563;
     }
     .months-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 10px;
-    }
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.month-card {
+  max-height: none;
+}
+
     .month-card {
       background: #ffffff;
       border-radius: 10px;
