@@ -189,8 +189,17 @@
       font-size: 0.9rem;
     }
     .print-header {
-      text-align: center;
       margin-bottom: 8px;
+    }
+    .print-header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: flex-start;
+    }
+    .print-logo {
+      height: 40px;
+      object-fit: contain;
     }
     .print-header h1 {
       margin: 0;
@@ -587,8 +596,14 @@
       const header = document.createElement("div");
       header.className = "print-header";
       header.innerHTML = `
-        <h1>Suivi kilométrique – ${currentAgence}</h1>
-        <div class="print-subtitle">${monthNames[monthIndex - 1]} ${currentYear}</div>
+        <div class="print-header-top">
+          <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+               alt="Durand Services" class="print-logo">
+          <div class="print-header-text">
+            <h1>Suivi kilométrique – ${currentAgence}</h1>
+            <div class="print-subtitle">${monthNames[monthIndex - 1]} ${currentYear}</div>
+          </div>
+        </div>
       `;
 
       wrapper.appendChild(header);
