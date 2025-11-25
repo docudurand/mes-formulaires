@@ -10,6 +10,7 @@
     "name": "AIR PN",
     "magasin": "La Motte Servolex",
     "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	"cc": ["receptionlms@durandservices.fr"],
 	 "infoLivreur": "Ville : MURS ET GELIGNIEUX Tournée AIN"
   },
   {
@@ -256,6 +257,7 @@
     "name": "KONIG",
     "magasin": "La Motte Servolex",
     "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	"cc": ["receptionlms@durandservices.fr"],
 	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
   },
   {
