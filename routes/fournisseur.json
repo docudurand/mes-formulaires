@@ -486,7 +486,8 @@
   {
     "name": "THERMO KING Froid & Services Rhône Alpes",
     "magasin": "Chasse sur Rhone",
-    "recipients": ["froidste@durandservices.fr"],
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr"],
 	 "infoLivreur": "Ville : CHASSE SUR RHONE"
   },
   {
