@@ -428,6 +428,13 @@
 	 "infoLivreur": "Ville : PONT-EVEQUE Tournée 3"
   },
   {
+    "name": "ROY",
+    "magasin": "Rives",
+    "recipients": ["receptionrives@durandservices.fr"],
+	"cc": ["magvl3rives@durandservices.fr"],
+	 "infoLivreur": "Ville : Rives"
+  },
+  {
     "name": "SAINTHON",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
