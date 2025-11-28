@@ -455,8 +455,14 @@ document.getElementById("btnClose").addEventListener("click", ()=>{
   $mask.setAttribute("aria-hidden","true");
   $modalContent.innerHTML = "";
 });
-document.getElementById("btnPrint").addEventListener("click", ()=>{
+document.getElementById("btnPrint").addEventListener("click", () => {
   const w = window.open("", "_blank");
+  if (!w) {
+    alert("Veuillez autoriser les fenêtres pop-up pour l’impression.");
+    return;
+  }
+
+  w.document.open();
   w.document.write(`
     <html>
       <head>
@@ -478,7 +484,16 @@ document.getElementById("btnPrint").addEventListener("click", ()=>{
       </body>
     </html>
   `);
-  w.document.close(); w.focus(); w.print(); w.close();
+  w.document.close();
+
+  w.addEventListener("load", () => {
+    w.focus();
+    w.print();
+
+    w.addEventListener("afterprint", () => {
+      w.close();
+    });
+  });
 });
 
 function load(){

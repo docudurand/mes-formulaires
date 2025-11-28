@@ -353,7 +353,8 @@ function toggleCulasseFields(){
   const blocI = el('section-injecteur');
   blocI.classList.toggle('hidden', !isInj);
   blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-  el('nbInjecteurs').required = isInj;
+
+  el('nbInjecteurs').required = false;
 }
 
   el('service').addEventListener('change', toggleCulasseFields);
