@@ -13,25 +13,26 @@ const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
 
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
-
 router.use((_req, res, next) => {
   res.removeHeader("X-Frame-Options");
   res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
   next();
 });
 
+const publicDir = path.join(__dirname, "public");
+
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+
   res.setHeader("Cache-Control", "no-store");
+
   res.send(
     `window.__SUIVI_CFG = {
-      SUIVI_PASS_FULL: ${JSON.stringify(SUIVI_PASS_FULL)},
-      SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
+      ATELIER_SUIVI_PASS_FULL: ${JSON.stringify(SUIVI_PASS_FULL)},
+      ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
     };`
   );
 });
-
-const publicDir = path.join(__dirname, "public");
 
 router.use(express.static(publicDir, {
   extensions: ["html", "htm"],
