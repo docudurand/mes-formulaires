@@ -1,159 +1,323 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Suivi des dossiers Atelier</title>
-<style>
-  :root{
-    --primary:#004080; --line:#e5e7eb; --ink:#0f172a;
-    --s1:#2563eb10; --s2:#16a34a10; --s3:#f59e0b10; --s4:#9333ea10;
-    --s1b:#2563eb;   --s2b:#16a34a;   --s3b:#d97706;   --s4b:#7e22ce;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-  .wrap{max-width:1680px;margin:22px auto;padding:14px}
-  h1{ margin:0 0 10px; color:#primary; font-size:1.35rem; color:var(--primary); }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Suivi des dossiers Atelier</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --line:#e5e7eb;
+      --ink:#0f172a;
+      --accent:#004080;
+      --accent-soft:#dbeafe;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    h1,h2{margin:0;}
 
-  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 12px}
-  label{font-weight:600;color:#334155}
-  select,input{padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:.95rem; background:#fff}
+    .wrap{
+      max-width:1200px;
+      margin:20px auto 40px;
+      padding:0 12px;
+    }
+    h1{
+      font-size:1.5rem;
+      margin-bottom:12px;
+      color:var(--accent);
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:10px 12px;
+      background:var(--card);
+      border-radius:10px;
+      border:1px solid var(--line);
+      margin-bottom:12px;
+    }
+    .toolbar label{
+      font-size:.9rem;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .toolbar select,
+    .toolbar input[type="search"]{
+      border-radius:999px;
+      border:1px solid var(--line);
+      padding:6px 10px;
+      font-size:.9rem;
+    }
 
-  .yearbar{margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
-  .yearTabs{display:flex;gap:8px;flex-wrap:wrap}
-  .yearBtn{background:#fff;color:#073763;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:.95rem}
-  .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
-  .months{display:none;gap:6px;flex-wrap:wrap}
-  .months.active{display:flex}
-  .monthBtn{background:#fff;border:1px solid var(--line);color:#073763;border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem}
-  .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
-  .legend{opacity:.8;font-size:.9rem}
+    .yearbar{
+      margin-bottom:12px;
+      background:var(--card);
+      border-radius:10px;
+      border:1px solid var(--line);
+      padding:10px 12px;
+    }
+    .yearTabs{
+      display:flex;
+      gap:8px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
+    }
+    .yearBtn{
+      border-radius:999px;
+      border:1px solid var(--accent);
+      background:#fff;
+      padding:4px 10px;
+      font-size:.85rem;
+      cursor:pointer;
+    }
+    .yearBtn.active{
+      background:var(--accent);
+      color:#fff;
+    }
+    .months{
+      display:none;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-bottom:6px;
+    }
+    .months.active{display:flex;}
+    .monthBtn{
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      padding:3px 8px;
+      font-size:.8rem;
+      cursor:pointer;
+    }
+    .monthBtn.active{
+      background:var(--accent-soft);
+      border-color:var(--accent);
+      color:var(--accent);
+    }
+    .legend{
+      font-size:.85rem;
+      color:#4b5563;
+    }
 
-  .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
-  table{width:100%; border-collapse:separate; border-spacing:0 8px; table-layout:fixed; background:#fff}
-  thead th{
-    background:#f8fbff; text-align:left; padding:10px 12px; color:#334155; font-size:.92rem; border-bottom:1px solid var(--line);
-    white-space:nowrap;
-  }
-  thead th.th-eta, thead th.th-actions{ white-space:normal; line-height:1.15; }
-  tbody tr{background:#fff}
-  tbody td{padding:10px 12px; font-size:.95rem; vertical-align:middle; border:0; background:#fff}
+    .tableWrap{
+      background:var(--card);
+      border-radius:10px;
+      border:1px solid var(--line);
+      overflow:auto;
+    }
+    table{
+      border-collapse:collapse;
+      width:100%;
+      font-size:.9rem;
+    }
+    thead{
+      background:#f9fafb;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+    th,td{
+      padding:6px 8px;
+      border-bottom:1px solid var(--line);
+      vertical-align:middle;
+    }
+    th{
+      text-align:left;
+      font-size:.8rem;
+      font-weight:600;
+      color:#4b5563;
+      white-space:nowrap;
+    }
+    td{
+      font-size:.9rem;
+    }
+    .nowrap{white-space:nowrap;}
+    .truncate{
+      max-width:220px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .wrap-ok{
+      white-space:normal;
+      word-break:break-word;
+      max-width:160px;
+    }
 
-  .col-no        { width: 4%  }
-  .col-magasin   { width: 10% }
-  .col-compte    { width: 8%  }
-  .col-client    { width: 13% }
-  .col-service   { width: 14% }
-  .col-date      { width: 9%  }
-  .col-statut    { width: 11% }
-  .col-eta       { width: 15% }
-  .col-actions   { width: 12% }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .badge.s-1{background:#e0f2fe;color:#0369a1;}
+    .badge.s-2{background:#dcfce7;color:#166534;}
+    .badge.s-3{background:#fef3c7;color:#92400e;}
+    .badge.s-4{background:#fee2e2;color:#b91c1c;}
 
-  .nowrap   { white-space:nowrap; }
-  .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .wrap-ok  { white-space:normal; word-break:break-word; }
+    .etaGroup{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .etaSel{
+      border-radius:8px;
+      border:1px solid var(--line);
+      padding:3px 6px;
+      font-size:.85rem;
+    }
+    .actions{
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+    .actions select{
+      border-radius:8px;
+      border:1px solid var(--line);
+      padding:3px 6px;
+      font-size:.85rem;
+    }
+    .actions button{
+      border-radius:8px;
+      border:none;
+      padding:5px 10px;
+      font-size:.8rem;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      font-weight:600;
+    }
+    .btnView{
+      border-radius:8px;
+      border:1px solid var(--accent);
+      padding:4px 8px;
+      font-size:.75rem;
+      cursor:pointer;
+      background:#fff;
+      color:var(--accent);
+      line-height:1.1;
+    }
 
-  .badge{
-    display:inline-flex; align-items:center; justify-content:center;
-    padding:5px 8px; border-radius:999px; font-weight:700; font-size:.84rem; min-width:84px; text-align:center;
-  }
-  .btnSave{ display: inline-flex;  align-items: center;  justify-content: center;}
-  .s-1{background:var(--s1); color:var(--s1b)}
-  .s-2{background:var(--s2); color:var(--s2b)}
-  .s-3{background:var(--s3); color:var(--s3b)}
-  .s-4{background:var(--s4); color:var(--s4b)}
+    .mask{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:40;
+    }
+    .mask.active{display:flex;}
+    .mask .box{
+      background:#fff;
+      border-radius:12px;
+      width:90%;
+      max-width:800px;
+      max-height:90vh;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      box-shadow:0 10px 25px rgba(15,23,42,.3);
+    }
+    .mask .bar{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background:#f9fafb;
+    }
+    .mask .bar button{
+      border-radius:999px;
+      border:1px solid var(--accent);
+      background:#fff;
+      color:var(--accent);
+      font-size:.8rem;
+      padding:4px 10px;
+      cursor:pointer;
+    }
+    .mask .content{
+      padding:10px 12px;
+      overflow:auto;
+      font-size:.9rem;
+    }
+    .spinner{
+      width:14px;height:14px;
+      border-radius:50%;
+      border:2px solid #e5e7eb;
+      border-top-color:var(--accent);
+      animation:spin 1s linear infinite;
+      display:inline-block;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
 
-  .actions{display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:nowrap}
-  .statusSel{padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-size:.9rem; min-width:155px;}
-  .etaSel{
-    padding:6px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem;
-    width:54px; min-width:54px; text-align:center; appearance:auto;
-  }
-
-  button{
-    appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
-    padding:7px 10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:.9rem
-  }
-
-  .etaGroup{ display:flex; align-items:center; gap:35px; }
-
-  .btnView{
-    white-space:normal; line-height:1.05; padding:6px 8px;
-    min-width:72px; max-width:84px; text-align:center;
-  }
-
-  .spinner{
-    width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#004080;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle
-  }
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  .mask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:16px; }
-  .box{ width:min(900px,96vw); max-height:min(90vh,800px); background:#fff; border-radius:14px; overflow:auto; border:1px solid var(--line); margin-top:10px; }
-  .bar{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff}
-  .content{padding:12px}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px}
-  .label{font-weight:700}
-  .section{margin-top:12px}
-  .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
-  .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
-
-  .loginOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.35);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:20000;
-  }
-  .loginBox{
-    background:#fff;
-    padding:20px 24px;
-    border-radius:12px;
-    box-shadow:0 4px 18px rgba(0,0,0,.2);
-    max-width:320px;
-    width:100%;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  }
-  .loginBox h2{
-    margin:0 0 8px;
-    font-size:1.1rem;
-    color:#004080;
-    text-align:center;
-  }
-  .loginBox p{
-    margin:0 0 10px;
-    font-size:.9rem;
-    color:#555;
-    text-align:center;
-  }
-  .loginBox input{
-    width:100%;
-    padding:8px 10px;
-    border-radius:8px;
-    border:1px solid #d1d5db;
-    font-size:1rem;
-    margin-bottom:10px;
-  }
-  .loginBox button{
-    width:100%;
-    padding:9px 12px;
-    border-radius:999px;
-    border:0;
-    background:#004080;
-    color:#fff;
-    font-weight:700;
-    cursor:pointer;
-    font-size:.95rem;
-  }
-  .loginBox .error{
-    margin-top:8px;
-    font-size:.85rem;
-    color:#b91c1c;
-    text-align:center;
-    min-height:1.1em;
-  }
-</style>
+    .loginOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.6);
+      z-index:50;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .loginBox{
+      background:#fff;
+      border-radius:14px;
+      padding:20px 18px 18px;
+      max-width:320px;
+      width:90%;
+      box-shadow:0 10px 25px rgba(15,23,42,.4);
+      border:1px solid var(--line);
+      text-align:center;
+    }
+    .loginBox h2{
+      font-size:1.1rem;
+      margin-bottom:6px;
+      color:var(--accent);
+    }
+    .loginBox p{
+      margin:0 0 10px;
+      font-size:.9rem;
+      color:#4b5563;
+    }
+    .loginBox input{
+      width:100%;
+      border-radius:999px;
+      border:1px solid var(--line);
+      padding:8px 10px;
+      font-size:.9rem;
+      margin-bottom:8px;
+    }
+    .loginBox button{
+      width:100%;
+      border-radius:999px;
+      border:none;
+      padding:8px 10px;
+      font-weight:700;
+      background:var(--accent);
+      color:#fff;
+      cursor:pointer;
+      font-size:.95rem;
+    }
+    .loginBox .error{
+      margin-top:8px;
+      font-size:.85rem;
+      color:#b91c1c;
+      min-height:1.1em;
+    }
+  </style>
 </head>
 <body>
 
@@ -174,17 +338,31 @@
     <label>Filtrer magasin :
       <select id="filterMag">
         <option value="">Tous</option>
-        <option>Annemasse</option><option>Bourgoin</option><option>Chasse sur Rhone</option><option>Chassieu</option><option>Gleize</option><option>La Motte Servolex</option><option>Miribel</option>
-        <option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
+        <option>Annemasse</option>
+        <option>Bourgoin</option>
+        <option>Chasse sur Rhone</option>
+        <option>Chassieu</option>
+        <option>Gleize</option>
+        <option>La Motte Servolex</option>
+        <option>Miribel</option>
+        <option>Renage</option>
+        <option>Rives</option>
+        <option>Seynod</option>
+        <option>St Egreve</option>
+        <option>St-Jean-Bonnefonds</option>
       </select>
     </label>
-    <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
+    <input id="q" type="search"
+           placeholder="Rechercher (n°, magasin, compte, client, service…)"
+           style="min-width:280px" />
   </div>
 
   <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
     <div class="yearTabs" role="tablist" aria-label="Années">
-      <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
-      <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
+      <button type="button" class="yearBtn" data-year="2025"
+              role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
+      <button type="button" class="yearBtn" data-year="2026"
+              role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
     </div>
     <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
     <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
@@ -247,27 +425,28 @@ const cfgSuivi = window.__SUIVI_CFG || {};
 const PASS_FULL    = cfgSuivi.SUIVI_PASS_FULL    || "";
 const PASS_LIMITED = cfgSuivi.SUIVI_PASS_LIMITED || "";
 
-const $tbody = document.querySelector("#tab tbody");
-const $filter = document.getElementById("filterMag");
-const $q      = document.getElementById("q");
-const $mask   = document.getElementById("mask");
-const $btnClose = document.getElementById("btnClose");
-const $btnPrint = document.getElementById("btnPrint");
-const $modalTitle = document.getElementById("modalTitle");
+const $tbody        = document.querySelector("#tab tbody");
+const $filter       = document.getElementById("filterMag");
+const $q            = document.getElementById("q");
+const $mask         = document.getElementById("mask");
+const $btnClose     = document.getElementById("btnClose");
+const $btnPrint     = document.getElementById("btnPrint");
+const $modalTitle   = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
-const $legend = document.getElementById("legend");
+const $legend       = document.getElementById("legend");
 
-const $overlay   = document.getElementById("suiviLoginOverlay");
-const $pwdInput  = document.getElementById("suiviPassword");
-const $btnLogin  = document.getElementById("suiviLoginBtn");
-const $errBox    = document.getElementById("suiviError");
+const $overlay  = document.getElementById("suiviLoginOverlay");
+const $pwdInput = document.getElementById("suiviPassword");
+const $btnLogin = document.getElementById("suiviLoginBtn");
+const $errBox   = document.getElementById("suiviError");
 
-let IS_LOADING = true;
+let IS_LOADING   = true;
 let LIMITED_VIEW = false;
+let rows = [];
 
 function setTableLoading(msg){
   $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
-    <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg||"Chargement…"}
+    <span class="spinner" aria-hidden="true" style="margin-right:8px"></span>${msg || "Chargement…"}
   </td></tr>`;
 }
 
@@ -282,69 +461,84 @@ function parseDate(v){
   const d = new Date(v);
   if (!isNaN(d)) return d;
   const m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m1) { const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
+  if (m1){ const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
   const m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
+  if (m2){ const d3 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d3)?null:d3; }
   return null;
 }
-function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—"; }
+function fmtJJMMYYYYdash(v){
+  const d = parseDate(v);
+  return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—";
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
 
 const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-let YEAR_FILTER = '';
-let MONTH_FILTER = '';
+let YEAR_FILTER  = "";
+let MONTH_FILTER = "";
 
 function buildMonths(year){
-  const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
-  ctn.innerHTML = '';
+  const ctn = document.getElementById(`months-${year}`); if (!ctn) return;
+  ctn.innerHTML = "";
   MONTHS_FULL.forEach((label, idx)=>{
     const m = idx+1;
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'monthBtn';
-    btn.dataset.month = String(m); btn.dataset.year = String(year);
-    btn.textContent = label; ctn.appendChild(btn);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "monthBtn";
+    btn.dataset.month = String(m);
+    btn.dataset.year  = String(year);
+    btn.textContent   = label;
+    ctn.appendChild(btn);
   });
-  const allBtn = document.createElement('button');
-  allBtn.type = 'button'; allBtn.className = 'monthBtn';
-  allBtn.dataset.month = 'all'; allBtn.dataset.year = String(year);
-  allBtn.textContent = 'Tout'; ctn.appendChild(allBtn);
+  const allBtn = document.createElement("button");
+  allBtn.type = "button";
+  allBtn.className = "monthBtn";
+  allBtn.dataset.month = "all";
+  allBtn.dataset.year  = String(year);
+  allBtn.textContent   = "Tout";
+  ctn.appendChild(allBtn);
 }
 function setYearActive(year){
-  YEAR_FILTER = String(year||'') || ''; MONTH_FILTER = '';
-  document.querySelectorAll('.yearBtn').forEach(b=>{
-    const on = String(b.dataset.year)===String(year);
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on?'true':'false');
+  YEAR_FILTER  = String(year || "") || "";
+  MONTH_FILTER = "";
+  document.querySelectorAll(".yearBtn").forEach(b=>{
+    const on = String(b.dataset.year) === String(year);
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
   });
-  document.querySelectorAll('.months').forEach(div=>{
-    div.classList.toggle('active', div.id===`months-${year}`);
+  document.querySelectorAll(".months").forEach(div=>{
+    div.classList.toggle("active", div.id === `months-${year}`);
   });
-  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove('active'));
+  document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove("active"));
   draw();
 }
 function setMonthActive(year, month){
-  if(String(YEAR_FILTER)!==String(year)) setYearActive(year);
-  MONTH_FILTER = String(month||'');
+  if (String(YEAR_FILTER) !== String(year)) setYearActive(year);
+  MONTH_FILTER = String(month || "");
   document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=>{
-    b.classList.toggle('active', String(b.dataset.month)===String(month));
+    b.classList.toggle("active", String(b.dataset.month) === String(month));
   });
   draw();
 }
-document.querySelector('.yearTabs').addEventListener('click', (e)=>{
-  const b = e.target.closest('.yearBtn'); if(!b) return; setYearActive(b.dataset.year);
+document.querySelector(".yearTabs").addEventListener("click", (e)=>{
+  const b = e.target.closest(".yearBtn"); if (!b) return;
+  setYearActive(b.dataset.year);
 });
-document.getElementById('months-2025').addEventListener('click', (e)=>{
-  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2025', b.dataset.month);
+document.getElementById("months-2025").addEventListener("click", (e)=>{
+  const b = e.target.closest(".monthBtn"); if (!b) return;
+  setMonthActive("2025", b.dataset.month);
 });
-document.getElementById('months-2026').addEventListener('click', (e)=>{
-  const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2026', b.dataset.month);
+document.getElementById("months-2026").addEventListener("click", (e)=>{
+  const b = e.target.closest(".monthBtn"); if (!b) return;
+  setMonthActive("2026", b.dataset.month);
 });
 
-let rows = [];
 function buildEstimateSelect(value){
   const v = (value === "" || value === null || value === undefined) ? "" : Number(value);
-  let opts = `<option value="" ${v==="" ? "selected":""}></option>`;
+  let opts = `<option value="" ${v === "" ? "selected":""}></option>`;
   for (let i=1;i<=10;i++){
-    opts += `<option value="${i}" ${v===i ? "selected":""}>${i}</option>`;
+    opts += `<option value="${i}" ${v === i ? "selected":""}>${i}</option>`;
   }
   return `<select class="etaSel" aria-label="Estimation Temps Travaux">${opts}</select>`;
 }
@@ -352,7 +546,7 @@ function matchesYearMonth(d){
   if (!YEAR_FILTER) return true;
   if (!d) return false;
   if (String(d.getFullYear()) !== String(YEAR_FILTER)) return false;
-  if (!MONTH_FILTER || MONTH_FILTER==='all') return true;
+  if (!MONTH_FILTER || MONTH_FILTER === "all") return true;
   return (d.getMonth()+1) === Number(MONTH_FILTER);
 }
 
@@ -361,14 +555,14 @@ function applyLimitedView(){
   hideLimitedColumns();
 }
 function hideLimitedColumns(){
-  document.querySelectorAll('.th-eta, .th-actions, .col-eta, .col-actions').forEach(el=>{
-    el.style.display = 'none';
+  document.querySelectorAll(".th-eta, .th-actions, .col-eta, .col-actions").forEach(el=>{
+    el.style.display = "none";
   });
-  document.querySelectorAll('td.col-eta, td.col-actions').forEach(el=>{
-    el.style.display = 'none';
+  document.querySelectorAll("td.col-eta, td.col-actions").forEach(el=>{
+    el.style.display = "none";
   });
-  document.querySelectorAll('.btnSave').forEach(b=>{
-    b.style.display = 'none';
+  document.querySelectorAll(".btnSave").forEach(b=>{
+    b.style.display = "none";
   });
 }
 
@@ -377,13 +571,11 @@ function doLogin(){
   $errBox.textContent = "";
 
   if (PASS_FULL && pwd === PASS_FULL){
-
     $overlay.style.display = "none";
     document.body.style.overflow = "";
     return;
   }
   if (PASS_LIMITED && pwd === PASS_LIMITED){
-
     applyLimitedView();
     $overlay.style.display = "none";
     document.body.style.overflow = "";
@@ -402,45 +594,149 @@ $pwdInput.addEventListener("keydown", function(e){
 });
 
 document.addEventListener("DOMContentLoaded", function(){
+  buildMonths(2025);
+  buildMonths(2026);
+
+  setYearActive("2025");
+
   if (!PASS_FULL && !PASS_LIMITED){
     $overlay.style.display = "none";
   } else {
     document.body.style.overflow = "hidden";
     $pwdInput.focus();
   }
+
+  loadCases();
 });
 
+function closeModal(){
+  $mask.classList.remove("active");
+  $mask.setAttribute("aria-hidden","true");
+}
+function printModal(){
+  const w = window.open("", "_blank", "noopener,noreferrer");
+  if (!w) return;
+  const html = `
+    <!doctype html>
+    <html><head><meta charset="utf-8">
+      <title>Impression dossier</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;margin:15mm;}
+        h2{margin-top:0;}
+        table{border-collapse:collapse;width:100%;margin-top:8px;}
+        td,th{border:1px solid #e5e7eb;padding:4px 6px;font-size:12px;}
+        .label{font-weight:700;background:#f9fafb;}
+      </style>
+    </head>
+    <body>${$modalContent.innerHTML}</body></html>`;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+$btnClose.addEventListener("click", closeModal);
+$btnPrint.addEventListener("click", printModal);
+$mask.addEventListener("click", (e)=>{
+  if (e.target === $mask) closeModal();
+});
+
+async function loadCases(){
+  IS_LOADING = true;
+  setTableLoading("Chargement des dossiers…");
+  try{
+    const resp = await fetch(`${API_BASE}/atelier/api/cases`);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const js = await resp.json();
+    rows = (js && js.data) || [];
+  } catch(e){
+    console.error(e);
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">
+      Erreur lors du chargement des dossiers.
+    </td></tr>`;
+    return;
+  } finally{
+    IS_LOADING = false;
+  }
+  draw();
+}
+
+function openDetails(row){
+  const h   = (row.snapshot && row.snapshot.header)    || {};
+  const cul = (row.snapshot && row.snapshot.culasse)   || null;
+  const inj = (row.snapshot && row.snapshot.injecteur) || null;
+  const com = (row.snapshot && row.snapshot.commentaires) || "";
+
+  let html = "";
+  html += `<div><b>N° dossier :</b> ${esc(String(row.no).padStart(5,"0"))}</div>`;
+  html += `<div><b>Magasin :</b> ${esc(h.magasin || row.magasin || "")}</div>`;
+  html += `<div><b>Client :</b> ${esc(h.client || row.client || "")}</div>`;
+  html += `<div><b>Service :</b> ${esc(h.service || row.service || "")}</div>`;
+  html += `<div><b>Date demande :</b> ${fmtJJMMYYYYdash(h.dateDemande || row.demandeDate)}</div>`;
+  html += `<div><b>Statut :</b> ${esc(row.status || "")}</div>`;
+
+  if (cul){
+    html += `<h3>Rectification culasse</h3>`;
+    html += `<div><b>Cylindre :</b> ${esc(cul.cylindre || "")}</div>`;
+    html += `<div><b>Soupapes :</b> ${esc(cul.soupapes || "")}</div>`;
+    html += `<div><b>Carburant :</b> ${esc(cul.carburant || "")}</div>`;
+  }
+  if (inj){
+    html += `<h3>Contrôle injection</h3>`;
+    html += `<div><b>Type :</b> ${esc(inj.type || "")}</div>`;
+    html += `<div><b>Nombre d’injecteurs :</b> ${esc(inj.nombre || "")}</div>`;
+  }
+  if (com && com.trim()){
+    html += `<h3>Commentaires</h3>`;
+    html += `<div style="white-space:pre-wrap;border:1px solid #e5e7eb;padding:6px 8px;border-radius:6px;">${esc(com)}</div>`;
+  }
+
+  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,"0")}`;
+  $modalContent.innerHTML = html;
+  $mask.classList.add("active");
+  $mask.setAttribute("aria-hidden","false");
+}
+
 function draw(){
-  if (IS_LOADING) { setTableLoading("Chargement des dossiers…"); return; }
+  if (IS_LOADING){
+    setTableLoading("Chargement des dossiers…");
+    return;
+  }
 
   const mag = $filter.value.trim().toLowerCase();
-  const q = $q.value.trim().toLowerCase();
+  const q   = $q.value.trim().toLowerCase();
 
   const list = [...rows].sort((a,b)=>{
     const da = parseDate(a.demandeDate), db = parseDate(b.demandeDate);
-    return (db?db.getTime():0) - (da?da.getTime():0);
+    return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
   });
 
   let count = 0;
   $tbody.innerHTML = "";
   list
-    .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
+    .filter(r => !mag || (r.magasin || "").toLowerCase() === mag)
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
     .filter(r => {
       if (!q) return true;
-      const s = [String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service, fmtJJMMYYYYdash(r.demandeDate)]
-        .join(' ').toLowerCase();
+      const s = [
+        String(r.no).padStart(5,"0"),
+        r.magasin,
+        r.compte,
+        r.client,
+        r.service,
+        fmtJJMMYYYYdash(r.demandeDate)
+      ].join(" ").toLowerCase();
       return s.includes(q);
     })
     .forEach(r => {
       count++;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="col-no nowrap"        title="${String(r.no)}">${String(r.no).padStart(5,'0')}</td>
-        <td class="col-magasin wrap-ok"  title="${r.magasin||""}">${r.magasin||""}</td>
-        <td class="col-compte nowrap"    title="${r.compte||""}">${r.compte||""}</td>
-        <td class="col-client truncate"  title="${r.client||""}">${r.client||""}</td>
-        <td class="col-service truncate" title="${r.service||""}">${r.service||""}</td>
+        <td class="col-no nowrap"        title="${String(r.no)}">${String(r.no).padStart(5,"0")}</td>
+        <td class="col-magasin wrap-ok"  title="${r.magasin || ""}">${r.magasin || ""}</td>
+        <td class="col-compte nowrap"    title="${r.compte || ""}">${r.compte || ""}</td>
+        <td class="col-client truncate"  title="${r.client || ""}">${r.client || ""}</td>
+        <td class="col-service truncate" title="${r.service || ""}">${r.service || ""}</td>
         <td class="col-date nowrap"      title="${fmtJJMMYYYYdash(r.demandeDate)}">${fmtJJMMYYYYdash(r.demandeDate)}</td>
         <td class="col-statut nowrap">${badge(r.status)}</td>
         <td class="col-eta nowrap">
@@ -452,7 +748,7 @@ function draw(){
         <td class="col-actions nowrap">
           <div class="actions">
             <select class="statusSel">
-              ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
+              ${LABELS.map(lbl => `<option ${r.status === lbl ? "selected":""}>${lbl}</option>`).join("")}
             </select>
             <button class="btnSave">Valider</button>
           </div>
@@ -461,36 +757,44 @@ function draw(){
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
 
-      tr.querySelector(".btnSave").addEventListener("click", async ()=>{
-        const statusSel = tr.querySelector(".statusSel");
-        const etaSel = tr.querySelector(".etaSel");
-        const saveBtn = tr.querySelector(".btnSave");
-        const oldHtml = saveBtn.innerHTML;
-        const status = statusSel.value;
+      const btnSave   = tr.querySelector(".btnSave");
+      const statusSel = tr.querySelector(".statusSel");
+      const etaSel    = tr.querySelector(".etaSel");
+
+      btnSave.addEventListener("click", async ()=>{
+        const oldHtml = btnSave.innerHTML;
+        const status  = statusSel.value;
         const estimation = etaSel.value ? Number(etaSel.value) : "";
 
         try{
-          saveBtn.disabled = true; statusSel.disabled = true; etaSel.disabled = true;
-          saveBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
+          btnSave.disabled   = true;
+          statusSel.disabled = true;
+          etaSel.disabled    = true;
+          btnSave.innerHTML  = `<span class="spinner" aria-hidden="true"></span>`;
 
-          const resp = await fetch(`${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`, {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ status, estimation })
-          });
-          if(!resp.ok){
+          const resp = await fetch(
+            `${API_BASE}/atelier/api/cases/${encodeURIComponent(r.no)}/status`,
+            {
+              method:"POST",
+              headers:{ "Content-Type":"application/json" },
+              body: JSON.stringify({ status, estimation })
+            }
+          );
+          if (!resp.ok){
             alert(`Erreur de mise à jour (${resp.status})`);
             return;
           }
 
-          r.status = status;
+          r.status     = status;
           r.estimation = estimation;
 
           const badgeCell = tr.querySelector(".col-statut");
           if (badgeCell) badgeCell.innerHTML = badge(r.status);
         } finally{
-          saveBtn.innerHTML = oldHtml;
-          saveBtn.disabled = false; statusSel.disabled = false; etaSel.disabled = false;
+          btnSave.innerHTML   = oldHtml;
+          btnSave.disabled    = false;
+          statusSel.disabled  = false;
+          etaSel.disabled     = false;
         }
       });
 
@@ -498,14 +802,16 @@ function draw(){
     });
 
   if (count === 0){
-    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">Aucun dossier.</td></tr>`;
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#334155">
+      Aucun dossier.
+    </td></tr>`;
   }
 
   const ymText = YEAR_FILTER
-    ? (MONTH_FILTER && MONTH_FILTER!=='all'
+    ? (MONTH_FILTER && MONTH_FILTER !== "all"
         ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
         : `Tout ${YEAR_FILTER}`)
-    : 'Toutes années';
+    : "Toutes années";
   $legend.textContent = `${count} dossier(s) • ${ymText}`;
 
   if (LIMITED_VIEW){
@@ -513,172 +819,8 @@ function draw(){
   }
 }
 
-function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-function openDetails(row){
-  const h = (row.snapshot && row.snapshot.header) || {};
-  const cul = (row.snapshot && row.snapshot.culasse) || null;
-  const inj = (row.snapshot && row.snapshot.injecteur) || null;
-  const com = (row.snapshot && row.snapshot.commentaires) ? String(row.snapshot.commentaires).trim() : "";
-
-  let opsHTML = "";
-  if (cul && Array.isArray(cul.operations) && cul.operations.length){
-    opsHTML = cul.operations.map(op=>{
-      const refs = Array.isArray(op.references) ? op.references.map(r=>{
-        const bits = [];
-        if (r.reference) bits.push(esc(r.reference));
-        if (r.libelleRef) bits.push(esc(r.libelleRef));
-        if (r.prixHT || r.prixHT===0) bits.push(`${esc(String(r.prixHT))} € HT`);
-        return `<div class="sub">- ${bits.join(" – ")}</div>`;
-      }).join("") : "";
-      return `<div class="bul">• ${esc(op.libelle || op.ligne)}</div>${refs}`;
-    }).join("");
-  }
-
-  const piecesHTML = (cul && Array.isArray(cul.piecesAFournir) && cul.piecesAFournir.length)
-    ? cul.piecesAFournir.map(p=>`<div class="bul">• ${esc(p)}</div>`).join("")
-    : "<div class='bul' style='opacity:.7'>Aucune pièce sélectionnée.</div>";
-
-  $modalTitle.textContent = `Dossier ${String(row.no).padStart(5,'0')} — ${h.service || ""}`;
-  $modalContent.innerHTML = `
-    <div class="grid2">
-      <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
-      <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
-      <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
-      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
-      <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
-      <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
-      <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
-      <div><span class="label">Email :</span> ${esc(h.email||"")}</div>
-      <div><span class="label">Véhicule :</span> ${esc(h.vehicule||"")}</div>
-      <div><span class="label">Immat. :</span> ${esc(h.immat||"")}</div>
-      <div><span class="label">Service :</span> ${esc(h.service||row.service||"")}</div>
-      <div><span class="label">Estimation :</span> ${esc(row.estimation || "—")}</div>
-      <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(h.dateDemande||row.demandeDate))}</div>
-    </div>
-
-    ${h.service === "Rectification Culasse" && cul ? `
-      <div class="section">
-        <h3>Détails Rectification Culasse</h3>
-        ${opsHTML || "<div class='bul' style='opacity:.7'>Aucune opération cochée.</div>"}
-        <div class="section">
-          <h3>Pièces à fournir</h3>
-          ${piecesHTML}
-        </div>
-      </div>
-    ` : ""}
-
-    ${(h.service === "Contrôle injection Diesel" || h.service === "Contrôle injection Essence") && inj ? `
-      <div class="section">
-        <h3>Détails Contrôle injection</h3>
-        <div class="grid2">
-          <div><span class="label">Type :</span> ${esc(inj.type||"")}</div>
-          <div><span class="label">Nb injecteurs :</span> ${esc(inj.nombre||"")}</div>
-        </div>
-      </div>
-    ` : ""}
-
-    ${com ? `
-      <div class="section">
-        <h3>Commentaires</h3>
-        <div class="area">${esc(com)}</div>
-      </div>
-    ` : ""}
-  `;
-  $mask.style.display = "flex";
-  $mask.setAttribute("aria-hidden","false");
-}
-document.getElementById("btnClose").addEventListener("click", ()=>{
-  $mask.style.display = "none";
-  $mask.setAttribute("aria-hidden","true");
-  $modalContent.innerHTML = "";
-});
-document.getElementById("btnPrint").addEventListener("click", () => {
-  const w = window.open("", "_blank");
-  if (!w) {
-    alert("Veuillez autoriser les fenêtres pop-up pour l’impression.");
-    return;
-  }
-
-  w.document.open();
-  w.document.write(`
-    <html>
-      <head>
-        <title>${$modalTitle.textContent}</title>
-        <meta charset="utf-8" />
-        <style>
-          body{font-family:system-ui,Arial,sans-serif;padding:20px;color:#0f172a}
-          h3{color:#004080;margin-top:16px}
-          .label{font-weight:700}
-          .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:10px}
-          .section{margin-top:14px}
-          .bul{margin:6px 0}
-          .sub{margin:2px 0 0 18px}
-          .area{border:1px solid #ccc;padding:10px;white-space:pre-wrap}
-        </style>
-      </head>
-      <body>
-        ${$modalContent.innerHTML}
-      </body>
-    </html>
-  `);
-  w.document.close();
-
-  w.addEventListener("load", () => {
-    w.focus();
-    w.print();
-
-    w.addEventListener("afterprint", () => {
-      w.close();
-    });
-  });
-});
-
-function load(){
-  IS_LOADING = true;
-  setTableLoading("Chargement des dossiers…");
-
-  buildMonths(2025);
-  buildMonths(2026);
-
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
-  if (y === 2025 || y === 2026) {
-    setMonthActive(String(y), String(m));
-  } else {
-    YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
-  }
-
-  fetch(`${API_BASE}/atelier/api/cases`)
-    .then(r=>r.json())
-    .then(json=>{
-      const data = (json && json.data) || [];
-      const fetched = data.map(x=>{
-        const h = (x.snapshot && x.snapshot.header) || {};
-        return {
-          ...x,
-          magasin: x.magasin || (h && h.magasin) || "",
-          compte:  x.compte  || (h && h.compte)  || "",
-          client:  x.client  || (h && h.client)  || "",
-          service: x.service || (h && h.service) || "",
-          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
-          estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
-        };
-      });
-      rows = fetched;
-    })
-    .catch(e=>{
-      console.error(e);
-      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
-    })
-    .finally(()=>{
-      IS_LOADING = false;
-      draw();
-    });
-}
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
-load();
 </script>
 </body>
 </html>
