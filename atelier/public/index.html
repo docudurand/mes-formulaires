@@ -326,24 +326,35 @@
     });
   }
 
-  function toggleCulasseFields(){
-    const service = el('service').value;
+function toggleCulasseFields(){
+  const service = el('service').value;
 
-    const isC = service === 'Rectification Culasse';
-    const blocC = el('section-culasse');
-    blocC.classList.toggle('hidden', !isC);
-    blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
-    el('segment').required = el('cylindre').required = el('carburant').required = isC;
-    el('soupapes').required = false;
-    if(!isC){ LIGNES.forEach(l=>{ const e=el('refs_'+l.ligne); if(e) e.textContent=''; }); }
-    else refreshReferences();
+  const isC = service === 'Rectification Culasse';
+  const blocC = el('section-culasse');
+  blocC.classList.toggle('hidden', !isC);
+  blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
 
-    const isInj = (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
-    const blocI = el('section-injecteur');
-    blocI.classList.toggle('hidden', !isInj);
-    blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-    el('nbInjecteurs').required = isInj;
+  el('segment').required   = false;
+  el('cylindre').required  = false;
+  el('carburant').required = false;
+  el('soupapes').required  = false;
+
+  if(!isC){
+    LIGNES.forEach(l=>{
+      const e = el('refs_'+l.ligne);
+      if(e) e.textContent='';
+    });
+  } else {
+    refreshReferences();
   }
+
+  const isInj =
+    (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
+  const blocI = el('section-injecteur');
+  blocI.classList.toggle('hidden', !isInj);
+  blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
+  el('nbInjecteurs').required = isInj;
+}
 
   el('service').addEventListener('change', toggleCulasseFields);
   ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
