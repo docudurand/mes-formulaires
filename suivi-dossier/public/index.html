@@ -96,9 +96,79 @@
   .section{margin-top:12px}
   .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
+
+  /* --- Ajout : bandeau mot de passe en haut de page --- */
+  .loginOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.35);
+    display:flex;
+    align-items:flex-start;   /* en haut de la page */
+    justify-content:center;
+    padding-top:20px;
+    z-index:20000;
+  }
+  .loginBox{
+    background:#fff;
+    padding:16px 18px;
+    border-radius:10px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.25);
+    min-width:260px;
+    max-width:320px;
+    font-size:.9rem;
+  }
+  .loginBox h2{
+    margin:0 0 6px;
+    font-size:1.05rem;
+    color:#004080;
+    text-align:center;
+  }
+  .loginBox p{
+    margin:0 0 10px;
+    font-size:.88rem;
+    color:#4b5563;
+    text-align:center;
+  }
+  .loginBox input{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #d1d5db;
+    font-size:.95rem;
+    margin-bottom:8px;
+  }
+  .loginBox button{
+    width:100%;
+    padding:8px 10px;
+    border-radius:999px;
+    border:0;
+    background:#004080;
+    color:#fff;
+    font-weight:700;
+    font-size:.9rem;
+    cursor:pointer;
+  }
+  .loginBox .error{
+    margin-top:6px;
+    font-size:.8rem;
+    color:#b91c1c;
+    text-align:center;
+    min-height:1em;
+  }
 </style>
 </head>
 <body>
+
+<!-- AJOUT : pop-up mot de passe en haut de page -->
+<div class="loginOverlay" id="loginOverlay">
+  <div class="loginBox">
+    <h2>Accès suivi atelier</h2>
+    <p>Veuillez saisir votre mot de passe.</p>
+    <input type="password" id="loginPassword" placeholder="Mot de passe" />
+    <button type="button" id="loginBtn">Se connecter</button>
+    <div class="error" id="loginError"></div>
+  </div>
+</div>
 
 <div class="wrap">
   <h1>Suivi des dossiers Atelier</h1>
@@ -168,7 +238,16 @@
   </div>
 </div>
 
+<!-- Config mots de passe côté serveur (à servir via /suivi-dossier/config.js) -->
+<script src="/suivi-dossier/config.js"></script>
+
 <script>
+const cfgSuivi = window.__SUIVI_CFG || {};
+// Variables Render côté serveur, exposées dans config.js
+const PASS_FULL    = cfgSuivi.ATELIER_SUIVI_PASS_FULL    || "";
+const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
+let LIMITED_VIEW   = false; // true = vue limitée (pas d’estimation, pas d’actions, mais VOIR DOSSIER visible)
+
 const API_BASE =
   (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
     ? "https://mes-formulaires.onrender.com"
@@ -277,6 +356,26 @@ function matchesYearMonth(d){
   return (d.getMonth()+1) === Number(MONTH_FILTER);
 }
 
+function applyLimitedView(){
+  if (!LIMITED_VIEW) return;
+
+  // masquer les entêtes Estimation / Actions
+  const thEta = document.querySelector("th.th-eta");
+  const thActions = document.querySelector("th.th-actions");
+  if (thEta) thEta.style.display = "none";
+  if (thActions) thActions.style.display = "none";
+
+  // masquer le select d’estimation, garder le bouton Voir dossier
+  document.querySelectorAll("td.col-eta .etaSel").forEach(sel=>{
+    sel.style.display = "none";
+  });
+
+  // masquer totalement la colonne Actions (statut + bouton Valider)
+  document.querySelectorAll("td.col-actions").forEach(td=>{
+    td.style.display = "none";
+  });
+}
+
 function draw(){
   if (IS_LOADING) { setTableLoading("Chargement des dossiers…"); return; }
 
@@ -374,6 +473,11 @@ function draw(){
         : `Tout ${YEAR_FILTER}`)
     : 'Toutes années';
   $legend.textContent = `${count} dossier(s) • ${ymText}`;
+
+  // appliquer vue limitée après chaque redraw
+  if (LIMITED_VIEW){
+    applyLimitedView();
+  }
 }
 
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -541,7 +645,53 @@ function load(){
 }
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
-load();
+
+/* --- Login / mots de passe --- */
+(function initLogin(){
+  const overlay = document.getElementById("loginOverlay");
+  const input   = document.getElementById("loginPassword");
+  const btn     = document.getElementById("loginBtn");
+  const errBox  = document.getElementById("loginError");
+
+  function startApp(){
+    if (overlay) overlay.style.display = "none";
+    load();
+  }
+
+  function handleLogin(){
+    const v = (input.value || "").trim();
+
+    // si aucun mot de passe n'est configuré côté serveur → pas de blocage
+    if (!PASS_FULL && !PASS_LIMITED){
+      LIMITED_VIEW = false;
+      startApp();
+      return;
+    }
+
+    if (PASS_FULL && v === PASS_FULL){
+      LIMITED_VIEW = false;
+      startApp();
+      return;
+    }
+    if (PASS_LIMITED && v === PASS_LIMITED){
+      LIMITED_VIEW = true;
+      startApp();
+      return;
+    }
+    errBox.textContent = "Mot de passe incorrect.";
+  }
+
+  btn.addEventListener("click", handleLogin);
+  input.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter") handleLogin();
+  });
+
+  // en dev si tu veux bypass : mettre un seul mot de passe vide côté serveur
+  if (!PASS_FULL && !PASS_LIMITED){
+    overlay.style.display = "none";
+    startApp();
+  }
+})();
 </script>
 </body>
 </html>
