@@ -10,10 +10,6 @@
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#fff; color:var(--ink)}
     .wrap{max-width:960px; margin:24px auto; padding:16px}
     h1{margin:0 0 12px; font-size:1.4rem; color:#004080}
-    .notice{
-      margin:10px 0 14px; padding:10px 12px; border:1px solid #eab308; border-radius:10px;
-      background:#fef9c3; color:#713f12; font-weight:700;
-    }
     form{background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,.04)}
     .grid{display:grid; gap:14px}
     @media(min-width:720px){ .grid-2{grid-template-columns:1fr 1fr} }
@@ -62,7 +58,6 @@
 <body>
   <div class="wrap">
     <h1>Demande d’intervention</h1>
-    <div class="notice" role="alert">Projet en test : l’envoi est temporairement désactivé. Vous pouvez previsualiser les refs dans l'onglet service / Rectification Culasse</div>
 
     <form id="form-atelier">
       <div class="grid grid-2">
@@ -219,7 +214,7 @@
       </div>
 
       <div class="actions">
-        <button id="btnSubmit" type="submit" class="primary" style="display:none">Envoyer</button>
+        <button id="btnSubmit" type="submit" class="primary">Envoyer</button>
         <button type="reset" class="ghost">Réinitialiser</button>
         <span id="statusMsg" style="margin-left:auto; font-weight:700;"></span>
       </div>
