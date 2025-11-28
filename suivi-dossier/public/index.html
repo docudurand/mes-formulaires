@@ -684,17 +684,6 @@ $q.addEventListener("input", draw);
     load();
   }
 
-  try {
-    const stored = window.localStorage ? localStorage.getItem("atelierSuiviPass") : null;
-    if (stored && (stored === PASS_FULL || stored === PASS_LIMITED)) {
-      LIMITED_VIEW = (stored === PASS_LIMITED);
-      startApp();
-      return;
-    } else if (stored && stored !== PASS_FULL && stored !== PASS_LIMITED) {
-      localStorage.removeItem("atelierSuiviPass");
-    }
-  } catch (_) {}
-
   function handleLogin(){
     const v = (input.value || "").trim();
 
@@ -706,25 +695,11 @@ $q.addEventListener("input", draw);
 
     if (PASS_FULL && v === PASS_FULL){
       LIMITED_VIEW = false;
-      try {
-        if (window.localStorage && (!remember || remember.checked)) {
-          localStorage.setItem("atelierSuiviPass", v);
-        } else if (window.localStorage) {
-          localStorage.removeItem("atelierSuiviPass");
-        }
-      } catch (_) {}
       startApp();
       return;
     }
     if (PASS_LIMITED && v === PASS_LIMITED){
       LIMITED_VIEW = true;
-      try {
-        if (window.localStorage && (!remember || remember.checked)) {
-          localStorage.setItem("atelierSuiviPass", v);
-        } else if (window.localStorage) {
-          localStorage.removeItem("atelierSuiviPass");
-        }
-      } catch (_) {}
       startApp();
       return;
     }
