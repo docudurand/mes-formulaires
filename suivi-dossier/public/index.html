@@ -97,13 +97,12 @@
   .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
 
-  /* --- Ajout : bandeau mot de passe en haut de page --- */
   .loginOverlay{
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.35);
     display:flex;
-    align-items:flex-start;   /* en haut de la page */
+    align-items:flex-start;
     justify-content:center;
     padding-top:20px;
     z-index:20000;
@@ -159,7 +158,6 @@
 </head>
 <body>
 
-<!-- AJOUT : pop-up mot de passe en haut de page -->
 <div class="loginOverlay" id="loginOverlay">
   <div class="loginBox">
     <h2>Accès suivi atelier</h2>
@@ -238,15 +236,13 @@
   </div>
 </div>
 
-<!-- Config mots de passe côté serveur (à servir via /suivi-dossier/config.js) -->
 <script src="/suivi-dossier/config.js"></script>
 
 <script>
 const cfgSuivi = window.__SUIVI_CFG || {};
-// Variables Render côté serveur, exposées dans config.js
 const PASS_FULL    = cfgSuivi.ATELIER_SUIVI_PASS_FULL    || "";
 const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
-let LIMITED_VIEW   = false; // true = vue limitée (pas d’estimation, pas d’actions, mais VOIR DOSSIER visible)
+let LIMITED_VIEW   = false;
 
 const API_BASE =
   (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
@@ -359,20 +355,29 @@ function matchesYearMonth(d){
 function applyLimitedView(){
   if (!LIMITED_VIEW) return;
 
-  // masquer les entêtes Estimation / Actions
   const thEta = document.querySelector("th.th-eta");
   const thActions = document.querySelector("th.th-actions");
-  if (thEta) thEta.style.display = "none";
-  if (thActions) thActions.style.display = "none";
 
-  // masquer le select d’estimation, garder le bouton Voir dossier
-  document.querySelectorAll("td.col-eta .etaSel").forEach(sel=>{
+  if (thEta) {
+    thEta.innerHTML = "Voir dossier";
+    thEta.style.textAlign = "center";
+    thEta.style.whiteSpace = "nowrap";
+  }
+
+  if (thActions) {
+    thActions.style.display = "none";
+  }
+
+  document.querySelectorAll("td.col-eta .etaSel").forEach(sel => {
     sel.style.display = "none";
   });
 
-  // masquer totalement la colonne Actions (statut + bouton Valider)
-  document.querySelectorAll("td.col-actions").forEach(td=>{
+  document.querySelectorAll("td.col-actions").forEach(td => {
     td.style.display = "none";
+  });
+
+  document.querySelectorAll("col.col-actions").forEach(col => {
+    col.style.display = "none";
   });
 }
 
@@ -474,7 +479,6 @@ function draw(){
     : 'Toutes années';
   $legend.textContent = `${count} dossier(s) • ${ymText}`;
 
-  // appliquer vue limitée après chaque redraw
   if (LIMITED_VIEW){
     applyLimitedView();
   }
@@ -646,7 +650,6 @@ function load(){
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
 
-/* --- Login / mots de passe --- */
 (function initLogin(){
   const overlay = document.getElementById("loginOverlay");
   const input   = document.getElementById("loginPassword");
@@ -661,7 +664,6 @@ $q.addEventListener("input", draw);
   function handleLogin(){
     const v = (input.value || "").trim();
 
-    // si aucun mot de passe n'est configuré côté serveur → pas de blocage
     if (!PASS_FULL && !PASS_LIMITED){
       LIMITED_VIEW = false;
       startApp();
@@ -686,7 +688,6 @@ $q.addEventListener("input", draw);
     if (e.key === "Enter") handleLogin();
   });
 
-  // en dev si tu veux bypass : mettre un seul mot de passe vide côté serveur
   if (!PASS_FULL && !PASS_LIMITED){
     overlay.style.display = "none";
     startApp();
