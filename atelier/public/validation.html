@@ -129,13 +129,17 @@
   </div>
 
   <script>
-  // Base d'URL API (Wix -> onrender, sinon même origine)
   const API_BASE =
     (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
       ? "https://mes-formulaires.onrender.com"
       : location.origin.replace(/\/$/, "");
 
   const $content = document.getElementById("content");
+  function normalizeNo(v){
+  return String(v == null ? "" : v)
+    .trim()
+    .replace(/^0+/, "");
+}
 
   function esc(s){
     return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
@@ -185,7 +189,9 @@
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const js = await resp.json();
       const data = (js && js.data) || [];
-      const row = data.find(function(r){ return String(r.no) === String(no); });
+      const row = data.find(function(r){
+  return normalizeNo(r.no) === normalizeNo(no);
+});
 
       if (!row){
         $content.innerHTML =

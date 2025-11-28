@@ -10,9 +10,6 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Config env
-// ───────────────────────────────────────────────────────────────────────────────
 const GS_URL   = process.env.GS_ATELIER_URL || "";
 const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
@@ -20,15 +17,11 @@ if (!GS_URL) {
   console.warn("[ATELIER] ⚠️ GS_ATELIER_URL est vide. Les opérations Sheets/Apps Script échoueront.");
 }
 
-// Client axios commun (timeouts + UA)
 const http = axios.create({
   timeout: 20000,
   headers: { "User-Agent": "atelier-api/1.1 (+render)" }
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Expose une petite config front si besoin
-// ───────────────────────────────────────────────────────────────────────────────
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -40,9 +33,6 @@ router.get("/config.js", (_req, res) => {
   );
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CSP pour intégration Wix (iframe)
-// ───────────────────────────────────────────────────────────────────────────────
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 router.use((req, res, next) => {
@@ -51,9 +41,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Parsing + Static
-// ───────────────────────────────────────────────────────────────────────────────
 router.use(express.json({ limit: "2mb" }));
 router.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
@@ -72,9 +59,6 @@ router.get("/", (_req, res) => {
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Petites utilitaires
-// ───────────────────────────────────────────────────────────────────────────────
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
 function fmtJJMMYYYYdash(v){
   if (!v) return "";
@@ -89,18 +73,14 @@ function siteLabelForService(service = ""){
   return "";
 }
 
-// estimation: retourne undefined si vide (pour ne pas envoyer NaN/null côté Apps Script)
 function sanitizeEstimation(v){
   if (v === 0 || v === "0") return "0";
   if (v === undefined || v === null) return undefined;
   const s = String(v).trim();
   if (!s) return undefined;
-  return s; // on laisse Apps Script enregistrer tel quel
+  return s;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Stockage local compteur (fallback)
-// ───────────────────────────────────────────────────────────────────────────────
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const COUNTER_FILE = path.join(dataDir, "counter.json");
@@ -139,19 +119,15 @@ async function nextDossierNumber(){
   return String(next).padStart(5, "0");
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Accès Apps Script
-// ───────────────────────────────────────────────────────────────────────────────
 async function gsListCases() {
   if (!GS_URL) return { ok: true, data: [] };
   const r = await http.get(GS_URL, {
     params: { action: "list_cases", sheet: GS_SHEET }
   });
-  // Attendu: { ok:true, data:[...] }
   const json = r.data;
   if (json && Array.isArray(json.data)) return { ok:true, data: json.data };
   if (json && json.ok && Array.isArray(json.data)) return json;
-  // fallback si Apps Script renvoie un format inattendu
+
   return { ok:true, data: [] };
 }
 async function gsAppendCase(entry) {
@@ -175,9 +151,6 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
   return r.data;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Emails
-// ───────────────────────────────────────────────────────────────────────────────
 function gmailTransport() {
   const user = process.env.GMAIL_USER;
   const pass = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
@@ -296,9 +269,6 @@ async function sendClientStatusMail(no, entry) {
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Impression HTML
-// ───────────────────────────────────────────────────────────────────────────────
 function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
   const meta   = payload.meta   || {};
   const header = payload.header || {};
@@ -334,7 +304,6 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
 
   const dossierTag = no ? `<div class="dossier-tag">Dossier n° ${esc(no)}</div>` : "";
 
-  // Bloc QR code de validation
   let qrBlock = "";
   if (validationUrl) {
     const qrImgSrc =
@@ -462,7 +431,6 @@ router.post("/api/print-html", (req, res) => {
     const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
     const no = (data && data.no) ? String(data.no).padStart(5,"0") : "";
 
-    // URL pour le QR code
     let validationUrl = "";
     if (no) {
       const baseUrl = `${req.protocol}://${req.get("host")}`.replace(/\/$/,"");
@@ -479,11 +447,6 @@ router.post("/api/print-html", (req, res) => {
   }
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// API: création et lecture des dossiers
-// ───────────────────────────────────────────────────────────────────────────────
-
-// Pré-requêtes CORS (si jamais le cors() global n’est pas appliqué)
 router.options("/api/submit", (_req, res) => res.status(204).end());
 router.options("/api/cases", (_req, res) => res.status(204).end());
 router.options("/api/cases/:no/status", (_req, res) => res.status(204).end());
@@ -516,7 +479,6 @@ router.post("/api/submit", async (req, res) => {
       return res.status(502).json({ ok:false, error:"upstream_save_failed", upstream: up });
     }
 
-    // email atelier (best-effort)
     try { await sendServiceMail(no, data); } catch (e) { console.warn("[ATELIER] mail atelier KO:", e?.message || e); }
 
     res.json({ ok: true, no });
@@ -529,7 +491,6 @@ router.post("/api/submit", async (req, res) => {
 router.get("/api/cases", async (_req, res) => {
   try {
     const r = await gsListCases();
-    // On renvoie toujours { data: [...] } (le front lit json.data)
     const data = (r && Array.isArray(r.data)) ? r.data : [];
     return res.json({ ok:true, data });
   } catch (e) {
@@ -551,8 +512,7 @@ router.post("/api/cases/:no/status", async (req, res) => {
       return res.status(502).json({ ok:false, error:"upstream_update_failed", upstream: up });
     }
 
-    // Mail client quand "Renvoyé"
-    const st = String(status).normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase(); // renvoye / renvoyé
+    const st = String(status).normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase();
     if (st === "renvoye") {
       try {
         const r = await gsListCases();
