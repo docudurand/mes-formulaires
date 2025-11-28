@@ -299,7 +299,7 @@ async function sendClientStatusMail(no, entry) {
 // ───────────────────────────────────────────────────────────────────────────────
 // Impression HTML
 // ───────────────────────────────────────────────────────────────────────────────
-function renderPrintHTML(payload = {}, no = ""){
+function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
   const meta   = payload.meta   || {};
   const header = payload.header || {};
   const culasse = payload.culasse || null;
@@ -334,6 +334,36 @@ function renderPrintHTML(payload = {}, no = ""){
 
   const dossierTag = no ? `<div class="dossier-tag">Dossier n° ${esc(no)}</div>` : "";
 
+  // Bloc QR code de validation
+  let qrBlock = "";
+  if (validationUrl) {
+    const qrImgSrc =
+      "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" +
+      encodeURIComponent(validationUrl);
+    qrBlock = `
+  <div id="qr-validation"
+       style="margin-top:24px;padding-top:12px;border-top:1px dashed #ccc;
+              font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+    <div style="font-weight:700;margin-bottom:6px;">
+      Validation de la réception de la pièce
+    </div>
+    <div style="font-size:12px;margin-bottom:6px;">
+      Scannez ce QR Code ou utilisez le lien ci-dessous pour valider la réception de la pièce.
+    </div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+      <img
+        alt="QR Code de validation"
+        width="160"
+        height="160"
+        src="${qrImgSrc}"
+      />
+      <div style="word-break:break-all;font-size:11px;">
+        ${esc(validationUrl)}
+      </div>
+    </div>
+  </div>`;
+  }
+
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -356,6 +386,7 @@ function renderPrintHTML(payload = {}, no = ""){
   .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px 30px; }
   .bullet{ margin:6px 0; } .subbullet{ margin-left:22px; margin-top:3px; }
   .area{ border:1px solid #222; padding:10px; min-height:60px; white-space:pre-wrap; }
+  .muted{ color:#6b7280; font-size:12px; }
 </style>
 </head>
 <body>
@@ -418,6 +449,8 @@ function renderPrintHTML(payload = {}, no = ""){
   </div>
   ` : ""}
 
+  ${qrBlock}
+
   <script>window.onload=()=>{ setTimeout(()=>window.print(), 120); };</script>
 </body>
 </html>`;
@@ -428,7 +461,15 @@ router.post("/api/print-html", (req, res) => {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
     const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
     const no = (data && data.no) ? String(data.no).padStart(5,"0") : "";
-    const html = renderPrintHTML(data, no);
+
+    // URL pour le QR code
+    let validationUrl = "";
+    if (no) {
+      const baseUrl = `${req.protocol}://${req.get("host")}`.replace(/\/$/,"");
+      validationUrl = `${baseUrl}/atelier/validation.html?no=${encodeURIComponent(no)}`;
+    }
+
+    const html = renderPrintHTML(data, no, validationUrl);
     res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.send(html);
