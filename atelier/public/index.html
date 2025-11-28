@@ -392,8 +392,8 @@
       title.style.marginBottom = "6px";
 
       const text = doc.createElement("div");
-      text.textContent =
-        "Scannez ce QR Code ou utilisez le lien ci-dessous pour valider la réception de la pièce.";
+            text.textContent =
+        "Scannez ce QR Code pour valider la réception de la pièce.";
       text.style.fontSize = "12px";
       text.style.marginBottom = "6px";
 
@@ -411,13 +411,8 @@
         "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data="
         + encodeURIComponent(LAST_VALIDATION_URL);
 
-      const link = doc.createElement("div");
-      link.style.wordBreak = "break-all";
-      link.style.fontSize = "11px";
-      link.textContent = LAST_VALIDATION_URL;
-
       line.appendChild(img);
-      line.appendChild(link);
+	  
       block.appendChild(title);
       block.appendChild(text);
       block.appendChild(line);

@@ -317,7 +317,7 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
       Validation de la réception de la pièce
     </div>
     <div style="font-size:12px;margin-bottom:6px;">
-      Scannez ce QR Code ou utilisez le lien ci-dessous pour valider la réception de la pièce.
+      Scannez ce QR Code pour valider la réception de la pièce.
     </div>
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
       <img
@@ -326,12 +326,10 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
         height="160"
         src="${qrImgSrc}"
       />
-      <div style="word-break:break-all;font-size:11px;">
-        ${esc(validationUrl)}
-      </div>
     </div>
   </div>`;
   }
+
 
   return `<!doctype html>
 <html lang="fr">
