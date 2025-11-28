@@ -679,6 +679,18 @@ $q.addEventListener("input", draw);
   const errBox  = document.getElementById("loginError");
   const remember = document.getElementById("rememberPwd");
 
+  const STORAGE_KEY = "atelier_suivi_pwd";
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      input.value = saved;
+      if (remember) remember.checked = true;
+    }
+  } catch (e) {
+    console.warn("localStorage indisponible", e);
+  }
+
   function startApp(){
     if (overlay) overlay.style.display = "none";
     load();
@@ -695,11 +707,29 @@ $q.addEventListener("input", draw);
 
     if (PASS_FULL && v === PASS_FULL){
       LIMITED_VIEW = false;
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
       startApp();
       return;
     }
     if (PASS_LIMITED && v === PASS_LIMITED){
       LIMITED_VIEW = true;
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
       startApp();
       return;
     }
