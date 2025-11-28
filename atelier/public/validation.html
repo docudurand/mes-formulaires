@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Validation de réception – Atelier</title>
+  <style>
+    :root{
+      --primary:#004080; --line:#e5e7eb; --ink:#0f172a; --bg:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:#f7f7f7;
+      color:var(--ink);
+      display:flex;
+      min-height:100vh;
+      align-items:center;
+      justify-content:center;
+    }
+    .card{
+      background:#fff;
+      padding:20px 24px;
+      border-radius:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.08);
+      max-width:640px;
+      width:100%;
+      border:1px solid var(--line);
+    }
+    .logo{
+      text-align:center;
+      margin-bottom:12px;
+    }
+    .logo img{
+      max-width:160px;
+      height:auto;
+    }
+    h1{
+      font-size:1.3rem;
+      margin:0 0 8px 0;
+      text-align:center;
+      color:var(--primary);
+    }
+    .muted-title{
+      font-size:0.9rem;
+      color:#666;
+      text-align:center;
+      margin-bottom:12px;
+    }
+
+    .muted{font-size:.9rem;color:#6b7280}
+    .grid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px 14px;
+      margin:10px 0 14px;
+      font-size:.95rem;
+    }
+    .label{font-weight:700}
+    .status-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:.85rem;
+      font-weight:700;
+      background:#d1fae5;
+      color:#065f46;
+    }
+    .status-badge.warn{
+      background:#fef3c7;
+      color:#92400e;
+    }
+    .status-badge.red{
+      background:#fee2e2;
+      color:#b91c1c;
+    }
+    .actions{
+      margin-top:16px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      appearance:none;
+      border-radius:999px;
+      padding:10px 18px;
+      font-weight:700;
+      cursor:pointer;
+      border:1px solid var(--primary);
+      background:var(--primary);
+      color:#fff;
+      font-size:.95rem;
+    }
+    button.secondary{
+      background:#fff;
+      color:var(--primary);
+    }
+    .msg{
+      margin-top:10px;
+      font-size:.95rem;
+    }
+    .msg.ok{color:#16a34a;}
+    .msg.err{color:#b91c1c;}
+    .loader{
+      width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#004080;
+      border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;
+      margin-right:6px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+           alt="Logo Durand Services" />
+    </div>
+    <h1>Validation de réception</h1>
+    <div class="muted-title">Validez la réception de la pièce pour ce dossier</div>
+
+    <div id="content">
+      Chargement du dossier…
+    </div>
+  </div>
+
+  <script>
+  const API_BASE =
+    (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
+      ? "https://mes-formulaires.onrender.com"
+      : location.origin.replace(/\/$/, "");
+
+  const $content = document.getElementById("content");
+
+  function esc(s){
+    return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c] || c));
+  }
+  function p2(n){ return String(n).padStart(2,"0"); }
+  function parseDate(v){
+    if (!v && v!==0) return null;
+    const d = new Date(v);
+    if (!isNaN(d)) return d;
+    const m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m1) { const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
+    const m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
+    return null;
+  }
+  function fmtJJMMYYYYdash(v){
+    const d = parseDate(v);
+    return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—";
+  }
+
+  const params = new URLSearchParams(location.search);
+  const noParam = params.get("no");
+
+  if (!noParam) {
+    $content.innerHTML = `
+      <div class="msg err"><strong>Numéro de dossier manquant.</strong><br/>
+      Le lien utilisé ne contient pas de numéro de dossier.</div>
+    `;
+  } else {
+    loadCase(noParam);
+  }
+
+  async function loadCase(no){
+    $content.innerHTML = `
+      <span class="loader" aria-hidden="true"></span>
+      <span class="muted">Chargement du dossier ${esc(no)}…</span>
+    `;
+    try{
+      const resp = await fetch(\`\${API_BASE}/atelier/api/cases\`);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const js = await resp.json();
+      const data = (js && js.data) || [];
+      const row = data.find(r => String(r.no) === String(no));
+
+      if (!row){
+        $content.innerHTML = \`
+          <div class="msg err"><strong>Dossier introuvable.</strong><br/>
+          Vérifiez que vous avez bien scanné le QR Code le plus récent.</div>
+        \`;
+        return;
+      }
+      showCase(row);
+    } catch(e){
+      console.error(e);
+      $content.innerHTML = \`
+        <div class="msg err"><strong>Erreur de chargement du dossier.</strong><br/>
+        Merci de réessayer plus tard.</div>
+      \`;
+    }
+  }
+
+  function showCase(row){
+    const h = (row.snapshot && row.snapshot.header) || {};
+    const status = row.status || "Demande envoyé";
+    const isReceived = status === "Pièce reçu";
+
+    const badgeClass =
+      status === "Pièce reçu" ? "" :
+      status === "Demande envoyé" ? "warn" :
+      "red";
+
+    const estimation = row.estimation || "";
+    const dateDemande = h.dateDemande || row.demandeDate;
+
+    $content.innerHTML = `
+      <div class="muted" style="margin-bottom:8px;">
+        Dossier n° <strong>${esc(String(row.no).padStart(5,"0"))}</strong>
+      </div>
+
+      <div class="grid2">
+        <div><span class="label">Client :</span> ${esc(h.client || row.client || "")}</div>
+        <div><span class="label">Magasin :</span> ${esc(h.magasin || row.magasin || "")}</div>
+        <div><span class="label">Service :</span> ${esc(h.service || row.service || "")}</div>
+        <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(dateDemande))}</div>
+        <div><span class="label">Immat. :</span> ${esc(h.immat || "")}</div>
+        <div><span class="label">Véhicule :</span> ${esc(h.vehicule || "")}</div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <span class="label">Statut actuel :</span>
+        <span class="status-badge ${badgeClass}">${esc(status)}</span>
+      </div>
+
+      <div class="muted">
+        Utilisez ce lien uniquement lorsque la pièce est effectivement reçue au magasin.
+      </div>
+
+      <div class="actions">
+        ${isReceived ? `
+          <span class="msg ok">
+            ✅ Ce dossier est déjà au statut "Pièce reçu".
+          </span>
+        ` : `
+          <button id="btnValidate" type="button">
+            Valider la réception de la pièce
+          </button>
+          <span id="msgArea" class="msg"></span>
+        `}
+      </div>
+    `;
+
+    if (!isReceived){
+      const $btn = document.getElementById("btnValidate");
+      const $msg = document.getElementById("msgArea");
+
+      $btn.addEventListener("click", async () => {
+        $btn.disabled = true;
+        $msg.className = "msg";
+        $msg.innerHTML = '<span class="loader" aria-hidden="true"></span> Validation en cours…';
+
+        try{
+          const resp = await fetch(\`\${API_BASE}/atelier/api/cases/\${encodeURIComponent(row.no)}/status\`, {
+            method: "POST",
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify({
+              status: "Pièce reçu",
+              estimation: estimation === "" ? "" : Number(estimation)
+            })
+          });
+          if (!resp.ok){
+            throw new Error("HTTP " + resp.status);
+          }
+
+          $msg.className = "msg ok";
+          $msg.textContent = 'Merci, la réception de la pièce est validée. Le statut du dossier est maintenant "Pièce reçu".';
+          $btn.style.display = "none";
+        } catch(e){
+          console.error(e);
+          $btn.disabled = false;
+          $msg.className = "msg err";
+          $msg.textContent = "Erreur lors de la validation. Merci de réessayer.";
+        }
+      });
+    }
+  }
+  </script>
+</body>
+</html>

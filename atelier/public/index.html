@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Formulaire Atelier – Rectification / Contrôle injecteurs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{ --primary:#004080; --accent:#00a7e1; --ink:#073763; --bg:#ffffff; --line:#e5e7eb; }
     *{box-sizing:border-box}
@@ -29,30 +29,32 @@
     .culasse-row input[type="checkbox"]{width:18px; height:18px}
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
-.pdfMask{
-  position: fixed;
-  inset: 0;
-  background: #0008;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 10000;
-  padding: 0;
-}
-.pdfBox{
-  width: min(900px, 96vw);
-  height: min(90vh, 800px);
-  background: #fff;
-  border-radius: 14px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--line);
-  margin-top: 0;
-  align-self: flex-start;
-}
+
+    .pdfMask{
+      position: fixed;
+      inset: 0;
+      background: #0008;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 10000;
+      padding: 0;
+    }
+    .pdfBox{
+      width: min(900px, 96vw);
+      height: min(90vh, 800px);
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      margin-top: 0;
+      align-self: flex-start;
+    }
     .pdfBar{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff; }
     #pdfFrame{ flex:1; width:100%; height:100%; border:0; }
+    .help{font-size:0.9rem;color:#6b7280;margin-top:8px}
   </style>
 </head>
 <body>
@@ -326,42 +328,105 @@
     });
   }
 
-function toggleCulasseFields(){
-  const service = el('service').value;
+  function toggleCulasseFields(){
+    const service = el('service').value;
 
-  const isC = service === 'Rectification Culasse';
-  const blocC = el('section-culasse');
-  blocC.classList.toggle('hidden', !isC);
-  blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
+    const isC = service === 'Rectification Culasse';
+    const blocC = el('section-culasse');
+    blocC.classList.toggle('hidden', !isC);
+    blocC.setAttribute('aria-hidden', isC ? 'false' : 'true');
 
-  el('segment').required   = false;
-  el('cylindre').required  = false;
-  el('carburant').required = false;
-  el('soupapes').required  = false;
+    el('segment').required   = false;
+    el('cylindre').required  = false;
+    el('carburant').required = false;
+    el('soupapes').required  = false;
 
-  if(!isC){
-    LIGNES.forEach(l=>{
-      const e = el('refs_'+l.ligne);
-      if(e) e.textContent='';
-    });
-  } else {
-    refreshReferences();
+    if(!isC){
+      LIGNES.forEach(l=>{
+        const e = el('refs_'+l.ligne);
+        if(e) e.textContent='';
+      });
+    } else {
+      refreshReferences();
+    }
+
+    const isInj =
+      (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
+    const blocI = el('section-injecteur');
+    blocI.classList.toggle('hidden', !isInj);
+    blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
+
+    el('nbInjecteurs').required = false;
   }
-
-  const isInj =
-    (service === 'Contrôle injection Diesel' || service === 'Contrôle injection Essence');
-  const blocI = el('section-injecteur');
-  blocI.classList.toggle('hidden', !isInj);
-  blocI.setAttribute('aria-hidden', isInj ? 'false' : 'true');
-
-  el('nbInjecteurs').required = false;
-}
 
   el('service').addEventListener('change', toggleCulasseFields);
   ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
   const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
         $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
+
+  let LAST_VALIDATION_URL = "";
+
+  $pdfFrame.addEventListener("load", () => {
+    if (!LAST_VALIDATION_URL) return;
+
+    try {
+      const doc = $pdfFrame.contentDocument || $pdfFrame.contentWindow?.document;
+      if (!doc) return;
+
+      if (doc.getElementById("qr-validation")) return;
+
+      const container = doc.body || doc.documentElement;
+      if (!container) return;
+
+      const block = doc.createElement("div");
+      block.id = "qr-validation";
+      block.style.marginTop = "24px";
+      block.style.paddingTop = "12px";
+      block.style.borderTop = "1px dashed #ccc";
+      block.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+
+      const title = doc.createElement("div");
+      title.textContent = "Validation de la réception de la pièce";
+      title.style.fontWeight = "700";
+      title.style.marginBottom = "6px";
+
+      const text = doc.createElement("div");
+      text.textContent =
+        "Scannez ce QR Code ou utilisez le lien ci-dessous pour valider la réception de la pièce.";
+      text.style.fontSize = "12px";
+      text.style.marginBottom = "6px";
+
+      const line = doc.createElement("div");
+      line.style.display = "flex";
+      line.style.alignItems = "center";
+      line.style.flexWrap = "wrap";
+      line.style.gap = "12px";
+
+      const img = doc.createElement("img");
+      img.alt = "QR Code de validation";
+      img.width = 160;
+      img.height = 160;
+      img.src =
+        "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data="
+        + encodeURIComponent(LAST_VALIDATION_URL);
+
+      const link = doc.createElement("div");
+      link.style.wordBreak = "break-all";
+      link.style.fontSize = "11px";
+      link.textContent = LAST_VALIDATION_URL;
+
+      line.appendChild(img);
+      line.appendChild(link);
+      block.appendChild(title);
+      block.appendChild(text);
+      block.appendChild(line);
+
+      container.appendChild(block);
+    } catch (e) {
+      console.error("Erreur injection QR validation :", e);
+    }
+  });
 
   function openPrintPreview(payload){
     document.body.style.overflow = "hidden";
@@ -378,8 +443,15 @@ function toggleCulasseFields(){
     $pdfMask.setAttribute('aria-hidden','true');
     $pdfFrame.src = 'about:blank';
     document.body.style.overflow = "";
+    LAST_VALIDATION_URL = "";
   });
-  $pdfReprint.addEventListener('click', ()=>{ try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{} });
+
+  $pdfReprint.addEventListener('click', ()=>{
+    try{
+      $pdfFrame.contentWindow?.focus();
+      $pdfFrame.contentWindow?.print();
+    }catch{}
+  });
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
     if(!e.target.reportValidity()){ return; }
@@ -483,6 +555,11 @@ function toggleCulasseFields(){
       $btn.disabled = false;
       return;
     }
+
+    const base = location.origin.replace(/\/$/,"");
+    const validationUrl =
+      `${base}/atelier/validation.html?no=${encodeURIComponent(no)}`;
+    LAST_VALIDATION_URL = validationUrl;
 
     const payloadForPrint = { ...payload, no };
     openPrintPreview(payloadForPrint);
