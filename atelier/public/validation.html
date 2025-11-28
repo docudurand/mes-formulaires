@@ -129,6 +129,7 @@
   </div>
 
   <script>
+  // Base d'URL API (Wix -> onrender, sinon même origine)
   const API_BASE =
     (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
       ? "https://mes-formulaires.onrender.com"
@@ -137,62 +138,67 @@
   const $content = document.getElementById("content");
 
   function esc(s){
-    return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c] || c));
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
+      return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"' :"&quot;" })[c] || c;
+    });
   }
   function p2(n){ return String(n).padStart(2,"0"); }
   function parseDate(v){
     if (!v && v!==0) return null;
-    const d = new Date(v);
+    var d = new Date(v);
     if (!isNaN(d)) return d;
-    const m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m1) { const d2 = new Date(+m1[1], +m1[2]-1, +m1[3]); return isNaN(d2)?null:d2; }
-    const m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (m2) { const d2 = new Date(+m2[3], +m2[2]-1, +m2[1]); return isNaN(d2)?null:d2; }
+    var m1 = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m1){
+      var d2 = new Date(+m1[1], +m1[2]-1, +m1[3]);
+      return isNaN(d2) ? null : d2;
+    }
+    var m2 = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (m2){
+      var d3 = new Date(+m2[3], +m2[2]-1, +m2[1]);
+      return isNaN(d3) ? null : d3;
+    }
     return null;
   }
   function fmtJJMMYYYYdash(v){
-    const d = parseDate(v);
-    return d ? `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}` : "—";
+    var d = parseDate(v);
+    return d ? (p2(d.getDate()) + "-" + p2(d.getMonth()+1) + "-" + d.getFullYear()) : "—";
   }
 
-  const params = new URLSearchParams(location.search);
-  const noParam = params.get("no");
+  var params = new URLSearchParams(location.search);
+  var noParam = params.get("no");
 
   if (!noParam) {
-    $content.innerHTML = `
-      <div class="msg err"><strong>Numéro de dossier manquant.</strong><br/>
-      Le lien utilisé ne contient pas de numéro de dossier.</div>
-    `;
+    $content.innerHTML =
+      '<div class="msg err"><strong>Numéro de dossier manquant.</strong><br/>' +
+      'Le lien utilisé ne contient pas de numéro de dossier.</div>';
   } else {
     loadCase(noParam);
   }
 
   async function loadCase(no){
-    $content.innerHTML = `
-      <span class="loader" aria-hidden="true"></span>
-      <span class="muted">Chargement du dossier ${esc(no)}…</span>
-    `;
+    $content.innerHTML =
+      '<span class="loader" aria-hidden="true"></span>' +
+      '<span class="muted">Chargement du dossier ' + esc(no) + '…</span>';
+
     try{
-      const resp = await fetch(\`\${API_BASE}/atelier/api/cases\`);
+      const resp = await fetch(API_BASE + "/atelier/api/cases");
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const js = await resp.json();
       const data = (js && js.data) || [];
-      const row = data.find(r => String(r.no) === String(no));
+      const row = data.find(function(r){ return String(r.no) === String(no); });
 
       if (!row){
-        $content.innerHTML = \`
-          <div class="msg err"><strong>Dossier introuvable.</strong><br/>
-          Vérifiez que vous avez bien scanné le QR Code le plus récent.</div>
-        \`;
+        $content.innerHTML =
+          '<div class="msg err"><strong>Dossier introuvable.</strong><br/>' +
+          'Vérifiez que vous avez bien scanné le QR Code le plus récent.</div>';
         return;
       }
       showCase(row);
     } catch(e){
-      console.error(e);
-      $content.innerHTML = \`
-        <div class="msg err"><strong>Erreur de chargement du dossier.</strong><br/>
-        Merci de réessayer plus tard.</div>
-      \`;
+      console.error("Erreur loadCase:", e);
+      $content.innerHTML =
+        '<div class="msg err"><strong>Erreur de chargement du dossier.</strong><br/>' +
+        'Merci de réessayer plus tard.</div>';
     }
   }
 
@@ -209,70 +215,72 @@
     const estimation = row.estimation || "";
     const dateDemande = h.dateDemande || row.demandeDate;
 
-    $content.innerHTML = `
-      <div class="muted" style="margin-bottom:8px;">
-        Dossier n° <strong>${esc(String(row.no).padStart(5,"0"))}</strong>
-      </div>
+    let html = '';
+    html += '<div class="muted" style="margin-bottom:8px;">';
+    html += 'Dossier n° <strong>' + esc(String(row.no).padStart(5,"0")) + '</strong>';
+    html += '</div>';
 
-      <div class="grid2">
-        <div><span class="label">Client :</span> ${esc(h.client || row.client || "")}</div>
-        <div><span class="label">Magasin :</span> ${esc(h.magasin || row.magasin || "")}</div>
-        <div><span class="label">Service :</span> ${esc(h.service || row.service || "")}</div>
-        <div><span class="label">Date demande :</span> ${esc(fmtJJMMYYYYdash(dateDemande))}</div>
-        <div><span class="label">Immat. :</span> ${esc(h.immat || "")}</div>
-        <div><span class="label">Véhicule :</span> ${esc(h.vehicule || "")}</div>
-      </div>
+    html += '<div class="grid2">';
+    html += '<div><span class="label">Client :</span> ' + esc(h.client || row.client || "") + '</div>';
+    html += '<div><span class="label">Magasin :</span> ' + esc(h.magasin || row.magasin || "") + '</div>';
+    html += '<div><span class="label">Service :</span> ' + esc(h.service || row.service || "") + '</div>';
+    html += '<div><span class="label">Date demande :</span> ' + esc(fmtJJMMYYYYdash(dateDemande)) + '</div>';
+    html += '<div><span class="label">Immat. :</span> ' + esc(h.immat || "") + '</div>';
+    html += '<div><span class="label">Véhicule :</span> ' + esc(h.vehicule || "") + '</div>';
+    html += '</div>';
 
-      <div style="margin-bottom:10px;">
-        <span class="label">Statut actuel :</span>
-        <span class="status-badge ${badgeClass}">${esc(status)}</span>
-      </div>
+    html += '<div style="margin-bottom:10px;">';
+    html += '<span class="label">Statut actuel :</span> ';
+    html += '<span class="status-badge ' + badgeClass + '">' + esc(status) + '</span>';
+    html += '</div>';
 
-      <div class="muted">
-        Utilisez ce lien uniquement lorsque la pièce est effectivement reçue au magasin.
-      </div>
+    html += '<div class="muted">';
+    html += 'Utilisez ce lien uniquement lorsque la pièce est effectivement reçue au magasin.';
+    html += '</div>';
 
-      <div class="actions">
-        ${isReceived ? `
-          <span class="msg ok">
-            ✅ Ce dossier est déjà au statut "Pièce reçu".
-          </span>
-        ` : `
-          <button id="btnValidate" type="button">
-            Valider la réception de la pièce
-          </button>
-          <span id="msgArea" class="msg"></span>
-        `}
-      </div>
-    `;
+    html += '<div class="actions">';
+    if (isReceived){
+      html += '<span class="msg ok">✅ Ce dossier est déjà au statut "Pièce reçu".</span>';
+    } else {
+      html += '<button id="btnValidate" type="button">Valider la réception de la pièce</button>';
+      html += '<span id="msgArea" class="msg"></span>';
+    }
+    html += '</div>';
+
+    $content.innerHTML = html;
 
     if (!isReceived){
       const $btn = document.getElementById("btnValidate");
       const $msg = document.getElementById("msgArea");
 
-      $btn.addEventListener("click", async () => {
+      $btn.addEventListener("click", async function(){
         $btn.disabled = true;
         $msg.className = "msg";
-        $msg.innerHTML = '<span class="loader" aria-hidden="true"></span> Validation en cours…';
+        $msg.innerHTML =
+          '<span class="loader" aria-hidden="true"></span> Validation en cours…';
 
         try{
-          const resp = await fetch(\`\${API_BASE}/atelier/api/cases/\${encodeURIComponent(row.no)}/status\`, {
-            method: "POST",
-            headers: { "Content-Type":"application/json" },
-            body: JSON.stringify({
-              status: "Pièce reçu",
-              estimation: estimation === "" ? "" : Number(estimation)
-            })
-          });
+          const resp = await fetch(
+            API_BASE + "/atelier/api/cases/" + encodeURIComponent(row.no) + "/status",
+            {
+              method: "POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({
+                status: "Pièce reçu",
+                estimation: estimation === "" ? "" : Number(estimation)
+              })
+            }
+          );
           if (!resp.ok){
             throw new Error("HTTP " + resp.status);
           }
 
           $msg.className = "msg ok";
-          $msg.textContent = 'Merci, la réception de la pièce est validée. Le statut du dossier est maintenant "Pièce reçu".';
+          $msg.textContent =
+            'Merci, la réception de la pièce est validée. Le statut du dossier est maintenant "Pièce reçu".';
           $btn.style.display = "none";
         } catch(e){
-          console.error(e);
+          console.error("Erreur validation statut:", e);
           $btn.disabled = false;
           $msg.className = "msg err";
           $msg.textContent = "Erreur lors de la validation. Merci de réessayer.";
