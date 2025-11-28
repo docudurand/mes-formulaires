@@ -154,6 +154,15 @@
     text-align:center;
     min-height:1em;
   }
+  .rememberLabel{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:.8rem;
+    color:#4b5563;
+    margin-bottom:6px;
+    user-select:none;
+  }
 </style>
 </head>
 <body>
@@ -162,7 +171,16 @@
   <div class="loginBox">
     <h2>Accès suivi atelier</h2>
     <p>Veuillez saisir votre mot de passe.</p>
-    <input type="password" id="loginPassword" placeholder="Mot de passe" />
+    <input
+      type="password"
+      id="loginPassword"
+      placeholder="Mot de passe"
+      autocomplete="current-password"
+    />
+    <label class="rememberLabel">
+      <input type="checkbox" id="rememberPwd" checked />
+      Se souvenir du mot de passe sur cet appareil
+    </label>
     <button type="button" id="loginBtn">Se connecter</button>
     <div class="error" id="loginError"></div>
   </div>
@@ -372,10 +390,14 @@ function applyLimitedView(){
     sel.style.display = "none";
   });
 
+  document.querySelectorAll("td.col-eta .etaGroup").forEach(group => {
+    group.style.justifyContent = "center";
+    group.style.gap = "0";
+  });
+
   document.querySelectorAll("td.col-actions").forEach(td => {
     td.style.display = "none";
   });
-
   document.querySelectorAll("col.col-actions").forEach(col => {
     col.style.display = "none";
   });
@@ -655,11 +677,23 @@ $q.addEventListener("input", draw);
   const input   = document.getElementById("loginPassword");
   const btn     = document.getElementById("loginBtn");
   const errBox  = document.getElementById("loginError");
+  const remember = document.getElementById("rememberPwd");
 
   function startApp(){
     if (overlay) overlay.style.display = "none";
     load();
   }
+
+  try {
+    const stored = window.localStorage ? localStorage.getItem("atelierSuiviPass") : null;
+    if (stored && (stored === PASS_FULL || stored === PASS_LIMITED)) {
+      LIMITED_VIEW = (stored === PASS_LIMITED);
+      startApp();
+      return;
+    } else if (stored && stored !== PASS_FULL && stored !== PASS_LIMITED) {
+      localStorage.removeItem("atelierSuiviPass");
+    }
+  } catch (_) {}
 
   function handleLogin(){
     const v = (input.value || "").trim();
@@ -672,11 +706,25 @@ $q.addEventListener("input", draw);
 
     if (PASS_FULL && v === PASS_FULL){
       LIMITED_VIEW = false;
+      try {
+        if (window.localStorage && (!remember || remember.checked)) {
+          localStorage.setItem("atelierSuiviPass", v);
+        } else if (window.localStorage) {
+          localStorage.removeItem("atelierSuiviPass");
+        }
+      } catch (_) {}
       startApp();
       return;
     }
     if (PASS_LIMITED && v === PASS_LIMITED){
       LIMITED_VIEW = true;
+      try {
+        if (window.localStorage && (!remember || remember.checked)) {
+          localStorage.setItem("atelierSuiviPass", v);
+        } else if (window.localStorage) {
+          localStorage.removeItem("atelierSuiviPass");
+        }
+      } catch (_) {}
       startApp();
       return;
     }
