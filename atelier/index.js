@@ -13,6 +13,9 @@ const router = express.Router();
 const GS_URL   = process.env.GS_ATELIER_URL || "";
 const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
+const SUIVI_PASS_FULL    = process.env.ATELIER_SUIVI_PASS_FULL    || "";
+const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
+
 if (!GS_URL) {
   console.warn("[ATELIER] ⚠️ GS_ATELIER_URL est vide. Les opérations Sheets/Apps Script échoueront.");
 }
@@ -28,7 +31,9 @@ router.get("/config.js", (_req, res) => {
   res.send(
     `window.__ATELIER_CFG = {
       GS_URL: ${JSON.stringify(GS_URL)},
-      GS_SHEET: ${JSON.stringify(GS_SHEET)}
+      GS_SHEET: ${JSON.stringify(GS_SHEET)},
+      SUIVI_PASS_FULL: ${JSON.stringify(SUIVI_PASS_FULL)},
+      SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
     };`
   );
 });
@@ -59,7 +64,11 @@ router.get("/", (_req, res) => {
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
-function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
+function esc(s){
+  return String(s ?? "").replace(/[&<>"]/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
+  }[c]));
+}
 function fmtJJMMYYYYdash(v){
   if (!v) return "";
   const d = new Date(v);
@@ -127,7 +136,6 @@ async function gsListCases() {
   const json = r.data;
   if (json && Array.isArray(json.data)) return { ok:true, data: json.data };
   if (json && json.ok && Array.isArray(json.data)) return json;
-
   return { ok:true, data: [] };
 }
 async function gsAppendCase(entry) {
@@ -329,7 +337,6 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
     </div>
   </div>`;
   }
-
 
   return `<!doctype html>
 <html lang="fr">
