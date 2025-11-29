@@ -371,10 +371,10 @@
       if (!qrCanvas) return;
 
       const agence = $agence.value || "AGENCE";
-      const tourneeName = $tournee.value || "TOURNÉE";
+      const tourneeName = $tournee.value || "Tournée";
       const tourneeCode = slugify(tourneeName);
 
-      // Texte en une seule ligne dans la barre bleue
+      // Texte en une ligne dans la zone bleue
       const headerText = (agence + " " + tourneeName).trim();
 
       const brand = detectBrand();
@@ -395,42 +395,35 @@
         ctx.drawImage(frameImg, 0, 0, w, h);
 
         /* === QR CODE DANS LE CADRE BLEU ===
-           Coordonnées mesurées sur le modèle :
-           - cadre bleu : x≈5..163, y≈121..229
-           - carré intérieur blanc ≈ x 50..150, y 121..221
+           On garde la même zone, mais on réduit la marge interne pour qu'il remplisse presque tout.
         */
-        const qrSize = w * 0.152;       // ~100 px pour une largeur de 659
-        const qrX = w * 0.076;          // ~50 px du bord gauche
-        const qrY = h * 0.129;          // ~121 px du haut
+        const qrSize = w * 0.152;       // taille du carré (à l'intérieur du cadre)
+        const qrX = w * 0.076;          // position X du carré blanc
+        const qrY = h * 0.129;          // position Y du carré blanc
 
-        // fond blanc intérieur du carré
+        // carré blanc (intérieur du cadre)
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
-        const innerPad = qrSize * 0.05; // marge pour laisser le bord bleu apparent
+        // marge très faible pour que le QR prenne presque toute la place
+        const innerPad = qrSize * 0.015; // ~1,5 % de marge
         const innerSize = qrSize - innerPad * 2;
+
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
-        /* === TEXTE BLANC DANS LA BARRE BLEUE EN HAUT ===
-           Coordonnées mesurées sur le bandeau :
-           - bandeau bleu : x≈5..162, y≈14..119
-           On place le texte au centre vertical, à droite du logo, sans dépasser.
-        */
+        /* === TEXTE BLANC DANS LA BARRE BLEUE EN HAUT === */
+
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft   = w * 0.106;   // ~70 px, juste à droite du logo Durand
-        const textCenterY = h * 0.071;  // ~66 px (milieu du bandeau)
-        const maxWidth   = w * 0.14;    // ~92 px de largeur utilisable
+        // Position dans le bandeau bleu (ajustée pour être bien dans la zone texte)
+        const textLeft    = w * 0.18;   // un peu plus à droite que précédemment
+        const textCenterY = h * 0.065;  // centre vertical du bandeau bleu
 
-        let fontSize = Math.round(h * 0.028); // point de départ
-        let width;
-        do {
-          ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-          width = ctx.measureText(headerText).width;
-          fontSize--;
-        } while (width > maxWidth && fontSize > 10);
+        // Taille de police fixe (suffisamment grande pour être bien lisible)
+        const fontSize = Math.round(h * 0.03); // ≈ 3 % de la hauteur
+        ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
         ctx.fillText(headerText, textLeft, textCenterY);
 
