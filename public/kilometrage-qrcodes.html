@@ -195,10 +195,7 @@
 
     let allParams = [];
 
-    /* Feuilles complètes :
-       - cchezvous.png
-       - warning.png
-       (avec le cadre bleu en haut à gauche) */
+    // Feuilles complètes (avec cadre bleu et barre bleue)
     const FRAME_URLS = {
       CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
       WARNING:   "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/warning.png"
@@ -377,8 +374,8 @@
       const tourneeName = $tournee.value || "TOURNÉE";
       const tourneeCode = slugify(tourneeName);
 
-      const labelTop = agence;
-      const labelBottom = tourneeName;
+      // Texte en une seule ligne dans la barre bleue
+      const headerText = (agence + " " + tourneeName).trim();
 
       const brand = detectBrand();
       const frameUrl = FRAME_URLS[brand] || FRAME_URLS[DEFAULT_FRAME_BRAND];
@@ -397,47 +394,45 @@
         // fond complet (feuille kilométrique)
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        /* QR CODE DANS LE CADRE BLEU
-           -> taille réduite et position ajustée pour rester dans le carré */
-        const qrSize = w * 0.29;      // AVANT 0.34 : maintenant plus petit
-        const qrX = w * 0.035;        // marge gauche du cadre
-        const qrY = h * 0.13;         // hauteur du carré
+        /* === QR CODE DANS LE CADRE BLEU ===
+           Coordonnées mesurées sur le modèle :
+           - cadre bleu : x≈5..163, y≈121..229
+           - carré intérieur blanc ≈ x 50..150, y 121..221
+        */
+        const qrSize = w * 0.152;       // ~100 px pour une largeur de 659
+        const qrX = w * 0.076;          // ~50 px du bord gauche
+        const qrY = h * 0.129;          // ~121 px du haut
 
         // fond blanc intérieur du carré
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
-        const innerPad = qrSize * 0.04;
+        const innerPad = qrSize * 0.05; // marge pour laisser le bord bleu apparent
         const innerSize = qrSize - innerPad * 2;
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
-        /* TEXTE BLANC DANS LA BARRE BLEUE EN HAUT A GAUCHE */
+        /* === TEXTE BLANC DANS LA BARRE BLEUE EN HAUT ===
+           Coordonnées mesurées sur le bandeau :
+           - bandeau bleu : x≈5..162, y≈14..119
+           On place le texte au centre vertical, à droite du logo, sans dépasser.
+        */
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        // zone de texte : à droite du logo, dans la partie bleue
-        const textLeft = w * 0.15;       // un peu à droite du logo Durand
-        const textCenterY = h * 0.055;   // milieu de la barre bleue
-        const maxWidth = w * 0.18;       // largeur max dans la zone bleue
+        const textLeft   = w * 0.106;   // ~70 px, juste à droite du logo Durand
+        const textCenterY = h * 0.071;  // ~66 px (milieu du bandeau)
+        const maxWidth   = w * 0.14;    // ~92 px de largeur utilisable
 
-        // ajustement dynamique de la taille de police
-        let fontSize = Math.round(h * 0.024); // taille de départ ~2.4% de la hauteur
-        let width1, width2, maxW;
+        let fontSize = Math.round(h * 0.028); // point de départ
+        let width;
         do {
           ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-          width1 = ctx.measureText(labelTop).width;
-          width2 = ctx.measureText(labelBottom).width;
-          maxW = Math.max(width1, width2);
+          width = ctx.measureText(headerText).width;
           fontSize--;
-        } while (maxW > maxWidth && fontSize > 10);
+        } while (width > maxWidth && fontSize > 10);
 
-        const lineGap = fontSize + 4;
-        const firstY = textCenterY - lineGap / 2;
-        const secondY = textCenterY + lineGap / 2;
-
-        ctx.fillText(labelTop,    textLeft, firstY);
-        ctx.fillText(labelBottom, textLeft, secondY);
+        ctx.fillText(headerText, textLeft, textCenterY);
 
         // téléchargement
         const dataUrl = canvas.toDataURL("image/png");
