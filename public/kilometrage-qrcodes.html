@@ -177,7 +177,6 @@
     </div>
   </div>
 
-  <!-- Librairie QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
@@ -391,7 +390,6 @@
 
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        // QR dans le cadre bleu
         const qrSize = w * 0.2160;
         const qrX = w * 0.01813;
         const qrY = h * 0.08253;
@@ -403,16 +401,15 @@
         const innerSize = qrSize - innerPad * 2;
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
-        // TEXTE BLANC dans la barre bleue (taille + gauche ajustées)
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft   = w * 0.085;    // avant 0.112 → léger décalage à gauche
+        const textLeft   = w * 0.085;
         const textCenterY = h * 0.0386;
-        const maxWidth   = w * 0.155;   // avant 0.125 → un peu plus de largeur dispo
+        const maxWidth   = w * 0.155;
 
-        let fontSize = Math.round(h * 0.031);  // avant 0.028 → légèrement plus grand
+        let fontSize = Math.round(h * 0.031);
         let width1, width2, maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
