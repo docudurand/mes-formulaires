@@ -177,6 +177,7 @@
     </div>
   </div>
 
+  <!-- Librairie QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
@@ -194,6 +195,10 @@
 
     let allParams = [];
 
+    /* Feuilles complètes :
+       - cchezvous.png
+       - warning.png
+       (avec le cadre bleu en haut à gauche) */
     const FRAME_URLS = {
       CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
       WARNING:   "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/warning.png"
@@ -340,6 +345,7 @@
       }, 200);
     });
 
+    // Détection automatique C CHEZ VOUS / WARNING à partir du code chauffeur
     function detectBrand() {
       const code = ($codeTransporteur.value || "").trim().toUpperCase();
       const name = ($transporteur.value || "").trim().toUpperCase();
@@ -350,7 +356,6 @@
       if (code.includes("CHEZ") || code.includes("CCV") || name.includes("CHEZ")) {
         return "CCHEZVOUS";
       }
-
       return DEFAULT_FRAME_BRAND;
     }
 
@@ -389,12 +394,16 @@
         canvas.height = h;
         const ctx = canvas.getContext("2d");
 
+        // fond complet (feuille kilométrique)
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        const qrSize = w * 0.34;
-        const qrX = w * 0.035;
-        const qrY = h * 0.13;
+        /* QR CODE DANS LE CADRE BLEU
+           -> taille réduite et position ajustée pour rester dans le carré */
+        const qrSize = w * 0.29;      // AVANT 0.34 : maintenant plus petit
+        const qrX = w * 0.035;        // marge gauche du cadre
+        const qrY = h * 0.13;         // hauteur du carré
 
+        // fond blanc intérieur du carré
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
@@ -402,15 +411,18 @@
         const innerSize = qrSize - innerPad * 2;
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
+        /* TEXTE BLANC DANS LA BARRE BLEUE EN HAUT A GAUCHE */
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft = w * 0.18;
-        const textCenterY = h * 0.055;
-        const maxWidth = w * 0.40;
+        // zone de texte : à droite du logo, dans la partie bleue
+        const textLeft = w * 0.15;       // un peu à droite du logo Durand
+        const textCenterY = h * 0.055;   // milieu de la barre bleue
+        const maxWidth = w * 0.18;       // largeur max dans la zone bleue
 
-        let fontSize = Math.round(h * 0.025);
+        // ajustement dynamique de la taille de police
+        let fontSize = Math.round(h * 0.024); // taille de départ ~2.4% de la hauteur
         let width1, width2, maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -427,14 +439,15 @@
         ctx.fillText(labelTop,    textLeft, firstY);
         ctx.fillText(labelBottom, textLeft, secondY);
 
+        // téléchargement
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
         a.download = `Feuille_kilometrique_${agence}_${tourneeCode}.png`;
         a.click();
       } catch (e) {
-        console.error("Erreur lors du chargement de la feuille kilométrique :", e);
-        alert("Impossible de charger l'image de fond de la feuille kilométrique.");
+        console.error("Erreur lors du chargement de l'image de fond :", e);
+        alert("Impossible de charger l'image de la feuille kilométrique.");
       }
     });
 
