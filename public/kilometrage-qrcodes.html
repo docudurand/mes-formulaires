@@ -117,9 +117,6 @@
             <label for="baseUrl">URL de base</label>
             <input id="baseUrl" type="text"
                    value="https://mes-formulaires.onrender.com/kilometrage-saisie.html" />
-            <div class="muted">
-              
-            </div>
           </div>
 
           <div class="field">
@@ -127,9 +124,6 @@
             <select id="agence">
               <option value="">— Sélectionne une agence —</option>
             </select>
-            <div class="muted">
-              
-            </div>
           </div>
 
           <div class="field">
@@ -143,25 +137,23 @@
           </div>
 
           <div class="field">
-            <label for="transporteur">Nom du transporteur</label>
-            <input id="transporteur" type="text" placeholder="Ex : WARNING" />
+            <label for="transporteur">Nom du transporteur / chauffeur</label>
+            <input id="transporteur" type="text" placeholder="Ex : C CHEZ VOUS ou WARNING" />
           </div>
 
           <div class="field">
-            <label for="codeTransporteur">Code transporteur</label>
-            <input id="codeTransporteur" type="text" placeholder="Ex : WARNING" />
-            <div class="muted"></div>
+            <label for="codeTransporteur">Code chauffeur</label>
+            <input id="codeTransporteur" type="text" placeholder="Ex : C CHEZ VOUS ou WARNING" />
           </div>
 
           <div class="field">
             <label for="tournee">Nom de la tournée</label>
-            <input id="tournee" type="text" placeholder="Ex : Tournée 1" />
+            <input id="tournee" type="text" placeholder="Ex : Tournée 1 C CHEZ VOUS" />
           </div>
 
           <div class="field">
             <label for="codeTournee">Code tournée</label>
             <input id="codeTournee" type="text" placeholder="Ex : T1" />
-            <div class="muted"></div>
           </div>
 
           <button id="btnGenerate">Générer le QR code</button>
@@ -170,7 +162,6 @@
             <label for="finalUrl">URL générée</label>
             <input id="finalUrl" type="text" readonly />
           </div>
-
         </div>
 
         <div>
@@ -179,7 +170,7 @@
             Télécharger la fiche (PNG)
           </button>
           <div class="muted">
-            Le fichier téléchargé utilise le cadre Durand avec le nom du magasin et de la tournée.
+            Le fichier téléchargé est la feuille kilométrique complète avec le QR code dans le cadre bleu.
           </div>
         </div>
       </div>
@@ -187,6 +178,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <script>
     const $agence = document.getElementById("agence");
     const $tourneePreset = document.getElementById("tourneePreset");
@@ -202,7 +194,11 @@
 
     let allParams = [];
 
-    const FRAME_URL = "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/QRKILOMETRAGE.png";
+    const FRAME_URLS = {
+      CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
+      WARNING:   "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/warning.png"
+    };
+    const DEFAULT_FRAME_BRAND = "CCHEZVOUS";
 
     function slugify(str) {
       return (str || "")
@@ -255,8 +251,8 @@
       filtered.forEach((p, index) => {
         const opt = document.createElement("option");
         opt.value = String(index);
-        opt.textContent = (p.tournee || "Tournée") + " – " +
-                          (p.transporteur || p.codeTransporteur || "Transporteur");
+        const chauffeur = p.chauffeur || p.transporteur || p.codeChauffeur || p.codeTransporteur || "Transporteur";
+        opt.textContent = (p.tournee || "Tournée") + " – " + chauffeur;
         opt.dataset.index = String(index);
         $tourneePreset.appendChild(opt);
       });
@@ -284,8 +280,12 @@
       if (isNaN(idx) || !filtered[idx]) return;
 
       const p = filtered[idx];
-      $transporteur.value = p.transporteur || "";
-      $codeTransporteur.value = p.codeTransporteur || slugify(p.transporteur || "");
+
+      const chauffeurName = p.chauffeur || p.transporteur || "";
+      const chauffeurCode = p.codeChauffeur || p.codeTransporteur || slugify(chauffeurName);
+
+      $transporteur.value = chauffeurName;
+      $codeTransporteur.value = chauffeurCode;
       $tournee.value = p.tournee || "";
       $codeTournee.value = p.codeTournee || "";
     });
@@ -299,7 +299,7 @@
       const codeTournee = $codeTournee.value.trim();
 
       if (!base || !agence || !tournee || !codeTournee || !transporteur) {
-        alert("Merci de remplir au minimum : base URL, agence, transporteur, tournée et code tournée.");
+        alert("Merci de remplir au minimum : URL de base, agence, transporteur, tournée et code tournée.");
         return null;
       }
 
@@ -340,20 +340,47 @@
       }, 200);
     });
 
-    $btnDownload.addEventListener("click", () => {
+    function detectBrand() {
+      const code = ($codeTransporteur.value || "").trim().toUpperCase();
+      const name = ($transporteur.value || "").trim().toUpperCase();
+
+      if (code.includes("WARN") || name.includes("WARN")) {
+        return "WARNING";
+      }
+      if (code.includes("CHEZ") || code.includes("CCV") || name.includes("CHEZ")) {
+        return "CCHEZVOUS";
+      }
+
+      return DEFAULT_FRAME_BRAND;
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = url;
+      });
+    }
+
+    $btnDownload.addEventListener("click", async () => {
       const qrCanvas = $qrcode.querySelector("canvas");
       if (!qrCanvas) return;
 
       const agence = $agence.value || "AGENCE";
       const tourneeName = $tournee.value || "TOURNÉE";
       const tourneeCode = slugify(tourneeName);
+
       const labelTop = agence;
       const labelBottom = tourneeName;
 
-      const frameImg = new Image();
-      frameImg.crossOrigin = "anonymous";
+      const brand = detectBrand();
+      const frameUrl = FRAME_URLS[brand] || FRAME_URLS[DEFAULT_FRAME_BRAND];
 
-      frameImg.onload = () => {
+      try {
+        const frameImg = await loadImage(frameUrl);
+
         const w = frameImg.width;
         const h = frameImg.height;
 
@@ -364,9 +391,9 @@
 
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        const qrSize = Math.min(w * 0.78, h * 0.60);
-        const qrX = (w - qrSize) / 2;
-        const qrY = h * 0.35;
+        const qrSize = w * 0.34;
+        const qrX = w * 0.035;
+        const qrY = h * 0.13;
 
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
@@ -379,14 +406,14 @@
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft = w * 0.30 + 10;
-        const textCenterY = h * 0.10;
-        const maxWidth = qrSize * 0.90;
+        const textLeft = w * 0.18;
+        const textCenterY = h * 0.055;
+        const maxWidth = w * 0.40;
 
-        let fontSize = 24;
+        let fontSize = Math.round(h * 0.025);
         let width1, width2, maxW;
         do {
-          ctx.font = "bold " + fontSize + "px system-ui";
+          ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
           width1 = ctx.measureText(labelTop).width;
           width2 = ctx.measureText(labelBottom).width;
           maxW = Math.max(width1, width2);
@@ -403,53 +430,12 @@
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `QR_${agence}_${tourneeCode}.png`;
+        a.download = `Feuille_kilometrique_${agence}_${tourneeCode}.png`;
         a.click();
-      };
-
-      frameImg.onerror = () => {
-        console.error("Impossible de charger QRKILOMETRAGE.png, fallback simple.");
-
-        const qrSize = qrCanvas.width;
-        const padding = 8;
-        const textAreaHeight = 50;
-        const canvas = document.createElement("canvas");
-        canvas.width = qrSize;
-        canvas.height = qrSize + textAreaHeight + padding * 2;
-        const ctx = canvas.getContext("2d");
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        let fontSize = 18;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        let maxW;
-        do {
-          ctx.font = "bold " + fontSize + "px system-ui";
-          const w1 = ctx.measureText(labelTop).width;
-          const w2 = ctx.measureText(labelBottom).width;
-          maxW = Math.max(w1, w2);
-          fontSize--;
-        } while (maxW > canvas.width - 16 && fontSize > 8);
-
-        const midY = padding + textAreaHeight / 2;
-        const lineGap = fontSize + 4;
-        ctx.fillStyle = "#000000";
-        ctx.fillText(labelTop, canvas.width / 2, midY - lineGap / 2);
-        ctx.fillText(labelBottom, canvas.width / 2, midY + lineGap / 2);
-
-        const qrY = padding * 2 + textAreaHeight;
-        ctx.drawImage(qrCanvas, 0, qrY, qrSize, qrSize);
-
-        const dataUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = `QR_${agence}_${tourneeCode}.png`;
-        a.click();
-      };
-
-      frameImg.src = FRAME_URL;
+      } catch (e) {
+        console.error("Erreur lors du chargement de la feuille kilométrique :", e);
+        alert("Impossible de charger l'image de fond de la feuille kilométrique.");
+      }
     });
 
     loadParams();
