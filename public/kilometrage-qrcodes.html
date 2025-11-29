@@ -195,7 +195,6 @@
 
     let allParams = [];
 
-    // Feuilles complètes (C CHEZ VOUS / WARNING)
     const FRAME_URLS = {
       CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
       WARNING:   "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/warning.png"
@@ -342,7 +341,6 @@
       }, 200);
     });
 
-    // Choix C CHEZ VOUS / WARNING
     function detectBrand() {
       const code = ($codeTransporteur.value || "").trim().toUpperCase();
       const name = ($transporteur.value || "").trim().toUpperCase();
@@ -374,7 +372,6 @@
       const tourneeName = $tournee.value || "Tournée";
       const tourneeCode = slugify(tourneeName);
 
-      // Deux lignes dans la zone bleue
       const labelTop = agence;
       const labelBottom = tourneeName;
 
@@ -392,44 +389,30 @@
         canvas.height = h;
         const ctx = canvas.getContext("2d");
 
-        // fond complet (feuille kilométrique)
         ctx.drawImage(frameImg, 0, 0, w, h);
 
-        /* === QR CODE DANS LE CADRE BLEU ===
-           Coordonnées mesurées sur ton modèle (662x933) :
-           - cadre intérieur utile ~ x:12→155, y:77→221
-           => ratios : X≈0.0181, Y≈0.0825, W≈0.2160
-        */
+        // QR dans le cadre bleu
         const qrSize = w * 0.2160;
         const qrX = w * 0.01813;
         const qrY = h * 0.08253;
 
-        // carré blanc intérieur
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX, qrY, qrSize, qrSize);
 
-        // très petite marge pour laisser le cadre bien propre
         const innerPad = qrSize * 0.01;
         const innerSize = qrSize - innerPad * 2;
         ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
 
-        /* === TEXTE BLANC DANS LA BARRE BLEUE À CÔTÉ DU LOGO ===
-           Bandeau bleu mesuré : x:4→163, y:5→67
-           Zone texte choisie à droite du logo :
-           - x ≈ 0.112w
-           - largeur max ≈ 0.125w
-           - centre vertical ≈ 0.0386h
-        */
+        // TEXTE BLANC dans la barre bleue (taille + gauche ajustées)
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
 
-        const textLeft   = w * 0.112;          // début de la zone texte
-        const textCenterY = h * 0.0386;        // centre vertical du bandeau
-        const maxWidth   = w * 0.125;          // largeur max du texte
+        const textLeft   = w * 0.10;    // avant 0.112 → léger décalage à gauche
+        const textCenterY = h * 0.0386;
+        const maxWidth   = w * 0.155;   // avant 0.125 → un peu plus de largeur dispo
 
-        // Ajustement automatique de la taille pour que les 2 lignes tiennent dans la zone
-        let fontSize = Math.round(h * 0.028);  // point de départ
+        let fontSize = Math.round(h * 0.031);  // avant 0.028 → légèrement plus grand
         let width1, width2, maxW;
         do {
           ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -446,7 +429,6 @@
         ctx.fillText(labelTop,    textLeft, firstY);
         ctx.fillText(labelBottom, textLeft, secondY);
 
-        // téléchargement
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
