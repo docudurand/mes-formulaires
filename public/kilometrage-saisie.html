@@ -160,135 +160,137 @@
     <div id="message" class="msg"></div>
   </div>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
+<script>
+  const params = new URLSearchParams(window.location.search);
 
-    const agence = params.get("agence") || "";
-    const codeAgence = params.get("codeAgence") || agence;
-    const tournee = params.get("tournee") || "";
-    const codeTournee = params.get("codeTournee") || "";
-    const chauffeur = params.get("chauffeur") || "";
-    const codeChauffeur = params.get("codeChauffeur") || "";
+  const agence = params.get("agence") || "";
+  const codeAgence = params.get("codeAgence") || agence;
+  const tournee = params.get("tournee") || "";
+  const codeTournee = params.get("codeTournee") || "";
+  const chauffeur = params.get("chauffeur") || "";
+  const codeChauffeur = params.get("codeChauffeur") || "";
 
-    const infoBloc = document.getElementById("infoBloc");
-    const messageEl = document.getElementById("message");
-    const form = document.getElementById("kmForm");
-    const submitBtn = document.getElementById("submitBtn");
-    const dateInput = document.getElementById("date");
-    const horaireSelect = document.getElementById("horaire");
-    const kmInput = document.getElementById("km");
+  const infoBloc = document.getElementById("infoBloc");
+  const messageEl = document.getElementById("message");
+  const form = document.getElementById("kmForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const dateInput = document.getElementById("date");
+  const horaireSelect = document.getElementById("horaire");
+  const kmInput = document.getElementById("km");
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  dateInput.value = `${yyyy}-${mm}-${dd}`;
 
-    function buildInfo() {
-      const lines = [];
-      if (agence || codeAgence) {
-        lines.push(`<strong>Agence :</strong> ${agence || codeAgence}`);
-      }
-      if (tournee || codeTournee) {
-        lines.push(`<strong>Tournée :</strong> ${tournee || codeTournee}`);
-      }
-      if (chauffeur || codeChauffeur) {
-        lines.push(`<strong>Transporteur :</strong> ${chauffeur || codeChauffeur}`);
-      }
-      if (!lines.length) {
-        infoBloc.innerHTML =
-          "Les paramètres de la tournée ne sont pas dans l'URL. Scanne bien le QR code fourni.";
-      } else {
-        infoBloc.innerHTML = lines.join("<br>");
-      }
+  function buildInfo() {
+    const lines = [];
+    if (agence || codeAgence) {
+      lines.push(`<strong>Agence :</strong> ${agence || codeAgence}`);
+    }
+    if (tournee || codeTournee) {
+      lines.push(`<strong>Tournée :</strong> ${tournee || codeTournee}`);
+    }
+    if (chauffeur || codeChauffeur) {
+      lines.push(`<strong>Transporteur :</strong> ${chauffeur || codeChauffeur}`);
+    }
+    if (!lines.length) {
+      infoBloc.innerHTML =
+        "Les paramètres de la tournée ne sont pas dans l'URL. Scanne bien le QR code fourni.";
+    } else {
+      infoBloc.innerHTML = lines.join("<br>");
+    }
+  }
+
+  buildInfo();
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    messageEl.textContent = "";
+    messageEl.className = "msg";
+
+    const dateValue = dateInput.value;
+    const horaireValue = horaireSelect.value;
+    const kmValue = kmInput.value;
+    const commentaireValue = document.getElementById("commentaire").value;
+
+    if (!codeTournee) {
+      messageEl.textContent =
+        "Erreur : code tournée manquant. Vérifie le QR code.";
+      messageEl.classList.add("err");
+      return;
+    }
+    if (!dateValue) {
+      messageEl.textContent = "Merci de choisir une date.";
+      messageEl.classList.add("err");
+      return;
+    }
+    if (kmValue === "" || isNaN(Number(kmValue))) {
+      messageEl.textContent =
+        "Merci de saisir un relevé compteur valide.";
+      messageEl.classList.add("err");
+      return;
     }
 
-    buildInfo();
+    const kmNumber = Number(kmValue);
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      messageEl.textContent = "";
-      messageEl.className = "msg";
+    const payload = {
+      agence,
+      codeAgence,
+      tournee,
+      codeTournee,
+      chauffeur,
+      codeChauffeur,
+      date: dateValue,
+      km: kmNumber,
+      commentaire: commentaireValue
+    };
 
-      const dateValue = dateInput.value;
-      const horaireValue = horaireSelect.value;
-      const kmValue = kmInput.value;
-      const commentaireValue = document.getElementById("commentaire").value;
+    // Et champ horaire spécifique pour l'Apps Script
+    if (horaireValue === "8H") {
+      payload.km8h = kmNumber;
+    } else if (horaireValue === "12H") {
+      payload.km12h = kmNumber;
+    } else if (horaireValue === "14H") {
+      payload.km14h = kmNumber;
+    } else if (horaireValue === "18H") {
+      payload.km18h = kmNumber;
+    }
 
-      if (!codeTournee) {
-        messageEl.textContent =
-          "Erreur : code tournée manquant. Vérifie le QR code.";
-        messageEl.classList.add("err");
-        return;
-      }
-      if (!dateValue) {
-        messageEl.textContent = "Merci de choisir une date.";
-        messageEl.classList.add("err");
-        return;
-      }
-      if (kmValue === "" || isNaN(Number(kmValue))) {
-        messageEl.textContent =
-          "Merci de saisir un relevé compteur valide.";
-        messageEl.classList.add("err");
-        return;
-      }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Enregistrement...";
 
-      const kmNumber = Number(kmValue);
+    try {
+      const res = await fetch("/api/kilometrage/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      const payload = {
-        agence,
-        codeAgence,
-        tournee,
-        codeTournee,
-        chauffeur,
-        codeChauffeur,
-        date: dateValue,
-        commentaire: commentaireValue
-      };
+      const data = await res.json().catch(() => ({}));
 
-      if (horaireValue === "8H") {
-        payload.km8h = kmNumber;
-      } else if (horaireValue === "12H") {
-        payload.km12h = kmNumber;
-      } else if (horaireValue === "14H") {
-        payload.km14h = kmNumber;
-      } else if (horaireValue === "18H") {
-        payload.km18h = kmNumber;
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || "Erreur serveur");
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Enregistrement...";
+      messageEl.textContent =
+        "Relevé " + horaireValue + " enregistré 👍";
+      messageEl.classList.add("ok");
 
-      try {
-        const res = await fetch("/api/kilometrage/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok || data.success === false) {
-          throw new Error(data.error || "Erreur serveur");
-        }
-
-        messageEl.textContent =
-          "Relevé " + horaireValue + " enregistré 👍";
-        messageEl.classList.add("ok");
-
-        kmInput.value = "";
-        document.getElementById("commentaire").value = "";
-        kmInput.focus();
-      } catch (err) {
-        console.error(err);
-        messageEl.textContent =
-          "Erreur lors de l'enregistrement. Réessaie ou contacte le responsable.";
-        messageEl.classList.add("err");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Valider";
-      }
-    });
-  </script>
+      kmInput.value = "";
+      document.getElementById("commentaire").value = "";
+      kmInput.focus();
+    } catch (err) {
+      console.error(err);
+      messageEl.textContent =
+        "Erreur lors de l'enregistrement. Réessaie ou contacte le responsable.";
+      messageEl.classList.add("err");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Valider";
+    }
+  });
+</script>
 </body>
 </html>
