@@ -50,6 +50,51 @@
       color: #111827;
     }
 
+    .agency-buttons-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+
+    .agency-label {
+      font-size: 0.9rem;
+      color: #374151;
+      font-weight: 600;
+    }
+
+    .agency-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .agency-buttons button {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+    }
+
+    .agency-buttons button:hover {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    .agency-buttons button.active {
+      background: #004080;
+      color: #ffffff;
+      border-color: #004080;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+      transform: translateY(1px);
+    }
+
     main {
       padding: 10px;
     }
@@ -235,10 +280,6 @@
   <header>
     <h1>Suivi kilométrique des tournées</h1>
     <div class="filters">
-      <div class="agency-select">
-        <span>Magasin :</span>
-        <select id="agencySelect"></select>
-      </div>
       <div class="year-select">
         <span>Année :</span>
         <select id="yearSelect"></select>
@@ -247,6 +288,10 @@
   </header>
 
   <main>
+    <div class="agency-buttons-bar">
+      <span class="agency-label">Magasin :</span>
+      <div id="agencyButtons" class="agency-buttons"></div>
+    </div>
     <div class="info-line" id="infoLine"></div>
     <div class="status" id="status"></div>
     <div id="monthsContainer" class="months-grid"></div>
@@ -282,7 +327,7 @@
     ];
 
     const yearSelect = document.getElementById("yearSelect");
-    const agencySelect = document.getElementById("agencySelect");
+    const agencyButtons = document.getElementById("agencyButtons");
     const infoLine = document.getElementById("infoLine");
     const statusEl = document.getElementById("status");
     const monthsContainer = document.getElementById("monthsContainer");
@@ -308,23 +353,25 @@
       });
     }
 
-    function initAgencySelect() {
-      agencySelect.innerHTML = "";
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "— Sélectionner un magasin —";
-      agencySelect.appendChild(placeholder);
+    function initAgencyButtons() {
+      agencyButtons.innerHTML = "";
 
       const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
       sorted.forEach((ag) => {
-        const opt = document.createElement("option");
-        opt.value = ag;
-        opt.textContent = ag;
-        agencySelect.appendChild(opt);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = ag;
+        btn.addEventListener("click", () => {
+          currentAgence = ag;
+          Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
+            b.classList.toggle("active", b === btn)
+          );
+          loadData();
+        });
+        agencyButtons.appendChild(btn);
       });
 
       currentAgence = "";
-      agencySelect.value = "";
     }
 
     async function loadData() {
@@ -341,7 +388,7 @@
 
       const loader = document.createElement("div");
       loader.className = "loader";
-      loader.textContent = "Chargement des données...";
+      loader.textContent = "Chargement des données.";
       monthsContainer.appendChild(loader);
 
       try {
@@ -638,13 +685,8 @@
       loadData();
     });
 
-    agencySelect.addEventListener("change", () => {
-      currentAgence = agencySelect.value;
-      loadData();
-    });
-
     initYearSelect();
-    initAgencySelect();
+    initAgencyButtons();
   </script>
 </body>
 </html>
