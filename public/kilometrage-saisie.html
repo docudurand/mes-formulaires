@@ -84,15 +84,6 @@
       min-height: 60px;
     }
 
-    .summary {
-      margin-top: 6px;
-      font-size: 0.85rem;
-      color: #444;
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 6px 8px;
-    }
-
     button {
       margin-top: 16px;
       width: 100%;
@@ -137,8 +128,8 @@
 
     <h1>Kilométrage de la journée</h1>
     <div class="sub">
-      Choisir l'horaire (8h, 12h, 14h ou 18h) puis saisir le relevé compteur.<br />
-      Le total sera calculé automatiquement sur le site.
+      Choisir l'horaire (8h, 12h, 14h ou 18h) et saisir le relevé compteur.<br />
+      Tu peux revenir plus tard pour compléter les autres horaires.
     </div>
 
     <div id="infoBloc" class="info">
@@ -149,7 +140,6 @@
       <label for="date">Date de la journée</label>
       <input type="date" id="date" name="date" required />
 
-      <!-- Sélecteur d'horaire -->
       <label for="horaire">Horaire du relevé</label>
       <select id="horaire" name="horaire">
         <option value="8H">8H</option>
@@ -158,19 +148,8 @@
         <option value="18H">18H</option>
       </select>
 
-      <!-- Champ visible pour la valeur à l'horaire sélectionné -->
-      <label for="kmCurrent">Relevé compteur à cette heure</label>
-      <input type="number" id="kmCurrent" min="0" step="0.1" />
-
-      <!-- Champs cachés envoyés au serveur -->
-      <input type="hidden" id="km8h"  name="km8h" />
-      <input type="hidden" id="km12h" name="km12h" />
-      <input type="hidden" id="km14h" name="km14h" />
-      <input type="hidden" id="km18h" name="km18h" />
-
-      <div id="summary" class="summary">
-        8h : -&nbsp;&nbsp;|&nbsp;&nbsp;12h : -&nbsp;&nbsp;|&nbsp;&nbsp;14h : -&nbsp;&nbsp;|&nbsp;&nbsp;18h : -
-      </div>
+      <label for="km">Relevé compteur à cette heure</label>
+      <input type="number" id="km" name="km" min="0" step="0.1" required />
 
       <label for="commentaire">Commentaire (optionnel)</label>
       <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
@@ -196,16 +175,8 @@
     const form = document.getElementById("kmForm");
     const submitBtn = document.getElementById("submitBtn");
     const dateInput = document.getElementById("date");
-
     const horaireSelect = document.getElementById("horaire");
-    const kmCurrentInput = document.getElementById("kmCurrent");
-
-    const km8hInput  = document.getElementById("km8h");
-    const km12hInput = document.getElementById("km12h");
-    const km14hInput = document.getElementById("km14h");
-    const km18hInput = document.getElementById("km18h");
-
-    const summaryDiv = document.getElementById("summary");
+    const kmInput = document.getElementById("km");
 
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -232,46 +203,7 @@
       }
     }
 
-    function updateSummary() {
-      const v8  = km8hInput.value  ? km8hInput.value  : "-";
-      const v12 = km12hInput.value ? km12hInput.value : "-";
-      const v14 = km14hInput.value ? km14hInput.value : "-";
-      const v18 = km18hInput.value ? km18hInput.value : "-";
-      summaryDiv.innerHTML = `8h : ${v8}&nbsp;&nbsp;|&nbsp;&nbsp;12h : ${v12}&nbsp;&nbsp;|&nbsp;&nbsp;14h : ${v14}&nbsp;&nbsp;|&nbsp;&nbsp;18h : ${v18}`;
-    }
-
-    horaireSelect.addEventListener("change", () => {
-      const slot = horaireSelect.value;
-      let v = "";
-      if (slot === "8H") {
-        v = km8hInput.value;
-      } else if (slot === "12H") {
-        v = km12hInput.value;
-      } else if (slot === "14H") {
-        v = km14hInput.value;
-      } else if (slot === "18H") {
-        v = km18hInput.value;
-      }
-      kmCurrentInput.value = v || "";
-    });
-
-    kmCurrentInput.addEventListener("input", () => {
-      const slot = horaireSelect.value;
-      const v = kmCurrentInput.value;
-      if (slot === "8H") {
-        km8hInput.value = v;
-      } else if (slot === "12H") {
-        km12hInput.value = v;
-      } else if (slot === "14H") {
-        km14hInput.value = v;
-      } else if (slot === "18H") {
-        km18hInput.value = v;
-      }
-      updateSummary();
-    });
-
     buildInfo();
-    updateSummary();
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -279,10 +211,8 @@
       messageEl.className = "msg";
 
       const dateValue = dateInput.value;
-      const km8hValue  = km8hInput.value;
-      const km12hValue = km12hInput.value;
-      const km14hValue = km14hInput.value;
-      const km18hValue = km18hInput.value;
+      const horaireValue = horaireSelect.value;
+      const kmValue = kmInput.value;
       const commentaireValue = document.getElementById("commentaire").value;
 
       if (!codeTournee) {
@@ -296,11 +226,9 @@
         messageEl.classList.add("err");
         return;
       }
-
-      const values = [km8hValue, km12hValue, km14hValue, km18hValue];
-      if (values.some(v => v === "" || isNaN(Number(v)))) {
+      if (kmValue === "" || isNaN(Number(kmValue))) {
         messageEl.textContent =
-          "Merci de saisir un relevé compteur valide pour 8h, 12h, 14h et 18h.";
+          "Merci de saisir un relevé compteur valide.";
         messageEl.classList.add("err");
         return;
       }
@@ -320,10 +248,8 @@
             chauffeur,
             codeChauffeur,
             date: dateValue,
-            km8h: Number(km8hValue),
-            km12h: Number(km12hValue),
-            km14h: Number(km14hValue),
-            km18h: Number(km18hValue),
+            horaire: horaireValue,
+            km: Number(kmValue),
             commentaire: commentaireValue
           })
         });
@@ -334,18 +260,13 @@
           throw new Error(data.error || "Erreur serveur");
         }
 
-        messageEl.textContent = "Kilométrage enregistré 👍";
+        messageEl.textContent =
+          "Relevé " + horaireValue + " enregistré 👍";
         messageEl.classList.add("ok");
-        form.reset();
-        dateInput.value = `${yyyy}-${mm}-${dd}`;
 
-        km8hInput.value = "";
-        km12hInput.value = "";
-        km14hInput.value = "";
-        km18hInput.value = "";
-        horaireSelect.value = "8H";
-        kmCurrentInput.value = "";
-        updateSummary();
+        kmInput.value = "";
+        document.getElementById("commentaire").value = "";
+        kmInput.focus();
       } catch (err) {
         console.error(err);
         messageEl.textContent =
