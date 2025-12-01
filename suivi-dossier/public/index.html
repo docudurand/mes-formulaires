@@ -419,33 +419,19 @@ function matchesYearMonth(d){
 function applyLimitedView(){
   if (!LIMITED_VIEW) return;
 
-  const thEta = document.querySelector("th.th-eta");
   const thActions = document.querySelector("th.th-actions");
-
-  if (thEta) {
-    thEta.innerHTML = "Voir dossier";
-    thEta.style.textAlign = "center";
-    thEta.style.whiteSpace = "nowrap";
-  }
-
   if (thActions) {
     thActions.style.display = "none";
   }
-
-  document.querySelectorAll("td.col-eta .etaSel").forEach(sel => {
-    sel.style.display = "none";
-  });
-
-  document.querySelectorAll("td.col-eta .etaGroup").forEach(group => {
-    group.style.justifyContent = "center";
-    group.style.gap = "0";
-  });
-
   document.querySelectorAll("td.col-actions").forEach(td => {
     td.style.display = "none";
   });
   document.querySelectorAll("col.col-actions").forEach(col => {
     col.style.display = "none";
+  });
+
+  document.querySelectorAll("select.etaSel").forEach(sel => {
+    sel.disabled = true;
   });
 }
 
