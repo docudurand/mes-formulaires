@@ -13,7 +13,7 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
   .wrap{max-width:1680px;margin:22px auto;padding:14px}
-  h1{ margin:0 0 10px; color:#primary; font-size:1.35rem; color:var(--primary); }
+  h1{ margin:0 0 10px; font-size:1.35rem; color:var(--primary); }
 
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:6px 0 12px}
   label{font-weight:600;color:#334155}
@@ -27,6 +27,30 @@
   .months.active{display:flex}
   .monthBtn{background:#fff;border:1px solid var(--line);color:#073763;border-radius:999px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:.9rem}
   .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
+
+  .statusTabs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:4px;
+    margin-bottom:4px;
+  }
+  .statusBtn{
+    background:#fff;
+    border:1px solid var(--line);
+    color:#073763;
+    border-radius:999px;
+    padding:5px 10px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:.85rem;
+  }
+  .statusBtn.active{
+    background:#004080;
+    color:#fff;
+    border-color:#004080;
+  }
+
   .legend{opacity:.8;font-size:.9rem}
 
   .tableWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
@@ -207,6 +231,16 @@
     </div>
     <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
     <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
+
+    <!-- Onglets statut -->
+    <div class="statusTabs" id="statusTabs" aria-label="Filtre par statut">
+      <button type="button" class="statusBtn active" data-status="">Tout</button>
+      <button type="button" class="statusBtn" data-status="Demande envoyé">Demande envoyé</button>
+      <button type="button" class="statusBtn" data-status="Pièce reçu">Pièce reçu</button>
+      <button type="button" class="statusBtn" data-status="Travaux en cours">Travaux en cours</button>
+      <button type="button" class="statusBtn" data-status="Renvoyé">Renvoyé</button>
+    </div>
+
     <div class="legend" id="legend"></div>
   </div>
 
@@ -276,6 +310,7 @@ const $btnPrint = document.getElementById("btnPrint");
 const $modalTitle = document.getElementById("modalTitle");
 const $modalContent = document.getElementById("modalContent");
 const $legend = document.getElementById("legend");
+const $statusTabs = document.getElementById("statusTabs");
 
 let IS_LOADING = true;
 
@@ -306,6 +341,7 @@ function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate(
 const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 let YEAR_FILTER = '';
 let MONTH_FILTER = '';
+let STATUS_FILTER = ''; // "" = tous les statuts
 
 function buildMonths(year){
   const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
@@ -351,6 +387,16 @@ document.getElementById('months-2025').addEventListener('click', (e)=>{
 });
 document.getElementById('months-2026').addEventListener('click', (e)=>{
   const b = e.target.closest('.monthBtn'); if(!b) return; setMonthActive('2026', b.dataset.month);
+});
+
+$statusTabs.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".statusBtn");
+  if (!btn) return;
+  STATUS_FILTER = btn.dataset.status || "";
+  document.querySelectorAll(".statusBtn").forEach(b=>{
+    b.classList.toggle("active", b === btn);
+  });
+  draw();
 });
 
 let rows = [];
@@ -424,6 +470,10 @@ function draw(){
       const s = [String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service, fmtJJMMYYYYdash(r.demandeDate)]
         .join(' ').toLowerCase();
       return s.includes(q);
+    })
+    .filter(r => {
+      if (!STATUS_FILTER) return true;
+      return (r.status || "") === STATUS_FILTER;
     })
     .forEach(r => {
       count++;
@@ -499,7 +549,12 @@ function draw(){
         ? `${MONTHS_FULL[Number(MONTH_FILTER)-1]} ${YEAR_FILTER}`
         : `Tout ${YEAR_FILTER}`)
     : 'Toutes années';
-  $legend.textContent = `${count} dossier(s) • ${ymText}`;
+
+  const statusText = STATUS_FILTER
+    ? ` • Statut : ${STATUS_FILTER}`
+    : ' • Statut : Tous';
+
+  $legend.textContent = `${count} dossier(s) • ${ymText}${statusText}`;
 
   if (LIMITED_VIEW){
     applyLimitedView();
@@ -635,11 +690,13 @@ function load(){
 
   const now = new Date();
   const y = now.getFullYear();
-  const m = now.getMonth() + 1;
+
   if (y === 2025 || y === 2026) {
-    setMonthActive(String(y), String(m));
+    setMonthActive(String(y), 'all');
   } else {
-    YEAR_FILTER = ''; MONTH_FILTER = ''; draw();
+    YEAR_FILTER = '';
+    MONTH_FILTER = '';
+    draw();
   }
 
   fetch(`${API_BASE}/atelier/api/cases`)
