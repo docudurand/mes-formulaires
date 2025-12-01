@@ -233,6 +233,29 @@
         return;
       }
 
+      const kmNumber = Number(kmValue);
+
+      const payload = {
+        agence,
+        codeAgence,
+        tournee,
+        codeTournee,
+        chauffeur,
+        codeChauffeur,
+        date: dateValue,
+        commentaire: commentaireValue
+      };
+
+      if (horaireValue === "8H") {
+        payload.km8h = kmNumber;
+      } else if (horaireValue === "12H") {
+        payload.km12h = kmNumber;
+      } else if (horaireValue === "14H") {
+        payload.km14h = kmNumber;
+      } else if (horaireValue === "18H") {
+        payload.km18h = kmNumber;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = "Enregistrement...";
 
@@ -240,18 +263,7 @@
         const res = await fetch("/api/kilometrage/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            agence,
-            codeAgence,
-            tournee,
-            codeTournee,
-            chauffeur,
-            codeChauffeur,
-            date: dateValue,
-            horaire: horaireValue,
-            km: Number(kmValue),
-            commentaire: commentaireValue
-          })
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json().catch(() => ({}));
