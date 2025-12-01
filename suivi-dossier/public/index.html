@@ -93,6 +93,13 @@
     padding:6px 8px; border:1px solid var(--line); border-radius:10px; font-size:.9rem;
     width:54px; min-width:54px; text-align:center; appearance:auto;
   }
+  .etaSel.readonlyLimited{
+    font-weight:700;
+    color:#0b4a6f;
+    background:#eef5ff;
+    border-color:#bcd7ff;
+    pointer-events:none;
+  }
 
   button{
     appearance:none; border:1px solid var(--primary); background:#fff; color:#004080;
@@ -232,7 +239,6 @@
     <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
     <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
 
-    <!-- Onglets statut -->
     <div class="statusTabs" id="statusTabs" aria-label="Filtre par statut">
       <button type="button" class="statusBtn active" data-status="">Tout</button>
       <button type="button" class="statusBtn" data-status="Demande envoyé">Demande envoyé</button>
@@ -431,7 +437,8 @@ function applyLimitedView(){
   });
 
   document.querySelectorAll("select.etaSel").forEach(sel => {
-    sel.disabled = true;
+    sel.classList.add("readonlyLimited");
+    sel.setAttribute("tabindex","-1");
   });
 }
 
