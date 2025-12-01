@@ -96,9 +96,95 @@
   .section{margin-top:12px}
   .section h3{margin:8px 0; color:#0b4a6f; font-size:.95rem}
   .area{border:1px solid var(--line); padding:10px; white-space:pre-wrap}
+
+  .loginOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.35);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding-top:20px;
+    z-index:20000;
+  }
+  .loginBox{
+    background:#fff;
+    padding:16px 18px;
+    border-radius:10px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.25);
+    min-width:260px;
+    max-width:320px;
+    font-size:.9rem;
+  }
+  .loginBox h2{
+    margin:0 0 6px;
+    font-size:1.05rem;
+    color:#004080;
+    text-align:center;
+  }
+  .loginBox p{
+    margin:0 0 10px;
+    font-size:.88rem;
+    color:#4b5563;
+    text-align:center;
+  }
+  .loginBox input{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #d1d5db;
+    font-size:.95rem;
+    margin-bottom:8px;
+  }
+  .loginBox button{
+    width:100%;
+    padding:8px 10px;
+    border-radius:999px;
+    border:0;
+    background:#004080;
+    color:#fff;
+    font-weight:700;
+    font-size:.9rem;
+    cursor:pointer;
+  }
+  .loginBox .error{
+    margin-top:6px;
+    font-size:.8rem;
+    color:#b91c1c;
+    text-align:center;
+    min-height:1em;
+  }
+  .rememberLabel{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:.8rem;
+    color:#4b5563;
+    margin-bottom:6px;
+    user-select:none;
+  }
 </style>
 </head>
 <body>
+
+<div class="loginOverlay" id="loginOverlay">
+  <div class="loginBox">
+    <h2>Accès suivi atelier</h2>
+    <p>Veuillez saisir votre mot de passe.</p>
+    <input
+      type="password"
+      id="loginPassword"
+      placeholder="Mot de passe"
+      autocomplete="current-password"
+    />
+    <label class="rememberLabel">
+      <input type="checkbox" id="rememberPwd" checked />
+      Se souvenir du mot de passe sur cet appareil
+    </label>
+    <button type="button" id="loginBtn">Se connecter</button>
+    <div class="error" id="loginError"></div>
+  </div>
+</div>
 
 <div class="wrap">
   <h1>Suivi des dossiers Atelier</h1>
@@ -168,7 +254,14 @@
   </div>
 </div>
 
+<script src="/suivi-dossier/config.js"></script>
+
 <script>
+const cfgSuivi = window.__SUIVI_CFG || {};
+const PASS_FULL    = cfgSuivi.ATELIER_SUIVI_PASS_FULL    || "";
+const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
+let LIMITED_VIEW   = false;
+
 const API_BASE =
   (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
     ? "https://mes-formulaires.onrender.com"
@@ -277,6 +370,39 @@ function matchesYearMonth(d){
   return (d.getMonth()+1) === Number(MONTH_FILTER);
 }
 
+function applyLimitedView(){
+  if (!LIMITED_VIEW) return;
+
+  const thEta = document.querySelector("th.th-eta");
+  const thActions = document.querySelector("th.th-actions");
+
+  if (thEta) {
+    thEta.innerHTML = "Voir dossier";
+    thEta.style.textAlign = "center";
+    thEta.style.whiteSpace = "nowrap";
+  }
+
+  if (thActions) {
+    thActions.style.display = "none";
+  }
+
+  document.querySelectorAll("td.col-eta .etaSel").forEach(sel => {
+    sel.style.display = "none";
+  });
+
+  document.querySelectorAll("td.col-eta .etaGroup").forEach(group => {
+    group.style.justifyContent = "center";
+    group.style.gap = "0";
+  });
+
+  document.querySelectorAll("td.col-actions").forEach(td => {
+    td.style.display = "none";
+  });
+  document.querySelectorAll("col.col-actions").forEach(col => {
+    col.style.display = "none";
+  });
+}
+
 function draw(){
   if (IS_LOADING) { setTableLoading("Chargement des dossiers…"); return; }
 
@@ -374,6 +500,10 @@ function draw(){
         : `Tout ${YEAR_FILTER}`)
     : 'Toutes années';
   $legend.textContent = `${count} dossier(s) • ${ymText}`;
+
+  if (LIMITED_VIEW){
+    applyLimitedView();
+  }
 }
 
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -541,7 +671,81 @@ function load(){
 }
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
-load();
+
+(function initLogin(){
+  const overlay = document.getElementById("loginOverlay");
+  const input   = document.getElementById("loginPassword");
+  const btn     = document.getElementById("loginBtn");
+  const errBox  = document.getElementById("loginError");
+  const remember = document.getElementById("rememberPwd");
+
+  const STORAGE_KEY = "atelier_suivi_pwd";
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      input.value = saved;
+      if (remember) remember.checked = true;
+    }
+  } catch (e) {
+    console.warn("localStorage indisponible", e);
+  }
+
+  function startApp(){
+    if (overlay) overlay.style.display = "none";
+    load();
+  }
+
+  function handleLogin(){
+    const v = (input.value || "").trim();
+
+    if (!PASS_FULL && !PASS_LIMITED){
+      LIMITED_VIEW = false;
+      startApp();
+      return;
+    }
+
+    if (PASS_FULL && v === PASS_FULL){
+      LIMITED_VIEW = false;
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
+      startApp();
+      return;
+    }
+    if (PASS_LIMITED && v === PASS_LIMITED){
+      LIMITED_VIEW = true;
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
+      startApp();
+      return;
+    }
+    errBox.textContent = "Mot de passe incorrect.";
+  }
+
+  btn.addEventListener("click", handleLogin);
+  input.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter") handleLogin();
+  });
+
+  if (!PASS_FULL && !PASS_LIMITED){
+    overlay.style.display = "none";
+    startApp();
+  }
+})();
 </script>
 </body>
 </html>
