@@ -416,26 +416,36 @@ function matchesYearMonth(d){
   return (d.getMonth()+1) === Number(MONTH_FILTER);
 }
 
-   - affiche l'estimation mais ne permet pas de la modifier
-   - masque la colonne Actions (statut + Valider)
-
 function applyLimitedView(){
   if (!LIMITED_VIEW) return;
 
-
+  const thEta = document.querySelector("th.th-eta");
   const thActions = document.querySelector("th.th-actions");
+
+  if (thEta) {
+    thEta.innerHTML = "Voir dossier";
+    thEta.style.textAlign = "center";
+    thEta.style.whiteSpace = "nowrap";
+  }
+
   if (thActions) {
     thActions.style.display = "none";
   }
+
+  document.querySelectorAll("td.col-eta .etaSel").forEach(sel => {
+    sel.style.display = "none";
+  });
+
+  document.querySelectorAll("td.col-eta .etaGroup").forEach(group => {
+    group.style.justifyContent = "center";
+    group.style.gap = "0";
+  });
+
   document.querySelectorAll("td.col-actions").forEach(td => {
     td.style.display = "none";
   });
   document.querySelectorAll("col.col-actions").forEach(col => {
     col.style.display = "none";
-  });
-
-  document.querySelectorAll("select.etaSel").forEach(sel => {
-    sel.disabled = true;
   });
 }
 
@@ -551,7 +561,7 @@ function draw(){
   }
 }
 
-function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&gt;','>':'&gt;'}[c])); }
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function openDetails(row){
   const h = (row.snapshot && row.snapshot.header) || {};
   const cul = (row.snapshot && row.snapshot.culasse) || null;
