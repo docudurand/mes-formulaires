@@ -191,6 +191,13 @@
 	 "infoLivreur": "Ville : GENAS"
   },
   {
+    "name": "ETS SESALY",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS"
+  },
+  {
     "name": "FIREM",
     "magasin": "Bourgoin",
     "recipients": ["receptionbourgoin@durandservices.fr"],
