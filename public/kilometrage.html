@@ -31,6 +31,10 @@
       gap: 10px;
       flex-wrap: wrap;
     }
+	
+	.recap-separator-top td {
+	  border-top: 3px solid #9ca3af !important;
+	}
 
     .year-select {
       display: flex;
@@ -816,22 +820,27 @@
 
       const tbody = document.createElement("tbody");
 
-      rows
-        .sort((a, b) => {
-          if (a.date === b.date) {
-            if (a.tournee === b.tournee) {
-              return a.chauffeur.localeCompare(b.chauffeur, "fr");
-            }
-            return a.tournee.localeCompare(b.tournee, "fr");
-          }
-          const [da, ma, ya] = a.date.split("/").map(Number);
-          const [db, mb, yb] = b.date.split("/").map(Number);
-          const dateA = new Date(ya, ma - 1, da);
-          const dateB = new Date(yb, mb - 1, db);
-          return dateA - dateB;
-        })
-        .forEach((item) => {
-          const tr = document.createElement("tr");
+let previousDate = null;
+
+rows
+  .sort((a, b) => {
+    if (a.date === b.date) {
+      if (a.tournee === b.tournee) {
+        return a.chauffeur.localeCompare(b.chauffeur, "fr");
+      }
+      return a.tournee.localeCompare(b.tournee, "fr");
+    }
+    const [da, ma, ya] = a.date.split("/").map(Number);
+    const [db, mb, yb] = b.date.split("/").map(Number);
+    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+  })
+  .forEach((item) => {
+    const tr = document.createElement("tr");
+
+    if (previousDate !== null && previousDate !== item.date) {
+      tr.classList.add("recap-separator-top");
+    }
+    previousDate = item.date;
 
           const tdDate = document.createElement("td");
           tdDate.textContent = item.date;
