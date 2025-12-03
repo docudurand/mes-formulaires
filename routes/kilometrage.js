@@ -119,5 +119,37 @@ router.get("/params", async (req, res) => {
       .json({ success: false, error: "Erreur lors de la récupération des paramètres" });
   }
 });
+router.get("/resume", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    const { agence, codeAgence, codeTournee, date } = req.query;
+
+    const url =
+      apiUrl +
+      `?mode=resume` +
+      `&agence=${encodeURIComponent(agence || "")}` +
+      `&codeAgence=${encodeURIComponent(codeAgence || "")}` +
+      `&codeTournee=${encodeURIComponent(codeTournee || "")}` +
+      `&date=${encodeURIComponent(date || "")}`;
+
+    const response = await axios.get(url, { timeout: 10000 });
+
+    return res.json(response.data || { found: false });
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/resume :", err.message);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: "Erreur lors de la récupération du résumé de la journée"
+      });
+  }
+});
 
 export default router;

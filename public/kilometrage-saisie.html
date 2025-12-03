@@ -254,47 +254,31 @@
       resume18hEl.textContent = "-";
 
       const dateValue = dateInput.value;
-      if (!dateValue) return;
-
-      const year = dateValue.slice(0, 4);
+      if (!dateValue || !codeTournee) return;
 
       const qs = new URLSearchParams({
         agence: agence || codeAgence || "",
-        year: year
+        codeAgence: codeAgence || agence || "",
+        codeTournee: codeTournee,
+        date: dateValue
       });
 
       try {
-        const res = await fetch("/api/kilometrage/data?" + qs.toString());
-        const data = await res.json().catch(() => []);
+        const res = await fetch("/api/kilometrage/resume?" + qs.toString());
+        const data = await res.json().catch(() => null);
 
-        if (!Array.isArray(data)) {
-          console.error("Réponse inattendue pour /data :", data);
+        console.log("Résumé journée reçu :", data);
+
+        if (!data || data.found === false) {
           return;
         }
 
-        const row = data.find(item =>
-          (item.codeTournee === codeTournee || item.tournee === tournee) &&
-          item.date === dateValue
-        );
-
-        if (!row) {
-          return;
-        }
-
-        if (row.km8h !== null && row.km8h !== "" && row.km8h !== undefined) {
-          resume8hEl.textContent = row.km8h;
-        }
-        if (row.km12h !== null && row.km12h !== "" && row.km12h !== undefined) {
-          resume12hEl.textContent = row.km12h;
-        }
-        if (row.km14h !== null && row.km14h !== "" && row.km14h !== undefined) {
-          resume14hEl.textContent = row.km14h;
-        }
-        if (row.km18h !== null && row.km18h !== "" && row.km18h !== undefined) {
-          resume18hEl.textContent = row.km18h;
-        }
+        if (data.km8h != null)  resume8hEl.textContent  = data.km8h;
+        if (data.km12h != null) resume12hEl.textContent = data.km12h;
+        if (data.km14h != null) resume14hEl.textContent = data.km14h;
+        if (data.km18h != null) resume18hEl.textContent = data.km18h;
       } catch (err) {
-        console.error("Erreur chargement résumé /data :", err);
+        console.error("Erreur chargement résumé :", err);
       }
     }
 
