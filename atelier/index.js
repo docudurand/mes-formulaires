@@ -68,6 +68,7 @@ function fmtJJMMYYYYdash(v){
   return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
 }
 function siteLabelForService(service = ""){
+  if (service === "Arbre de Transmission") return "BOURGOIN";
   if (service === "Contrôle injection Essence") return "ST EGREVE";
   if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
   return "";
@@ -513,8 +514,14 @@ router.post("/api/cases/:no/status", async (req, res) => {
       return res.status(502).json({ ok:false, error:"upstream_update_failed", upstream: up });
     }
 
-    const st = String(status).normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase();
-    if (st === "renvoye") {
+    const stNorm = String(status)
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/['’]/g, "")
+      .toLowerCase()
+      .trim();
+
+    if (stNorm === "renvoye" || stNorm === "piece renvoye a lagence") {
       try {
         const r = await gsListCases();
         const hit = (r && r.data || []).find(x => String(x.no) === String(no));
