@@ -8,8 +8,7 @@ const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
 
-const SUIVI_PASS_STE     = process.env.ATELIER_SUIVI_PASS_STE     || "";
-const SUIVI_PASS_BG      = process.env.ATELIER_SUIVI_PASS_BG      || "";
+const SUIVI_PASS_FULL    = process.env.ATELIER_SUIVI_PASS_FULL    || "";
 const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
 
 const FRAME_ANCESTORS =
@@ -24,12 +23,12 @@ const publicDir = path.join(__dirname, "public");
 
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+
   res.setHeader("Cache-Control", "no-store");
 
   res.send(
     `window.__SUIVI_CFG = {
-      ATELIER_SUIVI_PASS_STE: ${JSON.stringify(SUIVI_PASS_STE)},
-      ATELIER_SUIVI_PASS_BG: ${JSON.stringify(SUIVI_PASS_BG)},
+      ATELIER_SUIVI_PASS_FULL: ${JSON.stringify(SUIVI_PASS_FULL)},
       ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
     };`
   );

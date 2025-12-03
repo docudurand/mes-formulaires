@@ -327,38 +327,13 @@ function setTableLoading(msg){
 }
 
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
-
-function getStatusLabelsForService(service) {
-  const s = (service || "").trim();
-  if (s === "Arbre de Transmission") {
-    return [
-      "Demande envoyé",
-      "Pièce envoyé chez Fournisseurs",
-      "Pièce renvoyé à l'agence"
-    ];
-  }
-  return LABELS;
-}
-
 function displayStatusLabel(status){
-  if (status === "Renvoyé") return "Pièce Renvoyé";
-  return status;
+  return status === "Renvoyé" ? "Pièce Renvoyé" : status;
 }
-
 function badge(status){
-  const map = {
-    "Demande envoyé": "s-1",
-    "Pièce reçu": "s-2",
-    "Travaux en cours": "s-3",
-    "Renvoyé": "s-4",
-
-    "Pièce envoyé chez Fournisseurs": "s-2",
-    "Pièce renvoyé à l'agence": "s-4"
-  };
-  const cls = map[status] || "s-1";
-  return `<span class="badge ${cls}">${displayStatusLabel(status)}</span>`;
+  const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
+  return `<span class="badge ${m}">${displayStatusLabel(status)}</span>`;
 }
-
 function p2(n){ return String(n).padStart(2,"0"); }
 function parseDate(v){
   if (!v && v!==0) return null;
@@ -521,18 +496,17 @@ function draw(){
           </div>
         </td>
         <td class="col-actions nowrap">
-  <div class="actions">
-    <select class="statusSel">
-      ${getStatusLabelsForService(r.service).map(lbl => `
-        <option value="${lbl}" ${r.status === lbl ? "selected" : ""}>
-          ${displayStatusLabel(lbl)}
-        </option>
-      `).join("")}
-    </select>
-    <button class="btnSave">Valider</button>
-  </div>
-</td>
-
+          <div class="actions">
+            <select class="statusSel">
+  ${LABELS.map(lbl=>`
+    <option value="${lbl}" ${r.status===lbl?"selected":""}>
+      ${displayStatusLabel(lbl)}
+    </option>
+  `).join("")}
+</select>
+            <button class="btnSave">Valider</button>
+          </div>
+        </td>
       `;
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));

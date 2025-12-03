@@ -209,116 +209,91 @@
   }
 
   function showCase(row){
-  const h = (row.snapshot && row.snapshot.header) || {};
-  const service = (h.service || row.service || "").trim();
-  const status  = row.status || "Demande envoyé";
+    const h = (row.snapshot && row.snapshot.header) || {};
+    const status = row.status || "Demande envoyé";
+    const isReceived = status === "Pièce reçu";
 
-  const targetStatus =
-    service === "Arbre de Transmission"
-      ? "Pièce envoyé chez Fournisseurs"
-      : "Pièce reçu";
+    const badgeClass =
+      status === "Pièce reçu" ? "" :
+      status === "Demande envoyé" ? "warn" :
+      "red";
 
-  const isDone = (status === targetStatus);
+    const estimation = row.estimation || "";
+    const dateDemande = h.dateDemande || row.demandeDate;
 
-  let badgeClass;
-  if (isDone) {
-    badgeClass = "";
-  } else if (status === "Demande envoyé") {
-    badgeClass = "warn";
-  } else {
-    badgeClass = "red";
-  }
+    let html = '';
+    html += '<div class="muted" style="margin-bottom:8px;">';
+    html += 'Dossier n° <strong>' + esc(String(row.no).padStart(5,"0")) + '</strong>';
+    html += '</div>';
 
-  const estimation  = row.estimation || "";
-  const dateDemande = h.dateDemande || row.demandeDate;
+    html += '<div class="grid2">';
+    html += '<div><span class="label">Client :</span> ' + esc(h.client || row.client || "") + '</div>';
+    html += '<div><span class="label">Magasin :</span> ' + esc(h.magasin || row.magasin || "") + '</div>';
+    html += '<div><span class="label">Service :</span> ' + esc(h.service || row.service || "") + '</div>';
+    html += '<div><span class="label">Date demande :</span> ' + esc(fmtJJMMYYYYdash(dateDemande)) + '</div>';
+    html += '<div><span class="label">Immat. :</span> ' + esc(h.immat || "") + '</div>';
+    html += '<div><span class="label">Véhicule :</span> ' + esc(h.vehicule || "") + '</div>';
+    html += '</div>';
 
-  let html = '';
-  html += '<div class="muted" style="margin-bottom:8px;">';
-  html += 'Dossier n° <strong>' + esc(String(row.no).padStart(5,"0")) + '</strong>';
-  html += '</div>';
+    html += '<div style="margin-bottom:10px;">';
+    html += '<span class="label">Statut actuel :</span> ';
+    html += '<span class="status-badge ' + badgeClass + '">' + esc(status) + '</span>';
+    html += '</div>';
 
-  html += '<div class="grid2">';
-  html += '<div><span class="label">Client :</span> ' + esc(h.client || row.client || "") + '</div>';
-  html += '<div><span class="label">Magasin :</span> ' + esc(h.magasin || row.magasin || "") + '</div>';
-  html += '<div><span class="label">Service :</span> ' + esc(service) + '</div>';
-  html += '<div><span class="label">Date demande :</span> ' + esc(fmtJJMMYYYYdash(dateDemande)) + '</div>';
-  html += '<div><span class="label">Immat. :</span> ' + esc(h.immat || "") + '</div>';
-  html += '<div><span class="label">Véhicule :</span> ' + esc(h.vehicule || "") + '</div>';
-  html += '</div>';
+    html += '<div class="muted">';
+    html += 'Utilisez ce lien uniquement lorsque la pièce est effectivement reçue au magasin.';
+    html += '</div>';
 
-  html += '<div style="margin-bottom:10px;">';
-  html += '<span class="label">Statut actuel :</span> ';
-  html += '<span class="status-badge ' + badgeClass + '">' + esc(status) + '</span>';
-  html += '</div>';
+    html += '<div class="actions">';
+    if (isReceived){
+      html += '<span class="msg ok">✅ Ce dossier est déjà au statut "Pièce reçu".</span>';
+    } else {
+      html += '<button id="btnValidate" type="button">Valider la réception de la pièce</button>';
+      html += '<span id="msgArea" class="msg"></span>';
+    }
+    html += '</div>';
 
-  const infoText =
-    service === "Arbre de Transmission"
-      ? "Utilisez ce lien lorsque la pièce est envoyée chez le fournisseur."
-      : "Utilisez ce lien uniquement lorsque la pièce est effectivement reçue au magasin.";
+    $content.innerHTML = html;
 
-  html += '<div class="muted">' + esc(infoText) + '</div>';
+    if (!isReceived){
+      const $btn = document.getElementById("btnValidate");
+      const $msg = document.getElementById("msgArea");
 
-  html += '<div class="actions">';
-  if (isDone){
-    const doneText =
-      service === "Arbre de Transmission"
-        ? '✅ Ce dossier est déjà au statut "Pièce envoyé chez Fournisseurs".'
-        : '✅ Ce dossier est déjà au statut "Pièce reçu".';
-    html += '<span class="msg ok">' + esc(doneText) + '</span>';
-  } else {
-    const btnLabel =
-      service === "Arbre de Transmission"
-        ? "Valider l'envoi de la pièce chez le fournisseur"
-        : "Valider la réception de la pièce";
-    html += '<button id="btnValidate" type="button">' + esc(btnLabel) + '</button>';
-    html += '<span id="msgArea" class="msg"></span>';
-  }
-  html += '</div>';
+      $btn.addEventListener("click", async function(){
+        $btn.disabled = true;
+        $msg.className = "msg";
+        $msg.innerHTML =
+          '<span class="loader" aria-hidden="true"></span> Validation en cours…';
 
-  $content.innerHTML = html;
-
-  if (!isDone){
-    const $btn = document.getElementById("btnValidate");
-    const $msg = document.getElementById("msgArea");
-
-    $btn.addEventListener("click", async function(){
-      $btn.disabled = true;
-      $msg.className = "msg";
-      $msg.innerHTML =
-        '<span class="loader" aria-hidden="true"></span> Validation en cours…';
-
-      try{
-        const resp = await fetch(
-          API_BASE + "/atelier/api/cases/" + encodeURIComponent(row.no) + "/status",
-          {
-            method: "POST",
-            headers: { "Content-Type":"application/json" },
-            body: JSON.stringify({
-              status: targetStatus,
-              estimation: estimation === "" ? "" : Number(estimation)
-            })
+        try{
+          const resp = await fetch(
+            API_BASE + "/atelier/api/cases/" + encodeURIComponent(row.no) + "/status",
+            {
+              method: "POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({
+                status: "Pièce reçu",
+                estimation: estimation === "" ? "" : Number(estimation)
+              })
+            }
+          );
+          if (!resp.ok){
+            throw new Error("HTTP " + resp.status);
           }
-        );
-        if (!resp.ok){
-          throw new Error("HTTP " + resp.status);
-        }
 
-        $msg.className = "msg ok";
-        const successText =
-          service === "Arbre de Transmission"
-            ? 'Merci, l\'envoi de la pièce chez le fournisseur est validé. Le statut du dossier est maintenant "Pièce envoyé chez Fournisseurs".'
-            : 'Merci, la réception de la pièce est validée. Le statut du dossier est maintenant "Pièce reçu".';
-        $msg.textContent = successText;
-        $btn.style.display = "none";
-      } catch(e){
-        console.error("Erreur validation statut:", e);
-        $btn.disabled = false;
-        $msg.className = "msg err";
-        $msg.textContent = "Erreur lors de la validation. Merci de réessayer.";
-      }
-    });
+          $msg.className = "msg ok";
+          $msg.textContent =
+            'Merci, la réception de la pièce est validée. Le statut du dossier est maintenant "Pièce reçu".';
+          $btn.style.display = "none";
+        } catch(e){
+          console.error("Erreur validation statut:", e);
+          $btn.disabled = false;
+          $msg.className = "msg err";
+          $msg.textContent = "Erreur lors de la validation. Merci de réessayer.";
+        }
+      });
+    }
   }
-}
   </script>
 </body>
 </html>
