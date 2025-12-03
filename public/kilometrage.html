@@ -32,16 +32,14 @@
       flex-wrap: wrap;
     }
 
-    .year-select,
-    .agency-select {
+    .year-select {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 0.9rem;
     }
 
-    .year-select select,
-    .agency-select select {
+    .year-select select {
       padding: 4px 8px;
       border-radius: 999px;
       border: 1px solid #e5e7eb;
@@ -220,6 +218,26 @@
       margin-bottom: 2px;
     }
 
+    .recap-container {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #fefce8;
+      font-size: 0.78rem;
+    }
+    .recap-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .recap-table th,
+    .recap-table td {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .recap-missing {
+      background: #fee2e2;
+    }
+
     #printContainer {
       display: none;
     }
@@ -327,6 +345,7 @@
 
     let currentAgence = "";
     let currentYear = new Date().getFullYear();
+    let currentData = [];
 
     const YEARS = [2025, 2026];
 
@@ -370,6 +389,7 @@
         infoLine.textContent = "";
         statusEl.textContent = "";
         monthsContainer.innerHTML = "";
+        currentData = [];
         return;
       }
 
@@ -392,6 +412,8 @@
 
         const data = await res.json().catch(() => []);
         console.log("Données kilométrage reçues :", data);
+        currentData = Array.isArray(data) ? data : [];
+
         monthsContainer.innerHTML = "";
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -447,6 +469,7 @@
         console.error("Erreur lors du chargement des données kilométriques :", err);
         statusEl.textContent =
           "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
+        currentData = [];
         buildMonthsTables({});
       }
     }
@@ -485,8 +508,17 @@
           printMonth(month, card);
         });
 
+        const recapBtn = document.createElement("button");
+        recapBtn.type = "button";
+        recapBtn.className = "print-btn";
+        recapBtn.textContent = "Récap";
+        recapBtn.addEventListener("click", () => {
+          toggleRecap(month, card, recapBtn);
+        });
+
         rightPart.appendChild(smallInfo);
         rightPart.appendChild(printBtn);
+        rightPart.appendChild(recapBtn);
 
         title.appendChild(leftTitle);
         title.appendChild(rightPart);
@@ -620,6 +652,11 @@
           card.appendChild(legendDiv);
         }
 
+        const recapDiv = document.createElement("div");
+        recapDiv.className = "recap-container";
+        recapDiv.style.display = "none";
+        card.appendChild(recapDiv);
+
         monthsContainer.appendChild(card);
       }
     }
@@ -669,6 +706,174 @@
       } else {
         window.print();
       }
+    }
+
+    function toggleRecap(monthIndex, monthCard, btn) {
+      const container = monthCard.querySelector(".recap-container");
+      if (!container) return;
+
+      const isVisible = container.style.display === "block";
+
+      if (!isVisible) {
+        buildRecapContent(monthIndex, container);
+        container.style.display = "block";
+        btn.textContent = "Fermer le récap";
+      } else {
+        container.style.display = "none";
+        btn.textContent = "Récap";
+      }
+    }
+
+    function buildRecapContent(monthIndex, container) {
+      container.innerHTML = "";
+
+      if (!currentData || !currentData.length) {
+        const p = document.createElement("p");
+        p.textContent = "Aucune donnée disponible pour ce mois.";
+        container.appendChild(p);
+        return;
+      }
+
+      const rows = [];
+
+      currentData.forEach((row) => {
+        let d = null;
+
+        if (row.date) {
+          const d1 = new Date(row.date);
+          if (!isNaN(d1)) d = d1;
+        }
+        if (!d && row.timestamp) {
+          const d2 = new Date(row.timestamp);
+          if (!isNaN(d2)) d = d2;
+        }
+        if (!d) return;
+
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        if (month !== monthIndex || year !== currentYear) return;
+
+        const day = d.getDate();
+        const dateStr =
+          String(day).padStart(2, "0") +
+          "/" +
+          String(monthIndex).padStart(2, "0") +
+          "/" +
+          currentYear;
+
+        const tournee = row.tournee || row.codeTournee || "Tournée inconnue";
+        const chauffeur = row.chauffeur || row.codeChauffeur || "Inconnu";
+
+        const km8h  = row.km8h;
+        const km12h = row.km12h;
+        const km14h = row.km14h;
+        const km18h = row.km18h;
+        const total = row.km || "";
+
+        rows.push({
+          date: dateStr,
+          tournee,
+          chauffeur,
+          km8h,
+          km12h,
+          km14h,
+          km18h,
+          total
+        });
+      });
+
+      if (!rows.length) {
+        const p = document.createElement("p");
+        p.textContent = "Aucune ligne de saisie pour ce mois.";
+        container.appendChild(p);
+        return;
+      }
+
+      const title = document.createElement("div");
+      title.className = "recap-title";
+      title.textContent =
+        "Récapitulatif des saisies – " +
+        monthNames[monthIndex - 1] +
+        " " +
+        currentYear +
+        " :";
+      container.appendChild(title);
+
+      const table = document.createElement("table");
+      table.className = "recap-table";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      ["Date", "Tournée", "Chauffeur", "8H", "12H", "14H", "18H", "Total"].forEach(
+        (label) => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headerRow.appendChild(th);
+        }
+      );
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+
+      rows
+        .sort((a, b) => {
+          if (a.date === b.date) {
+            if (a.tournee === b.tournee) {
+              return a.chauffeur.localeCompare(b.chauffeur, "fr");
+            }
+            return a.tournee.localeCompare(b.tournee, "fr");
+          }
+          const [da, ma, ya] = a.date.split("/").map(Number);
+          const [db, mb, yb] = b.date.split("/").map(Number);
+          const dateA = new Date(ya, ma - 1, da);
+          const dateB = new Date(yb, mb - 1, db);
+          return dateA - dateB;
+        })
+        .forEach((item) => {
+          const tr = document.createElement("tr");
+
+          const tdDate = document.createElement("td");
+          tdDate.textContent = item.date;
+          tr.appendChild(tdDate);
+
+          const tdTournee = document.createElement("td");
+          tdTournee.textContent = item.tournee;
+          tr.appendChild(tdTournee);
+
+          const tdChauffeur = document.createElement("td");
+          tdChauffeur.textContent = item.chauffeur;
+          tr.appendChild(tdChauffeur);
+
+          function addKmCell(value) {
+            const td = document.createElement("td");
+            const empty =
+              value === null ||
+              value === "" ||
+              typeof value === "undefined";
+            if (empty) {
+              td.textContent = "";
+              td.classList.add("recap-missing");
+            } else {
+              td.textContent = value;
+            }
+            return td;
+          }
+
+          tr.appendChild(addKmCell(item.km8h));
+          tr.appendChild(addKmCell(item.km12h));
+          tr.appendChild(addKmCell(item.km14h));
+          tr.appendChild(addKmCell(item.km18h));
+
+          const tdTotal = document.createElement("td");
+          tdTotal.textContent = item.total || "";
+          tr.appendChild(tdTotal);
+
+          tbody.appendChild(tr);
+        });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
     }
 
     yearSelect.addEventListener("change", () => {
