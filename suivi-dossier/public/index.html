@@ -354,7 +354,6 @@ function badge(status){
     "Pièce reçu": "s-2",
     "Travaux en cours": "s-3",
     "Renvoyé": "s-4",
-
     "Pièce envoyé chez Fournisseurs": "s-2",
     "Pièce renvoyé à l'agence": "s-4"
   };
@@ -379,6 +378,23 @@ const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet",
 let YEAR_FILTER = '';
 let MONTH_FILTER = '';
 let STATUS_FILTER = ''; // "" = tous les statuts
+
+const SERVICES_STE = [
+  "Rectification Culasse",
+  "Contrôle injection Diesel",
+  "Contrôle injection Essence"
+];
+
+function matchesServiceByView(row){
+  const svc = (row.service || "").trim();
+  if (VIEW_MODE === "STE") {
+    return SERVICES_STE.includes(svc);
+  }
+  if (VIEW_MODE === "BG") {
+    return svc === "Arbre de Transmission";
+  }
+  return true;
+}
 
 function buildMonths(year){
   const ctn = document.getElementById(`months-${year}`); if(!ctn) return;
@@ -489,7 +505,8 @@ function draw(){
   list
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
-           .filter(r => {
+    .filter(r => matchesServiceByView(r))              
+    .filter(r => {
       if (!q) return true;
       const noStr   = String(r.no).padStart(5,'0');
       const compte  = (r.compte || "").toLowerCase();
@@ -524,18 +541,17 @@ function draw(){
           </div>
         </td>
         <td class="col-actions nowrap">
-  <div class="actions">
-    <select class="statusSel">
-      ${getStatusLabelsForService(r.service).map(lbl => `
-        <option value="${lbl}" ${r.status === lbl ? "selected" : ""}>
-          ${displayStatusLabel(lbl)}
-        </option>
-      `).join("")}
-    </select>
-    <button class="btnSave">Valider</button>
-  </div>
-</td>
-
+          <div class="actions">
+            <select class="statusSel">
+              ${getStatusLabelsForService(r.service).map(lbl => `
+                <option value="${lbl}" ${r.status === lbl ? "selected" : ""}>
+                  ${displayStatusLabel(lbl)}
+                </option>
+              `).join("")}
+            </select>
+            <button class="btnSave">Valider</button>
+          </div>
+        </td>
       `;
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
@@ -855,7 +871,7 @@ $q.addEventListener("input", draw);
     if (e.key === "Enter") handleLogin();
   });
 
-  if (!PASS_FULL && !PASS_LIMITED){
+  if (!PASS_STE && !PASS_BG && !PASS_LIMITED){
     overlay.style.display = "none";
     startApp();
   }
