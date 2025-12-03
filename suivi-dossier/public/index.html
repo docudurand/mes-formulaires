@@ -244,7 +244,7 @@
       <button type="button" class="statusBtn" data-status="Demande envoyé">Demande envoyé</button>
       <button type="button" class="statusBtn" data-status="Pièce reçu">Pièce reçu</button>
       <button type="button" class="statusBtn" data-status="Travaux en cours">Travaux en cours</button>
-      <button type="button" class="statusBtn" data-status="Renvoyé">Renvoyé</button>
+      <button type="button" class="statusBtn" data-status="Renvoyé">Pièce Renvoyé</button>
     </div>
 
     <div class="legend" id="legend"></div>
@@ -327,9 +327,12 @@ function setTableLoading(msg){
 }
 
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
+function displayStatusLabel(status){
+  return status === "Renvoyé" ? "Pièce Renvoyé" : status;
+}
 function badge(status){
   const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
-  return `<span class="badge ${m}">${status}</span>`;
+  return `<span class="badge ${m}">${displayStatusLabel(status)}</span>`;
 }
 function p2(n){ return String(n).padStart(2,"0"); }
 function parseDate(v){
@@ -488,8 +491,12 @@ function draw(){
         <td class="col-actions nowrap">
           <div class="actions">
             <select class="statusSel">
-              ${LABELS.map(lbl=>`<option ${r.status===lbl?"selected":""}>${lbl}</option>`).join("")}
-            </select>
+  ${LABELS.map(lbl=>`
+    <option value="${lbl}" ${r.status===lbl?"selected":""}>
+      ${displayStatusLabel(lbl)}
+    </option>
+  `).join("")}
+</select>
             <button class="btnSave">Valider</button>
           </div>
         </td>
@@ -544,8 +551,8 @@ function draw(){
     : 'Toutes années';
 
   const statusText = STATUS_FILTER
-    ? ` • Statut : ${STATUS_FILTER}`
-    : ' • Statut : Tous';
+  ? ` • Statut : ${displayStatusLabel(STATUS_FILTER)}`
+  : ' • Statut : Tous';
 
   $legend.textContent = `${count} dossier(s) • ${ymText}${statusText}`;
 
@@ -585,7 +592,7 @@ function openDetails(row){
       <div><span class="label">N° dossier :</span> ${esc(String(row.no).padStart(5,'0'))}</div>
       <div><span class="label">Date :</span> ${fmtJJMMYYYYdash(row.demandeDate)}</div>
       <div><span class="label">Magasin :</span> ${esc(h.magasin||row.magasin||"")}</div>
-      <div><span class="label">Statut :</span> ${esc(row.status||"")}</div>
+      <div><span class="label">Statut :</span> ${esc(displayStatusLabel(row.status||""))}</div>
       <div><span class="label">Client :</span> ${esc(h.client||row.client||"")}</div>
       <div><span class="label">N° de compte :</span> ${esc(h.compte||row.compte||"")}</div>
       <div><span class="label">Téléphone :</span> ${esc(h.telephone||"")}</div>
