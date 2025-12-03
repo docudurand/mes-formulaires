@@ -32,7 +32,7 @@ router.get("/config.js", (_req, res) => {
       ATELIER_SUIVI_PASS_BG: ${JSON.stringify(SUIVI_PASS_BG)},
       ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
     };`
-  );
+  );Service
 });
 
 router.use(express.static(publicDir, {

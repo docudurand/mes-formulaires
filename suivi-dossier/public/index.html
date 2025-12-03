@@ -221,15 +221,23 @@
   <h1>Suivi des dossiers Atelier</h1>
 
   <div class="toolbar">
-    <label>Filtrer magasin :
-      <select id="filterMag">
-        <option value="">Tous</option>
-        <option>Annemasse</option><option>Bourgoin</option><option>Chasse sur Rhone</option><option>Chassieu</option><option>Gleize</option><option>La Motte Servolex</option><option>Miribel</option>
-        <option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
-      </select>
-    </label>
-    <input id="q" type="search" placeholder="Rechercher (n°, compte, client)" style="min-width:280px" />
-  </div>
+  <label>Filtrer magasin :
+    <select id="filterMag">
+      <option value="">Tous</option>
+      <option>Annemasse</option><option>Bourgoin</option><option>Chasse sur Rhone</option><option>Chassieu</option><option>Gleize</option><option>La Motte Servolex</option><option>Miribel</option>
+      <option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
+    </select>
+  </label>
+
+  <label id="serviceFilterContainer" style="display:none;">
+    Filtrer service :
+    <select id="filterService">
+      <option value="">Tous</option>
+    </select>
+  </label>
+
+  <input id="q" type="search" placeholder="Rechercher (n°, compte, client)" style="min-width:280px" />
+</div>
 
   <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
     <div class="yearTabs" role="tablist" aria-label="Années">
@@ -312,6 +320,8 @@ const API_BASE =
 
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
+const $filterService = document.getElementById("filterService");
+const $serviceFilterContainer = document.getElementById("serviceFilterContainer");
 const $q      = document.getElementById("q");
 const $mask   = document.getElementById("mask");
 const $btnClose = document.getElementById("btnClose");
@@ -468,6 +478,23 @@ function matchesYearMonth(d){
   if (!MONTH_FILTER || MONTH_FILTER==='all') return true;
   return (d.getMonth()+1) === Number(MONTH_FILTER);
 }
+function buildServiceFilterOptions() {
+  if (!$filterService) return;
+
+  const services = new Set();
+  rows.forEach(r => {
+    const svc = (r.service || "").trim();
+    if (svc) services.add(svc);
+  });
+
+  const current = $filterService.value;
+  let html = '<option value="">Tous</option>';
+  Array.from(services).sort().forEach(s => {
+    const selected = (s === current) ? ' selected' : '';
+    html += `<option value="${s}"${selected}>${s}</option>`;
+  });
+  $filterService.innerHTML = html;
+}
 
 function applyLimitedView(){
   if (!LIMITED_VIEW) return;
@@ -494,18 +521,28 @@ function draw(){
 
   const mag = $filter.value.trim().toLowerCase();
   const q = $q.value.trim().toLowerCase();
+  const serviceFilterValue =
+    (LIMITED_VIEW && $filterService)
+      ? $filterService.value.trim()
+      : "";
 
-  const list = [...rows].sort((a,b)=>{
-    const da = parseDate(a.demandeDate), db = parseDate(b.demandeDate);
-    return (db?db.getTime():0) - (da?da.getTime():0);
+  const list = [...rows].sort((a, b) => {
+    const na = parseInt(String(a.no).replace(/\D/g, ''), 10) || 0;
+    const nb = parseInt(String(b.no).replace(/\D/g, ''), 10) || 0;
+    return nb - na;
   });
+
 
   let count = 0;
   $tbody.innerHTML = "";
-  list
+    list
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
     .filter(r => matchesServiceByView(r))              
+    .filter(r => {
+      if (!serviceFilterValue) return true;
+      return (r.service || "").trim() === serviceFilterValue;
+    })
     .filter(r => {
       if (!q) return true;
       const noStr   = String(r.no).padStart(5,'0');
@@ -523,6 +560,7 @@ function draw(){
       if (!STATUS_FILTER) return true;
       return (r.status || "") === STATUS_FILTER;
     })
+
     .forEach(r => {
       count++;
       const tr = document.createElement("tr");
@@ -773,13 +811,29 @@ function load(){
       console.error(e);
       $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
     })
-    .finally(()=>{
+        .finally(()=>{
       IS_LOADING = false;
+
+      if (LIMITED_VIEW) {
+        if ($serviceFilterContainer) {
+          $serviceFilterContainer.style.display = "inline-block";
+        }
+        buildServiceFilterOptions();
+      } else {
+        if ($serviceFilterContainer) {
+          $serviceFilterContainer.style.display = "none";
+        }
+      }
+
       draw();
     });
 }
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
+
+if ($filterService) {
+  $filterService.addEventListener("change", draw);
+}
 
 (function initLogin(){
   const overlay = document.getElementById("loginOverlay");
