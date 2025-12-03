@@ -228,7 +228,7 @@
         <option>Renage</option><option>Rives</option><option>Seynod</option><option>St Egreve</option><option>St-Jean-Bonnefonds</option>
       </select>
     </label>
-    <input id="q" type="search" placeholder="Rechercher (n°, magasin, compte, client, service…)" style="min-width:280px" />
+    <input id="q" type="search" placeholder="Rechercher (n°, compte, client)" style="min-width:280px" />
   </div>
 
   <div class="yearbar" aria-label="Filtre par année et mois (Date de la demande)">
@@ -461,11 +461,18 @@ function draw(){
   list
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
-    .filter(r => {
+        .filter(r => {
       if (!q) return true;
-      const s = [String(r.no).padStart(5,'0'), r.magasin, r.compte, r.client, r.service, fmtJJMMYYYYdash(r.demandeDate)]
-        .join(' ').toLowerCase();
-      return s.includes(q);
+
+      const noStr   = String(r.no).padStart(5,'0');
+      const compte  = (r.compte || "").toLowerCase();
+      const client  = (r.client || "").toLowerCase();
+      const isNum   = /^\d+$/.test(q);
+
+      if (isNum) {
+        return noStr.includes(q) || compte.includes(q) || client.includes(q);
+      }
+      return compte.includes(q) || client.includes(q);
     })
     .filter(r => {
       if (!STATUS_FILTER) return true;
