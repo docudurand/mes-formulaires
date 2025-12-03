@@ -461,17 +461,17 @@ function draw(){
   list
     .filter(r => !mag || (r.magasin||"").toLowerCase() === mag)
     .filter(r => matchesYearMonth(parseDate(r.demandeDate)))
-        .filter(r => {
+           .filter(r => {
       if (!q) return true;
-
       const noStr   = String(r.no).padStart(5,'0');
       const compte  = (r.compte || "").toLowerCase();
       const client  = (r.client || "").toLowerCase();
       const isNum   = /^\d+$/.test(q);
 
       if (isNum) {
-        return noStr.includes(q) || compte.includes(q) || client.includes(q);
+        return noStr.includes(q);
       }
+
       return compte.includes(q) || client.includes(q);
     })
     .filter(r => {
