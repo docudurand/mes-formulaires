@@ -298,9 +298,12 @@
 
 <script>
 const cfgSuivi = window.__SUIVI_CFG || {};
-const PASS_FULL    = cfgSuivi.ATELIER_SUIVI_PASS_FULL    || "";
+const PASS_STE     = cfgSuivi.ATELIER_SUIVI_PASS_STE     || "";
+const PASS_BG      = cfgSuivi.ATELIER_SUIVI_PASS_BG      || "";
 const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
-let LIMITED_VIEW   = false;
+
+let LIMITED_VIEW = false;
+let VIEW_MODE    = "ALL";
 
 const API_BASE =
   (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
@@ -327,13 +330,38 @@ function setTableLoading(msg){
 }
 
 const LABELS = ["Demande envoyé","Pièce reçu","Travaux en cours","Renvoyé"];
+
+function getStatusLabelsForService(service) {
+  const s = (service || "").trim();
+  if (s === "Arbre de Transmission") {
+    return [
+      "Demande envoyé",
+      "Pièce envoyé chez Fournisseurs",
+      "Pièce renvoyé à l'agence"
+    ];
+  }
+  return LABELS;
+}
+
 function displayStatusLabel(status){
-  return status === "Renvoyé" ? "Pièce Renvoyé" : status;
+  if (status === "Renvoyé") return "Pièce Renvoyé";
+  return status;
 }
+
 function badge(status){
-  const m = {"Demande envoyé":"s-1","Pièce reçu":"s-2","Travaux en cours":"s-3","Renvoyé":"s-4"}[status] || "s-1";
-  return `<span class="badge ${m}">${displayStatusLabel(status)}</span>`;
+  const map = {
+    "Demande envoyé": "s-1",
+    "Pièce reçu": "s-2",
+    "Travaux en cours": "s-3",
+    "Renvoyé": "s-4",
+
+    "Pièce envoyé chez Fournisseurs": "s-2",
+    "Pièce renvoyé à l'agence": "s-4"
+  };
+  const cls = map[status] || "s-1";
+  return `<span class="badge ${cls}">${displayStatusLabel(status)}</span>`;
 }
+
 function p2(n){ return String(n).padStart(2,"0"); }
 function parseDate(v){
   if (!v && v!==0) return null;
@@ -496,17 +524,18 @@ function draw(){
           </div>
         </td>
         <td class="col-actions nowrap">
-          <div class="actions">
-            <select class="statusSel">
-  ${LABELS.map(lbl=>`
-    <option value="${lbl}" ${r.status===lbl?"selected":""}>
-      ${displayStatusLabel(lbl)}
-    </option>
-  `).join("")}
-</select>
-            <button class="btnSave">Valider</button>
-          </div>
-        </td>
+  <div class="actions">
+    <select class="statusSel">
+      ${getStatusLabelsForService(r.service).map(lbl => `
+        <option value="${lbl}" ${r.status === lbl ? "selected" : ""}>
+          ${displayStatusLabel(lbl)}
+        </option>
+      `).join("")}
+    </select>
+    <button class="btnSave">Valider</button>
+  </div>
+</td>
+
       `;
 
       tr.querySelector(".btnView").addEventListener("click", ()=> openDetails(r));
@@ -763,14 +792,16 @@ $q.addEventListener("input", draw);
   function handleLogin(){
     const v = (input.value || "").trim();
 
-    if (!PASS_FULL && !PASS_LIMITED){
+    if (!PASS_STE && !PASS_BG && !PASS_LIMITED){
       LIMITED_VIEW = false;
+      VIEW_MODE = "ALL";
       startApp();
       return;
     }
 
-    if (PASS_FULL && v === PASS_FULL){
+    if (PASS_STE && v === PASS_STE){
       LIMITED_VIEW = false;
+      VIEW_MODE = "STE";
 
       try {
         if (remember && remember.checked) {
@@ -783,8 +814,26 @@ $q.addEventListener("input", draw);
       startApp();
       return;
     }
+
+    if (PASS_BG && v === PASS_BG){
+      LIMITED_VIEW = false;
+      VIEW_MODE = "BG";
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
+      startApp();
+      return;
+    }
+
     if (PASS_LIMITED && v === PASS_LIMITED){
       LIMITED_VIEW = true;
+      VIEW_MODE = "ALL";
 
       try {
         if (remember && remember.checked) {
@@ -797,6 +846,7 @@ $q.addEventListener("input", draw);
       startApp();
       return;
     }
+
     errBox.textContent = "Mot de passe incorrect.";
   }
 
