@@ -157,12 +157,15 @@ function gmailTransport() {
   if (!user || !pass) return null;
   return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
 }
+
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
+  "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,
   "__DEFAULT__": process.env.MAIL_TO || process.env.MAIL_CG || process.env.GMAIL_USER || ""
 };
+
 function destForService(service = ""){
   return DEST_ATELIER[service] || DEST_ATELIER.__DEFAULT__;
 }

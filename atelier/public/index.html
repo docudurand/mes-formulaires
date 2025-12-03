@@ -211,7 +211,7 @@
 
       <div class="section-title">Commentaires</div>
       <div>
-        <label for="commentaires">Commentaires (optionnel)</label>
+        <label for="commentaires" id="labelCommentaires">Commentaires (optionnel)</label>
         <textarea id="commentaires" name="commentaires" rows="4" placeholder="Vos remarques..."></textarea>
       </div>
 
@@ -359,7 +359,29 @@
     el('nbInjecteurs').required = false;
   }
 
-  el('service').addEventListener('change', toggleCulasseFields);
+  function updateCommentFieldForService() {
+    const service = el('service').value;
+    const textarea = el('commentaires');
+    const label = el('labelCommentaires');
+    if (!textarea || !label) return;
+
+    if (service === 'Arbre de Transmission') {
+      label.innerHTML = 'LIBELLE DES TRAVAUX DEMANDES <span class="req">*</span>';
+      textarea.required = true;
+      textarea.setAttribute('aria-required', 'true');
+      textarea.placeholder = "Décrivez précisément les travaux demandés…";
+    } else {
+      label.textContent = 'Commentaires (optionnel)';
+      textarea.required = false;
+      textarea.removeAttribute('aria-required');
+      textarea.placeholder = "Vos remarques...";
+    }
+  }
+
+  el('service').addEventListener('change', ()=>{
+    toggleCulasseFields();
+    updateCommentFieldForService();
+  });
   ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
   const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
@@ -563,6 +585,7 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     toggleCulasseFields();
+    updateCommentFieldForService();
     loadConfig();
   });
   </script>
