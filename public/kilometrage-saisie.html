@@ -112,6 +112,32 @@
       color: #b91c1c;
     }
 
+    .resume {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #ecfeff;
+      font-size: 0.9rem;
+    }
+    .resume-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .resume-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 10px;
+    }
+    .resume-item {
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: #e5f3ff;
+    }
+    .resume-item strong {
+      display: inline-block;
+      min-width: 2.5em;
+    }
+
     @media (max-width: 480px) {
       .card {
         margin: 12px;
@@ -154,6 +180,16 @@
       <label for="commentaire">Commentaire (optionnel)</label>
       <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
 
+      <div id="resumeBloc" class="resume">
+        <div class="resume-title">Résumé des relevés de la journée</div>
+        <div class="resume-grid">
+          <div class="resume-item"><strong>8H :</strong> <span id="resume8h">-</span></div>
+          <div class="resume-item"><strong>12H :</strong> <span id="resume12h">-</span></div>
+          <div class="resume-item"><strong>14H :</strong> <span id="resume14h">-</span></div>
+          <div class="resume-item"><strong>18H :</strong> <span id="resume18h">-</span></div>
+        </div>
+      </div>
+
       <button type="submit" id="submitBtn">Valider</button>
     </form>
 
@@ -177,6 +213,11 @@
     const dateInput = document.getElementById("date");
     const horaireSelect = document.getElementById("horaire");
     const kmInput = document.getElementById("km");
+
+    const resume8hEl = document.getElementById("resume8h");
+    const resume12hEl = document.getElementById("resume12h");
+    const resume14hEl = document.getElementById("resume14h");
+    const resume18hEl = document.getElementById("resume18h");
 
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -204,6 +245,45 @@
     }
 
     buildInfo();
+
+    async function loadResume() {
+      resume8hEl.textContent = "-";
+      resume12hEl.textContent = "-";
+      resume14hEl.textContent = "-";
+      resume18hEl.textContent = "-";
+
+      const dateValue = dateInput.value;
+      if (!dateValue || !codeTournee) {
+        return;
+      }
+
+      const qs = new URLSearchParams({
+        mode: "resume",
+        agence: agence || codeAgence || "",
+        codeAgence: codeAgence || agence || "",
+        codeTournee: codeTournee,
+        date: dateValue
+      });
+
+      try {
+        const res = await fetch("/api/kilometrage/data?" + qs.toString());
+        const data = await res.json().catch(() => ({}));
+
+        if (!data || data.found === false) {
+          return;
+        }
+
+        if (data.km8h != null)  resume8hEl.textContent  = data.km8h;
+        if (data.km12h != null) resume12hEl.textContent = data.km12h;
+        if (data.km14h != null) resume14hEl.textContent = data.km14h;
+        if (data.km18h != null) resume18hEl.textContent = data.km18h;
+      } catch (err) {
+        console.error("Erreur chargement résumé :", err);
+      }
+    }
+
+    window.addEventListener("load", loadResume);
+    dateInput.addEventListener("change", loadResume);
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -234,7 +314,6 @@
       }
 
       const kmNumber = Number(kmValue);
-
       const commentaireEncoded = `@${horaireValue}@${commentaireUser}`;
 
       const payload = {
@@ -272,6 +351,8 @@
         kmInput.value = "";
         document.getElementById("commentaire").value = "";
         kmInput.focus();
+
+        loadResume();
       } catch (err) {
         console.error(err);
         messageEl.textContent =
