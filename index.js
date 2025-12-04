@@ -14,24 +14,30 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
-const salesMap = {
-  'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
-};
+let salesMap = {};
+try {
+  const raw = process.env.SALES_MAP_JSON;
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      salesMap = parsed;
+    }
+  }
+} catch {
+  salesMap = {};
+}
 
 function getFromName(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
-  if (s.includes('bosch')) return 'Bon de Commande BOSCH';
-  if (s.includes('lub'))   return 'Bon de Commande LUB';
+  if (s.includes('bosch')) return 'Bon de Commande BOSCH Janvier 2026';
+  if (s.includes('lub'))   return 'Bon de Commande LUB 2026';
   return 'Bon de Commande';
 }
 
 function getSubjectPrefix(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
-  if (s.includes('bosch')) return 'BDC - BOSCH';
-  if (s.includes('lub'))   return 'BDC - LUB';
+  if (s.includes('bosch')) return 'BOSCH JANVIER 2026';
+  if (s.includes('lub'))   return 'LUB 2026';
   return 'BDC';
 }
 
@@ -56,7 +62,7 @@ router.post('/send-order', async (req, res) => {
   }
 
   const today = new Date();
-  const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
+  const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}`;
 
   const safeClient = (client || 'Client inconnu')
     .replace(/[^\w\s-]/g, ' ')
