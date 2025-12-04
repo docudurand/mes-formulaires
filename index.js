@@ -14,12 +14,18 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
-const salesMap = {
-  'Casti Jeremy':   'comvl2miribel@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Trenti Anthony': 'comvlchassieu@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Bazoge Ilona':   'comvl2chassieu@durandservices.fr,magvl4gleize@durandservices.fr',
-  'Barret Olivier': 'comvlmiribel@durandservices.fr,magvl4gleize@durandservices.fr',
-};
+let salesMap = {};
+try {
+  const raw = process.env.SALES_MAP_JSON;
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      salesMap = parsed;
+    }
+  }
+} catch {
+  salesMap = {};
+}
 
 function getFromName(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
