@@ -412,41 +412,48 @@ app.use((req, res, next) => {
   next();
 });
 
-const APPS_SCRIPT_URL = process.env.TELEVENTE_APPS_SCRIPT_URL || "";
+const APPS_SCRIPT_URL_LUB   = process.env.TELEVENTE_APPS_SCRIPT_URL_LUB   || "";
+const APPS_SCRIPT_URL_BOSCH = process.env.TELEVENTE_APPS_SCRIPT_URL_BOSCH || "";
 
-app.get("/api/sheets/televente", async (req, res) => {
-  if (!APPS_SCRIPT_URL) {
-    return res.status(500).json({
-      error: "not_configured",
-      message: "TELEVENTE_APPS_SCRIPT_URL is not set"
-    });
-  }
-
-  const tryOnce = async () =>
-    axios.get(APPS_SCRIPT_URL, {
-      timeout: 12000,
-      params: req.query,
-      headers: { "User-Agent": "televente-proxy/1.0" },
-    });
-
-  try {
-    let r;
-    try {
-      r = await tryOnce();
-    } catch {
-      await new Promise(t => setTimeout(t, 400));
-      r = await tryOnce();
+function makeTeleventeProxy(appsScriptUrl) {
+  return async (req, res) => {
+    if (!appsScriptUrl) {
+      return res.status(500).json({
+        error: "not_configured",
+        message: "Apps Script URL is not set for this televente proxy"
+      });
     }
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "no-store");
-    res.status(200).json(r.data);
-  } catch (e) {
-    res.status(502).json({
-      error: "proxy_failed",
-      message: e?.message || "Bad gateway",
-    });
-  }
-});
+
+    const tryOnce = async () =>
+      axios.get(appsScriptUrl, {
+        timeout: 12000,
+        params: req.query,
+        headers: { "User-Agent": "televente-proxy/1.0" },
+      });
+
+    try {
+      let r;
+      try {
+        r = await tryOnce();
+      } catch {
+        await new Promise(t => setTimeout(t, 400));
+        r = await tryOnce();
+      }
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).json(r.data);
+    } catch (e) {
+      res.status(502).json({
+        error: "proxy_failed",
+        message: e?.message || "Bad gateway",
+      });
+    }
+  };
+}
+
+app.get("/api/sheets/televente-lub",   makeTeleventeProxy(APPS_SCRIPT_URL_LUB));
+app.get("/api/sheets/televente-bosch", makeTeleventeProxy(APPS_SCRIPT_URL_BOSCH));
+
 
 app.get("/stats/counters", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
