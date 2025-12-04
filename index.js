@@ -56,7 +56,17 @@ router.post('/send-order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'no_pdf' });
   }
 
-  const to = salesMap[salesperson] || process.env.DEFAULT_TO;
+  // Détermination du destinataire.
+  // On tente d'abord via le mapping JSON (par commercial), puis via DEFAULT_TO, puis via MAIL_TO.
+  let to = '';
+  if (salesperson && salesMap[salesperson]) {
+    to = salesMap[salesperson];
+  } else if (process.env.DEFAULT_TO) {
+    to = process.env.DEFAULT_TO;
+  } else if (process.env.MAIL_TO) {
+    // MAIL_TO est la variable historique pour les destinataires par défaut
+    to = process.env.MAIL_TO;
+  }
   if (!to) {
     return res.status(400).json({ success: false, error: 'no_recipient' });
   }
