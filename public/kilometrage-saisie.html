@@ -138,6 +138,28 @@
       min-width: 2.5em;
     }
 
+    .resume-loader {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #2563eb;
+      margin-top: 10px;
+    }
+    .resume-loader-spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #bfdbfe;
+      border-top-color: #2563eb;
+      animation: resume-spin 0.7s linear infinite;
+    }
+    @keyframes resume-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     @media (max-width: 480px) {
       .card {
         margin: 12px;
@@ -180,6 +202,12 @@
       <label for="commentaire">Commentaire (optionnel)</label>
       <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
 
+      <!-- Loader au-dessus du résumé -->
+      <div id="resumeLoader" class="resume-loader">
+        <div class="resume-loader-spinner"></div>
+        <span>Chargement des relevés...</span>
+      </div>
+
       <div id="resumeBloc" class="resume">
         <div class="resume-title">Résumé des relevés de la journée</div>
         <div class="resume-grid">
@@ -218,6 +246,7 @@
     const resume12hEl = document.getElementById("resume12h");
     const resume14hEl = document.getElementById("resume14h");
     const resume18hEl = document.getElementById("resume18h");
+    const resumeLoaderEl = document.getElementById("resumeLoader");
 
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -246,6 +275,10 @@
 
     buildInfo();
 
+    function setResumeLoading(isLoading) {
+      resumeLoaderEl.style.display = isLoading ? "flex" : "none";
+    }
+
     async function loadResume() {
       resume8hEl.textContent  = "-";
       resume12hEl.textContent = "-";
@@ -253,7 +286,12 @@
       resume18hEl.textContent = "-";
 
       const dateValue = dateInput.value;
-      if (!dateValue || !codeTournee) return;
+      if (!dateValue || !codeTournee) {
+        setResumeLoading(false);
+        return;
+      }
+
+      setResumeLoading(true);
 
       const year = dateValue.slice(0, 4);
 
@@ -326,6 +364,8 @@
         if (ligne.km18h !== null && ligne.km18h !== "") resume18hEl.textContent = ligne.km18h;
       } catch (err) {
         console.error("Erreur chargement résumé (via /data) :", err);
+      } finally {
+        setResumeLoading(false);
       }
     }
 
