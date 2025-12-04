@@ -247,40 +247,62 @@
     buildInfo();
 
     async function loadResume() {
-      // reset affichage
-      resume8hEl.textContent = "-";
-      resume12hEl.textContent = "-";
-      resume14hEl.textContent = "-";
-      resume18hEl.textContent = "-";
+  resume8hEl.textContent  = "-";
+  resume12hEl.textContent = "-";
+  resume14hEl.textContent = "-";
+  resume18hEl.textContent = "-";
 
-      const dateValue = dateInput.value;
-      if (!dateValue || !codeTournee) return;
+  const dateValue = dateInput.value;
+  if (!dateValue || !codeTournee) return;
 
-      const qs = new URLSearchParams({
-        agence: agence || codeAgence || "",
-        codeAgence: codeAgence || agence || "",
-        codeTournee: codeTournee,
-        date: dateValue
-      });
+  const year = dateValue.slice(0, 4);
 
-      try {
-        const res = await fetch("/api/kilometrage/resume?" + qs.toString());
-        const data = await res.json().catch(() => null);
+  const qs = new URLSearchParams({
+    agence: agence || codeAgence || "",
+    year: year
+  });
 
-        console.log("Résumé journée reçu :", data);
+  try {
+    const res = await fetch("/api/kilometrage/data?" + qs.toString());
+    const data = await res.json().catch(() => null);
 
-        if (!data || data.found === false) {
-          return;
-        }
+    console.log("Données reçues pour résumé :", data);
 
-        if (data.km8h != null)  resume8hEl.textContent  = data.km8h;
-        if (data.km12h != null) resume12hEl.textContent = data.km12h;
-        if (data.km14h != null) resume14hEl.textContent = data.km14h;
-        if (data.km18h != null) resume18hEl.textContent = data.km18h;
-      } catch (err) {
-        console.error("Erreur chargement résumé :", err);
-      }
+    if (!Array.isArray(data) || data.length === 0) {
+      console.log("Aucune donnée trouvée pour cette agence / année");
+      return;
     }
+
+    const dateKey        = dateValue;
+    const agenceKey      = (codeAgence || agence || "").toUpperCase();
+    const codeTourneeKey = (codeTournee || "").toString().trim();
+
+    const ligne = data.find((row) => {
+      const rowAgence = (row.codeAgence || row.agence || "").toString().toUpperCase();
+      const rowCodeTournee = (row.codeTournee || "").toString().trim();
+      const rowDate = (row.date || "").toString().slice(0, 10); // "yyyy-MM-dd"
+
+      return (
+        rowAgence === agenceKey &&
+        rowCodeTournee === codeTourneeKey &&
+        rowDate === dateKey
+      );
+    });
+
+    console.log("Ligne trouvée pour résumé :", ligne);
+
+    if (!ligne) {
+      return;
+    }
+
+    if (ligne.km8h  !== null && ligne.km8h  !== "") resume8hEl.textContent  = ligne.km8h;
+    if (ligne.km12h !== null && ligne.km12h !== "") resume12hEl.textContent = ligne.km12h;
+    if (ligne.km14h !== null && ligne.km14h !== "") resume14hEl.textContent = ligne.km14h;
+    if (ligne.km18h !== null && ligne.km18h !== "") resume18hEl.textContent = ligne.km18h;
+  } catch (err) {
+    console.error("Erreur chargement résumé (via /data) :", err);
+  }
+}
 
     window.addEventListener("load", loadResume);
     dateInput.addEventListener("change", loadResume);
