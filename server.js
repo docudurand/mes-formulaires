@@ -412,47 +412,56 @@ app.use((req, res, next) => {
   next();
 });
 
-const APPS_SCRIPT_URL_LUB   = process.env.TELEVENTE_APPS_SCRIPT_URL_LUB   || "";
-const APPS_SCRIPT_URL_BOSCH = process.env.TELEVENTE_APPS_SCRIPT_URL_BOSCH || "";
+const APPS_SCRIPT_URL_DEFAULT = process.env.TELEVENTE_APPS_SCRIPT_URL || "";
+const APPS_SCRIPT_URL_LUB     = process.env.TELEVENTE_LUB_APPS_SCRIPT_URL   || APPS_SCRIPT_URL_DEFAULT;
+const APPS_SCRIPT_URL_BOSCH   = process.env.TELEVENTE_BOSCH_APPS_SCRIPT_URL || APPS_SCRIPT_URL_DEFAULT;
 
-function makeTeleventeProxy(appsScriptUrl) {
-  return async (req, res) => {
-    if (!appsScriptUrl) {
-      return res.status(500).json({
-        error: "not_configured",
-        message: "Apps Script URL is not set for this televente proxy"
-      });
-    }
+async function proxyTelevente(req, res, targetUrl, label) {
+  if (!targetUrl) {
+    return res.status(500).json({
+      error: "not_configured",
+      message: `${label} is not set`,
+    });
+  }
 
-    const tryOnce = async () =>
-      axios.get(appsScriptUrl, {
-        timeout: 12000,
-        params: req.query,
-        headers: { "User-Agent": "televente-proxy/1.0" },
-      });
+  const tryOnce = () =>
+    axios.get(targetUrl, {
+      timeout: 12000,
+      params: req.query,
+      headers: { "User-Agent": "televente-proxy/1.0" },
+    });
 
+  try {
+    let r;
     try {
-      let r;
-      try {
-        r = await tryOnce();
-      } catch {
-        await new Promise(t => setTimeout(t, 400));
-        r = await tryOnce();
-      }
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cache-Control", "no-store");
-      res.status(200).json(r.data);
-    } catch (e) {
-      res.status(502).json({
-        error: "proxy_failed",
-        message: e?.message || "Bad gateway",
-      });
+      r = await tryOnce();
+    } catch {
+      await new Promise(t => setTimeout(t, 400));
+      r = await tryOnce();
     }
-  };
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json(r.data);
+  } catch (e) {
+    console.error("[televente proxy]", label, e?.message || e);
+    res.status(502).json({
+      error: "proxy_failed",
+      message: e?.message || "Bad gateway",
+    });
+  }
 }
 
-app.get("/api/sheets/televente-lub",   makeTeleventeProxy(APPS_SCRIPT_URL_LUB));
-app.get("/api/sheets/televente-bosch", makeTeleventeProxy(APPS_SCRIPT_URL_BOSCH));
+app.get("/api/sheets/televente", (req, res) =>
+  proxyTelevente(req, res, APPS_SCRIPT_URL_DEFAULT, "TELEVENTE_APPS_SCRIPT_URL")
+);
+
+app.get("/api/sheets/televente-lub", (req, res) =>
+  proxyTelevente(req, res, APPS_SCRIPT_URL_LUB, "TELEVENTE_LUB_APPS_SCRIPT_URL")
+);
+
+app.get("/api/sheets/televente-bosch", (req, res) =>
+  proxyTelevente(req, res, APPS_SCRIPT_URL_BOSCH, "TELEVENTE_BOSCH_APPS_SCRIPT_URL")
+);
 
 
 app.get("/stats/counters", async (_req, res) => {
