@@ -62,23 +62,9 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.
 
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
 
-let RESP_SERVICE_BY_MAGASIN = {};
-try {
-  const raw = process.env.RESP_SERVICE_BY_MAGASIN_JSON;
-  if (raw) {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      RESP_SERVICE_BY_MAGASIN = parsed;
-    }
-  }
-} catch {
-  RESP_SERVICE_BY_MAGASIN = {};
-}
-
-function respServiceEmailFor(magasin) {
-  const m = String(magasin || '').trim().toUpperCase();
-  return (RESP_SERVICE_BY_MAGASIN[m] || '').trim();
-}
+const RESP_SERVICE_BY_MAGASIN = {
+  "GLEIZE": "dampichard2007@gmail.com",
+};
 
 function siteRespNameFor(_magasin) {
  return "";
@@ -93,7 +79,7 @@ app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
 
-const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
+const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
 const pad2 = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
@@ -165,7 +151,7 @@ app.get('/presence/export-month', async (req, res) => {
     const MAGASINS_EXPORT = [
       "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
       "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
-      "SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+      "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
     ];
 
     const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
@@ -416,12 +402,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const APPS_SCRIPT_URL = process.env.TELEVENTE_APPS_SCRIPT_URL || '';
-
-app.get('/api/sheets/televente', async (req, res) => {
-  if (!APPS_SCRIPT_URL) {
-    return res.status(500).json({ error: 'not_configured', message: 'TELEVENTE_APPS_SCRIPT_URL is not set' });
-  }
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
 
 app.get("/api/sheets/televente", async (req, res) => {
   const tryOnce = async () =>
