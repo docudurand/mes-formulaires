@@ -62,26 +62,16 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.
 
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
 
-let RESP_SERVICE_BY_MAGASIN = {};
-try {
-  const raw = process.env.RESP_SERVICE_BY_MAGASIN_JSON;
-  if (raw) {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      RESP_SERVICE_BY_MAGASIN = parsed;
-    }
-  }
-} catch {
-  RESP_SERVICE_BY_MAGASIN = {};
-}
-
-function respServiceEmailFor(magasin) {
-  const m = String(magasin || '').trim().toUpperCase();
-  return (RESP_SERVICE_BY_MAGASIN[m] || '').trim();
-}
+const RESP_SERVICE_BY_MAGASIN = {
+  "GLEIZE": "dampichard2007@gmail.com",
+};
 
 function siteRespNameFor(_magasin) {
-  return "";
+ return "";
+}
+function respServiceEmailFor(magasin) {
+  const m = String(magasin || "").trim().toUpperCase();
+  return (RESP_SERVICE_BY_MAGASIN[m] || "").trim();
 }
 
 app.use("/atelier", atelier);
@@ -89,7 +79,7 @@ app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
 
-const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
+const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
 const pad2 = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
@@ -161,7 +151,7 @@ app.get('/presence/export-month', async (req, res) => {
     const MAGASINS_EXPORT = [
       "ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE",
       "LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES",
-      "SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
+      "SAINT-MARTIN-D'HERES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"
     ];
 
     const norm = s => String(s||"").trim().replace(/\s+/g," ").toUpperCase();
@@ -412,57 +402,27 @@ app.use((req, res, next) => {
   next();
 });
 
-const APPS_SCRIPT_URL_DEFAULT = process.env.TELEVENTE_APPS_SCRIPT_URL || "";
-const APPS_SCRIPT_URL_LUB     = process.env.TELEVENTE_LUB_APPS_SCRIPT_URL   || APPS_SCRIPT_URL_DEFAULT;
-const APPS_SCRIPT_URL_BOSCH   = process.env.TELEVENTE_BOSCH_APPS_SCRIPT_URL || APPS_SCRIPT_URL_DEFAULT;
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw5rfE4QgNBDYkYNmaI8NFmVzDvNw1n5KmVnlOKaanTO-Qikdh2x9gq7vWDOYDUneTY/exec";
 
-async function proxyTelevente(req, res, targetUrl, label) {
-  if (!targetUrl) {
-    return res.status(500).json({
-      error: "not_configured",
-      message: `${label} is not set`,
-    });
-  }
-
-  const tryOnce = () =>
-    axios.get(targetUrl, {
+app.get("/api/sheets/televente", async (req, res) => {
+  const tryOnce = async () =>
+    axios.get(APPS_SCRIPT_URL, {
       timeout: 12000,
       params: req.query,
       headers: { "User-Agent": "televente-proxy/1.0" },
     });
-
   try {
     let r;
-    try {
-      r = await tryOnce();
-    } catch {
-      await new Promise(t => setTimeout(t, 400));
-      r = await tryOnce();
-    }
+    try { r = await tryOnce(); }
+    catch { await new Promise(t => setTimeout(t, 400)); r = await tryOnce(); }
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json(r.data);
   } catch (e) {
-    console.error("[televente proxy]", label, e?.message || e);
-    res.status(502).json({
-      error: "proxy_failed",
-      message: e?.message || "Bad gateway",
-    });
+    res.status(502).json({ error: "proxy_failed", message: e?.message || "Bad gateway" });
   }
-}
-
-app.get("/api/sheets/televente", (req, res) =>
-  proxyTelevente(req, res, APPS_SCRIPT_URL_DEFAULT, "TELEVENTE_APPS_SCRIPT_URL")
-);
-
-app.get("/api/sheets/televente-lub", (req, res) =>
-  proxyTelevente(req, res, APPS_SCRIPT_URL_LUB, "TELEVENTE_LUB_APPS_SCRIPT_URL")
-);
-
-app.get("/api/sheets/televente-bosch", (req, res) =>
-  proxyTelevente(req, res, APPS_SCRIPT_URL_BOSCH, "TELEVENTE_BOSCH_APPS_SCRIPT_URL")
-);
-
+});
 
 app.get("/stats/counters", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
