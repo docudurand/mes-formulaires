@@ -164,9 +164,7 @@
       animation: resume-spin 0.7s linear infinite;
     }
     @keyframes resume-spin {
-      to {
-        transform: rotate(360deg);
-      }
+      to { transform: rotate(360deg); }
     }
 
     @media (max-width: 480px) {
@@ -235,12 +233,12 @@
   <script>
     const params = new URLSearchParams(window.location.search);
 
-    const agence = params.get("agence") || "";
-    const codeAgence = params.get("codeAgence") || agence;
-    const tournee = params.get("tournee") || "";
-    const codeTournee = params.get("codeTournee") || "";
-    const chauffeur = params.get("chauffeur") || "";
-    const codeChauffeur = params.get("codeChauffeur") || "";
+    let agence        = params.get("agence")        || "";
+    let codeAgence    = params.get("codeAgence")    || agence;
+    let tournee       = params.get("tournee")       || "";
+    let codeTournee   = params.get("codeTournee")   || "";
+    let chauffeur     = params.get("chauffeur")     || "";
+    let codeChauffeur = params.get("codeChauffeur") || "";
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -255,6 +253,74 @@
     const resume14hEl = document.getElementById("resume14h");
     const resume18hEl = document.getElementById("resume18h");
     const resumeLoaderEl = document.getElementById("resumeLoader");
+
+    function urlHasConfigParams() {
+      return (
+        params.get("codeTournee") ||
+        params.get("agence") ||
+        params.get("tournee") ||
+        params.get("chauffeur") ||
+        params.get("codeChauffeur")
+      );
+    }
+
+    function saveConfigToStorage() {
+      const cfg = {
+        agence,
+        codeAgence,
+        tournee,
+        codeTournee,
+        chauffeur,
+        codeChauffeur
+      };
+      try {
+        localStorage.setItem("kmConfig", JSON.stringify(cfg));
+      } catch (e) {
+        console.warn("Impossible de sauvegarder la config km", e);
+      }
+    }
+
+    function loadConfigFromStorage() {
+      try {
+        const str = localStorage.getItem("kmConfig");
+        if (!str) return false;
+        const cfg = JSON.parse(str);
+
+        agence        = cfg.agence        || "";
+        codeAgence    = cfg.codeAgence    || cfg.agence || "";
+        tournee       = cfg.tournee       || "";
+        codeTournee   = cfg.codeTournee   || "";
+        chauffeur     = cfg.chauffeur     || "";
+        codeChauffeur = cfg.codeChauffeur || "";
+
+        const newQs = new URLSearchParams({
+          agence: agence,
+          codeAgence: codeAgence,
+          tournee: tournee,
+          codeTournee: codeTournee,
+          chauffeur: chauffeur,
+          codeChauffeur: codeChauffeur
+        });
+        const newUrl = window.location.pathname + "?" + newQs.toString();
+        window.history.replaceState({}, "", newUrl);
+
+        return !!codeTournee;
+      } catch (e) {
+        console.warn("Impossible de relire la config km", e);
+        return false;
+      }
+    }
+
+    if (urlHasConfigParams()) {
+      saveConfigToStorage();
+    } else {
+      const ok = loadConfigFromStorage();
+      if (!ok) {
+        infoBloc.innerHTML =
+          "Impossible de retrouver les informations de tournée.<br>" +
+          "Scanne à nouveau le QR code pour initialiser la page.";
+      }
+    }
 
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -392,7 +458,7 @@
 
       if (!codeTournee) {
         messageEl.textContent =
-          "Erreur : code tournée manquant. Vérifie le QR code.";
+          "Erreur : code tournée manquant. Scanne à nouveau le QR code.";
         messageEl.classList.add("err");
         return;
       }
