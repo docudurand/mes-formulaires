@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link rel="apple-touch-icon" sizes="180x180" href="icon-km.png" />
-
   <meta name="apple-mobile-web-app-title" content="Km tournée" />
-
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#003c8f">
 
   <style>
     body {
@@ -457,6 +458,10 @@
         submitBtn.textContent = "Valider";
       }
     });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(console.error);
+    }
   </script>
 </body>
 </html>
