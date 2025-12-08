@@ -665,52 +665,55 @@
       }
     }
 
-    function printMonth(monthIndex, monthCard) {
-      printContainer.innerHTML = "";
+ function printMonth(monthIndex, monthCard) {
+  printContainer.innerHTML = "";
 
-      const clone = monthCard.cloneNode(true);
-      clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
+  const clone = monthCard.cloneNode(true);
 
-      const wrapper = document.createElement("div");
-      wrapper.className = "print-page";
+  clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
 
-      const header = document.createElement("div");
-      header.className = "print-header";
+  clone.querySelectorAll(".recap-container").forEach((recap) => recap.remove());
 
-      const top = document.createElement("div");
-      top.className = "print-header-top";
+  const wrapper = document.createElement("div");
+  wrapper.className = "print-page";
 
-      const logo = logoTemplate.cloneNode(true);
-      logo.style.display = "block";
-      logo.classList.add("print-logo");
-      logo.removeAttribute("id");
+  const header = document.createElement("div");
+  header.className = "print-header";
 
-      const textBox = document.createElement("div");
-      textBox.className = "print-header-text";
+  const top = document.createElement("div");
+  top.className = "print-header-top";
 
-      const title = document.createElement("h1");
-      title.textContent = "Suivi kilométrique – " + currentAgence;
+  const logo = logoTemplate.cloneNode(true);
+  logo.style.display = "block";
+  logo.classList.add("print-logo");
+  logo.removeAttribute("id");
 
-      const subtitle = document.createElement("div");
-      subtitle.className = "print-subtitle";
-      subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
+  const textBox = document.createElement("div");
+  textBox.className = "print-header-text";
 
-      textBox.appendChild(title);
-      textBox.appendChild(subtitle);
-      top.appendChild(logo);
-      top.appendChild(textBox);
-      header.appendChild(top);
+  const title = document.createElement("h1");
+  title.textContent = "Suivi kilométrique – " + currentAgence;
 
-      wrapper.appendChild(header);
-      wrapper.appendChild(clone);
-      printContainer.appendChild(wrapper);
+  const subtitle = document.createElement("div");
+  subtitle.className = "print-subtitle";
+  subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
 
-      if (!logo.complete) {
-        logo.onload = () => window.print();
-      } else {
-        window.print();
-      }
-    }
+  textBox.appendChild(title);
+  textBox.appendChild(subtitle);
+  top.appendChild(logo);
+  top.appendChild(textBox);
+  header.appendChild(top);
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(clone);
+  printContainer.appendChild(wrapper);
+
+  if (!logo.complete) {
+    logo.onload = () => window.print();
+  } else {
+    window.print();
+  }
+}
 
     function toggleRecap(monthIndex, monthCard, btn) {
       const container = monthCard.querySelector(".recap-container");
