@@ -31,8 +31,7 @@ router.post("/save", async (req, res) => {
       codeChauffeur,
       date,
       km,
-      commentaire,
-      id
+      commentaire
     } = req.body || {};
 
     if (!codeTournee || !date || km === undefined || km === null || km === "") {
@@ -51,8 +50,7 @@ router.post("/save", async (req, res) => {
       codeChauffeur: codeChauffeur || "",
       date,
       km: Number(km),
-      commentaire: commentaire || "",
-      id: id || ""
+      commentaire: commentaire || ""
     };
 
     const response = await axios.post(apiUrl, payload, {
@@ -66,44 +64,6 @@ router.post("/save", async (req, res) => {
     return res
       .status(500)
       .json({ success: false, error: "Erreur lors de l'enregistrement du kilométrage" });
-  }
-});
-
-router.post("/newid", async (req, res) => {
-  try {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) {
-      return res
-        .status(500)
-        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
-    }
-
-    const { agence, codeTournee } = req.body || {};
-
-    if (!agence || !codeTournee) {
-      return res.status(400).json({
-        success: false,
-        error: "Paramètres manquants (agence, codeTournee)"
-      });
-    }
-
-    const payload = {
-      action: "newId",
-      agence,
-      codeTournee
-    };
-
-    const response = await axios.post(apiUrl, payload, {
-      headers: { "Content-Type": "application/json" },
-      timeout: 10000
-    });
-
-    return res.json(response.data || { success: true });
-  } catch (err) {
-    console.error("Erreur /api/kilometrage/newid :", err.message);
-    return res
-      .status(500)
-      .json({ success: false, error: "Erreur lors de la génération du nouvel ID" });
   }
 });
 
@@ -159,7 +119,6 @@ router.get("/params", async (req, res) => {
       .json({ success: false, error: "Erreur lors de la récupération des paramètres" });
   }
 });
-
 router.get("/resume", async (req, res) => {
   try {
     const apiUrl = getApiUrl();

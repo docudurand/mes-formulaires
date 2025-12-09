@@ -1,0 +1,493 @@
+const SPREADSHEET_ID = '1VchOFOif4cqhczqRMv2FPDrP2tr5tLYG0xC-uhcQaEs';
+const SHEET_DONNEES = 'DONNEES';
+const SHEET_PARAMS = 'PARAMS';
+
+function parseFormDate_(str) {
+  if (!str) return new Date();
+  const parts = str.split("-");
+  if (parts.length !== 3) return new Date();
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return new Date();
+  return new Date(year, month - 1, day);
+}
+
+function normalizeDateString_(raw) {
+  if (!raw) return '';
+
+  let d = null;
+
+  if (raw instanceof Date) {
+    d = raw;
+  } else if (typeof raw === 'string') {
+    const s = raw.trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    } else {
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m) {
+        d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+      }
+    }
+  }
+
+  if (!d) {
+    return String(raw).trim();
+  }
+
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function parseNumberOrNull_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function computeKmTotal_(km8h, km12h, km14h, km18h) {
+  if (km8h === null || km12h === null || km14h === null || km18h === null) {
+    return '';
+  }
+
+  const kmMatin     = km12h - km8h;
+  const kmApresMidi = km18h - km14h;
+
+  if (kmMatin < 0 || kmApresMidi < 0) {
+    Logger.log('Différence négative détectée : ' +
+      JSON.stringify({ km8h, km12h, km14h, km18h }));
+    return '';
+  }
+
+  return kmMatin + kmApresMidi;
+}
+
+function extractHoraireAndComment_(raw) {
+  const s = (raw || '').toString();
+  const m = s.match(/^@(8H|12H|14H|18H)@(.*)$/s);
+  if (m) {
+    return {
+      horaire: m[1],
+      comment: (m[2] || '').trim()
+    };
+  }
+  return {
+    horaire: '',
+    comment: s.trim()
+  };
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: "Serveur occupé, merci de réessayer dans quelques secondes."
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const content = e.postData && e.postData.contents ? e.postData.contents : '{}';
+    const data = JSON.parse(content);
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sh = ss.getSheetByName(SHEET_DONNEES);
+    if (!sh) {
+      throw new Error('Onglet DONNEES introuvable');
+    }
+
+    const dateObj = parseFormDate_(data.date);
+
+    const agence         = (data.agence || '').toString().trim();
+    const codeAgence     = (data.codeAgence || '').toString().trim();
+    const tournee        = (data.tournee || '').toString().trim();
+    const codeTournee    = (data.codeTournee || '').toString().trim();
+    const chauffeur      = (data.chauffeur || '').toString().trim();
+    const codeChauffeur  = (data.codeChauffeur || '').toString().trim();
+    const commentaireRaw = (data.commentaire || '').toString();
+
+    const kmUnique = parseNumberOrNull_(data.km);
+
+    if (!codeTournee || !data.date) {
+      throw new Error('Champs obligatoires manquants (codeTournee ou date)');
+    }
+    if (kmUnique === null) {
+      throw new Error('Kilométrage invalide.');
+    }
+
+    const extracted = extractHoraireAndComment_(commentaireRaw);
+    const horaire = extracted.horaire;
+    const commentaire = extracted.comment;
+
+    if (!horaire) {
+      throw new Error('Horaire manquant dans le commentaire (format attendu : @8H@mon commentaire).');
+    }
+
+    const values = sh.getDataRange().getValues();
+
+    const IDX_TIMESTAMP     = 0;
+    const IDX_AGENCE        = 1;
+    const IDX_CODEAGENCE    = 2;
+    const IDX_TOURNEE       = 3;
+    const IDX_CODETOURNEE   = 4;
+    const IDX_CHAUFFEUR     = 5;
+    const IDX_CODECHAUFFEUR = 6;
+    const IDX_DATE          = 7;
+    const IDX_KM8H          = 8;
+    const IDX_KM12H         = 9;
+    const IDX_KM14H         = 10;
+    const IDX_KM18H         = 11;
+    const IDX_KM            = 12;
+    const IDX_COMMENTAIRE   = 13;
+
+    const agenceKey = (codeAgence || agence || '')
+      .toString()
+      .trim()
+      .toUpperCase();
+    const dateKey = normalizeDateString_(dateObj);
+
+    let targetRowIndex = null;
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const rowAgenceKey = (row[IDX_CODEAGENCE] || row[IDX_AGENCE] || '')
+        .toString()
+        .trim()
+        .toUpperCase();
+      const rowCodeTournee = (row[IDX_CODETOURNEE] || '').toString().trim();
+      const rowDateKey = normalizeDateString_(row[IDX_DATE] || row[IDX_TIMESTAMP]);
+
+      if (
+        rowAgenceKey === agenceKey &&
+        rowCodeTournee === codeTournee &&
+        rowDateKey === dateKey
+      ) {
+        targetRowIndex = i + 1;
+        break;
+      }
+    }
+
+    let existingRow;
+
+    if (targetRowIndex) {
+      existingRow = sh.getRange(targetRowIndex, 1, 1, 14).getValues()[0];
+    } else {
+      targetRowIndex = sh.getLastRow() + 1;
+      existingRow = [
+        dateObj,
+        agence || '',
+        codeAgence || '',
+        tournee || '',
+        codeTournee || '',
+        chauffeur || '',
+        codeChauffeur || '',
+        dateObj,
+        '',
+        '',
+        '',
+        '',
+        '',
+        ''
+      ];
+    }
+
+    let km8h  = parseNumberOrNull_(existingRow[IDX_KM8H]);
+    let km12h = parseNumberOrNull_(existingRow[IDX_KM12H]);
+    let km14h = parseNumberOrNull_(existingRow[IDX_KM14H]);
+    let km18h = parseNumberOrNull_(existingRow[IDX_KM18H]);
+
+    if (horaire === '8H') {
+      km8h = kmUnique;
+    } else if (horaire === '12H') {
+      km12h = kmUnique;
+    } else if (horaire === '14H') {
+      km14h = kmUnique;
+    } else if (horaire === '18H') {
+      km18h = kmUnique;
+    } else {
+      throw new Error('Horaire invalide (utiliser 8H, 12H, 14H ou 18H).');
+    }
+
+    const kmTotal = computeKmTotal_(km8h, km12h, km14h, km18h);
+
+    const existingComment = existingRow[IDX_COMMENTAIRE] || '';
+    const finalComment = commentaire || existingComment;
+
+    const rowData = [
+      dateObj,
+      agence || '',
+      codeAgence || '',
+      tournee || '',
+      codeTournee || '',
+      chauffeur || '',
+      codeChauffeur || '',
+      dateObj,
+      km8h  !== null ? km8h  : '',
+      km12h !== null ? km12h : '',
+      km14h !== null ? km14h : '',
+      km18h !== null ? km18h : '',
+      kmTotal !== '' ? kmTotal : '',
+      finalComment
+    ];
+
+    sh.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
+
+    mergeDuplicateRows_(sh);
+
+    SpreadsheetApp.flush();
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true, kmTotal: kmTotal }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function mergeDuplicateRows_(sh) {
+  const values = sh.getDataRange().getValues();
+  if (values.length <= 1) return;
+
+  const IDX_TIMESTAMP     = 0;
+  const IDX_AGENCE        = 1;
+  const IDX_CODEAGENCE    = 2;
+  const IDX_TOURNEE       = 3;
+  const IDX_CODETOURNEE   = 4;
+  const IDX_CHAUFFEUR     = 5;
+  const IDX_CODECHAUFFEUR = 6;
+  const IDX_DATE          = 7;
+  const IDX_KM8H          = 8;
+  const IDX_KM12H         = 9;
+  const IDX_KM14H         = 10;
+  const IDX_KM18H         = 11;
+  const IDX_KM            = 12;
+  const IDX_COMMENTAIRE   = 13;
+
+  const aggByKey = {};
+  const rowsToDelete = [];
+
+  for (let i = values.length - 1; i >= 1; i--) {
+    const row = values[i];
+
+    const codeAgence = (row[IDX_CODEAGENCE] || row[IDX_AGENCE] || '')
+      .toString().trim().toUpperCase();
+    const codeTournee = (row[IDX_CODETOURNEE] || '').toString().trim();
+    const dateKey = normalizeDateString_(row[IDX_DATE] || row[IDX_TIMESTAMP]);
+
+    if (!codeAgence || !codeTournee || !dateKey) continue;
+
+    const key = codeAgence + '__' + codeTournee + '__' + dateKey;
+    let agg = aggByKey[key];
+
+    if (!agg) {
+      agg = {
+        rowIndex: i + 1,
+        timestamp: row[IDX_TIMESTAMP],
+        agence: row[IDX_AGENCE],
+        codeAgence: row[IDX_CODEAGENCE],
+        tournee: row[IDX_TOURNEE],
+        codeTournee: row[IDX_CODETOURNEE],
+        chauffeur: row[IDX_CHAUFFEUR],
+        codeChauffeur: row[IDX_CODECHAUFFEUR],
+        date: row[IDX_DATE],
+        km8h: null,
+        km12h: null,
+        km14h: null,
+        km18h: null,
+        commentaire: row[IDX_COMMENTAIRE] || ''
+      };
+      aggByKey[key] = agg;
+    } else {
+      rowsToDelete.push(i + 1);
+    }
+
+    const v8  = parseNumberOrNull_(row[IDX_KM8H]);
+    const v12 = parseNumberOrNull_(row[IDX_KM12H]);
+    const v14 = parseNumberOrNull_(row[IDX_KM14H]);
+    const v18 = parseNumberOrNull_(row[IDX_KM18H]);
+
+    if (v8  !== null && agg.km8h  === null) agg.km8h  = v8;
+    if (v12 !== null && agg.km12h === null) agg.km12h = v12;
+    if (v14 !== null && agg.km14h === null) agg.km14h = v14;
+    if (v18 !== null && agg.km18h === null) agg.km18h = v18;
+
+    if (row[IDX_COMMENTAIRE]) {
+      agg.commentaire = row[IDX_COMMENTAIRE];
+    }
+  }
+
+  Object.keys(aggByKey).forEach(key => {
+    const agg = aggByKey[key];
+    const kmTotal = computeKmTotal_(agg.km8h, agg.km12h, agg.km14h, agg.km18h);
+
+    const rowData = [
+      agg.timestamp || new Date(),
+      agg.agence || '',
+      agg.codeAgence || '',
+      agg.tournee || '',
+      agg.codeTournee || '',
+      agg.chauffeur || '',
+      agg.codeChauffeur || '',
+      agg.date || new Date(),
+      agg.km8h  !== null ? agg.km8h  : '',
+      agg.km12h !== null ? agg.km12h : '',
+      agg.km14h !== null ? agg.km14h : '',
+      agg.km18h !== null ? agg.km18h : '',
+      kmTotal !== '' ? kmTotal : '',
+      agg.commentaire || ''
+    ];
+
+    sh.getRange(agg.rowIndex, 1, 1, rowData.length).setValues([rowData]);
+  });
+
+  SpreadsheetApp.flush();
+
+  rowsToDelete.sort((a, b) => b - a).forEach(r => sh.deleteRow(r));
+
+  SpreadsheetApp.flush();
+}
+
+function getParams_(params) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sh = ss.getSheetByName(SHEET_PARAMS);
+  if (!sh) {
+    return { error: 'Onglet PARAMS introuvable' };
+  }
+
+  const values = sh.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const agenceFilter = params.agence || '';
+  const out = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const agence = row[0] || row[1] || '';
+
+    if (agenceFilter && agence !== agenceFilter && row[1] !== agenceFilter) {
+      continue;
+    }
+
+    out.push({
+      agence: row[0] || '',
+      codeAgence: row[1] || '',
+      tournee: row[2] || '',
+      codeTournee: row[3] || '',
+      transporteur: row[4] || '',
+      codeTransporteur: row[5] || ''
+    });
+  }
+
+  return out;
+}
+
+function getData_(params) {
+  const agenceFilter = params.agence || '';
+  const yearFilter = params.year ? parseInt(params.year, 10) : null;
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sh = ss.getSheetByName(SHEET_DONNEES);
+  const values = sh.getDataRange().getValues();
+
+  if (values.length <= 1) return [];
+
+  const IDX_TIMESTAMP     = 0;
+  const IDX_AGENCE        = 1;
+  const IDX_CODEAGENCE    = 2;
+  const IDX_TOURNEE       = 3;
+  const IDX_CODETOURNEE   = 4;
+  const IDX_CHAUFFEUR     = 5;
+  const IDX_CODECHAUFFEUR = 6;
+  const IDX_DATE          = 7;
+  const IDX_KM8H          = 8;
+  const IDX_KM12H         = 9;
+  const IDX_KM14H         = 10;
+  const IDX_KM18H         = 11;
+  const IDX_KM            = 12;
+  const IDX_COMMENTAIRE   = 13;
+
+  const tz = Session.getScriptTimeZone();
+  const outData = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+
+    const agence = row[IDX_AGENCE] || row[IDX_CODEAGENCE] || '';
+    if (
+      agenceFilter &&
+      agence !== agenceFilter &&
+      row[IDX_CODEAGENCE] !== agenceFilter
+    ) {
+      continue;
+    }
+
+    const rawDate = row[IDX_DATE] || row[IDX_TIMESTAMP];
+    let formattedDate = '';
+    let yearVal = null;
+
+    if (rawDate instanceof Date) {
+      yearVal = rawDate.getFullYear();
+      formattedDate = Utilities.formatDate(rawDate, tz, 'yyyy-MM-dd');
+    } else if (typeof rawDate === 'string' && rawDate) {
+      const match = rawDate.match(/(\d{4})/);
+      if (match) {
+        yearVal = parseInt(match[1], 10);
+      }
+      formattedDate = rawDate;
+    }
+
+    if (yearFilter && yearVal && yearVal !== yearFilter) {
+      continue;
+    }
+
+    const km8  = row.length > IDX_KM8H ? row[IDX_KM8H] : null;
+    const km12 = row.length > IDX_KM12H ? row[IDX_KM12H] : null;
+    const km14 = row.length > IDX_KM14H ? row[IDX_KM14H] : null;
+    const km18 = row.length > IDX_KM18H ? row[IDX_KM18H] : null;
+
+    outData.push({
+      timestamp: row[IDX_TIMESTAMP],
+      agence: row[IDX_AGENCE],
+      codeAgence: row[IDX_CODEAGENCE],
+      tournee: row[IDX_TOURNEE],
+      codeTournee: row[IDX_CODETOURNEE],
+      chauffeur: row[IDX_CHAUFFEUR],
+      codeChauffeur: row[IDX_CODECHAUFFEUR],
+      date: formattedDate,
+      km: row[IDX_KM] || 0,
+      commentaire: row[IDX_COMMENTAIRE] || '',
+      km8h: km8,
+      km12h: km12,
+      km14h: km14,
+      km18h: km18
+    });
+  }
+
+  return outData;
+}
+
+function doGet(e) {
+  const params = e.parameter || {};
+  const mode = params.mode || 'data';
+
+  let result;
+  if (mode === 'params') {
+    result = getParams_(params);
+  } else {
+    result = getData_(params);
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}

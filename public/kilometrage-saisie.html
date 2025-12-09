@@ -238,7 +238,6 @@
     let codeTournee   = params.get("codeTournee")   || "";
     let chauffeur     = params.get("chauffeur")     || "";
     let codeChauffeur = params.get("codeChauffeur") || "";
-	let idQr          = params.get("id")            || "";
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -271,8 +270,7 @@
         tournee,
         codeTournee,
         chauffeur,
-        codeChauffeur,
-		id: idQr
+        codeChauffeur
       };
       try {
         localStorage.setItem("kmConfig", JSON.stringify(cfg));
@@ -293,7 +291,6 @@
         codeTournee   = cfg.codeTournee   || "";
         chauffeur     = cfg.chauffeur     || "";
         codeChauffeur = cfg.codeChauffeur || "";
-		idQr          = cfg.id           || "";
 
         const newQs = new URLSearchParams({
           agence: agence,
@@ -301,8 +298,7 @@
           tournee: tournee,
           codeTournee: codeTournee,
           chauffeur: chauffeur,
-          codeChauffeur: codeChauffeur,
-		  id: idQr
+          codeChauffeur: codeChauffeur
         });
         const newUrl = window.location.pathname + "?" + newQs.toString();
         window.history.replaceState({}, "", newUrl);
@@ -480,7 +476,7 @@
       const kmNumber = Number(kmValue);
       const commentaireEncoded = `@${horaireValue}@${commentaireUser}`;
 
-            const payload = {
+      const payload = {
         agence,
         codeAgence,
         tournee,
@@ -489,10 +485,8 @@
         codeChauffeur,
         date: dateValue,
         km: kmNumber,
-        commentaire: commentaireEncoded,
-        id: idQr
+        commentaire: commentaireEncoded
       };
-
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Enregistrement...";
