@@ -226,6 +226,13 @@
 	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
   },
   {
+    "name": "GM TRUCK",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT-PRIEST"
+  },
+  {
     "name": "GMT GRENOBLE",
     "magasin": "ST EGREVE",
     "recipients": ["receptionste2@durandservices.fr"],
