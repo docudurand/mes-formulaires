@@ -84,10 +84,10 @@
   },
     {
     "name": "CAPVI",
-    "magasin": "Chasse sur Rhone",
-    "recipients": ["receptionchasse@durandservices.fr"],
-	"cc": ["magvl5chasse@durandservices.fr"],
-	 "infoLivreur": "Ville : CORBAS Tournée 4"
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS"
   },
   {
     "name": "CARGO BULL",
