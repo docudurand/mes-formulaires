@@ -308,6 +308,26 @@
         $codeTransporteur.value = codeTrans;
       }
 
+      let idQr = "";
+      const matching = allParams.find((p) => {
+        const a = p.agence || p.codeAgence;
+        const ct = p.codeTournee || "";
+        return a === agence && ct === codeTournee;
+      });
+
+      if (matching && matching.id) {
+        idQr = String(matching.id).trim();
+      }
+
+      if (!idQr) {
+        alert(
+          "Aucun ID n'est défini pour cette tournée.\n" +
+          "Va d'abord sur la page de suivi, sélectionne cette tournée et clique sur 'Nouveau chauffeur' " +
+          "pour générer un nouvel ID, puis reviens ici pour générer le QR code."
+        );
+        return null;
+      }
+
       const url =
         base +
         "?agence=" + encodeURIComponent(agence) +
@@ -315,10 +335,12 @@
         "&tournee=" + encodeURIComponent(tournee) +
         "&codeTournee=" + encodeURIComponent(codeTournee) +
         "&chauffeur=" + encodeURIComponent(transporteur) +
-        "&codeChauffeur=" + encodeURIComponent(codeTrans);
+        "&codeChauffeur=" + encodeURIComponent(codeTrans) +
+        "&id=" + encodeURIComponent(idQr);
 
       return url;
     }
+
 
     $btnGenerate.addEventListener("click", () => {
       const url = buildUrl();
