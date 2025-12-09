@@ -31,10 +31,10 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-	
-	.recap-separator-top td {
-	  border-top: 3px solid #9ca3af !important;
-	}
+
+    .recap-separator-top td {
+      border-top: 3px solid #9ca3af !important;
+    }
 
     .year-select {
       display: flex;
@@ -57,7 +57,7 @@
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin: 10px 0;
+      margin: 10px 0 4px 0;
     }
 
     .agency-label {
@@ -96,6 +96,49 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.12);
       transform: translateY(1px);
     }
+
+.replacement-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 10px 0;
+  font-size: 0.85rem;
+}
+
+.replacement-bar select {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 0.85rem;
+}
+
+.replacement-bar button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #004080;
+  background: #004080;
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+              box-shadow 0.15s ease, transform 0.05s ease;
+}
+.replacement-bar button:hover:not(:disabled) {
+  background: #0755b3;
+  border-color: #0755b3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+  transform: translateY(1px);
+}
+.replacement-bar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 
     main {
       padding: 10px;
@@ -314,6 +357,16 @@
       <span class="agency-label">Magasin :</span>
       <div id="agencyButtons" class="agency-buttons"></div>
     </div>
+
+    <div class="replacement-bar" id="replacementBar">
+  <span class="agency-label">Changement de chauffeur :</span>
+  <select id="tourneeSelect">
+    <option value="">— Choisir une tournée —</option>
+  </select>
+  <button id="btnNewDriver" type="button">Nouveau chauffeur</button>
+  <span id="newDriverMsg" class="status"></span>
+</div>
+
     <div class="info-line" id="infoLine"></div>
     <div class="status" id="status"></div>
     <div id="monthsContainer" class="months-grid"></div>
@@ -346,10 +399,15 @@
     const monthsContainer = document.getElementById("monthsContainer");
     const printContainer = document.getElementById("printContainer");
     const logoTemplate = document.getElementById("printLogoTemplate");
+    const tourneeSelect = document.getElementById("tourneeSelect");
+    const btnNewDriver = document.getElementById("btnNewDriver");
+    const newDriverMsg = document.getElementById("newDriverMsg");
+	const replacementBar = document.getElementById("replacementBar");
 
     let currentAgence = "";
     let currentYear = new Date().getFullYear();
     let currentData = [];
+    let currentParams = [];
 
     const YEARS = [2025, 2026];
 
@@ -376,26 +434,121 @@
         btn.type = "button";
         btn.textContent = ag;
         btn.addEventListener("click", () => {
-          currentAgence = ag;
-          Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
-            b.classList.toggle("active", b === btn)
-          );
-          loadData();
-        });
+  currentAgence = ag;
+
+  Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
+    b.classList.toggle("active", b === btn)
+  );
+
+  replacementBar.style.display = "flex";
+
+  loadData();
+  loadParamsForCurrentAgence();
+});
+
         agencyButtons.appendChild(btn);
       });
 
       currentAgence = "";
     }
 
-    async function loadData() {
+    async function loadParamsForCurrentAgence() {
+      tourneeSelect.innerHTML = '<option value="">— Choisir une tournée —</option>';
+      newDriverMsg.textContent = "";
+      currentParams = [];
+
+      if (!currentAgence) return;
+
+      try {
+        const res = await fetch(
+          "/api/kilometrage/params?agence=" + encodeURIComponent(currentAgence)
+        );
+        const data = await res.json().catch(() => []);
+        if (!Array.isArray(data)) return;
+
+        currentParams = data;
+
+        data.forEach((p, index) => {
+          const opt = document.createElement("option");
+          opt.value = String(index);
+
+          const labelTournee = p.tournee || p.codeTournee || "Tournée";
+          const labelChauffeur = p.transporteur || p.codeTransporteur || "Chauffeur";
+          const idInfo = p.id ? " – ID: " + p.id : "";
+          const lastInfo = p.dernierRemplacement
+            ? " – Dernier rempla.: " + p.dernierRemplacement
+            : "";
+
+          opt.textContent = labelTournee + " – " + labelChauffeur + idInfo + lastInfo;
+          tourneeSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Erreur chargement PARAMS pour l'agence :", err);
+      }
+    }
+
+    btnNewDriver.addEventListener("click", async () => {
+      newDriverMsg.textContent = "";
+
       if (!currentAgence) {
-        infoLine.textContent = "";
-        statusEl.textContent = "";
-        monthsContainer.innerHTML = "";
-        currentData = [];
+        newDriverMsg.textContent = "Choisis d'abord un magasin.";
         return;
       }
+
+      const idx = parseInt(tourneeSelect.value, 10);
+      if (isNaN(idx) || !currentParams[idx]) {
+        newDriverMsg.textContent = "Choisis une tournée.";
+        return;
+      }
+
+      const p = currentParams[idx];
+      const codeTournee = p.codeTournee || "";
+      if (!codeTournee) {
+        newDriverMsg.textContent = "Code tournée manquant pour cette ligne PARAMS.";
+        return;
+      }
+
+      btnNewDriver.disabled = true;
+      try {
+        const res = await fetch("/api/kilometrage/newid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agence: currentAgence,
+            codeTournee: codeTournee,
+            action: "newId"
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || "Erreur serveur");
+        }
+
+        newDriverMsg.textContent =
+          "Nouveau chauffeur déclaré. Nouvel ID : " +
+          data.id +
+          ". Merci de créer un nouveau QR code pour le nouveau chauffeur.";
+
+        loadParamsForCurrentAgence();
+      } catch (err) {
+        console.error(err);
+        newDriverMsg.textContent =
+          "Erreur lors de la génération du nouvel ID.";
+      } finally {
+        btnNewDriver.disabled = false;
+      }
+    });
+
+    async function loadData() {
+      if (!currentAgence) {
+  infoLine.textContent = "";
+  statusEl.textContent = "";
+  monthsContainer.innerHTML = "";
+  currentData = [];
+  replacementBar.style.display = "none";
+  return;
+}
 
       infoLine.textContent = "Agence : " + currentAgence + " – Année : " + currentYear;
       statusEl.textContent = "";
@@ -427,7 +580,7 @@
             "</span> en <span>" +
             currentYear +
             "</span>.";
-          buildMonthsTables({});
+          buildMonthsTables({ });
           return;
         }
 
@@ -474,7 +627,7 @@
         statusEl.textContent =
           "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
         currentData = [];
-        buildMonthsTables({});
+        buildMonthsTables({ });
       }
     }
 
@@ -665,55 +818,54 @@
       }
     }
 
- function printMonth(monthIndex, monthCard) {
-  printContainer.innerHTML = "";
+    function printMonth(monthIndex, monthCard) {
+      printContainer.innerHTML = "";
 
-  const clone = monthCard.cloneNode(true);
+      const clone = monthCard.cloneNode(true);
 
-  clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
+      clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
+      clone.querySelectorAll(".recap-container").forEach((recap) => recap.remove());
 
-  clone.querySelectorAll(".recap-container").forEach((recap) => recap.remove());
+      const wrapper = document.createElement("div");
+      wrapper.className = "print-page";
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "print-page";
+      const header = document.createElement("div");
+      header.className = "print-header";
 
-  const header = document.createElement("div");
-  header.className = "print-header";
+      const top = document.createElement("div");
+      top.className = "print-header-top";
 
-  const top = document.createElement("div");
-  top.className = "print-header-top";
+      const logo = logoTemplate.cloneNode(true);
+      logo.style.display = "block";
+      logo.classList.add("print-logo");
+      logo.removeAttribute("id");
 
-  const logo = logoTemplate.cloneNode(true);
-  logo.style.display = "block";
-  logo.classList.add("print-logo");
-  logo.removeAttribute("id");
+      const textBox = document.createElement("div");
+      textBox.className = "print-header-text";
 
-  const textBox = document.createElement("div");
-  textBox.className = "print-header-text";
+      const title = document.createElement("h1");
+      title.textContent = "Suivi kilométrique – " + currentAgence;
 
-  const title = document.createElement("h1");
-  title.textContent = "Suivi kilométrique – " + currentAgence;
+      const subtitle = document.createElement("div");
+      subtitle.className = "print-subtitle";
+      subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
 
-  const subtitle = document.createElement("div");
-  subtitle.className = "print-subtitle";
-  subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
+      textBox.appendChild(title);
+      textBox.appendChild(subtitle);
+      top.appendChild(logo);
+      top.appendChild(textBox);
+      header.appendChild(top);
 
-  textBox.appendChild(title);
-  textBox.appendChild(subtitle);
-  top.appendChild(logo);
-  top.appendChild(textBox);
-  header.appendChild(top);
+      wrapper.appendChild(header);
+      wrapper.appendChild(clone);
+      printContainer.appendChild(wrapper);
 
-  wrapper.appendChild(header);
-  wrapper.appendChild(clone);
-  printContainer.appendChild(wrapper);
-
-  if (!logo.complete) {
-    logo.onload = () => window.print();
-  } else {
-    window.print();
-  }
-}
+      if (!logo.complete) {
+        logo.onload = () => window.print();
+      } else {
+        window.print();
+      }
+    }
 
     function toggleRecap(monthIndex, monthCard, btn) {
       const container = monthCard.querySelector(".recap-container");
@@ -823,27 +975,27 @@
 
       const tbody = document.createElement("tbody");
 
-let previousDate = null;
+      let previousDate = null;
 
-rows
-  .sort((a, b) => {
-    if (a.date === b.date) {
-      if (a.tournee === b.tournee) {
-        return a.chauffeur.localeCompare(b.chauffeur, "fr");
-      }
-      return a.tournee.localeCompare(b.tournee, "fr");
-    }
-    const [da, ma, ya] = a.date.split("/").map(Number);
-    const [db, mb, yb] = b.date.split("/").map(Number);
-    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
-  })
-  .forEach((item) => {
-    const tr = document.createElement("tr");
+      rows
+        .sort((a, b) => {
+          if (a.date === b.date) {
+            if (a.tournee === b.tournee) {
+              return a.chauffeur.localeCompare(b.chauffeur, "fr");
+            }
+            return a.tournee.localeCompare(b.tournee, "fr");
+          }
+          const [da, ma, ya] = a.date.split("/").map(Number);
+          const [db, mb, yb] = b.date.split("/").map(Number);
+          return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+        })
+        .forEach((item) => {
+          const tr = document.createElement("tr");
 
-    if (previousDate !== null && previousDate !== item.date) {
-      tr.classList.add("recap-separator-top");
-    }
-    previousDate = item.date;
+          if (previousDate !== null && previousDate !== item.date) {
+            tr.classList.add("recap-separator-top");
+          }
+          previousDate = item.date;
 
           const tdDate = document.createElement("td");
           tdDate.textContent = item.date;
