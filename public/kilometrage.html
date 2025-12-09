@@ -451,6 +451,24 @@
 
       currentAgence = "";
     }
+function formatFRDateOnly(str) {
+  if (!str) return "";
+
+  const d = new Date(str);
+  if (!isNaN(d)) {
+    const jj = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const aa = d.getFullYear();
+    return `${jj}/${mm}/${aa}`;
+  }
+
+  const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
+  return String(str);
+}
 
     async function loadParamsForCurrentAgence() {
       tourneeSelect.innerHTML = '<option value="">— Choisir une tournée —</option>';
@@ -475,9 +493,12 @@
           const labelTournee = p.tournee || p.codeTournee || "Tournée";
           const labelChauffeur = p.transporteur || p.codeTransporteur || "Chauffeur";
           const idInfo = p.id ? " – ID: " + p.id : "";
-          const lastInfo = p.dernierRemplacement
-            ? " – Dernier rempla.: " + p.dernierRemplacement
-            : "";
+const lastFormatted = p.dernierRemplacement
+  ? formatFRDateOnly(p.dernierRemplacement)
+  : "";
+const lastInfo = lastFormatted
+  ? " – Dernier rempla.: " + lastFormatted
+  : "";
 
           opt.textContent = labelTournee + " – " + labelChauffeur + idInfo + lastInfo;
           tourneeSelect.appendChild(opt);
