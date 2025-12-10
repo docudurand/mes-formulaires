@@ -242,9 +242,23 @@
       color: #000000 !important;
     }
 
-    .weekend {
+        .weekend,
+    .no-delivery {
       background: #000000 !important;
       color: #ffffff !important;
+    }
+
+    .holiday-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid #111827;
+      background: #000000;
+      cursor: pointer;
+      padding: 0;
+    }
+    .holiday-btn:hover {
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
     }
 
     .comments-legend {
@@ -408,6 +422,7 @@
     let currentYear = new Date().getFullYear();
     let currentData = [];
     let currentParams = [];
+	let currentHolidays = new Set();
 
     const YEARS = [2025, 2026];
 
@@ -426,31 +441,80 @@
     }
 
     function initAgencyButtons() {
-      agencyButtons.innerHTML = "";
+  agencyButtons.innerHTML = "";
 
-      const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
-      sorted.forEach((ag) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = ag;
-        btn.addEventListener("click", () => {
-  currentAgence = ag;
+  const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
+  sorted.forEach((ag) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = ag;
 
-  Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
-    b.classList.toggle("active", b === btn)
-  );
+    btn.addEventListener("click", () => {
+      currentAgence = ag;
 
-  replacementBar.style.display = "flex";
+      Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
+        b.classList.toggle("active", b === btn)
+      );
 
-  loadData();
-  loadParamsForCurrentAgence();
-});
+      replacementBar.style.display = "flex";
 
-        agencyButtons.appendChild(btn);
-      });
+      loadData();
+      loadParamsForCurrentAgence();
+    });
 
-      currentAgence = "";
+    agencyButtons.appendChild(btn);
+  });
+
+  currentAgence = "";
+}
+
+async function loadHolidays() {
+  currentHolidays = new Set();
+
+  if (!currentAgence) return;
+
+  try {
+    const res = await fetch(
+      "/api/kilometrage/holidays?agence=" +
+        encodeURIComponent(currentAgence) +
+        "&year=" +
+        encodeURIComponent(currentYear)
+    );
+    const data = await res.json().catch(() => []);
+    if (!Array.isArray(data)) return;
+
+    data.forEach((h) => {
+      if (h.date) {
+        currentHolidays.add(String(h.date));
+      }
+    });
+  } catch (err) {
+    console.error("Erreur chargement jours sans livraison :", err);
+  }
+}
+
+async function toggleHolidayOnServer(dateStr) {
+  if (!currentAgence) return;
+
+  try {
+    const res = await fetch("/api/kilometrage/holiday", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agence: currentAgence,
+        date: dateStr
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      alert(data.error || "Erreur lors de l'enregistrement du jour sans livraison.");
     }
+  } catch (err) {
+    console.error("Erreur toggleHolidayOnServer:", err);
+    alert("Erreur réseau lors de l'enregistrement du jour sans livraison.");
+  }
+}
+
 function formatFRDateOnly(str) {
   if (!str) return "";
 
@@ -642,6 +706,7 @@ const lastInfo = lastFormatted
           }
         });
 
+		await loadHolidays();
         buildMonthsTables(grouped);
       } catch (err) {
         console.error("Erreur lors du chargement des données kilométriques :", err);
@@ -675,8 +740,36 @@ const lastInfo = lastFormatted
 
         const rightPart = document.createElement("div");
         rightPart.className = "month-actions";
+
         const smallInfo = document.createElement("small");
         smallInfo.textContent = currentAgence + " – " + currentYear;
+
+        const holidayBtn = document.createElement("button");
+        holidayBtn.type = "button";
+        holidayBtn.className = "holiday-btn";
+        holidayBtn.title = "Marquer un jour sans livraison (colonne noire)";
+        holidayBtn.addEventListener("click", async () => {
+          const daysInMonth = new Date(currentYear, month, 0).getDate();
+          const jourStr = prompt(
+            "Numéro du jour à (dé)marquer comme 'sans livraison' pour " +
+            monthNames[month - 1] + " " + currentYear +
+            " ? (1–" + daysInMonth + ")"
+          );
+          if (!jourStr) return;
+          const jour = parseInt(jourStr, 10);
+          if (isNaN(jour) || jour < 1 || jour > daysInMonth) {
+            alert("Jour invalide.");
+            return;
+          }
+          const dateStr =
+            currentYear + "-" +
+            String(month).padStart(2, "0") + "-" +
+            String(jour).padStart(2, "0");
+
+          await toggleHolidayOnServer(dateStr);
+          await loadHolidays();
+          buildMonthsTables(grouped);
+        });
 
         const printBtn = document.createElement("button");
         printBtn.type = "button";
@@ -695,6 +788,7 @@ const lastInfo = lastFormatted
         });
 
         rightPart.appendChild(smallInfo);
+        rightPart.appendChild(holidayBtn);
         rightPart.appendChild(printBtn);
         rightPart.appendChild(recapBtn);
 
@@ -717,9 +811,18 @@ const lastInfo = lastFormatted
           const th = document.createElement("th");
           th.textContent = day;
 
+          const dateKey =
+            currentYear + "-" +
+            String(month).padStart(2, "0") + "-" +
+            String(day).padStart(2, "0");
+
           if (isWeekend(currentYear, month, day)) {
             th.classList.add("weekend");
             weekendDays.push(day);
+          }
+
+          if (currentHolidays.has(dateKey)) {
+            th.classList.add("no-delivery");
           }
 
           headerRow.appendChild(th);
@@ -772,11 +875,21 @@ const lastInfo = lastFormatted
                 td.className = "km-zero";
               }
 
+              const dateKey =
+                currentYear + "-" +
+                String(month).padStart(2, "0") + "-" +
+                String(day).padStart(2, "0");
+
               if (weekendDays.includes(day)) {
                 td.classList.add("weekend");
               }
 
+              if (currentHolidays.has(dateKey)) {
+                td.classList.add("no-delivery");
+              }
+
               if (hasComment) {
+
                 td.classList.add("has-comment");
                 td.title = commentaires.join(" / ");
                 const dateStr =
