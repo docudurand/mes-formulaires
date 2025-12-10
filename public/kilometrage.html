@@ -157,6 +157,7 @@
       font-weight: 600;
     }
 
+    /* Loader classe gardée mais plus utilisée */
     .loader {
       display: flex;
       align-items: center;
@@ -702,16 +703,6 @@
     statusEl.textContent = "Chargement en cours...";
     statusBaseText = statusEl.textContent;
     monthsContainer.innerHTML = "";
-
-    const loader = document.createElement("div");
-    loader.className = "loader";
-    const spinner = document.createElement("div");
-    spinner.className = "loader-spinner";
-    const span = document.createElement("span");
-    span.textContent = "Chargement des données...";
-    loader.appendChild(spinner);
-    loader.appendChild(span);
-    monthsContainer.appendChild(loader);
 
     try {
       const res = await fetch(
