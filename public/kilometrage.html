@@ -80,7 +80,8 @@
       font-size: 0.85rem;
       cursor: pointer;
       box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+      transition: background-color 0.15s ease, border-color 0.15s ease,
+                  box-shadow 0.15s ease, transform 0.05s ease;
     }
 
     .agency-buttons button:hover {
@@ -97,48 +98,47 @@
       transform: translateY(1px);
     }
 
-.replacement-bar {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 0 0 10px 0;
-  font-size: 0.85rem;
-}
+    .replacement-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 10px 0;
+      font-size: 0.85rem;
+    }
 
-.replacement-bar select {
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  font-size: 0.85rem;
-}
+    .replacement-bar select {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 0.85rem;
+    }
 
-.replacement-bar button {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid #004080;
-  background: #004080;
-  color: #ffffff;
-  font-size: 0.85rem;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-              box-shadow 0.15s ease, transform 0.05s ease;
-}
-.replacement-bar button:hover:not(:disabled) {
-  background: #0755b3;
-  border-color: #0755b3;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.12);
-  transform: translateY(1px);
-}
-.replacement-bar button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
+    .replacement-bar button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #004080;
+      background: #004080;
+      color: #ffffff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      transition: background-color 0.15s ease, border-color 0.15s ease,
+                  box-shadow 0.15s ease, transform 0.05s ease;
+    }
+    .replacement-bar button:hover:not(:disabled) {
+      background: #0755b3;
+      border-color: #0755b3;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+      transform: translateY(1px);
+    }
+    .replacement-bar button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
 
     main {
       padding: 10px;
@@ -242,7 +242,9 @@
       color: #000000 !important;
     }
 
-        .weekend,
+    .weekend {
+      background: #e5e7eb !important;
+    }
     .no-delivery {
       background: #000000 !important;
       color: #ffffff !important;
@@ -254,11 +256,8 @@
       border-radius: 4px;
       border: 1px solid #111827;
       background: #000000;
-      cursor: pointer;
       padding: 0;
-    }
-    .holiday-btn:hover {
-      box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+      cursor: default;
     }
 
     .comments-legend {
@@ -373,13 +372,13 @@
     </div>
 
     <div class="replacement-bar" id="replacementBar">
-  <span class="agency-label">Changement de chauffeur :</span>
-  <select id="tourneeSelect">
-    <option value="">— Choisir une tournée —</option>
-  </select>
-  <button id="btnNewDriver" type="button">Nouveau chauffeur</button>
-  <span id="newDriverMsg" class="status"></span>
-</div>
+      <span class="agency-label">Changement de chauffeur :</span>
+      <select id="tourneeSelect">
+        <option value="">— Choisir une tournée —</option>
+      </select>
+      <button id="btnNewDriver" type="button">Nouveau chauffeur</button>
+      <span id="newDriverMsg" class="status"></span>
+    </div>
 
     <div class="info-line" id="infoLine"></div>
     <div class="status" id="status"></div>
@@ -416,13 +415,13 @@
     const tourneeSelect = document.getElementById("tourneeSelect");
     const btnNewDriver = document.getElementById("btnNewDriver");
     const newDriverMsg = document.getElementById("newDriverMsg");
-	const replacementBar = document.getElementById("replacementBar");
+    const replacementBar = document.getElementById("replacementBar");
 
     let currentAgence = "";
     let currentYear = new Date().getFullYear();
     let currentData = [];
     let currentParams = [];
-	let currentHolidays = new Set();
+    let noDeliveryCells = new Set();
 
     const YEARS = [2025, 2026];
 
@@ -441,98 +440,51 @@
     }
 
     function initAgencyButtons() {
-  agencyButtons.innerHTML = "";
+      agencyButtons.innerHTML = "";
 
-  const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
-  sorted.forEach((ag) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = ag;
+      const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
+      sorted.forEach((ag) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = ag;
 
-    btn.addEventListener("click", () => {
-      currentAgence = ag;
+        btn.addEventListener("click", () => {
+          currentAgence = ag;
 
-      Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
-        b.classList.toggle("active", b === btn)
-      );
+          Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
+            b.classList.toggle("active", b === btn)
+          );
 
-      replacementBar.style.display = "flex";
+          replacementBar.style.display = "flex";
 
-      loadData();
-      loadParamsForCurrentAgence();
-    });
+          loadData();
+          loadParamsForCurrentAgence();
+        });
 
-    agencyButtons.appendChild(btn);
-  });
+        agencyButtons.appendChild(btn);
+      });
 
-  currentAgence = "";
-}
-
-async function loadHolidays() {
-  currentHolidays = new Set();
-
-  if (!currentAgence) return;
-
-  try {
-    const res = await fetch(
-      "/api/kilometrage/holidays?agence=" +
-        encodeURIComponent(currentAgence) +
-        "&year=" +
-        encodeURIComponent(currentYear)
-    );
-    const data = await res.json().catch(() => []);
-    if (!Array.isArray(data)) return;
-
-    data.forEach((h) => {
-      if (h.date) {
-        currentHolidays.add(String(h.date));
-      }
-    });
-  } catch (err) {
-    console.error("Erreur chargement jours sans livraison :", err);
-  }
-}
-
-async function toggleHolidayOnServer(dateStr) {
-  if (!currentAgence) return;
-
-  try {
-    const res = await fetch("/api/kilometrage/holiday", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agence: currentAgence,
-        date: dateStr
-      })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.success === false) {
-      alert(data.error || "Erreur lors de l'enregistrement du jour sans livraison.");
+      currentAgence = "";
     }
-  } catch (err) {
-    console.error("Erreur toggleHolidayOnServer:", err);
-    alert("Erreur réseau lors de l'enregistrement du jour sans livraison.");
-  }
-}
 
-function formatFRDateOnly(str) {
-  if (!str) return "";
+    function formatFRDateOnly(str) {
+      if (!str) return "";
 
-  const d = new Date(str);
-  if (!isNaN(d)) {
-    const jj = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const aa = d.getFullYear();
-    return `${jj}/${mm}/${aa}`;
-  }
+      const d = new Date(str);
+      if (!isNaN(d)) {
+        const jj = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const aa = d.getFullYear();
+        return `${jj}/${mm}/${aa}`;
+      }
 
-  const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) {
-    return `${m[3]}/${m[2]}/${m[1]}`;
-  }
+      const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) {
+        return `${m[3]}/${m[2]}/${m[1]}`;
+      }
 
-  return String(str);
-}
+      return String(str);
+    }
 
     async function loadParamsForCurrentAgence() {
       tourneeSelect.innerHTML = '<option value="">— Choisir une tournée —</option>';
@@ -557,12 +509,12 @@ function formatFRDateOnly(str) {
           const labelTournee = p.tournee || p.codeTournee || "Tournée";
           const labelChauffeur = p.transporteur || p.codeTransporteur || "Chauffeur";
           const idInfo = p.id ? " – ID: " + p.id : "";
-const lastFormatted = p.dernierRemplacement
-  ? formatFRDateOnly(p.dernierRemplacement)
-  : "";
-const lastInfo = lastFormatted
-  ? " – Dernier rempla.: " + lastFormatted
-  : "";
+          const lastFormatted = p.dernierRemplacement
+            ? formatFRDateOnly(p.dernierRemplacement)
+            : "";
+          const lastInfo = lastFormatted
+            ? " – Dernier rempla.: " + lastFormatted
+            : "";
 
           opt.textContent = labelTournee + " – " + labelChauffeur + idInfo + lastInfo;
           tourneeSelect.appendChild(opt);
@@ -625,15 +577,74 @@ const lastInfo = lastFormatted
       }
     });
 
+    async function loadNoDeliveryCells() {
+      noDeliveryCells.clear();
+      if (!currentAgence) return;
+
+      try {
+        const res = await fetch(
+          "/api/kilometrage/holidays?agence=" +
+            encodeURIComponent(currentAgence) +
+            "&year=" +
+            encodeURIComponent(currentYear)
+        );
+        const data = await res.json().catch(() => []);
+        if (!Array.isArray(data)) return;
+
+        data.forEach((item) => {
+          if (!item || !item.tournee || !item.date) return;
+          const key = item.tournee + "__" + String(item.date);
+          noDeliveryCells.add(key);
+        });
+      } catch (err) {
+        console.error("Erreur chargement cases sans livraison :", err);
+      }
+    }
+
+    async function toggleNoDeliveryCell(tourneeLabel, dateKey, td) {
+      if (!currentAgence || !tourneeLabel || !dateKey) return;
+
+      try {
+        const res = await fetch("/api/kilometrage/holiday", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agence: currentAgence,
+            tournee: tourneeLabel,
+            date: dateKey
+          })
+        });
+
+        const result = await res.json().catch(() => ({}));
+        if (!result || result.success === false) {
+          alert(result.error || "Erreur lors de l'enregistrement du jour sans livraison.");
+          return;
+        }
+
+        const key = tourneeLabel + "__" + (result.date || dateKey);
+
+        if (result.removed) {
+          noDeliveryCells.delete(key);
+          td.classList.remove("no-delivery");
+        } else {
+          noDeliveryCells.add(key);
+          td.classList.add("no-delivery");
+        }
+      } catch (err) {
+        console.error("Erreur toggleNoDeliveryCell :", err);
+        alert("Erreur réseau lors de l'enregistrement du jour sans livraison.");
+      }
+    }
+
     async function loadData() {
       if (!currentAgence) {
-  infoLine.textContent = "";
-  statusEl.textContent = "";
-  monthsContainer.innerHTML = "";
-  currentData = [];
-  replacementBar.style.display = "none";
-  return;
-}
+        infoLine.textContent = "";
+        statusEl.textContent = "";
+        monthsContainer.innerHTML = "";
+        currentData = [];
+        replacementBar.style.display = "none";
+        return;
+      }
 
       infoLine.textContent = "Agence : " + currentAgence + " – Année : " + currentYear;
       statusEl.textContent = "";
@@ -665,7 +676,7 @@ const lastInfo = lastFormatted
             "</span> en <span>" +
             currentYear +
             "</span>.";
-          buildMonthsTables({ });
+          buildMonthsTables({});
           return;
         }
 
@@ -706,14 +717,14 @@ const lastInfo = lastFormatted
           }
         });
 
-		await loadHolidays();
+        await loadNoDeliveryCells();
         buildMonthsTables(grouped);
       } catch (err) {
         console.error("Erreur lors du chargement des données kilométriques :", err);
         statusEl.textContent =
           "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
         currentData = [];
-        buildMonthsTables({ });
+        buildMonthsTables({});
       }
     }
 
@@ -744,32 +755,9 @@ const lastInfo = lastFormatted
         const smallInfo = document.createElement("small");
         smallInfo.textContent = currentAgence + " – " + currentYear;
 
-        const holidayBtn = document.createElement("button");
-        holidayBtn.type = "button";
-        holidayBtn.className = "holiday-btn";
-        holidayBtn.title = "Marquer un jour sans livraison (colonne noire)";
-        holidayBtn.addEventListener("click", async () => {
-          const daysInMonth = new Date(currentYear, month, 0).getDate();
-          const jourStr = prompt(
-            "Numéro du jour à (dé)marquer comme 'sans livraison' pour " +
-            monthNames[month - 1] + " " + currentYear +
-            " ? (1–" + daysInMonth + ")"
-          );
-          if (!jourStr) return;
-          const jour = parseInt(jourStr, 10);
-          if (isNaN(jour) || jour < 1 || jour > daysInMonth) {
-            alert("Jour invalide.");
-            return;
-          }
-          const dateStr =
-            currentYear + "-" +
-            String(month).padStart(2, "0") + "-" +
-            String(jour).padStart(2, "0");
-
-          await toggleHolidayOnServer(dateStr);
-          await loadHolidays();
-          buildMonthsTables(grouped);
-        });
+        const holidayIndicator = document.createElement("div");
+        holidayIndicator.className = "holiday-btn";
+        holidayIndicator.title = "Case noire = pas de livraison pour la tournée / le jour";
 
         const printBtn = document.createElement("button");
         printBtn.type = "button";
@@ -788,7 +776,7 @@ const lastInfo = lastFormatted
         });
 
         rightPart.appendChild(smallInfo);
-        rightPart.appendChild(holidayBtn);
+        rightPart.appendChild(holidayIndicator);
         rightPart.appendChild(printBtn);
         rightPart.appendChild(recapBtn);
 
@@ -811,18 +799,9 @@ const lastInfo = lastFormatted
           const th = document.createElement("th");
           th.textContent = day;
 
-          const dateKey =
-            currentYear + "-" +
-            String(month).padStart(2, "0") + "-" +
-            String(day).padStart(2, "0");
-
           if (isWeekend(currentYear, month, day)) {
             th.classList.add("weekend");
             weekendDays.push(day);
-          }
-
-          if (currentHolidays.has(dateKey)) {
-            th.classList.add("no-delivery");
           }
 
           headerRow.appendChild(th);
@@ -880,16 +859,25 @@ const lastInfo = lastFormatted
                 String(month).padStart(2, "0") + "-" +
                 String(day).padStart(2, "0");
 
-              if (weekendDays.includes(day)) {
+              if (isWeekend(currentYear, month, day)) {
                 td.classList.add("weekend");
               }
 
-              if (currentHolidays.has(dateKey)) {
+              const ndKey = tournee + "__" + dateKey;
+              if (noDeliveryCells.has(ndKey)) {
                 td.classList.add("no-delivery");
               }
 
-              if (hasComment) {
+              td.dataset.dateKey = dateKey;
+              td.dataset.tournee = tournee;
+              td.style.cursor = "pointer";
+              td.addEventListener("click", (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                toggleNoDeliveryCell(tournee, dateKey, td);
+              });
 
+              if (hasComment) {
                 td.classList.add("has-comment");
                 td.title = commentaires.join(" / ");
                 const dateStr =
@@ -1065,6 +1053,7 @@ const lastInfo = lastFormatted
 
         rows.push({
           date: dateStr,
+          rawDate: d,
           tournee,
           chauffeur,
           km8h,
@@ -1119,9 +1108,7 @@ const lastInfo = lastFormatted
             }
             return a.tournee.localeCompare(b.tournee, "fr");
           }
-          const [da, ma, ya] = a.date.split("/").map(Number);
-          const [db, mb, yb] = b.date.split("/").map(Number);
-          return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+          return a.rawDate - b.rawDate;
         })
         .forEach((item) => {
           const tr = document.createElement("tr");
@@ -1130,6 +1117,18 @@ const lastInfo = lastFormatted
             tr.classList.add("recap-separator-top");
           }
           previousDate = item.date;
+
+          const d = item.rawDate;
+          const dateKey =
+            d.getFullYear() +
+            "-" +
+            String(d.getMonth() + 1).padStart(2, "0") +
+            "-" +
+            String(d.getDate()).padStart(2, "0");
+          const ndKey = item.tournee + "__" + dateKey;
+          if (noDeliveryCells.has(ndKey)) {
+            tr.classList.add("no-delivery");
+          }
 
           const tdDate = document.createElement("td");
           tdDate.textContent = item.date;

@@ -195,17 +195,18 @@ router.post("/holiday", async (req, res) => {
         .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
-    const { agence, date } = req.body || {};
-    if (!agence || !date) {
+    const { agence, tournee, date } = req.body || {};
+    if (!agence || !tournee || !date) {
       return res.status(400).json({
         success: false,
-        error: "Paramètres manquants (agence, date)"
+        error: "Paramètres manquants (agence, tournee, date)"
       });
     }
 
     const payload = {
       action: "toggleHoliday",
       agence,
+      tournee,
       date
     };
 
@@ -219,7 +220,10 @@ router.post("/holiday", async (req, res) => {
     console.error("Erreur /api/kilometrage/holiday :", err.message);
     return res
       .status(500)
-      .json({ success: false, error: "Erreur lors de l'enregistrement du jour sans livraison" });
+      .json({
+        success: false,
+        error: "Erreur lors de l'enregistrement du jour sans livraison"
+      });
   }
 });
 
