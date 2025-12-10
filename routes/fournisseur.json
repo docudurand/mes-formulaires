@@ -186,8 +186,9 @@
   },
   {
     "name": "ESRA",
-    "magasin": "ST EGREVE",
-    "recipients": ["froidste@durandservices.fr"],
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr"],
 	 "infoLivreur": "Ville : GENAS"
   },
   {
