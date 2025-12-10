@@ -160,6 +160,37 @@ router.get("/params", async (req, res) => {
   }
 });
 
+router.get("/holidays", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    const { agence, year } = req.query;
+
+    const url =
+      apiUrl +
+      `?mode=holidays` +
+      `&agence=${encodeURIComponent(agence || "")}` +
+      `&year=${encodeURIComponent(year || "")}`;
+
+    const response = await axios.get(url, { timeout: 10000 });
+
+    return res.json(response.data || []);
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/holidays :", err.message);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: "Erreur lors de la récupération des jours sans livraison"
+      });
+  }
+});
+
 router.get("/resume", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
