@@ -57,7 +57,7 @@ router.post("/save", async (req, res) => {
 
     const response = await axios.post(apiUrl, payload, {
       headers: { "Content-Type": "application/json" },
-      timeout: 10000
+      timeout: 60000
     });
 
     return res.json(response.data || { success: true });
