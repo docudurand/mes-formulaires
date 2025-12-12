@@ -377,30 +377,33 @@
         year: year
       });
 
-      function normalizeRowDate(row) {
-        if (row.date) {
-          const s = row.date.toString().trim();
+function normalizeRowDate(row) {
+  const pick = (v) => (v === null || v === undefined) ? "" : String(v).trim();
 
-          if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-            return s.slice(0, 10);
-          }
+  let s = pick(row.date);
+  if (s) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
 
-          const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-          if (m) {
-            return `${m[3]}-${m[2]}-${m[1]}`;
-          }
-        }
-        if (row.timestamp) {
-          const d = new Date(row.timestamp);
-          if (!isNaN(d.getTime())) {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const d2 = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${d2}`;
-          }
-        }
-        return "";
-      }
+    let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+
+  s = pick(row.timestamp);
+  if (s) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+
+    let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+
+  return "";
+}
 
       try {
         const res = await fetch("/api/kilometrage/data?" + qs.toString());
