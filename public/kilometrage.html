@@ -627,19 +627,27 @@ const lastInfo = lastFormatted
           const day = d.getDate();
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
-          const km = Number(row.km || 0);
-          const commentaire = (row.commentaire || "").trim();
+const km =
+  (row.km === "" || row.km === null || typeof row.km === "undefined")
+    ? null
+    : Number(row.km);
 
-          if (!grouped[monthIndex]) grouped[monthIndex] = {};
-          if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
-          if (!grouped[monthIndex][tourneeKey][day]) {
-            grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
-          }
+const commentaire = (row.commentaire || "").trim();
 
-          grouped[monthIndex][tourneeKey][day].km += km;
-          if (commentaire) {
-            grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
-          }
+const hasKm = (km !== null && !isNaN(km));
+const hasComment = !!commentaire;
+
+if (!hasKm && !hasComment) return;
+
+if (!grouped[monthIndex]) grouped[monthIndex] = {};
+if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
+if (!grouped[monthIndex][tourneeKey][day]) {
+  grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
+}
+
+if (hasKm) grouped[monthIndex][tourneeKey][day].km += km;
+
+if (hasComment) grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
         });
 
         buildMonthsTables(grouped);
@@ -713,17 +721,17 @@ const lastInfo = lastFormatted
         const daysInMonth = new Date(currentYear, month, 0).getDate();
         const weekendDays = [];
 
-        for (let day = 1; day <= daysInMonth; day++) {
-          const th = document.createElement("th");
-          th.textContent = day;
+for (let day = 1; day <= daysInMonth; day++) {
+  const th = document.createElement("th");
+  th.textContent = day;
 
-          if (isWeekend(currentYear, month, day)) {
-            th.classList.add("weekend");
-            weekendDays.push(day);
-          }
+  if (isWeekend(currentYear, month, day)) {
+    th.classList.add("weekend");
+    weekendDays.push(day);
+  }
 
-          headerRow.appendChild(th);
-        }
+  headerRow.appendChild(th);
+}
 
         const totalTh = document.createElement("th");
         totalTh.textContent = "Total";
@@ -771,7 +779,7 @@ if (!hasEntry) {
 }
 
 if (hasEntry) total += km;
-
+if (isWeekend(currentYear, month, day)) td.classList.add("weekend");
   row.appendChild(td);
 }
 
