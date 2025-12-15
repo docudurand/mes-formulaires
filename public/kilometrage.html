@@ -763,14 +763,16 @@ const lastInfo = lastFormatted
               const commentaires = dayObj && dayObj.commentaires ? dayObj.commentaires : [];
               const hasComment = commentaires.length > 0;
 
-              if (km > 0) {
-                td.textContent = km;
-                td.className = "km";
-                total += km;
-              } else {
-                td.textContent = "";
-                td.className = "km-zero";
-              }
+              const hasDayEntry = !!dayObj;
+
+if (hasDayEntry) {
+  td.textContent = String(km);
+  td.className = km > 0 ? "km" : "km-zero";
+  total += km;
+} else {
+  td.textContent = "";
+  td.className = "km-zero";
+}
 
               if (weekendDays.includes(day)) {
                 td.classList.add("weekend");
