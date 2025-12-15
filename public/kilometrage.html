@@ -627,27 +627,19 @@ const lastInfo = lastFormatted
           const day = d.getDate();
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
-const km =
-  (row.km === "" || row.km === null || typeof row.km === "undefined")
-    ? null
-    : Number(row.km);
+          const km = Number(row.km || 0);
+          const commentaire = (row.commentaire || "").trim();
 
-const commentaire = (row.commentaire || "").trim();
+          if (!grouped[monthIndex]) grouped[monthIndex] = {};
+          if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
+          if (!grouped[monthIndex][tourneeKey][day]) {
+            grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
+          }
 
-const hasKm = (km !== null && !isNaN(km));
-const hasComment = !!commentaire;
-
-if (!hasKm && !hasComment) return;
-
-if (!grouped[monthIndex]) grouped[monthIndex] = {};
-if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
-if (!grouped[monthIndex][tourneeKey][day]) {
-  grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
-}
-
-if (hasKm) grouped[monthIndex][tourneeKey][day].km += km;
-
-if (hasComment) grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
+          grouped[monthIndex][tourneeKey][day].km += km;
+          if (commentaire) {
+            grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
+          }
         });
 
         buildMonthsTables(grouped);
@@ -721,17 +713,17 @@ if (hasComment) grouped[monthIndex][tourneeKey][day].commentaires.push(commentai
         const daysInMonth = new Date(currentYear, month, 0).getDate();
         const weekendDays = [];
 
-for (let day = 1; day <= daysInMonth; day++) {
-  const th = document.createElement("th");
-  th.textContent = day;
+        for (let day = 1; day <= daysInMonth; day++) {
+          const th = document.createElement("th");
+          th.textContent = day;
 
-  if (isWeekend(currentYear, month, day)) {
-    th.classList.add("weekend");
-    weekendDays.push(day);
-  }
+          if (isWeekend(currentYear, month, day)) {
+            th.classList.add("weekend");
+            weekendDays.push(day);
+          }
 
-  headerRow.appendChild(th);
-}
+          headerRow.appendChild(th);
+        }
 
         const totalTh = document.createElement("th");
         totalTh.textContent = "Total";
@@ -764,30 +756,51 @@ for (let day = 1; day <= daysInMonth; day++) {
             const daysByDay = monthData[tournee] || {};
             let total = 0;
 
-for (let day = 1; day <= daysInMonth; day++) {
-  const td = document.createElement("td");
-const dayObj = daysByDay[day];
-const hasEntry = !!dayObj;
-const km = hasEntry ? Number(dayObj.km ?? 0) : 0;
+            for (let day = 1; day <= daysInMonth; day++) {
+              const td = document.createElement("td");
+              const dayObj = daysByDay[day];
+              const km = dayObj ? (dayObj.km || 0) : 0;
+              const commentaires = dayObj && dayObj.commentaires ? dayObj.commentaires : [];
+              const hasComment = commentaires.length > 0;
 
-if (!hasEntry) {
-  td.textContent = "";
-  td.className = "km-zero";
-} else {
-  td.textContent = String(km);
-  td.className = km > 0 ? "km" : "km-zero";
-}
+              if (km > 0) {
+                td.textContent = km;
+                td.className = "km";
+                total += km;
+              } else {
+                td.textContent = "";
+                td.className = "km-zero";
+              }
 
-if (hasEntry) total += km;
-if (isWeekend(currentYear, month, day)) td.classList.add("weekend");
-  row.appendChild(td);
-}
+              if (weekendDays.includes(day)) {
+                td.classList.add("weekend");
+              }
 
-const totalTd = document.createElement("td");
-totalTd.className = "total-cell";
-totalTd.textContent = String(total);
-row.appendChild(totalTd);
+              if (hasComment) {
+                td.classList.add("has-comment");
+                td.title = commentaires.join(" / ");
+                const dateStr =
+                  String(day).padStart(2, "0") +
+                  "/" +
+                  String(month).padStart(2, "0") +
+                  "/" +
+                  currentYear;
+                commentaires.forEach((c) => {
+                  legendItems.push({
+                    date: dateStr,
+                    tournee,
+                    commentaire: c
+                  });
+                });
+              }
 
+              row.appendChild(td);
+            }
+
+            const totalTd = document.createElement("td");
+            totalTd.className = "total-cell";
+            totalTd.textContent = total > 0 ? total : "";
+            row.appendChild(totalTd);
 
             tbody.appendChild(row);
           });
@@ -935,7 +948,7 @@ row.appendChild(totalTd);
         const km12h = row.km12h;
         const km14h = row.km14h;
         const km18h = row.km18h;
-        const total = (row.km === 0 || row.km) ? row.km : "";
+        const total = row.km || "";
 
         rows.push({
           date: dateStr,
@@ -1038,7 +1051,7 @@ row.appendChild(totalTd);
           tr.appendChild(addKmCell(item.km18h));
 
           const tdTotal = document.createElement("td");
-          tdTotal.textContent = (item.total === 0 || item.total) ? String(item.total) : "";
+          tdTotal.textContent = item.total || "";
           tr.appendChild(tdTotal);
 
           tbody.appendChild(tr);
