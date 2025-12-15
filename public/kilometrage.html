@@ -627,19 +627,23 @@ const lastInfo = lastFormatted
           const day = d.getDate();
 
           const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
-          const km = Number(row.km || 0);
-          const commentaire = (row.commentaire || "").trim();
+const kmIsMissing = (row.km === "" || row.km === null || typeof row.km === "undefined");
+const km = kmIsMissing ? null : Number(row.km);
+const commentaire = (row.commentaire || "").trim();
 
-          if (!grouped[monthIndex]) grouped[monthIndex] = {};
-          if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
-          if (!grouped[monthIndex][tourneeKey][day]) {
-            grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
-          }
+if (km === null) return;
 
-          grouped[monthIndex][tourneeKey][day].km += km;
-          if (commentaire) {
-            grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
-          }
+if (!grouped[monthIndex]) grouped[monthIndex] = {};
+if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
+if (!grouped[monthIndex][tourneeKey][day]) {
+  grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [] };
+}
+
+grouped[monthIndex][tourneeKey][day].km += km;
+
+if (commentaire) {
+  grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
+}
         });
 
         buildMonthsTables(grouped);
