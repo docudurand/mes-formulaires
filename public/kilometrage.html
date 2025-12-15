@@ -796,10 +796,11 @@ const lastInfo = lastFormatted
 
               row.appendChild(td);
             }
+			const hasAnyEntry = Object.keys(daysByDay).length > 0;
 
             const totalTd = document.createElement("td");
             totalTd.className = "total-cell";
-            totalTd.textContent = total > 0 ? total : "";
+            totalTd.textContent = hasAnyEntry ? String(total) : "";
             row.appendChild(totalTd);
 
             tbody.appendChild(row);
@@ -948,7 +949,7 @@ const lastInfo = lastFormatted
         const km12h = row.km12h;
         const km14h = row.km14h;
         const km18h = row.km18h;
-        const total = row.km || "";
+        const total = (row.km === 0 || row.km) ? row.km : "";
 
         rows.push({
           date: dateStr,
@@ -1051,7 +1052,7 @@ const lastInfo = lastFormatted
           tr.appendChild(addKmCell(item.km18h));
 
           const tdTotal = document.createElement("td");
-          tdTotal.textContent = item.total || "";
+          tdTotal.textContent = (item.total === 0 || item.total) ? String(item.total) : "";
           tr.appendChild(tdTotal);
 
           tbody.appendChild(tr);
