@@ -228,6 +228,24 @@ body{
   position:absolute; inset:0; width:100%; height:100%; border:0;
 }
 
+/* ===== Accueil : vidéo centrée "style Wix" (pas pleine largeur) ===== */
+.content .video{
+  width: min(1100px, 92vw);   /* ✅ taille type Wix */
+  margin: 0 auto;            /* ✅ centrée */
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(0,0,0,.18);
+  background: #fff;
+}
+
+/* optionnel : un peu d’air au-dessus / dessous */
+.content .video{ margin-top: 10px; margin-bottom: 10px; }
+
+/* mobile : on élargit un peu pour utiliser l’écran */
+@media (max-width: 640px){
+  .content .video{ width: 96vw; border-radius: 12px; }
+}
+
 /* ===== Embeds (iframés) ===== */
 .embed-main{ padding: 0; }
 
