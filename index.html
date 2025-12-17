@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Documents Durand</title>
+
+  <style>
+    :root{
+      --blue-dark:#2a3b63;     /* barre bleue */
+      --pill:#1e2f57;          /* pilules actives */
+      --pill-muted:#6a748f;    /* pilules inactives */
+      --topbar:#e9edfb;        /* fond bandeau haut */
+      --card:#ffffff;
+      --shadow:0 18px 45px rgba(0,0,0,.22);
+      --radius:22px;
+      --radius-pill:999px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--blue-dark);
+      color:#111;
+    }
+
+    /* ===== Bandeau haut ===== */
+    .topbar{
+      background: var(--topbar);
+      border-top: 4px solid #6b2aa6; /* petit liseré violet comme sur la capture */
+      padding: 10px 14px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .brand-left, .brand-right{
+      display:flex;
+      align-items:center;
+      min-width: 140px;
+    }
+    .brand-left img{
+      height:34px;
+      width:auto;
+      display:block;
+    }
+    .brand-right{
+      margin-left:auto;
+      justify-content:flex-end;
+    }
+    .brand-right img{
+      height:34px;
+      width:auto;
+      display:block;
+    }
+
+    /* ===== Menus pilules ===== */
+    .nav{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:18px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .menu{
+      position:relative;
+    }
+
+    .menu-btn{
+      appearance:none;
+      border:0;
+      cursor:pointer;
+      padding: 12px 28px;
+      border-radius: var(--radius-pill);
+      color:#fff;
+      font-weight:800;
+      letter-spacing:.5px;
+      font-size:18px;
+      background: var(--pill-muted);
+      box-shadow: 0 6px 14px rgba(0,0,0,.18);
+      min-width: 220px;
+      text-transform: uppercase;
+    }
+    /* Comme sur tes captures : VL plus “foncé” */
+    .menu.is-active .menu-btn{ background: var(--pill); }
+
+    /* ===== Barre bleue sous le bandeau ===== */
+    .subbar{
+      height: 46px;
+      background: var(--blue-dark);
+    }
+
+    /* ===== Zone contenu ===== */
+    .wrap{
+      padding: 26px 14px 40px;
+      display:flex;
+      justify-content:center;
+    }
+
+    .card{
+      width: min(1120px, 96vw);
+      background: var(--card);
+      border-radius: 6px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      border: 1px solid rgba(0,0,0,.08);
+    }
+
+    /* Video responsive */
+    .video{
+      position:relative;
+      width:100%;
+      aspect-ratio: 16 / 9;
+      background:#fff;
+    }
+    .video iframe{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+    }
+
+    /* ===== Dropdown ===== */
+    .dropdown{
+      position:absolute;
+      top: calc(100% + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 420px;
+      max-width: 92vw;
+      background:#fff;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.12);
+      box-shadow: 0 18px 35px rgba(0,0,0,.25);
+      padding: 14px 10px;
+      display:none;
+      z-index: 50;
+    }
+
+    /* menu utilitaire : dropdown plus vers la droite (comme ta capture) */
+    .menu.util .dropdown{
+      left: auto;
+      right: 0;
+      transform: none;
+      width: 460px;
+    }
+
+    .dropdown a{
+      display:block;
+      padding: 16px 14px;
+      text-decoration:none;
+      color:#000;
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform: uppercase;
+      text-align:center;
+      border-radius: 12px;
+    }
+    .dropdown a:hover{
+      background: rgba(42,59,99,.07);
+    }
+
+    .menu.open .dropdown{ display:block; }
+
+    /* Desktop: ouverture au survol en plus (optionnel mais pratique) */
+    @media (hover:hover){
+      .menu:hover .dropdown{ display:block; }
+    }
+
+    /* Responsive */
+    @media (max-width: 980px){
+      .menu-btn{ min-width: 160px; font-size:16px; padding: 10px 18px; }
+      .brand-left, .brand-right{ min-width: 90px; }
+      .brand-left img, .brand-right img{ height:28px; }
+      .nav{ gap:10px; }
+      .subbar{ height: 36px; }
+    }
+
+    @media (max-width: 640px){
+      .topbar{ flex-wrap: wrap; }
+      .nav{ width:100%; order: 3; justify-content:space-between; }
+      .brand-right{ order:2; margin-left:0; }
+      .menu-btn{ width: 100%; min-width: 0; }
+      .menu{ flex:1; }
+      .dropdown{
+        left: 0;
+        transform:none;
+        width: 100%;
+      }
+      .menu.util .dropdown{
+        right:auto;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Bandeau haut -->
+  <header class="topbar">
+    <div class="brand-left">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png" alt="Documents Durand">
+    </div>
+
+    <nav class="nav" aria-label="Menus">
+      <!-- MENU PL -->
+      <div class="menu" data-menu="pl">
+        <button class="menu-btn" type="button">MENU PL</button>
+        <div class="dropdown" role="menu" aria-label="Menu PL">
+          <!-- Remplace les href par tes vraies pages -->
+          <a href="#" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
+          <a href="#" role="menuitem">FOURNISSEUR PL</a>
+          <a href="#" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
+        </div>
+      </div>
+
+      <!-- MENU VL (actif sur ta capture) -->
+      <div class="menu is-active" data-menu="vl">
+        <button class="menu-btn" type="button">MENU VL</button>
+        <div class="dropdown" role="menu" aria-label="Menu VL">
+          <a href="#" role="menuitem">FORMULAIRE CREATION REFERENCE VL / VUL</a>
+          <a href="#" role="menuitem">FORMULAIRE CREATION PNEUMATIQUE</a>
+          <a href="#" role="menuitem">FOURNISSEUR VL</a>
+          <a href="#" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
+          <a href="#" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
+        </div>
+      </div>
+
+      <!-- UTILITAIRE -->
+      <div class="menu util" data-menu="util">
+        <button class="menu-btn" type="button">UTILITAIRE</button>
+        <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
+          <a href="#" role="menuitem">PRET VEHICULE</a>
+          <a href="#" role="menuitem">DEMANDE RAMASSE</a>
+          <a href="#" role="menuitem">SERVICE CULASSE ET INJECTION</a>
+          <a href="#" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
+          <a href="#" role="menuitem">CASTROL</a>
+          <a href="#" role="menuitem">SITE IDENTIFIANT OE</a>
+          <a href="#" role="menuitem">CONTACTS FOURNISSEURS</a>
+          <a href="#" role="menuitem">REFERENCE COMPLIQUES</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="brand-right">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/durand_services_logo.png" alt="Durand Services">
+    </div>
+  </header>
+
+  <div class="subbar"></div>
+
+  <!-- Contenu -->
+  <main class="wrap">
+    <section class="card" aria-label="Accueil">
+      <div class="video">
+        <iframe
+          src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Ouverture au clic (utile mobile / tablette). Ferme les autres menus.
+    const menus = Array.from(document.querySelectorAll('.menu'));
+    function closeAll(except=null){
+      menus.forEach(m => { if(m !== except) m.classList.remove('open'); });
+    }
+
+    menus.forEach(menu => {
+      const btn = menu.querySelector('.menu-btn');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = menu.classList.contains('open');
+        closeAll();
+        menu.classList.toggle('open', !isOpen);
+      });
+    });
+
+    // clic dehors -> ferme
+    document.addEventListener('click', (e) => {
+      if(!e.target.closest('.menu')) closeAll();
+    });
+
+    // ESC -> ferme
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') closeAll();
+    });
+  </script>
+</body>
+</html>
