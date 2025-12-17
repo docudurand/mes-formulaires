@@ -2,7 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
-import nodemailer from 'nodemailer';
+import { transporter, fromEmail } from '../mailer.js';
 
 const router = express.Router();
 
@@ -263,20 +263,16 @@ router.post('/loans/email', async (req, res) => {
     const loan = req.body?.loan || {};
     const rawAtts = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
 
-    const user = process.env.GMAIL_USER;
-    const pass = process.env.GMAIL_PASS;
-    if (!user || !pass) return res.status(500).json({ ok:false, error:'mail_config_missing' });
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user, pass }
-    });
+	if (!transporter) {
+     return res.status(500).json({ ok:false, error:'smtp_not_configured' });
+    }
 
     const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0];
     const host  = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0];
-    const origin = host ? `${proto}://${host}` : '';
+    const origin = host ? `${proto}://${host}` : (process.env.PUBLIC_BASE_URL || "");
 
-    const to = process.env.MAIL_TO || user;
+    const to = (process.env.PRET_MAIL_TO || process.env.MAIL_TO || "").trim();
+	if (!to) return res.status(500).json({ ok:false, error:"mail_to_missing" });
     const subject = `NOUVEAU PRÊT – ${loan.immatriculation || '—'} – ${loan.magasin_pret || '—'}`;
 
     const rows = [
@@ -310,7 +306,7 @@ router.post('/loans/email', async (req, res) => {
     }));
 
     const info = await transporter.sendMail({
-      from: `"Prêts Véhicules" <${user}>`,
+      from: `"Prêts Véhicules" <${fromEmail}>`,
       to,
       subject,
       html,
