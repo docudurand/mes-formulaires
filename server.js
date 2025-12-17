@@ -34,6 +34,30 @@ const __dirname  = path.dirname(__filename);
 const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
+app.use((req, res, next) => {
+  const FRAME_ANCESTORS =
+    "frame-ancestors 'self' " +
+    "https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io " +
+    "https://*.onrender.com";
+
+  const existing = res.getHeader("Content-Security-Policy");
+  if (!existing) {
+    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
+  } else {
+    let csp = String(existing);
+
+    if (/frame-ancestors/i.test(csp)) {
+      csp = csp.replace(/frame-ancestors[^;]*/i, FRAME_ANCESTORS);
+    } else {
+      csp = csp.replace(/\s*;?\s*$/, "; ") + FRAME_ANCESTORS;
+    }
+    res.setHeader("Content-Security-Policy", csp);
+  }
+
+  res.removeHeader("X-Frame-Options");
+
+  next();
+});
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
