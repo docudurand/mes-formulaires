@@ -14,7 +14,6 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
-// Dictionnaire des destinataires par commercial chargé depuis l'environnement
 let salesMap = {};
 try {
   const raw = process.env.SALES_MAP_JSON;
@@ -42,22 +41,18 @@ function getSubjectPrefix(formOriginRaw) {
   return 'BDC';
 }
 
-// Envoi du bon de commande ; le PDF doit être fourni en base64
 router.post('/send-order', async (req, res) => {
   const { client, salesperson, pdf, form_origin } = req.body;
 
-  // Aucun PDF fourni → erreur 400
   if (!pdf) {
     return res.status(400).json({ success: false, error: 'no_pdf' });
   }
 
-  // SMTP non configuré
   if (!transporter) {
     console.error('[televente] SMTP not configured');
     return res.status(500).json({ success: false, error: 'smtp_not_configured' });
   }
 
-  // Détermine les destinataires
   let to = '';
   if (salesperson && salesMap[salesperson]) {
     to = salesMap[salesperson];
@@ -71,7 +66,6 @@ router.post('/send-order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'no_recipient' });
   }
 
-  // Champs safe
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 

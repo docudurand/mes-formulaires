@@ -78,13 +78,11 @@ router.post(
     }));
 
     try {
-      // Guard against missing SMTP configuration
       if (!transporter) {
         console.error('[formulaire-pneu] SMTP not configured');
         return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
       }
 
-      // Guard against missing destination email
       if (!process.env.DEST_EMAIL_FORMULAIRE_PNEU) {
         console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
         return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
@@ -101,7 +99,6 @@ router.post(
 
       await transporter.sendMail(mailOptions);
 
-      // Accusé réception au demandeur (optionnel)
       if (formData.email) {
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
@@ -141,7 +138,6 @@ router.post(
       console.error('[formulaire-pneu] Envoi mail échoué :', err);
       res.status(500).send("Erreur lors de l'envoi.");
     } finally {
-      // Toujours supprimer les fichiers uploadés
       files.forEach(file => {
         fs.unlink(file.path, () => {});
       });

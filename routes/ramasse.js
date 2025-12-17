@@ -3,9 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-// Remove direct dependency on nodemailer. All mail is sent via the
-// centralized transporter defined in ../mailer.js.
-// import nodemailer from "nodemailer";
+
 import mime from "mime-types";
 import PDFDocument from "pdfkit";
 import ftp from "basic-ftp";
@@ -35,11 +33,6 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
   path.resolve(__dirname, "../magasins.json"),
 ];
-
-// Previously this file constructed its own Gmail transporter. All emails
-// now use the shared transporter from ../mailer.js. Ensure it is
-// configured in your environment or requests will return an error.
-// const transporter = nodemailer.createTransport({ ... });
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -540,7 +533,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
-    // Ensure transporter is configured. Without it sendMail will throw.
     if (!transporter) {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });

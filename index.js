@@ -15,10 +15,6 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
-// Build a mapping between salesperson codes and destination email
-// addresses. The SALES_MAP_JSON environment variable should be a JSON
-// object mapping salesperson identifiers to one or more email
-// addresses. If parsing fails, an empty object is used.
 let salesMap = {};
 try {
   const raw = process.env.SALES_MAP_JSON;
@@ -53,9 +49,6 @@ router.post('/send-order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'no_pdf' });
   }
 
-  // Determine the destination email address. We first look up the
-  // salesperson in the JSON mapping; failing that we fall back to
-  // DEFAULT_TO or the legacy MAIL_TO variable.
   let to = '';
   if (salesperson && salesMap[salesperson]) {
     to = salesMap[salesperson];
@@ -83,8 +76,6 @@ router.post('/send-order', async (req, res) => {
   const fromName = getFromName(form_origin);
   const subjectPrefix = getSubjectPrefix(form_origin);
 
-  // If no transporter is configured (for example if credentials are missing),
-  // return an error immediately to avoid hanging the request.
   if (!transporter) {
     console.error('Email transporter not configured');
     return res.status(500).json({ success: false, error: 'smtp_not_configured' });

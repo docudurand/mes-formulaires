@@ -75,7 +75,6 @@ router.post(
       path: file.path
     }));
 
-    // Ensure SMTP is configured
     if (!transporter) {
       console.error('[formulaire-piecepl] SMTP not configured');
       for (const file of req.files) {
@@ -86,7 +85,7 @@ router.post(
 
     const mailOptions = {
       from: `"Formulaire création PL" <${fromEmail}>`,
-      to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL, // ✅ PL !
+      to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL,
       subject: '📨 Demande de création référence PL',
       replyTo: formData.email,
       html: generateHtml(formData),
