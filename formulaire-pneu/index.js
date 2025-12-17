@@ -1,9 +1,10 @@
 import express from 'express';
 import multer from 'multer';
-import nodemailer from 'nodemailer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
+// Use the shared mailer rather than constructing a new Gmail transporter.
+import { transporter, fromEmail } from '../mailer.js';
 
 dotenv.config();
 
@@ -42,14 +43,6 @@ const upload = multer({
   }
 });
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS
-  }
-});
-
 function generateHtml(data) {
   const rows = Object.entries(FIELD_LABELS).map(([key, label]) => `
     <tr>
@@ -83,8 +76,18 @@ router.post(
       path: file.path
     }));
 
+    // Guard against missing SMTP configuration
+    if (!transporter) {
+      console.error('[formulaire-pneu] SMTP not configured');
+      // delete uploaded files before returning
+      (req.files || []).forEach(file => {
+        fs.unlink(file.path, () => {});
+      });
+      return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
+    }
+
     const mailOptions = {
-      from: `"Formulaire création VL" <${process.env.GMAIL_USER}>`,
+      from: `"Formulaire création VL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
       subject: '📨 Demande création référence Pneumatique VL',
       replyTo: formData.email,
@@ -97,7 +100,7 @@ router.post(
 
       if (formData.email) {
         const accuserecepOptions = {
-          from: `"Service Pneumatiques VL" <${process.env.GMAIL_USER}>`,
+          from: `"Service Pneumatiques VL" <${fromEmail}>`,
           to: formData.email,
           subject: "Votre demande de création de référence pneu a bien été reçue",
           html: `

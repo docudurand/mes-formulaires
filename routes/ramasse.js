@@ -3,12 +3,15 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+// Remove direct dependency on nodemailer. All mail is sent via the
+// centralized transporter defined in ../mailer.js.
+// import nodemailer from "nodemailer";
 import mime from "mime-types";
 import PDFDocument from "pdfkit";
 import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
+import { transporter, fromEmail } from "../mailer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -33,13 +36,10 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: String(process.env.GMAIL_PASS || "").replace(/["\s]/g, ""),
-  },
-});
+// Previously this file constructed its own Gmail transporter. All emails
+// now use the shared transporter from ../mailer.js. Ensure it is
+// configured in your environment or requests will return an error.
+// const transporter = nodemailer.createTransport({ ... });
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -540,8 +540,14 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
+    // Ensure transporter is configured. Without it sendMail will throw.
+    if (!transporter) {
+      console.error("[RAMASSE] SMTP not configured");
+      return res.status(500).json({ error: "smtp_not_configured" });
+    }
+
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
@@ -563,7 +569,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      from: `"Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
       html: `
@@ -626,7 +632,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   } catch (e) {
     console.error("[RAMASSE] POST error:", e);
     res.status(500).json({
-      error: "Échec de l'envoi. Vérifiez la config Gmail / PDF / FTP.",
+      error: "Échec de l'envoi. Vérifiez la config SMTP / PDF / FTP.",
     });
   }
 });
@@ -663,9 +669,9 @@ router.get("/ack", async (req, res) => {
 
     const sendNow = shouldSendAckOnce(String(sig));
 
-    if (sendNow) {
+    if (sendNow && transporter) {
       await transporter.sendMail({
-        from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+        from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
         to: String(email),
         subject: `Accusé de réception – Demande de ramasse (${String(
           fournisseur
