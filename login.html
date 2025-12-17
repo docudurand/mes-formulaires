@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Connexion - Documents Durand</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1 class="auth-title">Accès protégé</h1>
+      <p class="auth-desc">Saisis le mot de passe pour accéder au site.</p>
+
+      <div class="auth-row">
+        <input id="pwd" class="auth-input" type="password" placeholder="Mot de passe" autocomplete="current-password" />
+        <button id="btn" class="auth-btn" type="button">Entrer</button>
+      </div>
+
+      <div id="err" class="auth-error"></div>
+
+      <div class="small-note">
+        <b>Note :</b> ce système reproduit le “mot de passe de site” (style Wix) via le navigateur.
+        Pour une sécurité forte (vrai contrôle d’accès), il faudra une authentification côté serveur.
+      </div>
+    </div>
+  </div>
+
+  <script>window.__SITE_PREFIX__="";</script>
+  <script src="assets/auth.js"></script>
+  <script>
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get("redirect") || "/index.html";
+      const pwd = document.getElementById("pwd");
+      const btn = document.getElementById("btn");
+      const err = document.getElementById("err");
+
+      function go(){
+        err.textContent = "";
+        const ok = loginWith(pwd.value || "");
+        if(!ok){
+          err.textContent = "Mot de passe incorrect.";
+          pwd.focus();
+          return;
+        }
+        window.location.replace(redirect);
+      }
+
+      btn.addEventListener("click", go);
+      pwd.addEventListener("keydown", (e)=>{ if(e.key==="Enter") go(); });
+      pwd.focus();
+    })();
+  </script>
+</body>
+</html>

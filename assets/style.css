@@ -1,0 +1,335 @@
+:root{
+  --blue-dark:#2a3b63;
+  --pill:#1e2f57;
+  --pill-muted:#6a748f;
+  --topbar:#e9edfb;
+  --card:#ffffff;
+  --shadow:0 18px 45px rgba(0,0,0,.22);
+  --radius:22px;
+  --radius-pill:999px;
+  --link:#2a46ff;
+  --text:#111;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--blue-dark);
+  color: var(--text);
+
+  /* ✅ 1 seul scroll : la page */
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ===== TOPBAR : Wix-like ===== */
+.topbar{
+  background: var(--topbar);
+  border-top: 4px solid #6b2aa6;
+  padding: 14px 18px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+
+  /* ✅ le dropdown passe au-dessus du contenu */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Logos gauche/droite */
+.brand-left, .brand-right{
+  display:flex;
+  align-items:center;
+  min-width: 180px;
+}
+.brand-left img,
+.brand-right img{
+  height: 44px;
+  width:auto;
+  display:block;
+}
+.brand-right{
+  margin-left:auto;
+  justify-content:flex-end;
+}
+
+/* Menus centrés */
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:22px;
+  flex:1;
+  min-width:0;
+}
+
+/* IMPORTANT : dropdown absolute se base sur .menu */
+.menu{
+  position: relative; /* ✅ indispensable */
+  display:flex;
+  align-items:center;
+}
+
+/* Boutons menu (pills) */
+.menu-btn{
+  appearance:none;
+  border:0;
+  cursor:pointer;
+
+  padding: 14px 34px;
+  border-radius: var(--radius-pill);
+
+  color:#fff;
+  font-weight:900;
+  letter-spacing:.8px;
+  font-size: 20px;
+  text-transform: uppercase;
+
+  background: var(--pill-muted);
+  box-shadow: 0 8px 18px rgba(0,0,0,.18);
+
+  min-width: 240px;
+}
+
+.menu-btn:focus-visible{
+  outline: 3px solid rgba(42,70,255,.45);
+  outline-offset: 3px;
+}
+
+/* Actif */
+.menu.is-active .menu-btn{ background: var(--pill); }
+
+/* Sous barre (espace sous menu) */
+.subbar{ height: 22px; }
+
+/* ===== Dropdown ===== */
+.dropdown{
+  position:absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  max-width: 92vw;
+  background:#fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,.12);
+  box-shadow: 0 18px 35px rgba(0,0,0,.25);
+  padding: 14px 10px;
+  display:none;
+  z-index: 50;
+}
+
+.menu.util .dropdown{
+  left:auto;
+  right:0;
+  transform:none;
+  width: 460px;
+}
+
+.dropdown a{
+  display:block;
+  padding: 16px 14px;
+  text-decoration:none;
+  color:#000;
+  font-weight:900;
+  letter-spacing:.6px;
+  text-transform: uppercase;
+  text-align:center;
+  border-radius: 12px;
+}
+.dropdown a:hover{ background: rgba(42,59,99,.07); }
+
+/* ✅ Ouverture au clic (si ton JS ajoute .open) */
+.menu.open .dropdown{ display:block; }
+
+/* ✅ Ouverture au survol sur PC */
+@media (hover:hover){
+  .menu:hover .dropdown{ display:block; }
+
+  /* petit "pont" pour éviter que le hover se coupe entre bouton et dropdown */
+  .menu::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    top:100%;
+    height:12px;
+    background:transparent;
+  }
+}
+
+/* ===== Layout / cadres (1 seul scroll) ===== */
+.wrap{
+  flex: 1;
+  padding: 6px 12px 12px;
+  display:flex;
+  justify-content:center;
+  align-items:stretch;
+}
+
+/* cadre principal */
+.card{
+  width: min(1680px, 98vw);
+  display:flex;
+  flex-direction:column;
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* pages type "contenu" (index) */
+.content{
+  background: #eef0ff;
+  padding: 42px 24px 60px;
+  min-height: 60vh;
+}
+
+.h1{
+  text-align:center;
+  font-size: 54px;
+  letter-spacing: 2px;
+  margin: 18px 0 38px;
+  color: #1d2336;
+  font-weight: 400;
+}
+
+.list{
+  max-width: 900px;
+  margin: 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap: 26px;
+}
+
+.list a{
+  text-align:center;
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--link);
+  text-decoration:none;
+}
+.list a:hover{ text-decoration: underline; }
+
+.video{
+  position:relative;
+  width:100%;
+  aspect-ratio: 16/9;
+  background:#fff;
+}
+.video iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0;
+}
+
+/* ===== Embeds (iframés) ===== */
+.embed-main{ padding: 0; }
+
+.embed-card{
+  width: min(1400px, 96vw);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* ✅ iframe : pas de scroll dans le cadre (hauteur gérée par JS postMessage) */
+.embed-frame,
+.card iframe{
+  width: 100% !important;
+  border: 0 !important;
+  display: block !important;
+  height: 1200px; /* valeur de secours le temps que le JS ajuste */
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 980px){
+  .menu-btn{ min-width: 180px; font-size:16px; padding: 12px 18px; }
+  .brand-left, .brand-right{ min-width: 110px; }
+  .brand-left img, .brand-right img{ height:34px; }
+  .nav{ gap:12px; }
+  .subbar{ height: 28px; }
+  .h1{ font-size: 40px; }
+}
+
+@media (max-width: 640px){
+  .topbar{ flex-wrap: wrap; }
+  .nav{ width:100%; order: 3; justify-content:space-between; }
+  .brand-right{ order:2; margin-left:0; }
+  .menu-btn{ width: 100%; min-width: 0; }
+  .menu{ flex:1; }
+  .dropdown{ left:0; transform:none; width:100%; }
+  .menu.util .dropdown{ right:auto; width:100%; }
+  .h1{ font-size: 32px; }
+}
+
+/* ===== Auth ===== */
+.auth-wrap{
+  min-height: calc(100vh - 50px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 30px 14px 60px;
+}
+
+.auth-card{
+  width: min(520px, 96vw);
+  background:#fff;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(0,0,0,.08);
+  padding: 26px 22px;
+}
+
+.auth-title{
+  margin:0 0 10px;
+  font-size: 26px;
+  text-align:center;
+}
+
+.auth-desc{
+  margin:0 0 18px;
+  color:#444;
+  text-align:center;
+}
+
+.auth-row{
+  display:flex;
+  gap:10px;
+}
+
+.auth-input{
+  flex:1;
+  padding: 12px 12px;
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.auth-btn{
+  padding: 12px 14px;
+  border:0;
+  border-radius: 10px;
+  background: var(--pill);
+  color:#fff;
+  font-weight: 800;
+  cursor:pointer;
+}
+
+.auth-error{
+  margin: 12px 0 0;
+  color: #b00020;
+  text-align:center;
+  min-height: 18px;
+}
+
+.small-note{
+  margin-top: 14px;
+  font-size: 12px;
+  color:#666;
+  line-height: 1.35;
+}
