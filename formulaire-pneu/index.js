@@ -3,7 +3,6 @@ import multer from 'multer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
-// Use the shared mailer rather than constructing a new Gmail transporter.
 import { transporter, fromEmail } from '../mailer.js';
 
 dotenv.config();
@@ -71,33 +70,38 @@ router.post(
   upload.array('fichiers[]'),
   async (req, res) => {
     const formData = req.body;
-    const attachments = (req.files || []).map(file => ({
+
+    const files = req.files || [];
+    const attachments = files.map(file => ({
       filename: file.originalname,
       path: file.path
     }));
 
-    // Guard against missing SMTP configuration
-    if (!transporter) {
-      console.error('[formulaire-pneu] SMTP not configured');
-      // delete uploaded files before returning
-      (req.files || []).forEach(file => {
-        fs.unlink(file.path, () => {});
-      });
-      return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
-    }
-
-    const mailOptions = {
-      from: `"Formulaire création VL" <${fromEmail}>`,
-      to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
-      subject: '📨 Demande création référence Pneumatique VL',
-      replyTo: formData.email,
-      html: generateHtml(formData),
-      attachments
-    };
-
     try {
+      // Guard against missing SMTP configuration
+      if (!transporter) {
+        console.error('[formulaire-pneu] SMTP not configured');
+        return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
+      }
+
+      // Guard against missing destination email
+      if (!process.env.DEST_EMAIL_FORMULAIRE_PNEU) {
+        console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
+        return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
+      }
+
+      const mailOptions = {
+        from: `"Formulaire création Pneu VL" <${fromEmail}>`,
+        to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
+        subject: '📨 Demande création référence Pneumatique VL',
+        replyTo: formData.email,
+        html: generateHtml(formData),
+        attachments
+      };
+
       await transporter.sendMail(mailOptions);
 
+      // Accusé réception au demandeur (optionnel)
       if (formData.email) {
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
@@ -124,19 +128,21 @@ router.post(
           `,
           attachments
         };
+
         try {
           await transporter.sendMail(accuserecepOptions);
         } catch (err) {
-          console.error('Erreur envoi accusé réception :', err);
+          console.error('[formulaire-pneu] Erreur envoi accusé réception :', err);
         }
       }
 
       res.status(200).send('Formulaire envoyé !');
     } catch (err) {
-      console.error('Envoi mail échoué :', err);
+      console.error('[formulaire-pneu] Envoi mail échoué :', err);
       res.status(500).send("Erreur lors de l'envoi.");
     } finally {
-      (req.files || []).forEach(file => {
+      // Toujours supprimer les fichiers uploadés
+      files.forEach(file => {
         fs.unlink(file.path, () => {});
       });
     }

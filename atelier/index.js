@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import nodemailer from "nodemailer";
+import { transporter, fromEmail } from "../mailer.js";
 import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -152,19 +152,12 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
   return r.data;
 }
 
-function gmailTransport() {
-  const user = process.env.GMAIL_USER;
-  const pass = String(process.env.GMAIL_PASS || "").replace(/["\s]/g, "");
-  if (!user || !pass) return null;
-  return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
-}
-
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,
-  "__DEFAULT__": process.env.MAIL_TO || process.env.MAIL_CG || process.env.GMAIL_USER || ""
+  "__DEFAULT__": process.env.MAIL_TO || process.env.MAIL_CG || ""
 };
 
 function destForService(service = ""){
@@ -172,8 +165,11 @@ function destForService(service = ""){
 }
 
 async function sendServiceMail(no, snapshot){
-  const t = gmailTransport();
-  if (!t) return;
+const t = transporter;
+if (!t) {
+  console.warn("[ATELIER][MAIL] SMTP not configured");
+  return;
+}
 
   const h = snapshot.header || {};
   const c = snapshot.culasse || null;
@@ -236,7 +232,7 @@ async function sendServiceMail(no, snapshot){
 
   await t.sendMail({
     to,
-    from: process.env.GMAIL_USER,
+    from: fromEmail,
     subject,
     html
   });
@@ -244,8 +240,11 @@ async function sendServiceMail(no, snapshot){
 
 async function sendClientStatusMail(no, entry) {
   try {
-    const t = gmailTransport();
-    if (!t) return;
+    const t = transporter;
+if (!t) {
+  console.warn("[ATELIER][MAIL Client] SMTP not configured");
+  return;
+}
 
     const h = (entry && entry.snapshot && entry.snapshot.header) || {};
     const to = (h.email || "").trim();
@@ -267,7 +266,7 @@ async function sendClientStatusMail(no, entry) {
     <div style="line-height:16px">&nbsp;</div>
   </div>
 `;
-    await t.sendMail({ to, from: process.env.GMAIL_USER, subject, html });
+    await t.sendMail({ to, from: fromEmail, subject, html });
   } catch (e) {
     console.warn("[ATELIER][MAIL Client] échec:", e?.message || e);
   }

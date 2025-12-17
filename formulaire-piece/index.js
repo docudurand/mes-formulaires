@@ -1,9 +1,9 @@
 import express from 'express';
 import multer from 'multer';
-import nodemailer from 'nodemailer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import { transporter, fromEmail } from '../mailer.js';
 
 dotenv.config();
 
@@ -35,14 +35,6 @@ const upload = multer({
       return cb(new Error('Type de fichier non autorisé.'), false);
     }
     cb(null, true);
-  }
-});
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS
   }
 });
 
@@ -83,8 +75,13 @@ router.post(
       path: file.path
     }));
 
+    if (!transporter) {
+      console.error('[formulaire-piece] SMTP not configured');
+      return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
+    }
+
     const mailOptions = {
-      from: `"Formulaire création VL" <${process.env.GMAIL_USER}>`,
+      from: `"Formulaire création VL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PIECE,
       subject: '📨 Demande de création référence VL',
       replyTo: formData.email,
@@ -97,7 +94,7 @@ router.post(
 
       if (formData.email) {
         const accuserecepOptions = {
-          from: `"Service Pièces VL" <${process.env.GMAIL_USER}>`,
+          from: `"Service Pièces VL" <${fromEmail}>`,
           to: formData.email,
           subject: "Votre demande de création de référence a bien été reçue",
           html: `
@@ -120,6 +117,7 @@ router.post(
           `,
           attachments
         };
+
         try {
           await transporter.sendMail(accuserecepOptions);
         } catch (err) {

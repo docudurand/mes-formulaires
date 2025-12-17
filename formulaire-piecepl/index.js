@@ -3,7 +3,6 @@ import multer from 'multer';
 import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
-// Use the centralized mailer instead of creating a Gmail transporter here.
 import { transporter, fromEmail } from '../mailer.js';
 
 dotenv.config();
@@ -15,7 +14,7 @@ router.use(express.urlencoded({ extended: true }));
 router.use(express.json({ limit: '15mb' }));
 
 router.get('/healthz', (_req, res) => res.sendStatus(200));
-router.get('/', (_req, res) => res.send('✅ Formulaire Création Référence VL – OK'));
+router.get('/', (_req, res) => res.send('✅ Formulaire Création Référence PL – OK'));
 
 const FORM_FIELDS = {
   email:       "Adresse e-mail",
@@ -54,7 +53,7 @@ function generateHtml(data) {
   return `
     <div style="font-family:Arial; max-width:700px; margin:auto;">
       <h2 style="text-align:center; color:#007bff;">
-        🔧 Formulaire Création Référence VL
+        🚚 Formulaire Création Référence PL
       </h2>
       <table style="width:100%; border-collapse:collapse; margin-top:20px;">
         ${rows}
@@ -78,7 +77,7 @@ router.post(
 
     // Ensure SMTP is configured
     if (!transporter) {
-      console.error('[formulaire-piece] SMTP not configured');
+      console.error('[formulaire-piecepl] SMTP not configured');
       for (const file of req.files) {
         fs.unlink(file.path, () => {});
       }
@@ -86,9 +85,9 @@ router.post(
     }
 
     const mailOptions = {
-      from: `"Formulaire création VL" <${fromEmail}>`,
-      to: process.env.DEST_EMAIL_FORMULAIRE_PIECE,
-      subject: '📨 Demande de création référence VL',
+      from: `"Formulaire création PL" <${fromEmail}>`,
+      to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL, // ✅ PL !
+      subject: '📨 Demande de création référence PL',
       replyTo: formData.email,
       html: generateHtml(formData),
       attachments
@@ -99,14 +98,14 @@ router.post(
 
       if (formData.email) {
         const accuserecepOptions = {
-          from: `"Service Pièces VL" <${fromEmail}>`,
+          from: `"Service Pièces PL" <${fromEmail}>`,
           to: formData.email,
-          subject: "Votre demande de création de référence a bien été reçue",
+          subject: "Votre demande de création de référence PL a bien été reçue",
           html: `
             <div style="font-family:Arial; max-width:700px; margin:auto;">
               <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
               <p>Bonjour,</p>
-              <p>Nous avons bien reçu votre demande de création de référence.</p>
+              <p>Nous avons bien reçu votre demande de création de référence PL.</p>
               <p>Nous la traiterons dans les plus brefs délais.<br>
               <b>Résumé de votre demande :</b></p>
               <table style="width:100%; border-collapse:collapse; margin-top:10px;">
@@ -122,16 +121,17 @@ router.post(
           `,
           attachments
         };
+
         try {
           await transporter.sendMail(accuserecepOptions);
         } catch (err) {
-          console.error('Erreur envoi accusé réception :', err);
+          console.error('[formulaire-piecepl] Erreur envoi accusé réception :', err);
         }
       }
 
       res.status(200).send('Formulaire envoyé !');
     } catch (err) {
-      console.error('Envoi mail échoué :', err);
+      console.error('[formulaire-piecepl] Envoi mail échoué :', err);
       res.status(500).send("Erreur lors de l'envoi.");
     } finally {
       for (const file of req.files) {

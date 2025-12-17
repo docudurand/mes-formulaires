@@ -72,4 +72,7 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
   }
 }
 
+console.log("[MAILER] mode =", (SMTP_HOST && SMTP_USER && SMTP_PASS) ? "SMTP(Mailjet)" : "GMAIL(fallback)");
+console.log("[MAILER] SMTP_HOST =", process.env.SMTP_HOST || "(none)");
+
 export { transporter, fromEmail };

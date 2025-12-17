@@ -1,11 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-// Import the shared mailer configuration. This centralizes SMTP/Gmail
-// credentials and exposes a single transporter and default sender.
-import { transporter, fromEmail } from './mailer.js';
 
 dotenv.config();
+
+import { transporter, fromEmail } from './mailer.js';
 
 const router = express.Router();
 
