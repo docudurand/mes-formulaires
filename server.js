@@ -40,7 +40,7 @@ app.use((req, res, next) => {
     "https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io " +
     "https://*.onrender.com";
 
-  const existing = res.getHeader("Content-Security-Policy");
+  const existing = req.get("Content-Security-Policy") || res.getHeader("Content-Security-Policy");
   if (!existing) {
     res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
   } else {
