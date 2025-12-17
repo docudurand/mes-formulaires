@@ -35,29 +35,52 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
 app.use((req, res, next) => {
-  const FRAME_ANCESTORS =
+  // Autoriser l'embed depuis Wix (et éviter qu'un sous-router remette un CSP qui bloque l'iframe)
+  const FRAME_ANCESTORS_VALUE =
     "frame-ancestors 'self' " +
     "https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io " +
     "https://*.onrender.com";
 
-  const existing = req.get("Content-Security-Policy") || res.getHeader("Content-Security-Policy");
-  if (!existing) {
-    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
-  } else {
-    let csp = String(existing);
+  const ensureFrameAncestors = (cspValue) => {
+    const v = String(cspValue || "").trim();
+    if (!v) return FRAME_ANCESTORS_VALUE;
 
-    if (/frame-ancestors/i.test(csp)) {
-      csp = csp.replace(/frame-ancestors[^;]*/i, FRAME_ANCESTORS);
-    } else {
-      csp = csp.replace(/\s*;?\s*$/, "; ") + FRAME_ANCESTORS;
+    if (/frame-ancestors/i.test(v)) {
+      // remplace UNIQUEMENT la directive frame-ancestors
+      return v.replace(/frame-ancestors[^;]*/i, FRAME_ANCESTORS_VALUE);
     }
-    res.setHeader("Content-Security-Policy", csp);
+    // ajoute la directive frame-ancestors sans casser le reste
+    return v.replace(/\s*;?\s*$/, "; ") + FRAME_ANCESTORS_VALUE;
+  };
+
+  // 1) on pose déjà un CSP si aucun n'existe
+  if (!res.getHeader("Content-Security-Policy")) {
+    res.setHeader("Content-Security-Policy", FRAME_ANCESTORS_VALUE);
   }
 
+  // 2) on intercepte les headers posés PLUS TARD (ex: dans /atelier) pour forcer frame-ancestors
+  const _setHeader = res.setHeader.bind(res);
+  res.setHeader = (name, value) => {
+    const key = String(name || "").toLowerCase();
+
+    if (key === "content-security-policy") {
+      return _setHeader(name, ensureFrameAncestors(value));
+    }
+
+    // X-Frame-Options peut bloquer un iframe même si le CSP est ok
+    if (key === "x-frame-options") {
+      return; // on ignore toute tentative de set de X-Frame-Options
+    }
+
+    return _setHeader(name, value);
+  };
+
+  // et au cas où un header a été posé avant ce middleware
   res.removeHeader("X-Frame-Options");
 
   next();
 });
+
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
