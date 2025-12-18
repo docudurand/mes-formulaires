@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
+import { buildMailjetHeaders } from "../utils/mj.js";
 
 dotenv.config();
 
@@ -79,18 +80,14 @@ router.post(
       console.error('[formulaire-piece] SMTP not configured');
       return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
-const mjCustomId = `creation_vl_${Date.now()}`;
+const mjHeadersMain = buildMailjetHeaders(`creation_vl_main_${Date.now()}`);
     const mailOptions = {
       from: `"Formulaire création VL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PIECE,
       subject: '📨 Demande de création référence VL',
       replyTo: formData.email,
       html: generateHtml(formData),
-	  headers: {
-  "X-MJ-CustomID": mjCustomId,
-  "X-Mailjet-TrackOpen": "1",
-  "X-Mailjet-TrackClick": "1",
-},
+headers: mjHeadersMain,
       attachments
     };
 
@@ -98,6 +95,7 @@ const mjCustomId = `creation_vl_${Date.now()}`;
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
+	    const mjHeadersAck = buildMailjetHeaders(`creation_vl_ack_${Date.now()}`);
         const accuserecepOptions = {
           from: `"Service Pièces VL" <${fromEmail}>`,
           to: formData.email,
@@ -120,6 +118,7 @@ const mjCustomId = `creation_vl_${Date.now()}`;
               <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
             </div>
           `,
+		  headers: mjHeadersAck,
           attachments
         };
 

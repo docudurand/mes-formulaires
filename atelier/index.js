@@ -4,6 +4,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { transporter, fromEmail } from "../mailer.js";
 import axios from "axios";
+import { buildMailjetHeaders } from "../utils/mj.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -230,7 +231,10 @@ if (!t) {
   </div>
 `.trim();
 
+  // Generate Mailjet headers for tracking and record the "sent" status.
+  const mjHeaders = buildMailjetHeaders(`atelier_service_${no}`);
   await t.sendMail({
+    headers: mjHeaders,
     to,
     from: fromEmail,
     subject,
@@ -266,7 +270,9 @@ if (!t) {
     <div style="line-height:16px">&nbsp;</div>
   </div>
 `;
-    await t.sendMail({ to, from: fromEmail, subject, html });
+    // Generate Mailjet headers for tracking and record the "sent" status for client emails
+    const mjHeaders = buildMailjetHeaders(`atelier_client_${no}`);
+    await t.sendMail({ headers: mjHeaders, to, from: fromEmail, subject, html });
   } catch (e) {
     console.warn("[ATELIER][MAIL Client] échec:", e?.message || e);
   }
@@ -434,7 +440,7 @@ router.post("/api/print-html", (req, res) => {
 
     let validationUrl = "";
     if (no) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`.replace(/\/$/,"");
+      const baseUrl = `${req.protocol}://${req.get("host")}`.replace(/\/$/ ,"");
       validationUrl = `${baseUrl}/atelier/validation.html?no=${encodeURIComponent(no)}`;
     }
 

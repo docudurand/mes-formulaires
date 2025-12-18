@@ -17,6 +17,7 @@ import mailjetWebhook from './routes/mailjet-webhook.js';
 import emailStatusRouter from './routes/emailStatus.js';
 import { initMailjetPersistence } from "./dataStore.js";
 import { cleanupOld } from "./mailjetFtpStore.js";
+import { buildMailjetHeaders } from "./utils/mj.js";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -957,8 +958,11 @@ const html = `
 const toList = [ SITE_RESP_EMAIL, respServiceEmailFor(magasin) ].filter(Boolean);
 const toRecipients = toList.length ? toList.join(",") : email;
 
+    // Generate Mailjet tracking headers for this leave request
+    const mjHeaders = buildMailjetHeaders(`conges_request_${leaveId}`);
 
-await transporter.sendMail({
+
+    await transporter.sendMail({
   to: toRecipients,
   from: `Demande jours de congés <${fromEmail}>`,
   replyTo: email,
@@ -968,8 +972,9 @@ await transporter.sendMail({
     filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
     content: pdfBuffer,
     contentType: "application/pdf"
-  }],
-});
+      }],
+      headers: mjHeaders
+    });
 
     res.json({ ok:true, id: leaveId });
   } catch (e) {
@@ -1138,13 +1143,17 @@ if (bothSigned && !arr[i].finalMailSent) {
       const demanderEmail = arr[i].email || "";
       const recipients = [SITE_RESP_EMAIL, demanderEmail].filter(Boolean).join(",");
 
+      // Generate Mailjet tracking headers for the final acceptance email
+      const mjHeaders = buildMailjetHeaders(`conges_accept_${id}`);
+
       await transporter.sendMail({
         to: recipients,
         from: `Validation congés <${fromEmail}>`,
         replyTo: demanderEmail || undefined,
         subject: `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
         html: `...`,
-        attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }]
+        attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }],
+        headers: mjHeaders
       });
 
       try { fs.unlinkSync(tmpFinal); } catch {}
