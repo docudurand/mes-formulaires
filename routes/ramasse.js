@@ -662,24 +662,10 @@ router.get("/ack", (req, res) => {
       return res.status(400).send("Lien expiré");
     }
 
-    const userClick = req.get("sec-fetch-user") === "?1";
-
-    if (userClick) {
-      return res.status(200).send(`<!doctype html>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Accusé de réception</title>
-<form id="f" method="POST" action="/api/ramasse/ack">
-  <input type="hidden" name="email" value="${esc(email)}"/>
-  <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
-  <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
-  <input type="hidden" name="pieces" value="${esc(pieces || "")}"/>
-  <input type="hidden" name="ts" value="${esc(ts)}"/>
-  <input type="hidden" name="nonce" value="${esc(nonce)}"/>
-  <input type="hidden" name="sig" value="${esc(sig)}"/>
-</form>
-<script>document.getElementById('f').submit();</script>`);
-    }
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
 
     return res.status(200).send(`<!doctype html>
 <meta charset="utf-8"/>
@@ -688,14 +674,16 @@ router.get("/ack", (req, res) => {
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#111}
   .box{max-width:520px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
+  .muted{color:#6b7280;font-size:14px;margin-top:10px}
   .btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;
        text-decoration:none;font-weight:700;border:0;cursor:pointer;width:100%}
-  .muted{color:#6b7280;font-size:14px;margin-top:10px}
 </style>
+
 <div class="box">
-  <h2>Accuser de réception</h2>
-  <p>Clique sur le bouton pour envoyer l’accusé au demandeur.</p>
-  <form method="POST" action="/api/ramasse/ack">
+  <h2>Accusé de réception</h2>
+  <p class="muted">Envoi en cours…</p>
+
+  <form id="f" method="POST" action="/api/ramasse/ack">
     <input type="hidden" name="email" value="${esc(email)}"/>
     <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
     <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
@@ -703,10 +691,18 @@ router.get("/ack", (req, res) => {
     <input type="hidden" name="ts" value="${esc(ts)}"/>
     <input type="hidden" name="nonce" value="${esc(nonce)}"/>
     <input type="hidden" name="sig" value="${esc(sig)}"/>
-    <button class="btn" type="submit">Accuser de réception</button>
+
+    <noscript>
+      <p class="muted">JavaScript est désactivé : clique ci-dessous.</p>
+      <button class="btn" type="submit">Accuser de réception</button>
+    </noscript>
   </form>
-  <div class="muted">Sécurité anti préchargement : aucun accusé n’est envoyé sans clic.</div>
-</div>`);
+</div>
+
+<script>
+  // Soumission automatique (sans 2e clic)
+  document.getElementById('f').submit();
+</script>`);
   } catch (e) {
     console.error("[RAMASSE] ACK GET error:", e);
     return res.status(400).send("Lien invalide.");
