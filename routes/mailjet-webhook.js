@@ -3,20 +3,67 @@ import { upsertStatus, recordEvent } from "../dataStore.js";
 
 const router = express.Router();
 
-router.post("/", async (req,res)=>{
-  const e = req.body;
-  const id = e.CustomID || e.MessageID;
-  if(!id) return res.sendStatus(200);
+function pickId(evt) {
+  return (
+    evt?.CustomID ||
+    evt?.customid ||
+    evt?.customID ||
+    evt?.MessageID ||
+    evt?.messageID ||
+    evt?.mj_message_id ||
+    evt?.Message_GUID ||
+    evt?.MessageGuid ||
+    null
+  );
+}
 
-  const patch = {
-    to: e.email,
-    state: e.event,
-    sentAt: e.time ? new Date(e.time*1000).toISOString() : undefined
-  };
+function pickTo(evt) {
+  return evt?.email || evt?.Email || evt?.to || evt?.To || "";
+}
 
-  upsertStatus(id, patch);
-  await recordEvent(e);
-  res.sendStatus(200);
+function pickEvent(evt) {
+  return String(evt?.event || evt?.Event || "").toLowerCase();
+}
+
+function pickTimeIso(evt) {
+  if (evt?.time) return new Date(Number(evt.time) * 1000).toISOString();
+  if (evt?.Time) return new Date(Number(evt.Time) * 1000).toISOString();
+  return new Date().toISOString();
+}
+
+router.post("/", async (req, res) => {
+  try {
+    const payload = req.body;
+
+    const events = Array.isArray(payload) ? payload : [payload];
+
+    for (const evt of events) {
+      const id = pickId(evt);
+      if (!id) continue;
+
+      const state = pickEvent(evt) || "sent";
+      const at = pickTimeIso(evt);
+
+      const patch = {
+        id: String(id),
+        to: String(pickTo(evt) || ""),
+        state,
+        lastEventAt: at,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (state === "open")  patch.openCount  = (Number(evt?.openCount)  || 0) + 1;
+      if (state === "click") patch.clickCount = (Number(evt?.clickCount) || 0) + 1;
+
+      upsertStatus(String(id), patch);
+      await recordEvent(evt);
+    }
+
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error("[mailjet-webhook] error:", e?.message || e);
+    return res.sendStatus(200);
+  }
 });
 
 export default router;

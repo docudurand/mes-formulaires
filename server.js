@@ -15,6 +15,8 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailjetWebhook from './routes/mailjet-webhook.js';
 import emailStatusRouter from './routes/emailStatus.js';
+import { initMailjetPersistence } from "./dataStore.js";
+import { cleanupOld } from "./mailjetFtpStore.js";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -1185,5 +1187,7 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   try { await stats.initCounters(); }
   catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
+  await initMailjetPersistence();
+  await cleanupOld(30);
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
