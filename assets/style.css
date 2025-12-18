@@ -351,3 +351,12 @@ body{
   color:#666;
   line-height: 1.35;
 }
+.menu-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  line-height: 1;
+}
+.menu-link:visited{ color:#fff; }
+

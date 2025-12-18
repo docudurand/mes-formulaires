@@ -12,12 +12,35 @@
       <h1 class="auth-title">Accès protégé</h1>
       <p class="auth-desc">Saisis le mot de passe pour accéder au site.</p>
 
-      <div class="auth-row">
-        <input id="pwd" class="auth-input" type="password" placeholder="Mot de passe" autocomplete="current-password" />
-        <button id="btn" class="auth-btn" type="button">Entrer</button>
-      </div>
+      <!-- ✅ VRAI FORMULAIRE => déclenche la proposition d’enregistrement navigateur -->
+      <form id="loginForm" autocomplete="on">
+        <!-- ✅ Username caché : aide les gestionnaires de mots de passe -->
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autocomplete="username"
+          value="durand"
+          aria-hidden="true"
+          tabindex="-1"
+          style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"
+        />
 
-      <div id="err" class="auth-error"></div>
+        <div class="auth-row">
+          <input
+            id="password"
+            name="password"
+            class="auth-input"
+            type="password"
+            placeholder="Mot de passe"
+            autocomplete="current-password"
+            required
+          />
+          <button class="auth-btn" type="submit">Entrer</button>
+        </div>
+
+        <div id="loginError" class="auth-error"></div>
+      </form>
 
       <div class="small-note">
         <b>Note :</b> ce système reproduit le “mot de passe de site” (style Wix) via le navigateur.
@@ -30,26 +53,16 @@
   <script src="assets/auth.js"></script>
   <script>
     (function(){
-      const params = new URLSearchParams(location.search);
-      const redirect = params.get("redirect") || "/index.html";
-      const pwd = document.getElementById("pwd");
-      const btn = document.getElementById("btn");
-      const err = document.getElementById("err");
+      // Utilise la fonction "wireLoginForm" du nouveau auth.js
+      // (elle gère redirect + erreurs + autocomplete)
+      wireLoginForm({
+        formId: "loginForm",
+        usernameId: "username",
+        passwordId: "password",
+        errorId: "loginError"
+      });
 
-      function go(){
-        err.textContent = "";
-        const ok = loginWith(pwd.value || "");
-        if(!ok){
-          err.textContent = "Mot de passe incorrect.";
-          pwd.focus();
-          return;
-        }
-        window.location.replace(redirect);
-      }
-
-      btn.addEventListener("click", go);
-      pwd.addEventListener("keydown", (e)=>{ if(e.key==="Enter") go(); });
-      pwd.focus();
+      document.getElementById("password").focus();
     })();
   </script>
 </body>
