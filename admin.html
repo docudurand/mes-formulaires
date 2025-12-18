@@ -19,7 +19,7 @@
   font-size: 1.08rem;
 }
 html {
-  font-size: 18px;   /* au lieu des ~16px par défaut */
+  font-size: 18px;
 }
     .banner {
       width: 100%;
@@ -276,7 +276,6 @@ html {
   border-radius: 12px;
   box-shadow: 0 2px 12px #0001;
   padding: 10px 10px 4px;
-  /* agrandit davantage la hauteur de la liste des dossiers pour afficher plus de lignes */
   max-height: calc(100vh - 80px);
   overflow: auto;
 }
@@ -286,7 +285,6 @@ html {
   border-bottom: 1px solid #eef1f5;
   cursor: pointer;
   display: grid;
-  /* colonne n° dossier | infos client | magasin/ID | statut */
   grid-template-columns: 90px 1fr auto auto;
   gap: 8px;
   align-items: center;
@@ -440,7 +438,6 @@ html {
   gap: 2px;
   flex: 1 1 70px;
   font-size: 0.85rem;
-  /* supprime toute marge verticale pour coller les éléments les uns aux autres */
   margin: 0;
 }
     .detail-form-group label {
@@ -669,9 +666,7 @@ html {
       margin-top: 20px;
       justify-content: center;
     }
-	/* === Ajustement des espaces demandés dans le formulaire détail === */
 
-/* 1) Coller l'input "Documents ajoutés au dossier" avec la barre + texte rouge */
 #docs-group {
   margin-top: 2px !important;
   margin-bottom: 0 !important;
@@ -682,7 +677,6 @@ html {
   padding: 0 !important;
 }
 
-/* 2) Coller la zone "Réponse au client" avec le titre "Pièces jointes..." */
 .detail-form-group.reponse-client {
   margin-bottom: 0 !important;
 }
@@ -690,7 +684,7 @@ html {
   margin-bottom: 0 !important;
 }
 #reponse-group {
-  margin-top: 2px !important;   /* colle le titre juste sous la zone de texte */
+  margin-top: 2px !important;
 }
 #reponse-group .file-list,
 #reponse-files-buffer {

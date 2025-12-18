@@ -4,7 +4,6 @@
     menus.forEach(m => { if(m !== except) m.classList.remove('open'); });
   }
 
-  // Clic uniquement sur mobile / tablette (pas de hover)
   const enableClickMenus = window.matchMedia('(hover: none)').matches;
 
   if (enableClickMenus) {

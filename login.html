@@ -12,9 +12,7 @@
       <h1 class="auth-title">Accès protégé</h1>
       <p class="auth-desc">Saisis le mot de passe pour accéder au site.</p>
 
-      <!-- ✅ VRAI FORMULAIRE => déclenche la proposition d’enregistrement navigateur -->
       <form id="loginForm" autocomplete="on">
-        <!-- ✅ Username caché : aide les gestionnaires de mots de passe -->
         <input
           id="username"
           name="username"
@@ -43,8 +41,6 @@
       </form>
 
       <div class="small-note">
-        <b>Note :</b> ce système reproduit le “mot de passe de site” (style Wix) via le navigateur.
-        Pour une sécurité forte (vrai contrôle d’accès), il faudra une authentification côté serveur.
       </div>
     </div>
   </div>
@@ -53,8 +49,6 @@
   <script src="assets/auth.js"></script>
   <script>
     (function(){
-      // Utilise la fonction "wireLoginForm" du nouveau auth.js
-      // (elle gère redirect + erreurs + autocomplete)
       wireLoginForm({
         formId: "loginForm",
         usernameId: "username",

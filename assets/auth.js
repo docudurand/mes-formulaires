@@ -1,6 +1,6 @@
 const AUTH_KEY = "dd_auth_ok_v1";
 
-const SITE_PASSWORD = "Durand38!";
+const SITE_PASSWORD = "test";
 
 const SITE_USERNAME = "durand";
 
