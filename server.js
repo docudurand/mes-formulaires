@@ -1184,10 +1184,17 @@ app.use("/pret/api", loansRouter);
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
+
 (async () => {
   try { await stats.initCounters(); }
   catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
-  await initMailjetPersistence();
-  await cleanupOld(30);
+
+  try { await initMailjetPersistence(); }
+  catch (e) { console.warn("[MAILJET] initMailjetPersistence FAILED (boot continues):", e?.message || e); }
+
+  try { await cleanupOld(30); }
+  catch (e) { console.warn("[MAILJET] cleanupOld FAILED (boot continues):", e?.message || e); }
+
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
+
