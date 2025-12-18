@@ -695,6 +695,72 @@ router.get("/ack", (req, res) => {
     res.status(400).send("Lien invalide.");
   }
 });
+router.post("/ack", async (req, res) => {
+  try {
+    const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
 
+    if (!email || !fournisseur || !ts || !nonce || !sig) {
+      return res.status(400).send("Lien incomplet");
+    }
+
+    const params = {
+      email: String(email),
+      fournisseur: String(fournisseur),
+      magasin: String(magasin || ""),
+      pieces: String(pieces || ""),
+      ts: String(ts),
+      nonce: String(nonce),
+    };
+
+    const expected = signAck(params);
+    const ok =
+      expected.length === String(sig).length &&
+      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
+
+    if (!ok) return res.status(400).send("Signature invalide");
+
+    const age = Date.now() - Number(ts);
+    if (isFinite(age) && age > 14 * 24 * 3600 * 1000) {
+      return res.status(400).send("Lien expiré");
+    }
+
+    const sendNow = shouldSendAckOnce(String(sig));
+    if (!sendNow) {
+      return res
+        .status(200)
+        .send(`<!doctype html><meta charset="utf-8"/>
+<div style="font-family:system-ui;padding:24px">✅ Accusé déjà envoyé.</div>`);
+    }
+
+    if (!transporter) {
+      return res.status(500).send("SMTP non configuré");
+    }
+
+    await transporter.sendMail({
+      from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
+      to: String(email),
+      subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
+      html: `
+        <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
+          <div style="text-align:center;margin:24px 0 32px;">
+            <span style="font-size:28px;">✔</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+          </div>
+          <p>Bonjour,</p>
+          <p>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong>
+          concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin
+          <strong>${esc(magasin || "—")}</strong>.</p>
+          <p>Cordialement,<br/>L'équipe Ramasse</p>
+        </div>
+      `,
+    });
+
+    res.status(200).send(`<!doctype html><meta charset="utf-8"/>
+<div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé.</div>`);
+  } catch (e) {
+    console.error("[RAMASSE] ACK POST error:", e);
+    res.status(400).send("Lien invalide ou erreur d'envoi.");
+  }
+});
 
 export default router;
