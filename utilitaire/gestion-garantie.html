@@ -60,15 +60,39 @@
 </header>
 <div class="subbar"></div>
 
-<main class="wrap embed-main">
-  <section class="card embed-card">
+<main class="wrap embed-main" id="embedWrap">
+  <section class="card embed-card" id="embedCard">
     <iframe
       class="embed-frame"
+      id="embedFrame"
       src="https://durandservicesgarantie.onrender.com/admin"
-      title="Prêt véhicule"
+      title="Gestion Garantie"
     ></iframe>
   </section>
 </main>
+
+<script>
+  (function () {
+    function resizeEmbed(){
+      const topbar = document.querySelector(".topbar");
+      const subbar = document.querySelector(".subbar");
+      const wrap   = document.getElementById("embedWrap");
+      const card   = document.getElementById("embedCard");
+      const frame  = document.getElementById("embedFrame");
+      if (!wrap || !card || !frame) return;
+
+      const topH = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
+      const h = Math.max(320, window.innerHeight - topH);
+
+      wrap.style.height = h + "px";
+      card.style.height = h + "px";
+      frame.style.height = h + "px";
+    }
+
+    window.addEventListener("resize", resizeEmbed);
+    resizeEmbed();
+  })();
+</script>
 
   <script>window.__SITE_PREFIX__="../";</script>
   <script src="../assets/auth.js"></script>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Suivi des e-mails envoyés</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; }
+    .wrap { max-width: 1200px; margin: 0 auto; }
+    .small { color:#666; font-size: 12px; }
+
+    #filters { margin-top:12px; padding:10px; border:1px solid #ddd; border-radius:12px; }
+    #filters label { white-space: nowrap; }
+
+    #tableWrap { max-height: 520px; overflow: auto; border: 1px solid #ddd; border-radius: 12px; margin-top: 12px; }
+
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f2f2f2; position: sticky; top: 0; z-index: 1; }
+
+    .state-sent { color: #666; font-weight: 700; }
+    .state-delivered { color: #0f766e; font-weight: 800; }
+    .state-open { color: #2563eb; font-weight: 800; }
+    .state-click { color: #7c3aed; font-weight: 800; }
+    .state-bounce, .state-blocked, .state-spam { color: #b91c1c; font-weight: 900; }
+    .state-unsub { color: #92400e; font-weight: 900; }
+
+    code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Suivi des e-mails envoyés</h1>
+    <div class="small">Actualisation automatique toutes les 10 secondes.</div>
+
+    <div id="filters">
+      <strong>Filtres :</strong>
+
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+        <label><input type="checkbox" class="st" value="sent" checked> Envoyé</label>
+        <label><input type="checkbox" class="st" value="delivered" checked> Livré</label>
+        <label><input type="checkbox" class="st" value="open" checked> Ouvert</label>
+        <label><input type="checkbox" class="st" value="click" checked> Cliqué</label>
+        <label><input type="checkbox" class="st" value="bounce" checked> Rebond</label>
+        <label><input type="checkbox" class="st" value="blocked" checked> Bloqué</label>
+        <label><input type="checkbox" class="st" value="spam" checked> Spam</label>
+        <label><input type="checkbox" class="st" value="unsub" checked> Désabonné</label>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>
+          <input type="checkbox" id="showCopies">
+          Afficher les copies vers <code>magvl4gleize@durandservices.fr</code>
+        </label>
+      </div>
+    </div>
+
+    <div id="tableWrap">
+      <table id="statusTable">
+        <thead>
+          <tr>
+            <th>Identifiant</th>
+            <th>Destinataire</th>
+            <th>Dernier évènement</th>
+            <th>Statut</th>
+            <th>Ouvertures</th>
+            <th>Clics</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="small" style="margin-top:10px;">
+      Astuce : <b>delivered</b> = accepté par le serveur destinataire (le meilleur indicateur “technique”).
+    </div>
+  </div>
+
+<script>
+const COPY_MAIL = "magvl4gleize@durandservices.fr";
+
+function getSelectedStates() {
+  return new Set([...document.querySelectorAll('input.st:checked')].map(x => x.value));
+}
+
+function shouldShowRow(item, selectedStates, showCopies) {
+  const st = (item.state || "sent").toLowerCase();
+  if (!selectedStates.has(st)) return false;
+
+  const to = String(item.to || "").toLowerCase();
+  if (!showCopies && to.includes(COPY_MAIL)) return false;
+
+  return true;
+}
+
+function fmtFR(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString("fr-FR"); } catch { return iso; }
+}
+
+async function chargerStatuts() {
+  try {
+    const res = await fetch('/api/email-status', { cache: "no-store" });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const selectedStates = getSelectedStates();
+    const showCopies = document.getElementById("showCopies").checked;
+
+    const tbody = document.querySelector('#statusTable tbody');
+    tbody.innerHTML = '';
+
+    data
+      .filter(item => shouldShowRow(item, selectedStates, showCopies))
+      .forEach(item => {
+        const tr = document.createElement('tr');
+        const state = (item.state || 'sent').toLowerCase();
+        const stateClass = 'state-' + state;
+
+        tr.innerHTML = `
+          <td>${item.id || ''}</td>
+          <td>${item.to || ''}</td>
+          <td>${fmtFR(item.lastEventAt || item.sentAt)}</td>
+          <td class="${stateClass}">${state}</td>
+          <td>${item.openCount || 0}</td>
+          <td>${item.clickCount || 0}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+  } catch (err) {
+    console.error('Erreur lors de la récupération du statut des e-mails :', err);
+  }
+}
+
+chargerStatuts();
+setInterval(chargerStatuts, 10000);
+
+document.addEventListener("change", (e) => {
+  if (e.target.matches("input.st") || e.target.id === "showCopies") {
+    chargerStatuts();
+  }
+});
+</script>
+</body>
+</html>

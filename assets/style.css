@@ -230,20 +230,17 @@ body{
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
-.embed-main{ padding: 0; }
-
-.embed-card{
-  width: min(1400px, 96vw);
-  border-radius: 10px;
+.embed-main{
+  height: 100vh;
   overflow: hidden;
 }
 
-.embed-frame,
-.card iframe{
-  width: 100% !important;
-  border: 0 !important;
-  display: block !important;
-  height: 1200px;
+.embed-card{
+  height: 100%;
+}
+
+.embed-frame{
+  height: 100% !important;
 }
 
 @media (max-width: 980px){

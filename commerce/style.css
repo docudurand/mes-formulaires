@@ -163,3 +163,14 @@ body{
   :root{ --ipadW: 100%; }
   .navBtn{ width: 240px; }
 }
+
+.frame.frame--home{
+  min-height: auto;
+  padding-bottom: 0;
+}
+.frame.frame--home .welcome{
+  padding: 18px 14px 22px;
+}
+.frame.frame--home .homeVideo{
+  margin-bottom: 0;
+}

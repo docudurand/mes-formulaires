@@ -87,13 +87,18 @@ router.post(
         console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
         return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
       }
-
+const mjCustomId = `creation_vl_${Date.now()}`;
       const mailOptions = {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
         to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
         subject: '📨 Demande création référence Pneumatique VL',
         replyTo: formData.email,
         html: generateHtml(formData),
+		headers: {
+    "X-MJ-CustomID": mjCustomId,
+    "X-Mailjet-TrackOpen": "1",
+    "X-Mailjet-TrackClick": "1",
+  },
         attachments
       };
 

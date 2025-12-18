@@ -13,6 +13,8 @@ import PDFDocument from "pdfkit";
 import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
+import mailjetWebhook from './routes/mailjet-webhook.js';
+import emailStatusRouter from './routes/emailStatus.js';
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -87,6 +89,8 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+app.use('/api/mailjet-webhook', mailjetWebhook);
+app.use('/api', emailStatusRouter);
 
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";

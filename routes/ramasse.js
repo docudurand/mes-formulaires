@@ -537,13 +537,18 @@ router.post("/", upload.single("file"), async (req, res) => {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });
     }
-
+const mjCustomId = `ramasse_${Date.now()}`;
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
       html: htmlMagasin,
+	  headers: {
+    "X-MJ-CustomID": mjCustomId,
+    "X-Mailjet-TrackOpen": "1",
+    "X-Mailjet-TrackClick": "1",
+  },
       attachments: attachmentsMagasin,
       replyTo: email,
     });

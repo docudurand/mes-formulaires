@@ -82,13 +82,18 @@ router.post(
       }
       return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
-
+const mjCustomId = `creation_vl_${Date.now()}`;
     const mailOptions = {
       from: `"Formulaire création PL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL,
       subject: '📨 Demande de création référence PL',
       replyTo: formData.email,
       html: generateHtml(formData),
+	  headers: {
+    "X-MJ-CustomID": mjCustomId,
+    "X-Mailjet-TrackOpen": "1",
+    "X-Mailjet-TrackClick": "1",
+  },
       attachments
     };
 
