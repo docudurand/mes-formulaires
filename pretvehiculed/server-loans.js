@@ -276,16 +276,16 @@ router.post('/loans/email', async (req, res) => {
         if (!to) return res.status(500).json({ ok:false, error:"mail_to_missing" });
     const subject = `NOUVEAU PRÊT – ${loan.immatriculation || '—'} – ${loan.magasin_pret || '—'}`;
 
-const rows = [
-  ['Magasin', loan.magasin_pret || ''],
-  ['Immatriculation', loan.immatriculation || ''],
-  ['Chauffeur', loan.chauffeur_nom || ''],
-  ['Transfert assurance', loan.transfert_assurance || ''],
-  ['Départ', [loan.date_depart || '', loan.heure_depart || ''].filter(Boolean).join(' ')],
-  ['Réceptionnaire (départ)', loan.receptionnaire_depart || ''],
-  ['Information chauffeur', (loan.observations || '').replace(/\n/g, '<br>')]
-];
-
+    const rows = [
+      ['Magasin', loan.magasin_pret||''],
+      ['Immatriculation', loan.immatriculation||''],
+      ['Chauffeur', loan.chauffeur_nom||''],
+      ['Transfert assurance', loan.transfert_assurance || ''],
+      ['Départ', [loan.date_depart||'', loan.heure_depart||''].filter(Boolean).join(' ')],
+      ['Réceptionnaire (départ)', loan.receptionnaire_depart||''],
+      ['Information chauffeur', (loan.observations||'').replace(/
+/g,'<br>')]
+    ];
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif">
         <h2 style="margin:0 0 8px">Nouveau prêt véhicule</h2>
@@ -307,7 +307,7 @@ const rows = [
       contentType: a.contentType || 'application/octet-stream'
     }));
 
-    const mjHeaders = buildMailjetHeaders(`pret_loan_${loan.loan_id || loan.immatriculation || Date.now()}`);
+    const mjHeaders = buildMailjetHeaders("pret_loan_", { to, subject });
     const info = await transporter.sendMail({ headers: mjHeaders,
       from: `"Prêts Véhicules" <${fromEmail}>`,
       to,

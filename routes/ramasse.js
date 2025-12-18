@@ -540,7 +540,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(500).json({ error: "smtp_not_configured" });
     }
     // Generate Mailjet headers for this ramasse request
-    const mjHeaders = buildMailjetHeaders(`ramasse_${Date.now()}`);
+    const mjHeaders = buildMailjetHeaders("ramasse_", { to: recipients.join(", "), subject });
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
@@ -568,6 +568,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
+      headers: buildMailjetHeaders(\"ramasse_user_\", { to: String(email), subject: \"Votre demande de ramasse a bien été envoye\" }),
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -602,7 +603,7 @@ router.post("/", upload.single("file"), async (req, res) => {
         </div>
       `,
       attachments: attachmentsUser,
-      headers: buildMailjetHeaders(`ramasse_user_${Date.now()}`)
+      headers: buildMailjetHeaders("ramasse_user_copy_", { to: String(email), subject: "Votre demande de ramasse a bien été envoye" })
     });
 
     try {
@@ -736,11 +737,12 @@ router.post("/ack", async (req, res) => {
     }
 
     // Generate Mailjet headers for the ramasse ack email
-    const mjHeadersAck = buildMailjetHeaders(`ramasse_ack_${Date.now()}`);
+    const subjectAck = `Accusé de réception – Demande de ramasse (${String(fournisseur)})`;
+    const mjHeadersAck = buildMailjetHeaders("ramasse_ack_", { to: String(email), subject: subjectAck });
     await transporter.sendMail({
       from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
-      subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
+      subject: subjectAck,
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">

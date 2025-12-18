@@ -232,7 +232,7 @@ if (!t) {
 `.trim();
 
   // Generate Mailjet headers for tracking and record the "sent" status.
-  const mjHeaders = buildMailjetHeaders(`atelier_service_${no}`);
+  const mjHeaders = buildMailjetHeaders(`atelier_service_${no}`, { to, subject });
   await t.sendMail({
     headers: mjHeaders,
     to,
@@ -271,7 +271,7 @@ if (!t) {
   </div>
 `;
     // Generate Mailjet headers for tracking and record the "sent" status for client emails
-    const mjHeaders = buildMailjetHeaders(`atelier_client_${no}`);
+    const mjHeaders = buildMailjetHeaders(`atelier_client_${no}`, { to, subject });
     await t.sendMail({ headers: mjHeaders, to, from: fromEmail, subject, html });
   } catch (e) {
     console.warn("[ATELIER][MAIL Client] échec:", e?.message || e);
