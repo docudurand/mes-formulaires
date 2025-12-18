@@ -10,7 +10,6 @@ import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
 import { transporter, fromEmail } from "../mailer.js";
-import { buildMailjetHeaders } from "../utils/mj.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -539,15 +538,12 @@ router.post("/", upload.single("file"), async (req, res) => {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });
     }
-    // Generate Mailjet headers for this ramasse request
-    const mjHeaders = buildMailjetHeaders("ramasse_", { to: recipients.join(", "), subject });
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
       html: htmlMagasin,
-      headers: mjHeaders,
       attachments: attachmentsMagasin,
       replyTo: email,
     });
@@ -568,7 +564,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
-      headers: buildMailjetHeaders("ramasse_user_", { to: String(email), subject: "Votre demande de ramasse a bien été envoye" }),
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -603,7 +598,6 @@ router.post("/", upload.single("file"), async (req, res) => {
         </div>
       `,
       attachments: attachmentsUser,
-      headers: buildMailjetHeaders("ramasse_user_copy_", { to: String(email), subject: "Votre demande de ramasse a bien été envoye" })
     });
 
     try {
@@ -736,13 +730,10 @@ router.post("/ack", async (req, res) => {
       return res.status(500).send("SMTP non configuré");
     }
 
-    // Generate Mailjet headers for the ramasse ack email
-    const subjectAck = `Accusé de réception – Demande de ramasse (${String(fournisseur)})`;
-    const mjHeadersAck = buildMailjetHeaders("ramasse_ack_", { to: String(email), subject: subjectAck });
     await transporter.sendMail({
       from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
-      subject: subjectAck,
+      subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -756,7 +747,6 @@ router.post("/ack", async (req, res) => {
           <p>Cordialement,<br/>L'équipe Ramasse</p>
         </div>
       `,
-        headers: mjHeadersAck,
     });
 
     res.status(200).send(`<!doctype html><meta charset="utf-8"/>

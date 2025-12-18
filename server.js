@@ -13,11 +13,11 @@ import PDFDocument from "pdfkit";
 import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
-import mailjetWebhook from './routes/mailjet-webhook.js';
-import emailStatusRouter from './routes/emailStatus.js';
-import { initMailjetPersistence } from "./dataStore.js";
-import { cleanupOld } from "./mailjetFtpStore.js";
-import { buildMailjetHeaders } from "./utils/mj.js";
+// Removed Mailjet tracking: no Mailjet webhook or email status routes
+// import mailjetWebhook from './routes/mailjet-webhook.js';
+// import emailStatusRouter from './routes/emailStatus.js';
+// import { initMailjetPersistence } from "./dataStore.js";
+// import { cleanupOld } from "./mailjetFtpStore.js";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -92,8 +92,9 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
-app.use('/api/mailjet-webhook', mailjetWebhook);
-app.use('/api', emailStatusRouter);
+// Mailjet tracking disabled: do not expose webhook or email status endpoints
+// app.use('/api/mailjet-webhook', mailjetWebhook);
+// app.use('/api', emailStatusRouter);
 
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";
@@ -958,11 +959,8 @@ const html = `
 const toList = [ SITE_RESP_EMAIL, respServiceEmailFor(magasin) ].filter(Boolean);
 const toRecipients = toList.length ? toList.join(",") : email;
 
-    // Generate Mailjet tracking headers for this leave request
-    const mjHeaders = buildMailjetHeaders(`conges_request_${leaveId}`, { to: toRecipients, subject });
 
-
-    await transporter.sendMail({
+await transporter.sendMail({
   to: toRecipients,
   from: `Demande jours de congés <${fromEmail}>`,
   replyTo: email,
@@ -972,9 +970,8 @@ const toRecipients = toList.length ? toList.join(",") : email;
     filename: `Demande-conges-${nomPrenomStr.replace(/[^\w.-]+/g, "_")}.pdf`,
     content: pdfBuffer,
     contentType: "application/pdf"
-      }],
-      headers: mjHeaders
-    });
+  }],
+});
 
     res.json({ ok:true, id: leaveId });
   } catch (e) {
@@ -1143,18 +1140,13 @@ if (bothSigned && !arr[i].finalMailSent) {
       const demanderEmail = arr[i].email || "";
       const recipients = [SITE_RESP_EMAIL, demanderEmail].filter(Boolean).join(",");
 
-      // Generate Mailjet tracking headers for the final acceptance email
-      const subjectFinal = `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`;
-      const mjHeaders = buildMailjetHeaders(`conges_accept_${id}`, { to: recipients, subject: subjectFinal });
-
       await transporter.sendMail({
         to: recipients,
         from: `Validation congés <${fromEmail}>`,
         replyTo: demanderEmail || undefined,
-        subject: subjectFinal,
+        subject: `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
         html: `...`,
-        attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }],
-        headers: mjHeaders
+        attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }]
       });
 
       try { fs.unlinkSync(tmpFinal); } catch {}
@@ -1199,11 +1191,13 @@ const PORT = process.env.PORT || 3000;
   try { await stats.initCounters(); }
   catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
 
-  try { await initMailjetPersistence(); }
-  catch (e) { console.warn("[MAILJET] initMailjetPersistence FAILED (boot continues):", e?.message || e); }
+  // Mailjet tracking disabled: no need to load persistence
+  // try { await initMailjetPersistence(); }
+  // catch (e) { console.warn("[MAILJET] initMailjetPersistence FAILED (boot continues):", e?.message || e); }
 
-  try { await cleanupOld(30); }
-  catch (e) { console.warn("[MAILJET] cleanupOld FAILED (boot continues):", e?.message || e); }
+  // Mailjet tracking disabled: no need to clean old email events
+  // try { await cleanupOld(30); }
+  // catch (e) { console.warn("[MAILJET] cleanupOld FAILED (boot continues):", e?.message || e); }
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();

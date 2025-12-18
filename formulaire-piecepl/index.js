@@ -4,7 +4,6 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
-import { buildMailjetHeaders } from "../utils/mj.js";
 
 dotenv.config();
 
@@ -71,30 +70,25 @@ router.post(
   upload.array('fichiers[]'),
   async (req, res) => {
     const formData = req.body;
-    const attachments = (req.files || []).map(file => ({
+    const attachments = req.files.map(file => ({
       filename: file.originalname,
       path: file.path
     }));
 
     if (!transporter) {
       console.error('[formulaire-piecepl] SMTP not configured');
-      for (const file of (req.files || [])) {
+      for (const file of req.files) {
         fs.unlink(file.path, () => {});
       }
       return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
-
-    const toMain = process.env.DEST_EMAIL_FORMULAIRE_PIECEPL;
-    const subjectMain = '📨 Demande de création référence PL';
-    const mjHeadersMain = buildMailjetHeaders('creation_pl_main_', { to: toMain, subject: subjectMain });
-
+    // Mailjet tracking disabled: do not generate a custom tracking ID
     const mailOptions = {
       from: `"Formulaire création PL" <${fromEmail}>`,
-      to: toMain,
-      subject: subjectMain,
+      to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL,
+      subject: '📨 Demande de création référence PL',
       replyTo: formData.email,
       html: generateHtml(formData),
-      headers: mjHeadersMain,
       attachments
     };
 
@@ -102,14 +96,10 @@ router.post(
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
-        const toAck = formData.email;
-        const subjectAck = "Votre demande de création de référence PL a bien été reçue";
-        const mjHeadersAck = buildMailjetHeaders('creation_pl_ack_', { to: toAck, subject: subjectAck });
-
         const accuserecepOptions = {
           from: `"Service Pièces PL" <${fromEmail}>`,
-          to: toAck,
-          subject: subjectAck,
+          to: formData.email,
+          subject: "Votre demande de création de référence PL a bien été reçue",
           html: `
             <div style="font-family:Arial; max-width:700px; margin:auto;">
               <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
@@ -128,7 +118,6 @@ router.post(
               <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
             </div>
           `,
-          headers: mjHeadersAck,
           attachments
         };
 
@@ -144,7 +133,7 @@ router.post(
       console.error('[formulaire-piecepl] Envoi mail échoué :', err);
       res.status(500).send("Erreur lors de l'envoi.");
     } finally {
-      for (const file of (req.files || [])) {
+      for (const file of req.files) {
         fs.unlink(file.path, () => {});
       }
     }

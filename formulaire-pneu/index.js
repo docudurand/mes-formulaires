@@ -4,7 +4,6 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
-import { buildMailjetHeaders } from "../utils/mj.js";
 
 dotenv.config();
 
@@ -88,32 +87,23 @@ router.post(
         console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
         return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
       }
-
-      const toMain = process.env.DEST_EMAIL_FORMULAIRE_PNEU;
-      const subjectMain = '📨 Demande création référence Pneumatique VL';
-      const mjHeadersMain = buildMailjetHeaders('creation_pneu_vl_main_', { to: toMain, subject: subjectMain });
-
+      // Mailjet tracking disabled: do not generate a custom tracking ID
       const mailOptions = {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
-        to: toMain,
-        subject: subjectMain,
+        to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
+        subject: '📨 Demande création référence Pneumatique VL',
         replyTo: formData.email,
         html: generateHtml(formData),
-        headers: mjHeadersMain,
         attachments
       };
 
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
-        const toAck = formData.email;
-        const subjectAck = "Votre demande de création de référence pneu a bien été reçue";
-        const mjHeadersAck = buildMailjetHeaders('creation_pneu_vl_ack_', { to: toAck, subject: subjectAck });
-
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
-          to: toAck,
-          subject: subjectAck,
+          to: formData.email,
+          subject: "Votre demande de création de référence pneu a bien été reçue",
           html: `
             <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
               <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
@@ -133,7 +123,6 @@ router.post(
               <p>L’équipe Pneumatiques VL</p>
             </div>
           `,
-          headers: mjHeadersAck,
           attachments
         };
 
