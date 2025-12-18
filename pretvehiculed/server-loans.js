@@ -3,6 +3,7 @@ import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import { transporter, fromEmail } from '../mailer.js';
+import { buildMailjetHeaders } from '../utils/mj.js';
 
 const router = express.Router();
 
@@ -263,7 +264,7 @@ router.post('/loans/email', async (req, res) => {
     const loan = req.body?.loan || {};
     const rawAtts = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
 
-	if (!transporter) {
+        if (!transporter) {
      return res.status(500).json({ ok:false, error:'smtp_not_configured' });
     }
 
@@ -272,7 +273,7 @@ router.post('/loans/email', async (req, res) => {
     const origin = host ? `${proto}://${host}` : (process.env.PUBLIC_BASE_URL || "");
 
     const to = (process.env.PRET_MAIL_TO || process.env.MAIL_TO || "").trim();
-	if (!to) return res.status(500).json({ ok:false, error:"mail_to_missing" });
+        if (!to) return res.status(500).json({ ok:false, error:"mail_to_missing" });
     const subject = `NOUVEAU PRÊT – ${loan.immatriculation || '—'} – ${loan.magasin_pret || '—'}`;
 
     const rows = [
@@ -282,7 +283,8 @@ router.post('/loans/email', async (req, res) => {
       ['Transfert assurance', loan.transfert_assurance || ''],
       ['Départ', [loan.date_depart||'', loan.heure_depart||''].filter(Boolean).join(' ')],
       ['Réceptionnaire (départ)', loan.receptionnaire_depart||''],
-      ['Information chauffeur', (loan.observations||'').replace(/\n/g,'<br>')]
+      ['Information chauffeur', (loan.observations||'').replace(/
+/g,'<br>')]
     ];
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif">
@@ -305,7 +307,8 @@ router.post('/loans/email', async (req, res) => {
       contentType: a.contentType || 'application/octet-stream'
     }));
 
-    const info = await transporter.sendMail({
+    const mjHeaders = buildMailjetHeaders(`pret_loan_${loan.loan_id || loan.immatriculation || Date.now()}`);
+    const info = await transporter.sendMail({ headers: mjHeaders,
       from: `"Prêts Véhicules" <${fromEmail}>`,
       to,
       subject,

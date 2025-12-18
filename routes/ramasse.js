@@ -10,6 +10,7 @@ import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
 import { transporter, fromEmail } from "../mailer.js";
+import { buildMailjetHeaders } from "../utils/mj.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -538,18 +539,15 @@ router.post("/", upload.single("file"), async (req, res) => {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });
     }
-const mjCustomId = `ramasse_${Date.now()}`;
+    // Generate Mailjet headers for this ramasse request
+    const mjHeaders = buildMailjetHeaders(`ramasse_${Date.now()}`);
     await transporter.sendMail({
       from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
       html: htmlMagasin,
-	  headers: {
-    "X-MJ-CustomID": mjCustomId,
-    "X-Mailjet-TrackOpen": "1",
-    "X-Mailjet-TrackClick": "1",
-  },
+      headers: mjHeaders,
       attachments: attachmentsMagasin,
       replyTo: email,
     });
@@ -604,6 +602,7 @@ const mjCustomId = `ramasse_${Date.now()}`;
         </div>
       `,
       attachments: attachmentsUser,
+      headers: buildMailjetHeaders(`ramasse_user_${Date.now()}`)
     });
 
     try {
@@ -662,28 +661,22 @@ router.get("/ack", (req, res) => {
       return res.status(400).send("Lien expiré");
     }
 
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("X-Robots-Tag", "noindex, nofollow");
-
-    return res.status(200).send(`<!doctype html>
+    res.status(200).send(`<!doctype html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Accusé de réception</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#111}
   .box{max-width:520px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
-  .muted{color:#6b7280;font-size:14px;margin-top:10px}
   .btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;
        text-decoration:none;font-weight:700;border:0;cursor:pointer;width:100%}
+  .muted{color:#6b7280;font-size:14px;margin-top:10px}
 </style>
-
 <div class="box">
   <h2>Accuser de réception</h2>
-  <p class="muted">Clique une seule fois sur le bouton pour envoyer l’accusé.</p>
+  <p>Clique sur le bouton pour envoyer l’accusé au demandeur.</p>
 
-  <form method="POST" action="/api/ramasse/ack">
+  <form id="f" method="POST" action="/api/ramasse/ack">
     <input type="hidden" name="email" value="${esc(email)}"/>
     <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
     <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
@@ -694,15 +687,14 @@ router.get("/ack", (req, res) => {
     <button class="btn" type="submit">Accuser de réception</button>
   </form>
 
-  <div class="muted">Sécurité anti préchargement : aucun accusé n’est envoyé sans clic.</div>
+  <div class="muted">Aucun accusé n’est envoyé tant que tu ne cliques pas.</div>
 </div>`);
   } catch (e) {
     console.error("[RAMASSE] ACK GET error:", e);
-    return res.status(400).send("Lien invalide.");
+    res.status(400).send("Lien invalide.");
   }
 });
-
-router.post("/ack", express.urlencoded({ extended: true }), async (req, res) => {
+router.post("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
 
@@ -739,14 +731,22 @@ router.post("/ack", express.urlencoded({ extended: true }), async (req, res) => 
 <div style="font-family:system-ui;padding:24px">✅ Accusé déjà envoyé.</div>`);
     }
 
-    if (!transporter) return res.status(500).send("SMTP non configuré");
+    if (!transporter) {
+      return res.status(500).send("SMTP non configuré");
+    }
 
+    // Generate Mailjet headers for the ramasse ack email
+    const mjHeadersAck = buildMailjetHeaders(`ramasse_ack_${Date.now()}`);
     await transporter.sendMail({
       from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
+          <div style="text-align:center;margin:24px 0 32px;">
+            <span style="font-size:28px;">✔</span>
+            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+          </div>
           <p>Bonjour,</p>
           <p>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong>
           concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin
@@ -754,15 +754,14 @@ router.post("/ack", express.urlencoded({ extended: true }), async (req, res) => 
           <p>Cordialement,<br/>L'équipe Ramasse</p>
         </div>
       `,
+        headers: mjHeadersAck,
     });
 
-    return res
-      .status(200)
-      .send(`<!doctype html><meta charset="utf-8"/>
+    res.status(200).send(`<!doctype html><meta charset="utf-8"/>
 <div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé.</div>`);
   } catch (e) {
     console.error("[RAMASSE] ACK POST error:", e);
-    return res.status(400).send("Lien invalide ou erreur d'envoi.");
+    res.status(400).send("Lien invalide ou erreur d'envoi.");
   }
 });
 

@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
+import { buildMailjetHeaders } from "../utils/mj.js";
 
 dotenv.config();
 
@@ -87,24 +88,21 @@ router.post(
         console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
         return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
       }
-const mjCustomId = `creation_vl_${Date.now()}`;
+const mjHeadersMain = buildMailjetHeaders(`creation_pneu_vl_main_${Date.now()}`);
       const mailOptions = {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
         to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
         subject: '📨 Demande création référence Pneumatique VL',
         replyTo: formData.email,
         html: generateHtml(formData),
-		headers: {
-    "X-MJ-CustomID": mjCustomId,
-    "X-Mailjet-TrackOpen": "1",
-    "X-Mailjet-TrackClick": "1",
-  },
+headers: mjHeadersMain,
         attachments
       };
 
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
+		  const mjHeadersAck = buildMailjetHeaders(`creation_pneu_vl_ack_${Date.now()}`);
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
           to: formData.email,
@@ -128,6 +126,7 @@ const mjCustomId = `creation_vl_${Date.now()}`;
               <p>L’équipe Pneumatiques VL</p>
             </div>
           `,
+		  headers: mjHeadersAck,
           attachments
         };
 
