@@ -12,36 +12,33 @@
       <h1 class="auth-title">Accès protégé</h1>
       <p class="auth-desc">Saisis le mot de passe pour accéder au site.</p>
 
-      <form id="loginForm" autocomplete="on">
+      <form id="loginForm" class="auth-row" action="." method="post" autocomplete="on">
         <input
           id="username"
           name="username"
           type="text"
           autocomplete="username"
-          value="durand"
+          value="documentsdurand"
           aria-hidden="true"
           tabindex="-1"
           style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"
         />
 
-        <div class="auth-row">
-          <input
-            id="password"
-            name="password"
-            class="auth-input"
-            type="password"
-            placeholder="Mot de passe"
-            autocomplete="current-password"
-            required
-          />
-          <button class="auth-btn" type="submit">Entrer</button>
-        </div>
+        <input
+          id="pwd"
+          class="auth-input"
+          type="password"
+          name="password"
+          placeholder="Mot de passe"
+          autocomplete="current-password"
+        />
 
-        <div id="loginError" class="auth-error"></div>
+        <button class="auth-btn" type="submit">Entrer</button>
       </form>
 
-      <div class="small-note">
-      </div>
+      <div id="loginError" class="auth-error"></div>
+
+      <div class="small-note"></div>
     </div>
   </div>
 
@@ -49,14 +46,30 @@
   <script src="assets/auth.js"></script>
   <script>
     (function(){
-      wireLoginForm({
-        formId: "loginForm",
-        usernameId: "username",
-        passwordId: "password",
-        errorId: "loginError"
-      });
+      if (typeof wireLoginForm === "function") {
+        wireLoginForm({
+          formId: "loginForm",
+          usernameId: "username",
+          passwordId: "pwd",
+          errorId: "loginError"
+        });
+      } else {
+        const form = document.getElementById("loginForm");
+        const pwd  = document.getElementById("pwd");
+        const err  = document.getElementById("loginError");
 
-      document.getElementById("password").focus();
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          err.textContent = "";
+          const ok = loginWith(pwd.value || "");
+          if (!ok) { err.textContent = "Mot de passe incorrect."; pwd.focus(); return; }
+          const params = new URLSearchParams(location.search);
+          const redirect = params.get("redirect") || "/index.html";
+          window.location.replace(redirect);
+        });
+      }
+
+      document.getElementById("pwd").focus();
     })();
   </script>
 </body>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Commerce – Documents Durand</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<script>window.__SITE_PREFIX__ = "../";</script>
+<script src="../assets/auth.js"></script>
+<script>
+  requireAuth();
+</script>
+<body>
+  <header class="topbar">
+    <button class="burger" id="btnBurger" type="button" aria-label="Ouvrir le menu" aria-controls="drawer" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <main class="stage">
+    <section class="frame" aria-label="Contenu">
+      <div class="welcome" id="welcome">
+  <div class="homeVideo">
+    <iframe
+      src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0&playsinline=1"
+      frameborder="0"
+      allow="autoplay; fullscreen; picture-in-picture"
+      allowfullscreen>
+    </iframe>
+  </div>
+</div>
+
+      <iframe id="contentFrame"
+              class="contentFrame"
+              title="Contenu Commerce"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+              allow="fullscreen; autoplay; clipboard-read; clipboard-write">
+      </iframe>
+    </section>
+  </main>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawerTop">
+      <button class="close" id="btnClose" type="button" aria-label="Fermer">×</button>
+    </div>
+
+    <nav class="drawerNav" aria-label="Menu Commerce">
+      <button class="navBtn" type="button" data-src="https://imaginative-hamster-040331.netlify.app/">
+        TELEVENTE BOSCH 2026
+      </button>
+
+      <button class="navBtn" type="button" data-src="https://cheery-bombolone-3507c2.netlify.app/">
+        TELEVENTE LUB 2026
+      </button>
+
+      <a class="navBtn navLink"
+         href="https://durandservicesgarantie.onrender.com/admin"
+         target="_blank"
+         rel="noopener noreferrer">
+        SUIVI GARANTIE
+      </a>
+
+      <button class="navBtn" type="button" data-src="../reference-castrol.html">
+        REFERENCE CASTROL
+      </button>
+    </nav>
+  </aside>
+
+  <script src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Références Castrol</title>
+  <style>
+    :root{
+      --bg:#d9f3de;
+      --blue:#0b45ff;
+    }
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+    }
+    .page{
+      max-width: 980px;
+      width: min(980px, 92vw);
+      margin: 0 auto;
+      padding: 18px 0 30px;
+    }
+    .logo{
+      display:block;
+      margin: 0 auto;
+      max-width: 520px;
+      width: min(520px, 70vw);
+      height:auto;
+    }
+    .block{
+      width: min(860px, 92vw);
+      margin: 14px auto 0;
+    }
+    .search-input{
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 1px solid #c7c7c7;
+      border-radius: 4px;
+      outline: none;
+    }
+    .results{
+      margin-top: 10px;
+      border: 0;
+      background: transparent;
+      max-height: calc(4 * 2.2em); /* 4 lignes visibles max */
+      overflow-y: auto;
+      padding-right: 10px; /* espace pour scrollbar */
+    }
+
+    /* Castrol 1: plus d'espace entre lignes */
+    .section-1 .result-item{
+      padding: 8px 0;          /* ↑ espace vertical */
+      line-height: 1.35;       /* ↑ interligne */
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .section-1 .result-item:last-child{ border-bottom:0; }
+    .section-1 .result-title{
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 14px;
+      margin: 0 0 2px 0;
+    }
+    .section-1 .result-ref{
+      font-size: 12px;
+      margin: 0;
+      color:#000;
+    }
+
+    /* Espace réduit avant le 2e logo */
+    .gap-after-results-1{
+      margin-bottom: 14px; /* ↓ réduit (au lieu d'un gros vide) */
+    }
+    .logo2-wrap{ margin-top: 6px; }
+
+    /* Castrol 2: liste 2 colonnes (Shell -> Castrol) */
+    .section-2 .result-row{
+      display:grid;
+      grid-template-columns: 1fr 28px 1fr;
+      gap: 10px;
+      align-items:center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+    .section-2 .result-row:last-child{ border-bottom:0; }
+    .arrow{ text-align:center; font-weight:700; color:#3b82f6; }
+    .left, .right{ font-weight:700; color:#1d2a7a; }
+    .right{ justify-self:start; }
+    .muted{ font-weight:600; color:#111; }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- LOGO + CASTROL1 -->
+    <img class="logo" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/castrol1.png" alt="Castrol"/>
+
+    <div class="block section-1">
+      <input id="searchBox1" class="search-input" type="text" placeholder="Rechercher (Castrol)..." autocomplete="off"/>
+      <div id="results1" class="results gap-after-results-1" aria-live="polite"></div>
+    </div>
+
+    <!-- LOGO + CASTROL2 -->
+    <div class="logo2-wrap">
+      <img class="logo" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/castrol2.png" alt="Shell vers Castrol"/>
+    </div>
+
+    <div class="block section-2">
+      <input id="searchBox2" class="search-input" type="text" placeholder="Rechercher (Shell → Castrol)..." autocomplete="off"/>
+      <div id="results2" class="results" aria-live="polite"></div>
+    </div>
+
+  </div>
+
+<script>
+  // ---------------- CASTROL 1 ----------------
+  const data1 = [
+{"designation":"ALPHA SP 100  20L","reference":"15F023"},
+{"designation":"ALPHA SP 150  20L","reference":"15FE32"},
+{"designation":"ALPHA SP 220  208L","reference":"15FE1E"},
+{"designation":"ALPHA SP 320  20L","reference":"15FE1C"},
+{"designation":"ALPHA SP 320  208L","reference":"145DD9"},
+{"designation":"ALPHASYN EP 220  208L","reference":"15F86C"},
+{"designation":"EDGE 0W-20 C5  1L","reference":"15F6E6"},
+{"designation":"EDGE 0W-20 C5  5L","reference":"15F6EB"},
+{"designation":"EDGE 0W-20 C5  20L","reference":"15EE43"},
+{"designation":"EDGE 0W-20 LL IV  1L","reference":"15F610"},
+{"designation":"EDGE 0W-20 LL IV  4L","reference":"15F612"},
+{"designation":"EDGE 0W-20 LL IV  20L","reference":"15B1B4"},
+{"designation":"EDGE 0W-20 LL IV  60L","reference":"15B1B5"},
+{"designation":"EDGE 0W-20 LL IV  208L","reference":"15B1B6"},
+{"designation":"EDGE 0W-20 V  1L","reference":"15F706"},
+{"designation":"EDGE 0W-20 V  4L","reference":"15F708"},
+{"designation":"EDGE 0W-20 V  20L","reference":"15DA9A"},
+{"designation":"EDGE 0W-20 V  60L","reference":"15DA98"},
+{"designation":"EDGE 0W-20 V  208L","reference":"15DA97"},
+{"designation":"EDGE 0W-30  1L","reference":"15F63B"},
+{"designation":"EDGE 0W-30  5L","reference":"15F642"},
+{"designation":"EDGE 0W-30  60L","reference":"1533F4"},
+{"designation":"EDGE 0W-30 E4  20L","reference":"1533F6"},
+{"designation":"EDGE 0W-30 E4  208L","reference":"1533F5"},
+{"designation":"EDGE 0W-30 LL  1L","reference":"15FEFB"},
+{"designation":"EDGE 0W-30 LL  5L","reference":"15FEFC"},
+{"designation":"EDGE 0W-30 LL  20L","reference":"160DFF"},
+{"designation":"EDGE 0W-30 LL  60L","reference":"15F9BC"},
+{"designation":"EDGE 0W-30 LL  208L","reference":"15F9BB"},
+{"designation":"EDGE 0W-40 A3/B4  20L","reference":"15336A"},
+{"designation":"EDGE 0W-40 A3/B4  208L","reference":"15336B"},
+{"designation":"EDGE 0W-40 R  1L","reference":"15F739"},
+{"designation":"EDGE 0W-40 R  5L","reference":"15F73A"},
+{"designation":"EDGE 10W-60  1L","reference":"15F62C"},
+{"designation":"EDGE 10W-60  5L","reference":"15F636"},
+{"designation":"EDGE 10W-60  20L","reference":"1595DB"},
+{"designation":"EDGE 10W-60  60L","reference":"1595CF"},
+{"designation":"EDGE 10W-60  208L","reference":"1595DA"},
+{"designation":"EDGE 5W-30 C3  5L","reference":"15F7EC"},
+{"designation":"EDGE 5W-30 LL  1L","reference":"15F7DA"},
+{"designation":"EDGE 5W-30 LL  5L","reference":"15F7E7"},
+{"designation":"EDGE 5W-30 LL  20L","reference":"15664C"},
+{"designation":"EDGE 5W-30 LL  60L","reference":"15665C"},
+{"designation":"EDGE 5W-30 LL  208L","reference":"15664F"},
+{"designation":"EDGE 5W-40  1L","reference":"15F7D5"},
+{"designation":"EDGE 5W-40  5L","reference":"15F7D7"},
+{"designation":"EDGE 5W-40 A3/ B4  1L","reference":"15F716"},
+{"designation":"EDGE 5W-40 A3/ B4  5L","reference":"15F719"},
+{"designation":"EDGE 5W-40 A3/B4  20L","reference":"15C4AC"},
+{"designation":"EDGE 5W-40 A3/B4  208L","reference":"1535AB"},
+{"designation":"EDGE 0W-30 A3/B4  20L","reference":"15334F"},
+{"designation":"EDGE 0W-30 A5/B5  1L","reference":"15F6A4"},
+{"designation":"EDGE 0W-30 A5/B5  5L","reference":"15F6A6"},
+{"designation":"EDGE 0W-30 A5/B5  20L","reference":"1531B7"},
+{"designation":"EDGE 0W-30 A5/B5  208L","reference":"1531B6"},
+{"designation":"EDGE 5W-30 M  1L","reference":"15F6DA"},
+{"designation":"EDGE 5W-30 M  5L","reference":"15F6DC"},
+{"designation":"EDGE 5W-30 M  20L","reference":"16149C"},
+{"designation":"EDGE 5W-30 M  60L","reference":"15BC8F"},
+{"designation":"EDGE 5W-30 M  208L","reference":"15B676"},
+{"designation":"EDGE 5W-40 M  1L","reference":"15F70F"},
+{"designation":"EDGE 5W-40 M  5L","reference":"15F710"},
+{"designation":"EDGE 5W-40 M  20L","reference":"15D3AC"},
+{"designation":"EDGE 5W-40 M  60L","reference":"15D3AE"},
+{"designation":"EDGE 5W-40 M  208L","reference":"15D3AD"},
+{"designation":"CRB TURBOMAX 10W-40 E4/E7 (le litre)","reference":"2B0049"},
+{"designation":"CRB TURBOMAX 10W-40 E4/E7  208L","reference":"15EA27"},
+{"designation":"GRAISSE MOLY GREASE 18 KG","reference":"15047E"},
+{"designation":"GRAISSE SPHEEROL EPL 00 18KG","reference":"160A96"},
+{"designation":"GRAISSE SPHEEROL EPL 00 50KG","reference":"160A97"},
+{"designation":"GRAISSE SPHEEROL EPL 2 18KG","reference":"160BBC"},
+{"designation":"GRAISSE SPHEEROL EPL 2 180KG","reference":"1605FE"},
+{"designation":"GRAISSE SPHEEROL EPL 2 400g","reference":"15FAE5"},
+{"designation":"GRAISSE SPHEEROL EPL 2 50KG","reference":"15FD30"},
+{"designation":"GRAISSE SPHEEROL EPLX 18KG","reference":"16073B"},
+{"designation":"GRAISSE SPHEEROL EPLX 200-2 400g","reference":"16073E"},
+{"designation":"GRAISSE SPHEEROL EPLX 200-2 50KG","reference":"16073D"},
+{"designation":"GTX 0W-16 AN2022  1L","reference":"160A25"},
+{"designation":"GTX 0W-16 AN2022  5L","reference":"160A26"},
+{"designation":"GTX 0W-20 RN17 FE  1L","reference":"160A0E"},
+{"designation":"GTX 0W-20 RN17 FE  5L","reference":"160A10"},
+{"designation":"GTX 0W-20 RN17 FE  60L","reference":"160A11"},
+{"designation":"GTX 0W-20 RN17 FE  208L","reference":"160A0F"},
+{"designation":"GTX 5W-30 C2  208L","reference":"15BDF9"},
+{"designation":"GTX 5W-30 C3  208L","reference":"16203F"},
+{"designation":"GTX 10W-40 A3/B4  1L","reference":"15F8FE"},
+{"designation":"GTX 10W-40 A3/B4  5L","reference":"15F8FC"},
+{"designation":"GTX 10W-40 A3/B4  208L","reference":"15F8F9"},
+{"designation":"GTX 10W-40 A3/B4  20L","reference":"15F8FB"},
+{"designation":"GTX 15W-40 A3/B3  5L","reference":"15F629"},
+{"designation":"GTX 20W-50  5L","reference":"15F646"},
+{"designation":"GTX 5W-30 A5/B5  20 L","reference":"15BE05"},
+{"designation":"GTX 5W-30 C2  20L","reference":"15BDFA"},
+{"designation":"GTX 5W-30 C3  20L","reference":"15DAFE"},
+{"designation":"GTX 5W-30 C3  60L","reference":"15DAFF"},
+{"designation":"GTX 5W-30 C3  208L","reference":"15DC03"},
+{"designation":"GTX 5W-30 C4  1L","reference":"15F64C"},
+{"designation":"GTX 5W-30 C4  5L","reference":"15F64F"},
+{"designation":"GTX 5W-30 C4  20L","reference":"15A26A"},
+{"designation":"GTX 5W-30 C4  60L","reference":"15C788"},
+{"designation":"GTX 5W-30 C4  208L","reference":"15900E"},
+{"designation":"GTX 5W-30 RN17  1L","reference":"15F6E4"},
+{"designation":"GTX 5W-30 RN17  5L","reference":"15F6E5"},
+{"designation":"GTX 5W-30 RN17  20L","reference":"15CC31"},
+{"designation":"GTX 5W-30 RN17  60L","reference":"15CC32"},
+{"designation":"GTX 5W-30 RN17  208L","reference":"15CC33"},
+{"designation":"GTX 5W-40 MV  20L","reference":"15DED5"},
+{"designation":"GTX 5W-40 MV  60L","reference":"15DED7"},
+{"designation":"GTX 5W-40 MV  208L","reference":"15DED6"},
+{"designation":"HUILE CRB MULTI 15W-40 CI-4/E7  5L","reference":"15F43B"},
+{"designation":"15W-40 CI4/E7 CRB MULTI 20L","reference":"15BA1A"},
+{"designation":"HUILE CRB MULTI 15W-40 CI-4/ E7  208L ","reference":"15EA3A"},
+{"designation":"HUILE HYSPIN AWH- M 46  20L","reference":"1604B3"},
+{"designation":"HUILE HYSPIN AWH- M 46  208L ","reference":"1604A9"},
+{"designation":"HUILE HYSPIN AWH- M 46 IBC 1000L","reference":"1604B2"},
+{"designation":"HUILE HYSPIN AWH- M 46 AU LITRE","reference":"1604A9/L"},
+{"designation":"HUILE HYSPIN AWH-M 68  20L","reference":"1605B5"},
+{"designation":"HUILE HYSPIN AWH-M 32  208L","reference":"16044F"},
+{"designation":"HYSPIN AWH-M 32  20L","reference":"16044E"},
+{"designation":"HUILE HYSPIN HVI 46  208L","reference":"15ECB6"},
+{"designation":"HYSPIN HVI 22  208L","reference":"14FB22"},
+{"designation":"HUILE TRANSMAX AGRI TRANS SUPERIOR 10W-30  20L","reference":"1619EB"},
+{"designation":"HUILE TRANSMAX AGRI TRANS SUPERIOR 10W-30  208L","reference":"1619EC"},
+{"designation":"HUILE TRANSMAX AGRI AS 80W  20L","reference":"15C163"},
+{"designation":"HUILE TRANSMAX AGRI MP 15W-40  20L","reference":"15BF7F"},
+{"designation":"HUILE TRANSMAX AGRI MP 15W-40  208L","reference":"15BF80"},
+{"designation":"HUILE TRANSMAX AGRI MP PLUS 10W-40  20L","reference":"15BD85"},
+{"designation":"HUILE TRANSMAX AGRI MP PLUS 10W-40  208L","reference":"15BD87"},
+{"designation":"HUILE TRANSMAX AGRI MP PLUS 10W-40  60L","reference":"15BD86"},
+{"designation":"HUILE TRANSMAX AGRI TRANS PLUS 80W  20L","reference":"15BF7D"},
+{"designation":"HUILE TRANSMAX AGRI TRANS PLUS 80W  208L","reference":"15BF79"},
+{"designation":"HUILE TRANSMAX ATF DX III MV  1L","reference":"15F176"},
+{"designation":"HUILE ATF DX III MV 20L TRANSMAX HUILE","reference":"15D66F"},
+{"designation":"HUILE TRANSMAX ATF DX III MV  208L","reference":"15D671"},
+{"designation":"HUILE TRANSMAX ATF Z (le Litre)","reference":"2B0068"},
+{"designation":"HUILE TRANSMAX ATF Z  1L","reference":"15F0B8"},
+{"designation":"HUILE TRANSMAX ATF Z  5L","reference":"15F0B9"},
+{"designation":"HUILE TRANSMAX ATF Z  20L","reference":"15D6C7"},
+{"designation":"HUILE TRANSMAX ATF Z  60L","reference":"15D6CA"},
+{"designation":"HUILE TRANSMAX ATF Z  208L","reference":"15D6C8"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI  1L","reference":"161ACB"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI  5L","reference":"161ACE"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI / MER-LV MV  12X1L","reference":"15F0BA"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI / MER-LV MV  4X5L","reference":"15F0BC"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI / MER-LV MV  20L","reference":"15D738"},
+{"designation":"HUILE TRANSMAX ATF DEX-VI / MER-LV MV  60L","reference":"161AC7"},
+{"designation":"HUILE TRANSMAX AXLE EPX 80W-90  20L","reference":"15D761"},
+{"designation":"HUILE TRANSMAX AXLE EPX 80W-90  208L","reference":"15EEDD"},
+{"designation":"HUILE TRANSMAX AXLE EPX 85W-140  5L","reference":"15F1A2"},
+{"designation":"HUILE TRANSMAX AXLE EPX 85W-140  20L","reference":"15F01D"},
+{"designation":"HUILE TRANSMAX AXLE EPX 85W-140  208L","reference":"15EEDC"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-90  1L","reference":"15F087"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-90  20L","reference":"15DB78"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-90  60L","reference":"15DBCF"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-90  208L","reference":"15D8CE"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-140  20L","reference":"15D7A1"},
+{"designation":"HUILE TRANSMAX AXLE LL 75W-140  208L","reference":"15DB83"},
+{"designation":"HUILE TRANSMAX DUAL MV 12X1L","reference":"15EEFC"},
+{"designation":"HUILE TRANSMAX LS LL 75W-140  12X1L","reference":"15F1EA"},
+{"designation":"HUILE TRANSMAX LS Z 85W-90  20L","reference":"15D983"},
+{"designation":"HUILE TRANSMAX LS Z 85W-90  208L","reference":"15DB82"},
+{"designation":"HUILE TRANSMAX MANUAL AT 75W-90  20L","reference":"16096A"},
+{"designation":"HUILE TRANSMAX MANUAL AT 75W-90  208L","reference":"15D733"},
+{"designation":"HUILE TRANSMAX MANUAL TRANSAXLE 75W-90 12X1L","reference":"15F137"},
+{"designation":"HUILE TRANSMAX MANUAL TRANSAXLE 75W-90  20L","reference":"15D6FA"},
+{"designation":"HUILE TRANSMAX MANUAL TRANSAXLE 75W-90  60L","reference":"15D8A9"},
+{"designation":"HUILE TRANSMAX MANUAL V 75W-80  1L","reference":"15F229"},
+{"designation":"HUILE TRANSMAX MANUAL V 75W-80  20L","reference":"15D7F3"},
+{"designation":"HUILE TRANSMAX MANUAL V 75W-80  208L","reference":"15D96F"},
+{"designation":"HUILE TRANSMAX MANUAL Z LL 75W-80  20L","reference":"15D70A"},
+{"designation":"HUILE TRANSMAX MANUAL Z LL 75W-80  208L","reference":"15D8DF"},
+{"designation":"HUILE TRANSMAX MANUAL Z LL 75W-80 AU LITRE","reference":"15D8DF/L"},
+{"designation":"HUILE TRANSMAX OFFROAD 10W  208L","reference":"15EAD8"},
+{"designation":"HUILE TRANSMAX OFFROAD 30  208L","reference":"15F00D"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90 (le litre)","reference":"2B009B"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90  1L","reference":"15F0AB"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90  20L","reference":"15DD10"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90  60L","reference":"15DD0C"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90  208L","reference":"15DD11"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 75W-90 AU LITRE","reference":"15DD11/L"},
+{"designation":"HUILE TRANSMAX UNIVERSAL LL 80W-90  60L","reference":"15D8BA"},
+{"designation":"HUILE CRB TURBOMAX 10W-40 E4/E7  20L","reference":"15BA25"},
+{"designation":"HUILE CRB TURBOMAX 10W-40 E4/E7  208L","reference":"15BA27"},
+{"designation":"HUILE CRB MULTI 15W40 CI-4/E7 IBC  1000L","reference":"15BA19"},
+{"designation":"HUILE VECTON 15W-40 CK-4/E9  20L","reference":"15C373"},
+{"designation":"HUILE VECTON 15W-40 CK-4/ E9  5L","reference":"15F3CF"},
+{"designation":"HUILE VECTON 15W-40 CK-4/E9  208L","reference":"15C302"},
+{"designation":"VECTON 15W-40 CK-4/E9 (le litre)","reference":"2B0067"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-30 E6/E9  20L","reference":"15B382"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-30 E6/E9  208L","reference":"15B384"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-30E6/E9 LE LITRE","reference":"2B009E"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 AU LITRE","reference":"15B34A/L"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E6/E9  5L","reference":"15F3D1"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E6/E9  20L","reference":"15B346"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E6/E9  60L","reference":"15BFB9"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E6/E9  208L","reference":"15B34A"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E6/E9 IBC  1000L","reference":"15B349"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E7  20L","reference":"15B351"},
+{"designation":"HUILE VECTON LONG DRAIN 10W-40 E7  208L","reference":"15B355"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30  5L","reference":"16051D"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30  20L","reference":"1605DD"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 AU LITRE","reference":"16051C/L"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 FA-4/F01  20L","reference":"16188F"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 FA-4/F01  208L","reference":"16188D"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 FA-4/F01 AU LITRE","reference":"16188D/L"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 E6/E9  208L","reference":"16051C"},
+{"designation":"HUILE VECTON LONG DRAIN 5W-30 E6/E9 IBC 1000L","reference":"16051B"},
+{"designation":"HUILE VECTON LONGDRAIN 10W-40 E6/E9 (le litre)","reference":"2B0057"},
+{"designation":"MAGNATEC 0W-20 D  1L","reference":"15F5E5"},
+{"designation":"MAGNATEC 0W-20 D  5L","reference":"15F5E4"},
+{"designation":"MAGNATEC 0W-20 D  60L","reference":"15F5E3"},
+{"designation":"MAGNATEC 0W-20 E  1L","reference":"15FD09"},
+{"designation":"MAGNATEC 0W-20 E  5L","reference":"15FD0E"},
+{"designation":"MAGNATEC 0W-20 E  20L","reference":"15FD0A"},
+{"designation":"MAGNATEC 0W-20 E  60L","reference":"15FD10"},
+{"designation":"MAGNATEC 0W-20 E  208L","reference":"15FD0B"},
+{"designation":"MAGNATEC 0W-20 FE  1L","reference":"1608A6"},
+{"designation":"MAGNATEC 0W-20 FE  5L","reference":"1608A7"},
+{"designation":"MAGNATEC 0W-20 FE  20L","reference":"1608A3"},
+{"designation":"MAGNATEC 0W-20 FE  60L","reference":"1608A5"},
+{"designation":"MAGNATEC 0W-20 FE  208L","reference":"1608A4"},
+{"designation":"MAGNATEC 0W-20 GSX/DSX  1L","reference":"1609DF"},
+{"designation":"MAGNATEC 0W-20 GSX/DSX  5L","reference":"1609EA"},
+{"designation":"MAGNATEC 0W-20 GSX/DSX  60L","reference":"1609DE"},
+{"designation":"MAGNATEC 0W-20 GSX/DSX  208L","reference":"1609DD"},
+{"designation":"MAGNATEC 0W-30 C2  1L","reference":"15F6BF"},
+{"designation":"MAGNATEC 0W-30 C2  5L","reference":"15F6BD"},
+{"designation":"MAGNATEC 0W-30 C2  20L","reference":"15F6BC"},
+{"designation":"MAGNATEC 0W-30 C2  60L","reference":"15F6BB"},
+{"designation":"MAGNATEC 0W-30 C2  208L","reference":"15F6BA"},
+{"designation":"MAGNATEC 0W-30 D  1L","reference":"15F67C"},
+{"designation":"MAGNATEC 0W-30 D  5L","reference":"15F67A"},
+{"designation":"MAGNATEC 0W-30 D  20L","reference":"15F679"},
+{"designation":"MAGNATEC 0W-30 D  60L","reference":"15F678"},
+{"designation":"MAGNATEC 5W-20 E  1L","reference":"15F9C9"},
+{"designation":"MAGNATEC 5W-20 E  5L","reference":"15F9E5"},
+{"designation":"MAGNATEC 5W-20 E  20L","reference":"15F9C2"},
+{"designation":"MAGNATEC 5W-20 E  60L","reference":"15F9E2"},
+{"designation":"MAGNATEC 5W-20 E  208L","reference":"15F9C3"},
+{"designation":"MAGNATEC 5W-30 A5  1L","reference":"15F903"},
+{"designation":"MAGNATEC 5W-30 A5  5L","reference":"15F909"},
+{"designation":"MAGNATEC 5W-30 A5  20L","reference":"15F905"},
+{"designation":"MAGNATEC 5W-30 A5  60L","reference":"15F90A"},
+{"designation":"MAGNATEC 5W-30 A5  208L","reference":"15F906"},
+{"designation":"MAGNATEC 5W-30 C2  1L","reference":"15F6C8"},
+{"designation":"MAGNATEC 5W-30 C2  5L","reference":"15F6C4"},
+{"designation":"MAGNATEC 5W-30 C2  20L","reference":"15F6C3"},
+{"designation":"MAGNATEC 5W-30 C2  60L","reference":"15F6C2"},
+{"designation":"MAGNATEC 5W-30 C2  208L","reference":"15F6C1"},
+{"designation":"MAGNATEC 5W-30 C3  1L","reference":"15F929"},
+{"designation":"MAGNATEC 5W-30 C3  5L","reference":"15F927"},
+{"designation":"MAGNATEC 5W-30 C3  20L","reference":"15F924"},
+{"designation":"MAGNATEC 5W-30 C3  60L","reference":"15F923"},
+{"designation":"MAGNATEC 5W-30 C3  208L","reference":"15F922"},
+{"designation":"MAGNATEC 5W-30 DX  1L","reference":"15FFE7"},
+{"designation":"MAGNATEC 5W-30 DX  5L","reference":"15F6E1"},
+{"designation":"MAGNATEC 5W-30 DX  20L","reference":"15C325"},
+{"designation":"MAGNATEC 5W-30 DX  60L","reference":"15FF4C"},
+{"designation":"MAGNATEC 5W-30 DX  208L","reference":"15FF4D"},
+{"designation":"MAGNATEC 5W-30 P  1L","reference":"1612B2"},
+{"designation":"MAGNATEC 5W-30 P  5L","reference":"1612B5"},
+{"designation":"MAGNATEC 5W-30 P  20L","reference":"1612B3"},
+{"designation":"MAGNATEC 5W-30 P  60L","reference":"1612B6"},
+{"designation":"MAGNATEC 5W-30 P  208L","reference":"1612B4"},
+{"designation":"MAGNATEC 5W-40 A3/B4  5L","reference":"15F64B"},
+{"designation":"MAGNATEC 5W-40 A3/B4  208L","reference":"15C9CE"},
+{"designation":"MAGNATEC 5W-40 DPF  1L","reference":"15F90C"},
+{"designation":"MAGNATEC 5W-40 DPF  5L","reference":"15F913"},
+{"designation":"MAGNATEC 5W-40 DPF  20L","reference":"15F90E"},
+{"designation":"MAGNATEC 5W-40 DPF  60L","reference":"15F915"},
+{"designation":"MAGNATEC 5W-40 DPF  208L","reference":"15F90F"},
+{"designation":"MAGNATEC HYBRID 0W-16  1L","reference":"15F6F9"},   
+{"designation":"MAGNATEC HYBRID 0W-16  5L","reference":"15F6FA"},
+{"designation":"MAGNATEC HYBRID 0W-20  1L","reference":"15F872"},
+{"designation":"MAGNATEC HYBRID 0W-20  5L","reference":"15F873"},
+{"designation":"MAGNATEC HYBRID 0W-20  208L","reference":"15F249"},
+{"designation":"MAGNATEC 10W-40 A/B  60L","reference":"15F09E"},
+{"designation":"OPTIGEAR SYNTHETIC PD 220","reference":"15B5AE"},
+{"designation":"POWER1 ULTIMATE 2T ZU 12X1L","reference":"15FFB3"},
+{"designation":"VECTON 15W-40 CK-4/E9 (le litre)","reference":"2B0067"},
+{"designation":"VRAC HUILE HYSPIN AWH-M 46 (LE LITRE)","reference":"2B0032"},
+{"designation":"TRANSMAX DUAL MV  20L","reference":"15EEFD"},
+  ];
+
+  const sb1 = document.getElementById('searchBox1');
+  const out1 = document.getElementById('results1');
+
+  function render1(list){
+    out1.innerHTML = "";
+    if(!list.length) return;
+    for(const item of list){
+      const wrap = document.createElement('div');
+      wrap.className = "result-item";
+      const t = document.createElement('p');
+      t.className = "result-title";
+      t.textContent = item.designation || "";
+      const r = document.createElement('p');
+      r.className = "result-ref";
+      r.textContent = "Réf. " + (item.reference || "");
+      wrap.appendChild(t);
+      wrap.appendChild(r);
+      out1.appendChild(wrap);
+    }
+  }
+
+  function filter1(q){
+    const query = String(q||"").trim().toLowerCase();
+    if(!query) return [];
+    return data1.filter(x =>
+      String(x.designation||"").toLowerCase().includes(query) ||
+      String(x.reference||"").toLowerCase().includes(query)
+    );
+  }
+
+  sb1.addEventListener('input', () => render1(filter1(sb1.value).slice(0, 200)));
+
+  // ---------------- CASTROL 2 ----------------
+  const data2 = [
+    {"designation":"SHELL GADUS S2 V220 00 18kg REF: 550028030","reference":"Spheerol EPL 00 REF: 160A96"},
+{"designation":"SHELL GADUS S2 V220 01 50kg REF: 550028064","reference":"Spheerol EPL 01 REF: 160A97"},
+{"designation":"SHELL GADUS S2 V220 2 400g REF: 550050006","reference":"Spheerol EPL 2 REF: 15FAE5"},
+{"designation":"SHELL GADUS S2 V220 3 18kg REF: 550058022","reference":"Spheerol EPL 3 REF: 160BBC"},
+{"designation":"SHELL GADUS S2 V220 4 50kg REF: 550058023","reference":"Spheerol EPL 4 REF: 15FD30"},
+{"designation":"SHELL GADUS S2 V220 5 180kg REF: 550025259","reference":"Spheerol EPL 5 REF: 1605FE"},
+{"designation":"SHELL GADUS S2 V220 2_1 18kg REF: 550028216","reference":"Spheerol EPL 2 REF: 160BBC"},
+{"designation":"SHELL GADUS S2 V220 2_12 400g REF: 550053026","reference":"Spheerol EPL 2 REF: 15FAE5"},
+{"designation":"SHELL GADUS S2 V220AC 2 400g REF: 550050007","reference":"Spheerol EPL 2 REF: 15FAE5"},
+{"designation":"SHELL GADUS S2 V220AC 3 18kg REF: 550028042","reference":"Spheerol EPL 3 REF: 160BBC"},
+    {"designation":"SHELL EDGE 5W-40 A3/B4 208L REF: 550073574","reference":"HELIX ULTRA 5W-40 REF: 1535AB"},
+{"designation":"SHELL GTX 5W-30 208L REF: 550040210","reference":"GTX 5W-30 C4 REF: 15900E"},
+{"designation":"SHELL HELIX HX8 5W-40 208L REF: 550040210","reference":"MAGNATEC A3/B4 5W-40 REF: 15C9CE"},
+{"designation":"SHELL HELIX ULTRA MULTI ECT 5W-30 208L REF: 550058159","reference":"GTX 5W-30 C3 REF: 15DC03"},
+{"designation":"SHELL HELIX HX8 ECT 5W-30 208L REF: 550048056","reference":"GTX 5W-30 C3 REF: 15DC03"},
+{"designation":"SHELL HLX ULTRA PRO APL 0W-30 208L REF: 550043466","reference":"MAGNATEC 0W-30 C2 REF: 15F6BA"},
+{"designation":"SHELL HLX ULTRA APL 5W-30 208L REF: 550040213","reference":"MAGNATEC 5W-30 C2 REF: 15F6C1"},
+{"designation":"SHELL HLX HX8 ECT 5W-40 208L REF: 550046687","reference":"MAGNATEC 5W-40 DPF REF: 15F90F"},
+{"designation":"SHELL HLX ULT AP-L 0W-20 208L REF: 550073977","reference":"MAGNATEC 0W-20 FE REF: 1608A4"},
+{"designation":"SHELL ECT 0W-30 C2-C3 20L REF: 550048373","reference":"EDGE 0W-30 LL REF: 160DFF"},
+{"designation":"SHELL AR-L 5W-30 C4 20L REF: 550086429","reference":"GTX 5W-30 C4 REF: 15A26A"},
+{"designation":"SHELL ECT 5W-30 C3 20L REF: 550048375","reference":"MAGNATEC 5W-30 C3 REF: 15F924"},
+{"designation":"SHELL AP-L 5W-30 C2 20L REF: 550048370","reference":"MAGNATEC 5W-30 C2 REF: 15F6C3"},
+{"designation":"SHELL APL 0W-30 ECO 20L REF: 550073846","reference":"EDGE 0W-30 A3/B4 REF: 15334F"},
+{"designation":"SHELL AV-L 0W-20 20L REF: 550053643","reference":"EDGE 0W-20 LL REF: 15B1B4"},
+{"designation":"SHELL AF 5W-30 A5/B5 20L REF: 550048289","reference":"MAGNATEC 5W-30 A5 REF: 15F905"},
+{"designation":"SHELL AV-L 0W-30 C3 20L REF: 550048372","reference":"EDGE 0W-30 LL REF: 160DFF"},
+{"designation":"SHELL AR-L 5W-30 RN17 20L REF: 550053648","reference":"GTX 5W-30 RN17 REF: 15CC31"},
+{"designation":"SHELL AF 5W-20 20L REF: 550053640","reference":"MAGNATEC 5W-20 REF: 15F9C2"},
+{"designation":"SHELL AP-L 0W-30 C2 20L REF: 550048374","reference":"MAGNATEC 0W-30 C2 REF: 15F6BC"},
+{"designation":"SHELL HLX ULT 5W-40 20L REF: 550073592","reference":"MAGNATEC 5W-40 A3/B4 REF: 15C4AC"},
+{"designation":"SHELL GADUS S2 V220AC 4 50kg REF: 550028043","reference":"Spheerol EPL 4 REF: 15FD30"},
+{"designation":"SHELL GADUS S2 V220 AD 18kg REF: 550028111","reference":"Moly Grease REF: 15047E"},
+{"designation":"SHELL GADUS S2 V220 AD 50kg REF: 550028414","reference":"Moly Grease REF: n/c"},
+{"designation":"SHELL GADUS S2 V220 AD 180kg REF: 550025256","reference":"Moly Grease REF: n/c"},
+{"designation":"SHELL GADUS S3 V220C 400g REF: 550053532","reference":"Spheerol EPLX 200-2 REF: 16073E"},
+{"designation":"SHELL GADUS S3 V220C 18kg REF: 550027995","reference":"Spheerol EPLX 200-3 REF: 16073B"},
+{"designation":"SHELL GADUS S3 V220C 50kg REF: 550027996","reference":"Spheerol EPLX 200-4 REF: 16073D"},
+{"designation":"SHELL GADUS S3 V220C 180kg REF: 550025251","reference":"Spheerol EPLX 200-5 REF: n/c"},
+{"designation":"SHELL HYDRAULIC S1 V46 FUT REF: 550051340","reference":"Hyspin HVI 46 REF: 15ECB6"},
+{"designation":"SHELL OMALA S2 GX 220 20L REF: 550066374","reference":"Alpha SP 220 REF: 15FE1D"},
+{"designation":"SHELL OMALA S4 GXV 220 20L REF: 550071274","reference":"Optigear Synthetic PD 220 ES REF: 15B5AE"},
+{"designation":"SHELL OMALA S4 GXV 221 FUT REF: 550046690","reference":"Optigear Synthetic PD 220 ES REF: 15B5AF"},
+{"designation":"SHELL OMALA S4 GXV 320 20L REF: 550047086","reference":"Optigear Synthetic PD 320 ES REF: 15B679"},
+{"designation":"SHELL OMALA S4 GXV 321 FUT REF: 550047087","reference":"Optigear Synthetic PD 320 ES REF: 15B67A"},
+{"designation":"SHELL RIMULA R4L 15W40 5L REF: 550047337","reference":"Vecton 15W40 CK-4/E9 REF: 15F3CF"},
+{"designation":"SHELL RIMULA R4L 15W41 20L REF: 550070445","reference":"Vecton 15W40 CK-4/E10 REF: 15C373"},
+{"designation":"SHELL RIMULA R4L 15W42 TONNELET REF: 550047336","reference":"Vecton 15W40 CK-4/E11 REF: n/c"},
+{"designation":"SHELL RIMULA R4L 15W43 FUT REF: 550047252","reference":"Vecton 15W40 CK-4/E12 REF: 15C302"},
+{"designation":"SHELL RIMULA R4X 15W40 5L REF: 550055173","reference":"CRB MULTI 15W40 CI-4/E7 REF: 15F43B"},
+{"designation":"SHELL RIMULA R4X 15W41 20L REF: 550036738","reference":"CRB MULTI 15W40 CI-4/E8 REF: 15BA1A"},
+{"designation":"SHELL RIMULA R4X 15W42 TONNELET REF: 550036740","reference":"CRB MULTI 15W40 CI-4/E9 REF: n/c"},
+{"designation":"SHELL RIMULA R4X 15W43 IBC 1000L REF: 550036747","reference":"CRB MULTI 15W40 CI-4/E10 REF: 15BA19"},
+{"designation":"SHELL RIMULA R5E 10W40 20L REF: 550070443","reference":"CRB TURBOMAX 10W40 E4/E7 REF: 15BA25"},
+{"designation":"SHELL RIMULA R5E 10W41 TONNELET REF: 550043120","reference":"CRB TURBOMAX 10W40 E4/E8 REF: n/c"},
+{"designation":"SHELL RIMULA R5E 10W42 FUT REF: 550033236","reference":"CRB TURBOMAX 10W40 E4/E9 REF: 15BA27"},
+{"designation":"SHELL RIMULA R5E 10W43 VRAC REF: 500003287","reference":"CRB TURBOMAX 10W40 E4/E10 REF: 2B0049"},
+{"designation":"SHELL RIMULA R5LE 10W30 20L REF: 550047311","reference":"Vecton Long Drain 10W-30 E6/E9 REF: 15B382"},
+{"designation":"SHELL RIMULA R5LE 10W31 FUT REF: 550047175","reference":"Vecton Long Drain 10W-30 E6/E10 REF: 15B384"},
+{"designation":"SHELL RIMULA R5LE 10W32 VRAC REF: 550010312","reference":"Vecton Long Drain 10W-30 E6/E11 REF: 2B009E"},
+{"designation":"SHELL RIMULA R5LE 10W40 5L REF: -","reference":"Vecton Long Drain 10W40 E6/E9 REF: 15F3D1"},
+{"designation":"SHELL RIMULA R5LE 10W41 20L REF: 550070621","reference":"Vecton Long Drain 10W40 E6/E10 REF: 15B346"},
+{"designation":"SHELL RIMULA R5LE 10W42 FUT REF: 550047209","reference":"Vecton Long Drain 10W40 E6/E11 REF: 15B34A"},
+{"designation":"SHELL RIMULA R5LE 10W43 IBC 1000L REF: 550047208","reference":"Vecton Long Drain 10W40 E6/E12 REF: 15B349"},
+{"designation":"SHELL RIMULA R5LE 10W44 VRAC REF: 500010313","reference":"Vecton Long Drain 10W40 E6/E13 REF: 2B0057"},
+{"designation":"SHELL RIMULA R6LM 10W40 5L REF: 550054436","reference":"Vecton Long Drain 10W40 E6/E9 REF: 15F3D1"},
+{"designation":"SHELL RIMULA R6LM 10W41 20L REF: 550070643","reference":"Vecton Long Drain 10W40 E6/E10 REF: 15B346"},
+{"designation":"SHELL RIMULA R6LM 10W42 FUT REF: 550044859","reference":"Vecton Long Drain 10W40 E6/E11 REF: 15B34A"},
+{"designation":"SHELL RIMULA R6LM 10W43 IBC 1000L REF: 550044857","reference":"Vecton Long Drain 10W40 E6/E12 REF: 15B349"},
+{"designation":"SHELL RIMULA R6LM 10W44 VRAC REF: 500009950","reference":"Vecton Long Drain 10W40 E6/E13 REF: 2B0057"},
+{"designation":"SHELL RIMULA R6LME+ 5W30 5L REF: 550075170","reference":"Vecton Long Drain 5W-30 E6/E9 REF: 16051D"},
+{"designation":"SHELL RIMULA R6LME+ 5W31 20L REF: 550070645","reference":"Vecton Long Drain 5W-30 E6/E10 REF: 1605DD"},
+{"designation":"SHELL RIMULA R6LME+ 5W32 FUT REF: 550052713","reference":"Vecton Long Drain 5W-30 E6/E11 REF: 16051C"},
+{"designation":"SHELL RIMULA R6LME+ 5W33 IBC 1000L REF: 550052711","reference":"Vecton Long Drain 5W-30 E6/E12 REF: 16051B"},
+{"designation":"SHELL RIMULA R6LME+ 5W34 VRAC REF: 500011510","reference":"Vecton Long Drain 5W-30 E6/E13 REF: 2B008B"},
+{"designation":"SHELL RIMULA R7 AX 5W30 20L REF: 550071984","reference":"Vecton Long Drain 5W-30 FA-4/F01 REF: 16188F"},
+{"designation":"SHELL RIMULA R7 AX 5W31 FUT REF: 550071985","reference":"Vecton Long Drain 5W-30 FA-4/F02 REF: 16188D"},
+{"designation":"SHELL RIMULA ULTRA 5W30 5L REF: 550054434","reference":"Vecton Long Drain 5W-30 E6/E9 REF: 16051D"},
+{"designation":"SHELL RIMULA ULTRA 5W31 20L REF: 550070642","reference":"Vecton Long Drain 5W-30 E6/E10 REF: 1605DD"},
+{"designation":"SHELL RIMULA ULTRA 5W32 FUT REF: 550044850","reference":"Vecton Long Drain 5W-30 E6/E11 REF: 16051C"},
+{"designation":"SHELL SPIRAX S2 A 80W90 20L REF: 550065646","reference":"Transmax Axle EPX 80W-90 REF: 15D761"},
+{"designation":"SHELL SPIRAX S2 A 80W91 FUT REF: 550027903","reference":"Transmax Axle EPX 80W-91 REF: 15EEDD"},
+{"designation":"SHELL SPIRAX S2 A 85W140 5L REF: n/c","reference":"Transmax Axle EPX 85W-140 REF: 15F1A2"},
+{"designation":"SHELL SPIRAX S2 A 85W141 20L REF: 550065647","reference":"Transmax Axle EPX 85W-141 REF: 15F01D"},
+{"designation":"SHELL SPIRAX S2 A 85W142 FUT REF: 550027938","reference":"Transmax Axle EPX 85W-142 REF: 15EEDC"},
+{"designation":"SHELL SPIRAX S2 A 85W143 VRAC REF: 550005771","reference":"Transmax Axle EPX 85W-143 REF: n/c"},
+{"designation":"SHELL SPIRAX S2 ATF AX 1L REF: 550043343","reference":"Transmax ATF DX III MV REF: 15F176"},
+{"designation":"SHELL SPIRAX S2 ATF AX 20L REF: 550027799","reference":"Transmax ATF DX III MV REF: 15D66F"},
+{"designation":"SHELL SPIRAX S2 ATF AX FUT REF: 550027804","reference":"Transmax ATF DX III MV REF: 15D671"},
+{"designation":"SHELL SPIRAX S3 ALS 85W90 20L REF: 550060232","reference":"Transmax LS Z 85W-90 REF: 15D983"},
+{"designation":"SHELL SPIRAX S3 ALS 85W91 FUT REF: 550055993","reference":"Transmax LS Z 85W-91 REF: 15DB82"},
+{"designation":"SHELL SPIRAX S3 AX 80W90 20L REF: 550065649","reference":"Transmax Axle EPX 80W-90 REF: 15D761"},
+{"designation":"SHELL SPIRAX S3 AX 80W91 FUT REF: 550027910","reference":"Transmax Axle EPX 80W-91 REF: 15EEDD"},
+{"designation":"SHELL SPIRAX S3 AX 85W140 FUT REF: 550027988","reference":"Transmax Axle EPX 85W-140 REF: 15EEDC"},
+{"designation":"SHELL SPIRAX S3 T 20L REF: 550065645","reference":"Transmax Agri MP 15W-40 REF: 15BF7F"},
+{"designation":"SHELL SPIRAX S3 T FUT REF: 550027986","reference":"Transmax Agri MP 15W-41 REF: 15BF80"},
+{"designation":"SHELL SPIRAX S4 AT 75W90 20L REF: 550027945","reference":"Transmax Universal LL 75W-90 REF: 15DD10"},
+{"designation":"SHELL SPIRAX S4 AT 75W91 20L REF: 550070979","reference":"Transmax Universal LL 75W-91 REF: 15DD10"},
+{"designation":"SHELL SPIRAX S4 AT 75W92 FUT REF: 550027950","reference":"Transmax Universal LL 75W-92 REF: 15DD11"},
+{"designation":"SHELL SPIRAX S4 ATF HDX 1L REF: 550028356","reference":"Transmax ATF Z REF: 15F0B8"},
+{"designation":"SHELL SPIRAX S4 ATF HDX 5L REF: n/c","reference":"Transmax ATF Z REF: 15F0B9"},
+{"designation":"SHELL SPIRAX S4 ATF HDX 20L REF: 550073300","reference":"Transmax ATF Z REF: 15D6C7"},
+{"designation":"SHELL SPIRAX S4 ATF HDX FUT REF: 550027842","reference":"Transmax ATF Z REF: 15D6C8"},
+{"designation":"SHELL SPIRAX S4 ATF HDX VRAC REF: 500005731","reference":"Transmax ATF Z REF: 2B0068"},
+{"designation":"SHELL SPIRAX S4 CX 10W FUT REF: 550027805","reference":"Transmax Offroad 10W REF: 15EAD8"},
+{"designation":"SHELL SPIRAX S4 CX 30 FUT REF: 550027806","reference":"Transmax Offroad 30 REF: 15F00D"},
+{"designation":"SHELL SPIRAX S4 G 75W80 1L REF: 550027989","reference":"Transmax Manual V 75W-80 REF: 15F229"},
+{"designation":"SHELL SPIRAX S4 G 75W81 1L REF: 550065679","reference":"Transmax Manual V 75W-81 REF: 15F229"},
+{"designation":"SHELL SPIRAX S4 G 75W82 20L REF: 550070978","reference":"Transmax Manual V 75W-82 REF: 15D7F3"},
+{"designation":"SHELL SPIRAX S4 G 75W83 TONNELET REF: 550045523","reference":"Transmax Manual V 75W-83 REF: 15D96F"},
+{"designation":"SHELL SPIRAX S4 G 75W84 FUT REF: 550027991","reference":"Transmax Manual V 75W-84 REF: n/c"},
+{"designation":"SHELL SPIRAX S4 TX 20L REF: 550027933","reference":"Transmax Agri MP P 10W-40 REF: 15BD85"},
+{"designation":"SHELL SPIRAX S4 TX TONNELET REF: 550036852","reference":"Transmax Agri MP P 10W-41 REF: 15BD86"},
+{"designation":"SHELL SPIRAX S4 TX FUT REF: 550027932","reference":"Transmax Agri MP P 10W-42 REF: 15BD87"},
+{"designation":"SHELL SPIRAX S4 TXM 20L REF: 550070974","reference":"Transmax Agri Trans Plus 80W REF: 15BF7D"},
+{"designation":"SHELL SPIRAX S4 TXM TONNELET REF: 550036611","reference":"Transmax Agri Trans Plus 80W REF: n/c"},
+{"designation":"SHELL SPIRAX S4 TXM FUT REF: 550027809","reference":"Transmax Agri Trans Plus 80W REF: 15BF79"},
+{"designation":"SHELL SPIRAX S5 ATF 1L REF: 550056389","reference":"Transmax ATF DEX-VI / MER-LV MV REF: 15F0BA"},
+{"designation":"SHELL SPIRAX S5 ATF 20L REF: 550041202","reference":"Transmax ATF DEX-VI / MER-LV MV REF: 15D738"},
+{"designation":"SHELL SPIRAX S6 AXME 75W90 1L REF: 550049036","reference":"Transmax Universal LL 75W-90 REF: 15F0AB"},
+{"designation":"SHELL SPIRAX S6 AXME 75W91 1L REF: 550056385","reference":"Transmax Universal LL 75W-91 REF: 15F0AB"},
+{"designation":"SHELL SPIRAX S6 AXME 75W92 20L REF: 550071080","reference":"Transmax Universal LL 75W-92 REF: 15DD10"},
+{"designation":"SHELL SPIRAX S6 AXME 75W93 FUT REF: 550027907","reference":"Transmax Universal LL 75W-93 REF: 15DD11"},
+{"designation":"SHELL SPIRAX S6 AXME 75W94 VRAC REF: 500005854","reference":"Transmax Universal LL 75W-94 REF: 2B009B"},
+{"designation":"SHELL SPIRAX S6 AXME 75W140 20L REF: 550071081","reference":"Transmax Axle LL 75W-140 REF: 15D7A1"},
+{"designation":"SHELL SPIRAX S6 AXME 75W141 FUT REF: 550027957","reference":"Transmax Axle LL 75W-141 REF: 15DB83"},
+{"designation":"SHELL SPIRAX S6 GXME 75W80 20L REF: 550027940","reference":"Transmax Manual Z LL 75W-80 REF: 15D70A"},
+{"designation":"SHELL SPIRAX S6 GXME 75W81 20L REF: 550074191","reference":"Transmax Manual Z LL 75W-81 REF: 15D70A"},
+{"designation":"SHELL SPIRAX S6 GXME 75W82 FUT REF: 550027939","reference":"Transmax Manual Z LL 75W-82 REF: 15D8DF"},
+{"designation":"SHELL SPIRAX S6 GXME 75W83 VRAC REF: 500005858","reference":"Transmax Manual Z LL 75W-83 REF: 2B007E"},
+{"designation":"SHELL SPIRAX S6 GXME ULTRA 75W80 FUT REF: 550058280","reference":"Transmax Manual Z LL 75W-80 REF: 15D8DF"},
+{"designation":"SHELL TELLUS S2 VX 22 20L REF: 550045825","reference":"Hyspin HVI 22 REF: 14FB22"},
+{"designation":"SHELL TELLUS S2 VX 32 20L REF: 550065930","reference":"Hyspin AWH-M 32 REF: 16044E"},
+{"designation":"SHELL TELLUS S2 VX 33 FUT REF: 550045739","reference":"Hyspin AWH-M 33 REF: 16044F"},
+{"designation":"SHELL TELLUS S2 VX 46 20L REF: 550065931","reference":"Hyspin AWH-M 46 REF: 1604B3"},
+{"designation":"SHELL TELLUS S2 VX 47 FUT REF: 550045524","reference":"Hyspin AWH-M 47 REF: 1604A9"},
+{"designation":"SHELL TELLUS S2 VX 48 IBC 1000L REF: 550045526","reference":"Hyspin AWH-M 48 REF: 1604B2"},
+{"designation":"SHELL TELLUS S2 VX 49 VRAC REF: 500010032","reference":"Hyspin AWH-M 49 REF: 2B0032"},
+{"designation":"SHELL TELLUS S2 VX 68 20L REF: 550045522","reference":"Hyspin AWH-M 68 REF: 1605B5"},
+{"designation":"SHELL TONNA S3 M 68 20L REF: 550027211","reference":"Magna SW B 68 REF: 15F444"},
+{"designation":"SHELL TRANSMISSION MA 75W90 20L REF: n/c","reference":"Transmax Manual AT 75W-90 REF: 16096A"},
+{"designation":"SHELL TRANSMISSION MA 75W91 FUT REF: 550014652","reference":"Transmax Manual AT 75W-91 REF: 15D733"},
+{"designation":"SHELL TRANSMISSION MB 75W90 FUT REF: 550068538","reference":"Transmax Universal LL 75W-90 REF: 15DD11"}
+  ];
+
+  const sb2 = document.getElementById('searchBox2');
+  const out2 = document.getElementById('results2');
+
+  function render2(list){
+    out2.innerHTML = "";
+    if(!list.length) return;
+    for(const item of list){
+      const row = document.createElement('div');
+      row.className = "result-row";
+
+      const left = document.createElement('div');
+      left.className = "left";
+      left.textContent = (item.shell || item.left || item.from || item.designation || "").trim();
+
+      const arrow = document.createElement('div');
+      arrow.className = "arrow";
+      arrow.textContent = "→";
+
+      const right = document.createElement('div');
+      right.className = "right";
+      // Selon les clés disponibles (on garde plusieurs possibilités)
+      const rtxt = (item.castrol || item.right || item.to || item.reference || "").trim();
+      right.textContent = rtxt;
+
+      row.appendChild(left);
+      row.appendChild(arrow);
+      row.appendChild(right);
+      out2.appendChild(row);
+    }
+  }
+
+  function filter2(q){
+    const query = String(q||"").trim().toLowerCase();
+    if(!query) return [];
+    return data2.filter(x => {
+      const a = String(x.shell || x.left || x.from || x.designation || "").toLowerCase();
+      const b = String(x.castrol || x.right || x.to || x.reference || "").toLowerCase();
+      return a.includes(query) || b.includes(query);
+    });
+  }
+
+  sb2.addEventListener('input', () => render2(filter2(sb2.value).slice(0, 200)));
+</script>
+</body>
+</html>
