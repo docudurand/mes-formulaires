@@ -88,25 +88,32 @@ router.post(
         console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
         return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
       }
-const mjHeadersMain = buildMailjetHeaders(`creation_pneu_vl_main_${Date.now()}`);
+
+      const toMain = process.env.DEST_EMAIL_FORMULAIRE_PNEU;
+      const subjectMain = '📨 Demande création référence Pneumatique VL';
+      const mjHeadersMain = buildMailjetHeaders('creation_pneu_vl_main_', { to: toMain, subject: subjectMain });
+
       const mailOptions = {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
-        to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
-        subject: '📨 Demande création référence Pneumatique VL',
+        to: toMain,
+        subject: subjectMain,
         replyTo: formData.email,
         html: generateHtml(formData),
-headers: mjHeadersMain,
+        headers: mjHeadersMain,
         attachments
       };
 
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
-		  const mjHeadersAck = buildMailjetHeaders(`creation_pneu_vl_ack_${Date.now()}`);
+        const toAck = formData.email;
+        const subjectAck = "Votre demande de création de référence pneu a bien été reçue";
+        const mjHeadersAck = buildMailjetHeaders('creation_pneu_vl_ack_', { to: toAck, subject: subjectAck });
+
         const accuserecepOptions = {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
-          to: formData.email,
-          subject: "Votre demande de création de référence pneu a bien été reçue",
+          to: toAck,
+          subject: subjectAck,
           html: `
             <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
               <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
@@ -126,7 +133,7 @@ headers: mjHeadersMain,
               <p>L’équipe Pneumatiques VL</p>
             </div>
           `,
-		  headers: mjHeadersAck,
+          headers: mjHeadersAck,
           attachments
         };
 

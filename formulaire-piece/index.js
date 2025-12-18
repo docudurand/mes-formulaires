@@ -71,7 +71,7 @@ router.post(
   upload.array('fichiers[]'),
   async (req, res) => {
     const formData = req.body;
-    const attachments = req.files.map(file => ({
+    const attachments = (req.files || []).map(file => ({
       filename: file.originalname,
       path: file.path
     }));
@@ -80,14 +80,18 @@ router.post(
       console.error('[formulaire-piece] SMTP not configured');
       return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
-const mjHeadersMain = buildMailjetHeaders(`creation_vl_main_${Date.now()}`);
+
+    const toMain = process.env.DEST_EMAIL_FORMULAIRE_PIECE;
+    const subjectMain = '📨 Demande de création référence VL';
+    const mjHeadersMain = buildMailjetHeaders('creation_vl_main_', { to: toMain, subject: subjectMain });
+
     const mailOptions = {
       from: `"Formulaire création VL" <${fromEmail}>`,
-      to: process.env.DEST_EMAIL_FORMULAIRE_PIECE,
-      subject: '📨 Demande de création référence VL',
+      to: toMain,
+      subject: subjectMain,
       replyTo: formData.email,
       html: generateHtml(formData),
-headers: mjHeadersMain,
+      headers: mjHeadersMain,
       attachments
     };
 
@@ -95,11 +99,14 @@ headers: mjHeadersMain,
       await transporter.sendMail(mailOptions);
 
       if (formData.email) {
-	    const mjHeadersAck = buildMailjetHeaders(`creation_vl_ack_${Date.now()}`);
+        const toAck = formData.email;
+        const subjectAck = "Votre demande de création de référence a bien été reçue";
+        const mjHeadersAck = buildMailjetHeaders('creation_vl_ack_', { to: toAck, subject: subjectAck });
+
         const accuserecepOptions = {
           from: `"Service Pièces VL" <${fromEmail}>`,
-          to: formData.email,
-          subject: "Votre demande de création de référence a bien été reçue",
+          to: toAck,
+          subject: subjectAck,
           html: `
             <div style="font-family:Arial; max-width:700px; margin:auto;">
               <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
@@ -118,7 +125,7 @@ headers: mjHeadersMain,
               <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
             </div>
           `,
-		  headers: mjHeadersAck,
+          headers: mjHeadersAck,
           attachments
         };
 
@@ -134,7 +141,7 @@ headers: mjHeadersMain,
       console.error('Envoi mail échoué :', err);
       res.status(500).send("Erreur lors de l'envoi.");
     } finally {
-      for (const file of req.files) {
+      for (const file of (req.files || [])) {
         fs.unlink(file.path, () => {});
       }
     }
