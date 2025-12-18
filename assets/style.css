@@ -20,13 +20,11 @@ body{
   background: var(--blue-dark);
   color: var(--text);
 
-  /* ✅ 1 seul scroll : la page */
   min-height: 100vh;
   display:flex;
   flex-direction:column;
 }
 
-/* ===== TOPBAR : Wix-like ===== */
 .topbar{
   background: var(--topbar);
   border-top: 4px solid #6b2aa6;
@@ -35,13 +33,11 @@ body{
   align-items:center;
   gap:18px;
 
-  /* ✅ le dropdown passe au-dessus du contenu */
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
-/* Logos gauche/droite */
 .brand-left, .brand-right{
   display:flex;
   align-items:center;
@@ -58,7 +54,6 @@ body{
   justify-content:flex-end;
 }
 
-/* Menus centrés */
 .nav{
   display:flex;
   align-items:center;
@@ -68,14 +63,12 @@ body{
   min-width:0;
 }
 
-/* IMPORTANT : dropdown absolute se base sur .menu */
 .menu{
-  position: relative; /* ✅ indispensable */
+  position: relative;
   display:flex;
   align-items:center;
 }
 
-/* Boutons menu (pills) */
 .menu-btn{
   appearance:none;
   border:0;
@@ -101,19 +94,17 @@ body{
   outline-offset: 3px;
 }
 
-/* Actif */
 .menu.is-active .menu-btn{ background: var(--pill); }
 
-/* Sous barre (espace sous menu) */
 .subbar{ height: 22px; }
 
-/* ===== Dropdown ===== */
 .dropdown{
   position:absolute;
   top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
-  width: 420px;
+  width: max-content;
+  min-width: 420px;
   max-width: 92vw;
   background:#fff;
   border-radius: 18px;
@@ -141,17 +132,16 @@ body{
   text-transform: uppercase;
   text-align:center;
   border-radius: 12px;
+  white-space: nowrap;
+  width: 100%;
 }
 .dropdown a:hover{ background: rgba(42,59,99,.07); }
 
-/* ✅ Ouverture au clic (si ton JS ajoute .open) */
 .menu.open .dropdown{ display:block; }
 
-/* ✅ Ouverture au survol sur PC */
 @media (hover:hover){
   .menu:hover .dropdown{ display:block; }
 
-  /* petit "pont" pour éviter que le hover se coupe entre bouton et dropdown */
   .menu::after{
     content:"";
     position:absolute;
@@ -163,7 +153,6 @@ body{
   }
 }
 
-/* ===== Layout / cadres (1 seul scroll) ===== */
 .wrap{
   flex: 1;
   padding: 6px 12px 12px;
@@ -172,7 +161,6 @@ body{
   align-items:stretch;
 }
 
-/* cadre principal */
 .card{
   width: min(1680px, 98vw);
   display:flex;
@@ -184,7 +172,6 @@ body{
   box-shadow: var(--shadow);
 }
 
-/* pages type "contenu" (index) */
 .content{
   background: #eef0ff;
   padding: 42px 24px 60px;
@@ -228,25 +215,21 @@ body{
   position:absolute; inset:0; width:100%; height:100%; border:0;
 }
 
-/* ===== Accueil : vidéo centrée "style Wix" (pas pleine largeur) ===== */
 .content .video{
-  width: min(1100px, 92vw);   /* ✅ taille type Wix */
-  margin: 0 auto;            /* ✅ centrée */
+  width: min(1100px, 92vw);
+  margin: 0 auto;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 14px 30px rgba(0,0,0,.18);
   background: #fff;
 }
 
-/* optionnel : un peu d’air au-dessus / dessous */
 .content .video{ margin-top: 10px; margin-bottom: 10px; }
 
-/* mobile : on élargit un peu pour utiliser l’écran */
 @media (max-width: 640px){
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
-/* ===== Embeds (iframés) ===== */
 .embed-main{ padding: 0; }
 
 .embed-card{
@@ -255,16 +238,14 @@ body{
   overflow: hidden;
 }
 
-/* ✅ iframe : pas de scroll dans le cadre (hauteur gérée par JS postMessage) */
 .embed-frame,
 .card iframe{
   width: 100% !important;
   border: 0 !important;
   display: block !important;
-  height: 1200px; /* valeur de secours le temps que le JS ajuste */
+  height: 1200px;
 }
 
-/* ===== Responsive ===== */
 @media (max-width: 980px){
   .menu-btn{ min-width: 180px; font-size:16px; padding: 12px 18px; }
   .brand-left, .brand-right{ min-width: 110px; }
@@ -285,7 +266,6 @@ body{
   .h1{ font-size: 32px; }
 }
 
-/* ===== Auth ===== */
 .auth-wrap{
   min-height: calc(100vh - 50px);
   display:flex;
@@ -360,8 +340,35 @@ body{
 }
 .menu-link:visited{ color:#fff; }
 
-/* --- HOME ONLY: centre la vidéo comme sur Wix --- */
 .home .home-content{
   padding: 18px 0;
 }
+.content .video{
+  overflow: hidden;
+}
 
+.content .video iframe,
+.content .video video,
+.content .video img{
+  position: absolute;
+  left: 0;
+  width: 100%;
+
+  top: -8%;
+  height: 116%;
+}
+.wrap.home { align-items: stretch; }
+
+.home .card{
+  background: #eef0ff;
+}
+
+.home .content.home-content{
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef0ff;
+  padding: 24px;
+}
