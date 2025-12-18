@@ -12,8 +12,18 @@
     #filters { margin-top:12px; padding:10px; border:1px solid #ddd; border-radius:12px; }
     #filters label { white-space: nowrap; }
 
-    #tableWrap { max-height: 520px; overflow: auto; border: 1px solid #ddd; border-radius: 12px; margin-top: 12px; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .searchBox { margin-top:10px; }
+    .searchBox input{
+      width: min(520px, 100%);
+      padding:10px 12px;
+      border:1px solid #ddd;
+      border-radius:10px;
+      outline:none;
+    }
+    .searchBox input:focus { border-color:#999; }
 
+    #tableWrap { max-height: 520px; overflow: auto; border: 1px solid #ddd; border-radius: 12px; margin-top: 12px; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background: #f2f2f2; position: sticky; top: 0; z-index: 1; }
@@ -26,6 +36,14 @@
     .state-unsub { color: #92400e; font-weight: 900; }
 
     code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
+
+    .btn {
+      padding:10px 12px;
+      border:1px solid #ddd;
+      border-radius:10px;
+      background:#fff;
+      cursor:pointer;
+    }
   </style>
 </head>
 <body>
@@ -36,7 +54,7 @@
     <div id="filters">
       <strong>Filtres :</strong>
 
-      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+      <div class="row" style="margin-top:8px;">
         <label><input type="checkbox" class="st" value="sent" checked> Envoyé</label>
         <label><input type="checkbox" class="st" value="delivered" checked> Livré</label>
         <label><input type="checkbox" class="st" value="open" checked> Ouvert</label>
@@ -47,11 +65,20 @@
         <label><input type="checkbox" class="st" value="unsub" checked> Désabonné</label>
       </div>
 
-      <div style="margin-top:10px;">
+      <div class="row" style="margin-top:10px;">
         <label>
           <input type="checkbox" id="showCopies">
           Afficher les copies vers <code>magvl4gleize@durandservices.fr</code>
         </label>
+      </div>
+
+      <div class="searchBox row">
+        <input id="q" type="search" placeholder="Recherche (ID, email destinataire, statut…)" />
+        <button class="btn" id="clearQ" type="button">Effacer</button>
+      </div>
+
+      <div class="small" style="margin-top:6px;">
+        Astuce : tu peux taper une partie d’un ID (ex: <code>ramasse_</code>) ou un email.
       </div>
     </div>
 
@@ -83,19 +110,31 @@ function getSelectedStates() {
   return new Set([...document.querySelectorAll('input.st:checked')].map(x => x.value));
 }
 
-function shouldShowRow(item, selectedStates, showCopies) {
+function fmtFR(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString("fr-FR"); } catch { return iso; }
+}
+
+function matchesQuery(item, q) {
+  if (!q) return true;
+  const hay = [
+    item.id || "",
+    item.to || "",
+    item.state || "",
+  ].join(" ").toLowerCase();
+  return hay.includes(q);
+}
+
+function shouldShowRow(item, selectedStates, showCopies, q) {
   const st = (item.state || "sent").toLowerCase();
   if (!selectedStates.has(st)) return false;
 
   const to = String(item.to || "").toLowerCase();
   if (!showCopies && to.includes(COPY_MAIL)) return false;
 
-  return true;
-}
+  if (!matchesQuery(item, q)) return false;
 
-function fmtFR(iso) {
-  if (!iso) return "";
-  try { return new Date(iso).toLocaleString("fr-FR"); } catch { return iso; }
+  return true;
 }
 
 async function chargerStatuts() {
@@ -106,12 +145,13 @@ async function chargerStatuts() {
 
     const selectedStates = getSelectedStates();
     const showCopies = document.getElementById("showCopies").checked;
+    const q = (document.getElementById("q").value || "").trim().toLowerCase();
 
     const tbody = document.querySelector('#statusTable tbody');
     tbody.innerHTML = '';
 
     data
-      .filter(item => shouldShowRow(item, selectedStates, showCopies))
+      .filter(item => shouldShowRow(item, selectedStates, showCopies, q))
       .forEach(item => {
         const tr = document.createElement('tr');
         const state = (item.state || 'sent').toLowerCase();
@@ -140,6 +180,17 @@ document.addEventListener("change", (e) => {
   if (e.target.matches("input.st") || e.target.id === "showCopies") {
     chargerStatuts();
   }
+});
+
+let t;
+document.getElementById("q").addEventListener("input", () => {
+  clearTimeout(t);
+  t = setTimeout(chargerStatuts, 150);
+});
+
+document.getElementById("clearQ").addEventListener("click", () => {
+  document.getElementById("q").value = "";
+  chargerStatuts();
 });
 </script>
 </body>
