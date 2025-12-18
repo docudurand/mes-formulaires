@@ -680,10 +680,10 @@ router.get("/ack", (req, res) => {
 </style>
 
 <div class="box">
-  <h2>Accusé de réception</h2>
-  <p class="muted">Envoi en cours…</p>
+  <h2>Accuser de réception</h2>
+  <p class="muted">Clique une seule fois sur le bouton pour envoyer l’accusé.</p>
 
-  <form id="f" method="POST" action="/api/ramasse/ack">
+  <form method="POST" action="/api/ramasse/ack">
     <input type="hidden" name="email" value="${esc(email)}"/>
     <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
     <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
@@ -691,23 +691,17 @@ router.get("/ack", (req, res) => {
     <input type="hidden" name="ts" value="${esc(ts)}"/>
     <input type="hidden" name="nonce" value="${esc(nonce)}"/>
     <input type="hidden" name="sig" value="${esc(sig)}"/>
-
-    <noscript>
-      <p class="muted">JavaScript est désactivé : clique ci-dessous.</p>
-      <button class="btn" type="submit">Accuser de réception</button>
-    </noscript>
+    <button class="btn" type="submit">Accuser de réception</button>
   </form>
-</div>
 
-<script>
-  // Soumission automatique (sans 2e clic)
-  document.getElementById('f').submit();
-</script>`);
+  <div class="muted">Sécurité anti préchargement : aucun accusé n’est envoyé sans clic.</div>
+</div>`);
   } catch (e) {
     console.error("[RAMASSE] ACK GET error:", e);
     return res.status(400).send("Lien invalide.");
   }
 });
+
 router.post("/ack", express.urlencoded({ extended: true }), async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
@@ -771,6 +765,5 @@ router.post("/ack", express.urlencoded({ extended: true }), async (req, res) => 
     return res.status(400).send("Lien invalide ou erreur d'envoi.");
   }
 });
-
 
 export default router;
