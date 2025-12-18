@@ -1,3 +1,4 @@
+
 :root{
   --blue-dark:#2a3b63;
   --pill:#1e2f57;
@@ -10,104 +11,108 @@
   --link:#2a46ff;
   --text:#111;
 }
-
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
   font-family: Arial, Helvetica, sans-serif;
   background: var(--blue-dark);
   color: var(--text);
-
-  /* ✅ 1 seul scroll : la page */
-  min-height: 100vh;
-  display:flex;
-  flex-direction:column;
 }
-
-/* ===== TOPBAR : Wix-like ===== */
 .topbar{
-  background: var(--topbar);
-  border-top: 4px solid #6b2aa6;
-  padding: 14px 18px;
-  display:flex;
-  align-items:center;
-  gap:18px;
-
-  /* ✅ le dropdown passe au-dessus du contenu */
   position: sticky;
   top: 0;
-  z-index: 1000;
-}
+  z-index: 200;
 
-/* Logos gauche/droite */
+  background: var(--topbar);
+  border-top: 4px solid #6b2aa6;
+  padding: 10px 14px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
 .brand-left, .brand-right{
   display:flex;
   align-items:center;
-  min-width: 180px;
+  min-width: 140px;
 }
-.brand-left img,
-.brand-right img{
-  height: 44px;
-  width:auto;
-  display:block;
-}
-.brand-right{
-  margin-left:auto;
-  justify-content:flex-end;
-}
-
-/* Menus centrés */
-.nav{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:22px;
-  flex:1;
-  min-width:0;
-}
-
-/* IMPORTANT : dropdown absolute se base sur .menu */
-.menu{
-  position: relative; /* ✅ indispensable */
-  display:flex;
-  align-items:center;
-}
-
-/* Boutons menu (pills) */
+.brand-left img{height:34px;width:auto;display:block}
+.brand-right{margin-left:auto;justify-content:flex-end}
+.brand-right img{height:34px;width:auto;display:block}
+.nav{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
+.menu{position:relative; flex: 0 0 auto;}
 .menu-btn{
   appearance:none;
   border:0;
   cursor:pointer;
-
-  padding: 14px 34px;
+  padding: 12px 28px;
   border-radius: var(--radius-pill);
-
   color:#fff;
-  font-weight:900;
-  letter-spacing:.8px;
-  font-size: 20px;
-  text-transform: uppercase;
-
+  font-weight:800;
+  letter-spacing:.5px;
+  font-size:18px;
   background: var(--pill-muted);
-  box-shadow: 0 8px 18px rgba(0,0,0,.18);
-
-  min-width: 240px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+  min-width:200px;
+  text-transform: uppercase;
 }
-
-.menu-btn:focus-visible{
-  outline: 3px solid rgba(42,70,255,.45);
-  outline-offset: 3px;
-}
-
-/* Actif */
 .menu.is-active .menu-btn{ background: var(--pill); }
 
-/* Sous barre (espace sous menu) */
-.subbar{ height: 22px; }
+.subbar{ height: 18px; } 
 
-/* ===== Dropdown ===== */
+.wrap{ padding: 6px 12px 18px; }
+
+.card{
+  width: min(1680px, 98vw);
+  min-height: calc(100vh - 120px);
+}
+.content{
+  background: #eef0ff;
+  padding: 42px 24px 60px;
+  min-height: 60vh;
+}
+.h1{
+  text-align:center;
+  font-size: 54px;
+  letter-spacing: 2px;
+  margin: 18px 0 38px;
+  color: #1d2336;
+  font-weight: 400;
+}
+.list{
+  max-width: 900px;
+  margin: 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap: 26px;
+}
+.list a{
+  text-align:center;
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--link);
+  text-decoration:none;
+}
+.list a:hover{ text-decoration: underline; }
+
+.video{
+  position: relative;
+  width: min(980px, 92vw);
+  aspect-ratio: 16 / 9;
+  margin: 22px auto 0;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,.16);
+}
+.video iframe{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+}
 .dropdown{
   position:absolute;
   top: calc(100% + 12px);
@@ -123,14 +128,12 @@ body{
   display:none;
   z-index: 50;
 }
-
 .menu.util .dropdown{
   left:auto;
   right:0;
   transform:none;
   width: 460px;
 }
-
 .dropdown a{
   display:block;
   padding: 16px 14px;
@@ -143,137 +146,19 @@ body{
   border-radius: 12px;
 }
 .dropdown a:hover{ background: rgba(42,59,99,.07); }
-
-/* ✅ Ouverture au clic (si ton JS ajoute .open) */
 .menu.open .dropdown{ display:block; }
 
-/* ✅ Ouverture au survol sur PC */
 @media (hover:hover){
   .menu:hover .dropdown{ display:block; }
-
-  /* petit "pont" pour éviter que le hover se coupe entre bouton et dropdown */
-  .menu::after{
-    content:"";
-    position:absolute;
-    left:0;
-    right:0;
-    top:100%;
-    height:12px;
-    background:transparent;
-  }
 }
-
-/* ===== Layout / cadres (1 seul scroll) ===== */
-.wrap{
-  flex: 1;
-  padding: 6px 12px 12px;
-  display:flex;
-  justify-content:center;
-  align-items:stretch;
-}
-
-/* cadre principal */
-.card{
-  width: min(1680px, 98vw);
-  display:flex;
-  flex-direction:column;
-  flex: 1;
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
-/* pages type "contenu" (index) */
-.content{
-  background: #eef0ff;
-  padding: 42px 24px 60px;
-  min-height: 60vh;
-}
-
-.h1{
-  text-align:center;
-  font-size: 54px;
-  letter-spacing: 2px;
-  margin: 18px 0 38px;
-  color: #1d2336;
-  font-weight: 400;
-}
-
-.list{
-  max-width: 900px;
-  margin: 0 auto;
-  display:flex;
-  flex-direction:column;
-  gap: 26px;
-}
-
-.list a{
-  text-align:center;
-  font-size: 18px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--link);
-  text-decoration:none;
-}
-.list a:hover{ text-decoration: underline; }
-
-.video{
-  position:relative;
-  width:100%;
-  aspect-ratio: 16/9;
-  background:#fff;
-}
-.video iframe{
-  position:absolute; inset:0; width:100%; height:100%; border:0;
-}
-
-/* ===== Accueil : vidéo centrée "style Wix" (pas pleine largeur) ===== */
-.content .video{
-  width: min(1100px, 92vw);   /* ✅ taille type Wix */
-  margin: 0 auto;            /* ✅ centrée */
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 14px 30px rgba(0,0,0,.18);
-  background: #fff;
-}
-
-/* optionnel : un peu d’air au-dessus / dessous */
-.content .video{ margin-top: 10px; margin-bottom: 10px; }
-
-/* mobile : on élargit un peu pour utiliser l’écran */
-@media (max-width: 640px){
-  .content .video{ width: 96vw; border-radius: 12px; }
-}
-
-/* ===== Embeds (iframés) ===== */
-.embed-main{ padding: 0; }
-
-.embed-card{
-  width: min(1400px, 96vw);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* ✅ iframe : pas de scroll dans le cadre (hauteur gérée par JS postMessage) */
-.embed-frame,
-.card iframe{
-  width: 100% !important;
-  border: 0 !important;
-  display: block !important;
-  height: 1200px; /* valeur de secours le temps que le JS ajuste */
-}
-
-/* ===== Responsive ===== */
 @media (max-width: 980px){
-  .menu-btn{ min-width: 180px; font-size:16px; padding: 12px 18px; }
-  .brand-left, .brand-right{ min-width: 110px; }
-  .brand-left img, .brand-right img{ height:34px; }
-  .nav{ gap:12px; }
-  .subbar{ height: 28px; }
-  .h1{ font-size: 40px; }
+  .menu-btn{ min-width: 160px; font-size:16px; padding: 10px 18px; }
+  .brand-left, .brand-right{ min-width: 90px; }
+  .brand-left img, .brand-right img{ height:28px; }
+  .nav{ gap:10px; }
+  .subbar{ height: 36px; }
+  .h1{font-size: 40px;}
 }
-
 @media (max-width: 640px){
   .topbar{ flex-wrap: wrap; }
   .nav{ width:100%; order: 3; justify-content:space-between; }
@@ -282,10 +167,10 @@ body{
   .menu{ flex:1; }
   .dropdown{ left:0; transform:none; width:100%; }
   .menu.util .dropdown{ right:auto; width:100%; }
-  .h1{ font-size: 32px; }
+  .h1{font-size: 32px;}
 }
 
-/* ===== Auth ===== */
+/* Auth */
 .auth-wrap{
   min-height: calc(100vh - 50px);
   display:flex;
@@ -293,7 +178,6 @@ body{
   justify-content:center;
   padding: 30px 14px 60px;
 }
-
 .auth-card{
   width: min(520px, 96vw);
   background:#fff;
@@ -302,24 +186,20 @@ body{
   border: 1px solid rgba(0,0,0,.08);
   padding: 26px 22px;
 }
-
 .auth-title{
   margin:0 0 10px;
   font-size: 26px;
   text-align:center;
 }
-
 .auth-desc{
   margin:0 0 18px;
   color:#444;
   text-align:center;
 }
-
 .auth-row{
   display:flex;
   gap:10px;
 }
-
 .auth-input{
   flex:1;
   padding: 12px 12px;
@@ -327,7 +207,6 @@ body{
   border-radius: 10px;
   font-size: 16px;
 }
-
 .auth-btn{
   padding: 12px 14px;
   border:0;
@@ -337,26 +216,97 @@ body{
   font-weight: 800;
   cursor:pointer;
 }
-
 .auth-error{
   margin: 12px 0 0;
   color: #b00020;
   text-align:center;
   min-height: 18px;
 }
-
 .small-note{
   margin-top: 14px;
   font-size: 12px;
   color:#666;
   line-height: 1.35;
 }
-.menu-link{
-  display:inline-flex;
+
+.embed-main { padding: 0; }
+.embed-card {
+  width: min(1400px, 96vw);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.wrap{ padding: 6px 12px 28px; }
+
+.embed-frame{
+  width: 100% !important;
+  height: calc(100vh - 70px) !important;
+  border: 0 !important;
+  display: block !important;
+}
+
+@media (hover:hover){
+  .menu::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    top:100%;
+    height:12px;
+    background:transparent;
+  }
+  
+  /* ===== Layout plein écran : pas de cadre qui scroll tout seul ===== */
+html, body { height: 100%; }
+
+body{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* La zone sous le menu prend toute la hauteur restante */
+.wrap{
+  flex: 1;
+  padding: 6px 12px 12px;   /* espace réduit sous le menu */
+  display: flex;
+  justify-content: center;
+  align-items: stretch;     /* IMPORTANT */
+}
+
+/* Le cadre prend toute la hauteur dispo */
+.card{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Iframe “plein cadre” */
+.embed-frame,
+.card iframe{
+  width: 100%;
+  border: 0;
+  display: block;
+
+  /* IMPORTANT : hauteur "grande" + au moins la hauteur visible */
+  height: max(2200px, calc(100vh - 120px));
+}
+
+}
+
+
+/* Liens qui ressemblent à des boutons */
+.menu-btn.menu-link{display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff}
+.menu-btn.menu-link:visited{color:#fff}
+
+
+/* Home: centre la vidéo comme sur Wix */
+.home-page .wrap{
+  align-items: center;
+}
+.home-page .card{
+  min-height: calc(100vh - 84px);
+  display:flex;
   align-items:center;
   justify-content:center;
-  text-decoration:none;
-  line-height: 1;
 }
-.menu-link:visited{ color:#fff; }
-

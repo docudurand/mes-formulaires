@@ -1,17 +1,10 @@
-// Simple "mot de passe site" côté navigateur (comme Wix) via sessionStorage.
-// IMPORTANT: barrière légère (pas une sécurité forte). Pour une vraie sécurité: auth serveur.
 const AUTH_KEY = "dd_auth_ok_v1";
 
-// ⚠️ Mets ton vrai mot de passe ici
-const SITE_PASSWORD = "test";
+const SITE_PASSWORD = "Durand38!";
 
-// (optionnel) un identifiant fixe (permet d’aider les gestionnaires de mots de passe)
 const SITE_USERNAME = "durand";
 
-/* ---------------- helpers ---------------- */
-
 function getPrefix() {
-  // Chaque page définit window.__SITE_PREFIX__ à "" (racine) ou "../" (sous-dossier)
   return (window.__SITE_PREFIX__ !== undefined) ? String(window.__SITE_PREFIX__) : "";
 }
 
@@ -27,15 +20,12 @@ function clearAuthed() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
-/* ---------------- core ---------------- */
-
 function requireAuth() {
   if (isAuthed()) return;
 
   const prefix = getPrefix();
   const dest = window.location.pathname + window.location.search + window.location.hash;
 
-  // redirige vers login.html en gardant la destination
   window.location.replace(prefix + "login.html?redirect=" + encodeURIComponent(dest));
 }
 
@@ -52,18 +42,9 @@ function logout() {
   window.location.href = getPrefix() + "login.html";
 }
 
-/* ---------------- Password-manager friendly login binding ----------------
-   Sur login.html, utilise un vrai <form> avec :
-   - input name="username" autocomplete="username"
-   - input type="password" name="password" autocomplete="current-password"
-   - button type="submit"
-   Ça déclenche la proposition d’enregistrement du navigateur.
--------------------------------------------------------------------------- */
-
 function getRedirectTarget() {
   const qs = new URLSearchParams(window.location.search || "");
   const r = qs.get("redirect");
-  // sécurité basique: on n’accepte que des chemins internes
   if (!r) return null;
   if (/^https?:\/\//i.test(r)) return null;
   return r;
@@ -73,25 +54,19 @@ function goAfterLogin() {
   const prefix = getPrefix();
   const target = getRedirectTarget();
   if (target) {
-    // target est un pathname complet (ex: /utilitaire/xxx.html)
     window.location.href = target;
   } else {
     window.location.href = prefix + "index.html";
   }
 }
 
-/**
- * À appeler sur login.html :
- * - si tu as un <form id="loginForm"> avec #username + #password
- * - ou si tu as juste <form id="loginForm"> avec #password
- */
 function wireLoginForm(options = {}) {
   const {
     formId = "loginForm",
     usernameId = "username",
     passwordId = "password",
     errorId = "loginError",
-    forceUsername = SITE_USERNAME, // si pas de champ username, on le remplit en cache
+    forceUsername = SITE_USERNAME,
   } = options;
 
   const form = document.getElementById(formId);
@@ -101,10 +76,8 @@ function wireLoginForm(options = {}) {
   const user = document.getElementById(usernameId);
   const err  = document.getElementById(errorId);
 
-  // ✅ Important pour déclencher l’enregistrement navigateur
   form.setAttribute("autocomplete", "on");
 
-  // Si pas de champ username dans ton HTML, on en crée un caché (aide le password manager)
   if (!user) {
     const hiddenUser = document.createElement("input");
     hiddenUser.type = "text";
@@ -136,8 +109,6 @@ function wireLoginForm(options = {}) {
     const pwd = pass ? String(pass.value || "") : "";
 
     if (loginWith(pwd)) {
-      // ✅ laisse le formulaire être “réel” pour le navigateur,
-      // mais on gère la navigation nous-mêmes.
       goAfterLogin();
     } else {
       if (err) err.textContent = "Mot de passe incorrect.";
@@ -146,7 +117,6 @@ function wireLoginForm(options = {}) {
   });
 }
 
-// Expose pour usage inline si besoin
 window.requireAuth = requireAuth;
 window.loginWith = loginWith;
 window.logout = logout;
