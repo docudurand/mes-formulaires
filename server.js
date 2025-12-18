@@ -959,7 +959,7 @@ const toList = [ SITE_RESP_EMAIL, respServiceEmailFor(magasin) ].filter(Boolean)
 const toRecipients = toList.length ? toList.join(",") : email;
 
     // Generate Mailjet tracking headers for this leave request
-    const mjHeaders = buildMailjetHeaders(`conges_request_${leaveId}`, { to: toRecipients, subject });
+    const mjHeaders = buildMailjetHeaders(`conges_request_${leaveId}`);
 
 
     await transporter.sendMail({
@@ -1144,14 +1144,13 @@ if (bothSigned && !arr[i].finalMailSent) {
       const recipients = [SITE_RESP_EMAIL, demanderEmail].filter(Boolean).join(",");
 
       // Generate Mailjet tracking headers for the final acceptance email
-      const subjectFinal = `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`;
-      const mjHeaders = buildMailjetHeaders(`conges_accept_${id}`, { to: recipients, subject: subjectFinal });
+      const mjHeaders = buildMailjetHeaders(`conges_accept_${id}`);
 
       await transporter.sendMail({
         to: recipients,
         from: `Validation congés <${fromEmail}>`,
         replyTo: demanderEmail || undefined,
-        subject: subjectFinal,
+        subject: `Acceptation — ${(arr[i].nom || "").toUpperCase()} ${arr[i].prenom || ""}`,
         html: `...`,
         attachments: [{ filename: `Demande-conges-${(arr[i].nom || "").toUpperCase()}_${arr[i].prenom || ""}.pdf`, path: tmpFinal }],
         headers: mjHeaders
