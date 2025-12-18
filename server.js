@@ -35,30 +35,36 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
 app.use((req, res, next) => {
-  // Autoriser l'embed depuis Wix (et éviter qu'un sous-router remette un CSP qui bloque l'iframe)
-  const FRAME_ANCESTORS_VALUE =
-    "frame-ancestors 'self' " +
-    "https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io " +
-    "https://*.onrender.com";
+
+const ALLOWED_FRAME_ANCESTORS = [
+  "'self'",
+  "https://documentsdurand.wixsite.com",
+  "https://*.wixsite.com",
+  "https://*.wix.com",
+  "https://*.editorx.io",
+  "https://*.onrender.com",
+"https://documentsdurand.fr",
+"https://www.documentsdurand.fr",
+];
+
+const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(" ");
 
   const ensureFrameAncestors = (cspValue) => {
     const v = String(cspValue || "").trim();
     if (!v) return FRAME_ANCESTORS_VALUE;
 
     if (/frame-ancestors/i.test(v)) {
-      // remplace UNIQUEMENT la directive frame-ancestors
+
       return v.replace(/frame-ancestors[^;]*/i, FRAME_ANCESTORS_VALUE);
     }
-    // ajoute la directive frame-ancestors sans casser le reste
+
     return v.replace(/\s*;?\s*$/, "; ") + FRAME_ANCESTORS_VALUE;
   };
 
-  // 1) on pose déjà un CSP si aucun n'existe
   if (!res.getHeader("Content-Security-Policy")) {
     res.setHeader("Content-Security-Policy", FRAME_ANCESTORS_VALUE);
   }
 
-  // 2) on intercepte les headers posés PLUS TARD (ex: dans /atelier) pour forcer frame-ancestors
   const _setHeader = res.setHeader.bind(res);
   res.setHeader = (name, value) => {
     const key = String(name || "").toLowerCase();
@@ -67,15 +73,13 @@ app.use((req, res, next) => {
       return _setHeader(name, ensureFrameAncestors(value));
     }
 
-    // X-Frame-Options peut bloquer un iframe même si le CSP est ok
     if (key === "x-frame-options") {
-      return; // on ignore toute tentative de set de X-Frame-Options
+      return;
     }
 
     return _setHeader(name, value);
   };
 
-  // et au cas où un header a été posé avant ce middleware
   res.removeHeader("X-Frame-Options");
 
   next();
