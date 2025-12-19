@@ -12,6 +12,30 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#e9efff">
   
+
+  <style>
+    .iframe-card{
+      padding: 0 !important;
+      overflow: hidden !important;
+      display: flex;
+      flex-direction: column;
+    }
+    .iframe-card iframe{
+      display: block;
+      width: 100%;
+      border: 0;
+      /* hauteur du cadre (évite le grand blanc sous le contenu) */
+      height: calc(100vh - 210px);
+      min-height: 700px;
+    }
+    @media (max-width: 1024px){
+      .iframe-card iframe{
+        height: calc(100vh - 190px);
+        min-height: 520px;
+      }
+    }
+  </style>
+
 </head>
 <body>
   
@@ -66,7 +90,7 @@
 <div class="subbar"></div>
 
   <main class="wrap">
-    <section class="card">
+    <section class="card iframe-card">
       <iframe src="https://mes-formulaires.onrender.com/kilometrage"></iframe>
     </section>
   </main>

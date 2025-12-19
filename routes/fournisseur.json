@@ -494,7 +494,7 @@
     {
     "name": "SOPRA PNEUMATIQUE (SOCAFLUID)",
     "magasin": "Gleize",
-    "recipients": ["magvl4gleize@durandservices.fr.fr,magvl6gleize@durandservices.fr"],
+    "recipients": ["magvl4gleize@durandservices.fr,magvl6gleize@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
   },
   {
@@ -570,7 +570,7 @@
   {
     "name": "VOLTEO VILLEFRANCHE",
     "magasin": "Gleize",
-    "recipients": ["magvl4gleize@durandservices.fr.fr,magvl6gleize@durandservices.fr"],
+    "recipients": ["magvl4gleize@durandservices.fr,magvl6gleize@durandservices.fr"],
 	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
   },
     {
