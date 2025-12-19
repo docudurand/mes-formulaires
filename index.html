@@ -6,13 +6,13 @@
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>Documents Durand</title>
 <link href="assets/style.css" rel="stylesheet"/>
-  <!-- Favicons / raccourci -->
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#e9efff">
+  
 </head>
 <body>
 <header class="topbar">
@@ -61,7 +61,26 @@
 <div class="subbar"></div>
 <main class="wrap home">
 <section class="card">
-<div class="content home-content"><div class="video">
+<div class="content home-content">
+
+<div class="info-ticker" aria-label="Informations">
+  <div class="ticker-track">
+    <div class="ticker-inner">
+      <span class="ticker-item">
+        ⚠️ MERCI DE CONTACTER DAMIEN 59401 SI VOUS PENSEZ AVOIR UN PROBLEME AVEC LES FORMULAIRES AVANT DE CONTACTER LES PERSONNES DES DIFFERENTS SERVICES CREATION REF OU RAMASSE
+        ⚠️
+      </span>
+
+      <span class="ticker-item" aria-hidden="true">
+        ⚠️ MERCI DE CONTACTER DAMIEN 59401 SI VOUS PENSEZ AVOIR UN PROBLEME AVEC LES FORMULAIRES AVANT DE CONTACTER LES PERSONNES DES DIFFERENTS SERVICES CREATION REF OU RAMASSE
+        ⚠️
+      </span>
+    </div>
+  </div>
+</div>
+
+  <div class="video">
+
 <iframe allow="autoplay; fullscreen; picture-in-picture" allowfullscreen="" loading="lazy" src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&amp;autoplay=1&amp;muted=1&amp;controls=0&amp;title=0&amp;byline=0&amp;portrait=0&amp">
 </iframe>
 </div></div>
@@ -71,5 +90,51 @@
 <script src="assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="assets/app.js"></script>
+<script>
+(function () {
+  const track = document.querySelector(".ticker-track");
+  const inner = document.querySelector(".ticker-inner");
+  if (!track || !inner) return;
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  let x = 0;
+  let speed = 140;
+  let last = performance.now();
+  let halfWidth = 0;
+
+  function measure() {
+    halfWidth = inner.scrollWidth / 2;
+
+    x = track.clientWidth;
+    inner.style.transform = `translateX(${x}px)`;
+  }
+
+  function step(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+
+    x -= speed * dt;
+
+    if (halfWidth > 0 && x <= -halfWidth) {
+      x += halfWidth;
+    }
+
+    inner.style.transform = `translateX(${x}px)`;
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("load", () => {
+    measure();
+    requestAnimationFrame(step);
+  });
+
+  window.addEventListener("resize", () => {
+    measure();
+  });
+})();
+</script>
+
 </body>
 </html>
