@@ -41,11 +41,11 @@ body{
 .brand-left, .brand-right{
   display:flex;
   align-items:center;
-  min-width: 180px;
+  min-width: 140px;
 }
 .brand-left img,
 .brand-right img{
-  height: 44px;
+  height: 34px;
   width:auto;
   display:block;
 }
@@ -74,19 +74,20 @@ body{
   border:0;
   cursor:pointer;
 
-  padding: 14px 34px;
+  padding: 12px 22px;
   border-radius: var(--radius-pill);
 
   color:#fff;
   font-weight:900;
-  letter-spacing:.8px;
-  font-size: 20px;
+  letter-spacing:.6px;
+  font-size: 17px;
   text-transform: uppercase;
 
   background: var(--pill-muted);
   box-shadow: 0 8px 18px rgba(0,0,0,.18);
 
-  min-width: 240px;
+  min-width: 210px;
+  white-space: nowrap;
 }
 
 .menu-btn:focus-visible{
@@ -334,6 +335,7 @@ body{
   justify-content:center;
   text-decoration:none;
   line-height: 1;
+  white-space: nowrap;
 }
 .menu-link:visited{ color:#fff; }
 
