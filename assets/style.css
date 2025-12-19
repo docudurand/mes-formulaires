@@ -177,6 +177,7 @@ body{
   background: #eef0ff;
   padding: 42px 24px 60px;
   min-height: 60vh;
+  flex: 1;
 }
 
 .h1{
