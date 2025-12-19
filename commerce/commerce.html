@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Commerce – Documents Durand</title>
   <link rel="stylesheet" href="./style.css" />
+  <!-- Icônes (favoris / raccourci iOS / onglet navigateur) -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/durand_services_logo.png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/durand_services_logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Documents Durand">
 </head>
-<script>window.__SITE_PREFIX__ = "../";</script>
-<script src="../assets/auth.js"></script>
-<script>
-  requireAuth();
-</script>
 <body>
   <header class="topbar">
     <button class="burger" id="btnBurger" type="button" aria-label="Ouvrir le menu" aria-controls="drawer" aria-expanded="false">
@@ -19,18 +19,12 @@
   </header>
 
   <main class="stage">
-    <section class="frame frame--home" aria-label="Contenu">
+    <section class="frame" aria-label="Contenu">
       <div class="welcome" id="welcome">
-  <div class="homeVideo">
-    <iframe
-      src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0&playsinline=1"
-      frameborder="0"
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowfullscreen>
-    </iframe>
-  </div>
-</div>
+        <img class="logo" src="../logodurand.png" alt="Durand Services" />
+      </div>
 
+      <!-- Contenu chargé ici (sur clic) -->
       <iframe id="contentFrame"
               class="contentFrame"
               title="Contenu Commerce"
@@ -42,6 +36,7 @@
     </section>
   </main>
 
+  <!-- Drawer (menu tablette) -->
   <div class="backdrop" id="backdrop" hidden></div>
 
   <aside class="drawer" id="drawer" aria-hidden="true">
@@ -65,7 +60,7 @@
         SUIVI GARANTIE
       </a>
 
-      <button class="navBtn" type="button" data-src="https://mes-formulaires.onrender.com/castrol">
+      <button class="navBtn" type="button" data-src="../reference-castrol.html">
         REFERENCE CASTROL
       </button>
     </nav>
