@@ -44,15 +44,14 @@
       margin-top: 10px;
       border: 0;
       background: transparent;
-      max-height: calc(4 * 2.2em); /* 4 lignes visibles max */
+      max-height: calc(4 * 2.2em);
       overflow-y: auto;
-      padding-right: 10px; /* espace pour scrollbar */
+      padding-right: 10px;
     }
 
-    /* Castrol 1: plus d'espace entre lignes */
     .section-1 .result-item{
-      padding: 8px 0;          /* ↑ espace vertical */
-      line-height: 1.35;       /* ↑ interligne */
+      padding: 8px 0;
+      line-height: 1.35;
       border-bottom: 1px solid rgba(0,0,0,0.06);
     }
     .section-1 .result-item:last-child{ border-bottom:0; }
@@ -68,13 +67,11 @@
       color:#000;
     }
 
-    /* Espace réduit avant le 2e logo */
     .gap-after-results-1{
-      margin-bottom: 14px; /* ↓ réduit (au lieu d'un gros vide) */
+      margin-bottom: 14px;
     }
     .logo2-wrap{ margin-top: 6px; }
 
-    /* Castrol 2: liste 2 colonnes (Shell -> Castrol) */
     .section-2 .result-row{
       display:grid;
       grid-template-columns: 1fr 28px 1fr;
@@ -95,7 +92,6 @@
 <body>
   <div class="page">
 
-    <!-- LOGO + CASTROL1 -->
     <img class="logo" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/castrol1.png" alt="Castrol"/>
 
     <div class="block section-1">
@@ -103,7 +99,6 @@
       <div id="results1" class="results gap-after-results-1" aria-live="polite"></div>
     </div>
 
-    <!-- LOGO + CASTROL2 -->
     <div class="logo2-wrap">
       <img class="logo" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/castrol2.png" alt="Shell vers Castrol"/>
     </div>
@@ -116,7 +111,6 @@
   </div>
 
 <script>
-  // ---------------- CASTROL 1 ----------------
   const data1 = [
 {"designation":"ALPHA SP 100  20L","reference":"15F023"},
 {"designation":"ALPHA SP 150  20L","reference":"15FE32"},
@@ -434,7 +428,6 @@
 
   sb1.addEventListener('input', () => render1(filter1(sb1.value).slice(0, 200)));
 
-  // ---------------- CASTROL 2 ----------------
   const data2 = [
     {"designation":"SHELL GADUS S2 V220 00 18kg REF: 550028030","reference":"Spheerol EPL 00 REF: 160A96"},
 {"designation":"SHELL GADUS S2 V220 01 50kg REF: 550028064","reference":"Spheerol EPL 01 REF: 160A97"},
@@ -601,7 +594,6 @@
 
       const right = document.createElement('div');
       right.className = "right";
-      // Selon les clés disponibles (on garde plusieurs possibilités)
       const rtxt = (item.castrol || item.right || item.to || item.reference || "").trim();
       right.textContent = rtxt;
 

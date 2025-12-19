@@ -853,7 +853,6 @@ if (hasDayEntry) {
 
       clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
 
-      // On retire le bloc récap de la carte clonée et on le reconstruit pour l'impression
       clone.querySelectorAll(".recap-container").forEach((recap) => recap.remove());
 
       const wrapper = document.createElement("div");
@@ -889,7 +888,6 @@ if (hasDayEntry) {
       wrapper.appendChild(header);
       wrapper.appendChild(clone);
 
-      // Ajoute le récap dans la version imprimée
       const recapPrint = document.createElement("div");
       recapPrint.className = "recap-container";
       recapPrint.style.display = "block";

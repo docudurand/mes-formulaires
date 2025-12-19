@@ -79,7 +79,6 @@ router.post(
       console.error('[formulaire-piece] SMTP not configured');
       return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
-    // Mailjet tracking disabled: do not generate a custom tracking ID
     const mailOptions = {
       from: `"Formulaire création VL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PIECE,
