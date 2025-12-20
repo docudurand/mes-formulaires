@@ -34,14 +34,6 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: String(process.env.GMAIL_PASS || "").replace(/["\s]/g, ""),
-  },
-});
-
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TMP_DIR),
