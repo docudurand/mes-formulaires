@@ -534,7 +534,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      from: `"Demande de Ramasse" <${fromEmail}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
@@ -556,7 +556,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+      from: `"Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
       html: `
@@ -619,7 +619,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   } catch (e) {
     console.error("[RAMASSE] POST error:", e);
     res.status(500).json({
-      error: "Échec de l'envoi. Vérifiez la config Gmail / PDF / FTP.",
+      error: "Échec de l'envoi. Vérifiez la config SMTP / PDF / FTP.",
     });
   }
 });
@@ -658,7 +658,7 @@ router.get("/ack", async (req, res) => {
 
     if (sendNow) {
       await transporter.sendMail({
-        from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+        from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
         to: String(email),
         subject: `Accusé de réception – Demande de ramasse (${String(
           fournisseur
