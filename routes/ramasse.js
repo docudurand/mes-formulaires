@@ -662,13 +662,14 @@ router.get("/ack", (req, res) => {
 <title>Accusé de réception</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#111}
-  .box{max-width:620px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
-  .muted{color:#6b7280;margin-top:10px}
+  .box{max-width:520px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
+  .btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;
+       text-decoration:none;font-weight:700;border:0;cursor:pointer;width:100%}
+  .muted{color:#6b7280;font-size:14px;margin-top:10px}
 </style>
 <div class="box">
-  <h2>Accusé de réception</h2>
-  <p>Envoi de l’accusé en cours…</p>
-  <div class="muted">Si rien ne se passe, merci d’activer JavaScript.</div>
+  <h2>Accuser de réception</h2>
+  <p>Clique sur le bouton pour envoyer l’accusé au demandeur.</p>
 
   <form id="f" method="POST" action="/api/ramasse/ack">
     <input type="hidden" name="email" value="${esc(email)}"/>
@@ -678,24 +679,16 @@ router.get("/ack", (req, res) => {
     <input type="hidden" name="ts" value="${esc(ts)}"/>
     <input type="hidden" name="nonce" value="${esc(nonce)}"/>
     <input type="hidden" name="sig" value="${esc(sig)}"/>
+    <button class="btn" type="submit">Accuser de réception</button>
   </form>
 
-  <noscript>
-    <p>JavaScript est désactivé : clique ici pour envoyer l’accusé.</p>
-    <button type="submit" form="f">Envoyer l’accusé</button>
-  </noscript>
-</div>
-
-<script>
-  // auto-submit => 1 clic dans l'email pour l'utilisateur
-  document.getElementById('f').submit();
-</script>`);
+  <div class="muted">Aucun accusé n’est envoyé tant que tu ne cliques pas.</div>
+</div>`);
   } catch (e) {
     console.error("[RAMASSE] ACK GET error:", e);
     res.status(400).send("Lien invalide.");
   }
 });
-
 router.post("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
