@@ -3,18 +3,17 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import mime from "mime-types";
 import PDFDocument from "pdfkit";
 import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
-import { transporter, fromEmail } from "../mailer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
-router.use(express.urlencoded({ extended: true }));
 
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -33,6 +32,27 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
   path.resolve(__dirname, "../magasins.json"),
 ];
+
+const SMTP_HOST = process.env.SMTP_HOST || "in-v3.mailjet.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || "false") === "true";
+const SMTP_USER = process.env.SMTP_USER || ""; // souvent "apikey"
+const SMTP_PASS = String(process.env.SMTP_PASS || "").replace(/["\s]/g, "");
+
+const FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_FROM || "";
+const FROM_NAME  = process.env.FROM_NAME  || "Demande de Ramasse";
+
+const EFFECTIVE_FROM_EMAIL = FROM_EMAIL || process.env.MAIL_FROM || "";
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS,
+  },
+});
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -533,8 +553,12 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
+    const fromHeader = EFFECTIVE_FROM_EMAIL
+      ? `"${FROM_NAME}" <${EFFECTIVE_FROM_EMAIL}>`
+      : undefined;
+
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
+      from: fromHeader,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
@@ -556,7 +580,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
+      from: fromHeader,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
       html: `
@@ -596,10 +620,10 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     try {
-  incrementRamasseMagasin(mg || "Inconnu");
-} catch (e) {
-  console.error("[RAMASSE] Erreur compteur ramasse :", e);
-}
+      incrementRamasseMagasin(mg || "Inconnu");
+    } catch (e) {
+      console.error("[RAMASSE] Erreur compteur ramasse :", e);
+    }
 
     const d    = new Date();
     const yyyy = d.getFullYear();
@@ -619,7 +643,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   } catch (e) {
     console.error("[RAMASSE] POST error:", e);
     res.status(500).json({
-      error: "Échec de l'envoi. Vérifiez la config SMTP / PDF / FTP.",
+      error: "Échec de l'envoi. Vérifiez la config SMTP/Mailjet / PDF / FTP.",
     });
   }
 });
@@ -657,8 +681,12 @@ router.get("/ack", async (req, res) => {
     const sendNow = shouldSendAckOnce(String(sig));
 
     if (sendNow) {
+      const fromHeader = EFFECTIVE_FROM_EMAIL
+        ? `"Accusé Demande de Ramasse" <${EFFECTIVE_FROM_EMAIL}>`
+        : undefined;
+
       await transporter.sendMail({
-        from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
+        from: fromHeader,
         to: String(email),
         subject: `Accusé de réception – Demande de ramasse (${String(
           fournisseur
