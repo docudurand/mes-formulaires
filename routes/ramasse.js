@@ -628,7 +628,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
   }
 });
-router.get("/ack", async (req, res) => {
+router.get("/ack", (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
     if (!email || !fournisseur || !ts || !nonce || !sig) {
@@ -656,31 +656,6 @@ router.get("/ack", async (req, res) => {
       return res.status(400).send("Lien expiré");
     }
 
-    const sendNow = shouldSendAckOnce(String(sig));
-
-    if (sendNow) {
-      if (!transporter) return res.status(500).send("SMTP non configuré");
-
-      await transporter.sendMail({
-        from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
-        to: String(email),
-        subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-        html: `
-          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
-            <div style="text-align:center;margin:24px 0 32px;">
-              <span style="font-size:28px;">✔</span>
-              <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
-            </div>
-            <p>Bonjour,</p>
-            <p>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong>
-            concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin
-            <strong>${esc(magasin || "—")}</strong>.</p>
-            <p>Cordialement,<br/>L'équipe Ramasse</p>
-          </div>
-        `,
-      });
-    }
-
     res.status(200).send(`<!doctype html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -688,18 +663,39 @@ router.get("/ack", async (req, res) => {
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#111}
   .box{max-width:620px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
-  .ok{font-size:18px;font-weight:800}
   .muted{color:#6b7280;margin-top:10px}
 </style>
 <div class="box">
-  <div class="ok">✅ Accusé de réception envoyé${sendNow ? "" : " (déjà envoyé)"}.</div>
-  <div class="muted">Vous pouvez fermer cette page.</div>
-</div>`);
+  <h2>Accusé de réception</h2>
+  <p>Envoi de l’accusé en cours…</p>
+  <div class="muted">Si rien ne se passe, merci d’activer JavaScript.</div>
+
+  <form id="f" method="POST" action="/api/ramasse/ack">
+    <input type="hidden" name="email" value="${esc(email)}"/>
+    <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
+    <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
+    <input type="hidden" name="pieces" value="${esc(pieces || "")}"/>
+    <input type="hidden" name="ts" value="${esc(ts)}"/>
+    <input type="hidden" name="nonce" value="${esc(nonce)}"/>
+    <input type="hidden" name="sig" value="${esc(sig)}"/>
+  </form>
+
+  <noscript>
+    <p>JavaScript est désactivé : clique ici pour envoyer l’accusé.</p>
+    <button type="submit" form="f">Envoyer l’accusé</button>
+  </noscript>
+</div>
+
+<script>
+  // auto-submit => 1 clic dans l'email pour l'utilisateur
+  document.getElementById('f').submit();
+</script>`);
   } catch (e) {
     console.error("[RAMASSE] ACK GET error:", e);
-    res.status(400).send("Lien invalide ou erreur d'envoi.");
+    res.status(400).send("Lien invalide.");
   }
 });
+
 router.post("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
