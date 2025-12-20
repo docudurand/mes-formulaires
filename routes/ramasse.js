@@ -3,7 +3,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-
 import mime from "mime-types";
 import PDFDocument from "pdfkit";
 import ftp from "basic-ftp";
@@ -34,6 +33,14 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "magasins.json"),
   path.resolve(__dirname, "../magasins.json"),
 ];
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: String(process.env.GMAIL_PASS || "").replace(/["\s]/g, ""),
+  },
+});
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -534,12 +541,8 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
-    if (!transporter) {
-      console.error("[RAMASSE] SMTP not configured");
-      return res.status(500).json({ error: "smtp_not_configured" });
-    }
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
+      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: recipients.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
       subject,
@@ -561,7 +564,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
 
     await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
+      from: `"Demande de Ramasse" <${process.env.GMAIL_USER}>`,
       to: String(email),
       subject: "Votre demande de ramasse a bien été envoye",
       html: `
@@ -624,11 +627,12 @@ router.post("/", upload.single("file"), async (req, res) => {
   } catch (e) {
     console.error("[RAMASSE] POST error:", e);
     res.status(500).json({
-      error: "Échec de l'envoi. Vérifiez la config SMTP / PDF / FTP.",
+      error: "Échec de l'envoi. Vérifiez la config Gmail / PDF / FTP.",
     });
   }
 });
-router.get("/ack", (req, res) => {
+
+router.get("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
     if (!email || !fournisseur || !ts || !nonce || !sig) {
@@ -647,70 +651,10 @@ router.get("/ack", (req, res) => {
     const expected = signAck(params);
     const ok =
       expected.length === String(sig).length &&
-      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
-
-    if (!ok) return res.status(400).send("Signature invalide");
-
-    const age = Date.now() - Number(ts);
-    if (isFinite(age) && age > 14 * 24 * 3600 * 1000) {
-      return res.status(400).send("Lien expiré");
-    }
-
-    res.status(200).send(`<!doctype html>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Accusé de réception</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#111}
-  .box{max-width:520px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:18px}
-  .btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;
-       text-decoration:none;font-weight:700;border:0;cursor:pointer;width:100%}
-  .muted{color:#6b7280;font-size:14px;margin-top:10px}
-</style>
-<div class="box">
-  <h2>Accuser de réception</h2>
-  <p>Clique sur le bouton pour envoyer l’accusé au demandeur.</p>
-
-  <form id="f" method="POST" action="/api/ramasse/ack">
-    <input type="hidden" name="email" value="${esc(email)}"/>
-    <input type="hidden" name="fournisseur" value="${esc(fournisseur)}"/>
-    <input type="hidden" name="magasin" value="${esc(magasin || "")}"/>
-    <input type="hidden" name="pieces" value="${esc(pieces || "")}"/>
-    <input type="hidden" name="ts" value="${esc(ts)}"/>
-    <input type="hidden" name="nonce" value="${esc(nonce)}"/>
-    <input type="hidden" name="sig" value="${esc(sig)}"/>
-    <button class="btn" type="submit">Accuser de réception</button>
-  </form>
-
-  <div class="muted">Aucun accusé n’est envoyé tant que tu ne cliques pas.</div>
-</div>`);
-  } catch (e) {
-    console.error("[RAMASSE] ACK GET error:", e);
-    res.status(400).send("Lien invalide.");
-  }
-});
-router.post("/ack", async (req, res) => {
-  try {
-    const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;
-
-    if (!email || !fournisseur || !ts || !nonce || !sig) {
-      return res.status(400).send("Lien incomplet");
-    }
-
-    const params = {
-      email: String(email),
-      fournisseur: String(fournisseur),
-      magasin: String(magasin || ""),
-      pieces: String(pieces || ""),
-      ts: String(ts),
-      nonce: String(nonce),
-    };
-
-    const expected = signAck(params);
-    const ok =
-      expected.length === String(sig).length &&
-      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
-
+      crypto.timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(String(sig))
+      );
     if (!ok) return res.status(400).send("Signature invalide");
 
     const age = Date.now() - Number(ts);
@@ -719,40 +663,41 @@ router.post("/ack", async (req, res) => {
     }
 
     const sendNow = shouldSendAckOnce(String(sig));
-    if (!sendNow) {
-      return res
-        .status(200)
-        .send(`<!doctype html><meta charset="utf-8"/>
-<div style="font-family:system-ui;padding:24px">✅ Accusé déjà envoyé.</div>`);
-    }
 
-    if (!transporter) {
-      return res.status(500).send("SMTP non configuré");
-    }
-
-    await transporter.sendMail({
-      from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
-      to: String(email),
-      subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
-      html: `
-        <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
-          <div style="text-align:center;margin:24px 0 32px;">
-            <span style="font-size:28px;">✔</span>
-            <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+    if (sendNow) {
+      await transporter.sendMail({
+        from: `"Accusé Demande de Ramasse" <${process.env.GMAIL_USER}>`,
+        to: String(email),
+        subject: `Accusé de réception – Demande de ramasse (${String(
+          fournisseur
+        )})`,
+        html: `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
+            <div style="text-align:center;margin:24px 0 32px;">
+              <span style="font-size:28px;">✔</span>
+              <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
+            </div>
+            <p>Bonjour,</p>
+            <p>Votre demande de ramasse pour <strong>${esc(
+              fournisseur
+            )}</strong> concernant <em>${esc(
+          pieces || "—"
+        )}</em> a bien été prise en compte par le magasin <strong>${esc(
+          magasin || "—"
+        )}</strong>.</p>
+            <p>Cordialement,<br/>L'équipe Ramasse</p>
           </div>
-          <p>Bonjour,</p>
-          <p>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong>
-          concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin
-          <strong>${esc(magasin || "—")}</strong>.</p>
-          <p>Cordialement,<br/>L'équipe Ramasse</p>
-        </div>
-      `,
-    });
+        `,
+      });
+    }
 
-    res.status(200).send(`<!doctype html><meta charset="utf-8"/>
-<div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé.</div>`);
+    res
+      .status(200)
+      .send(
+        `<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`
+      );
   } catch (e) {
-    console.error("[RAMASSE] ACK POST error:", e);
+    console.error("[RAMASSE] ACK error:", e);
     res.status(400).send("Lien invalide ou erreur d'envoi.");
   }
 });
