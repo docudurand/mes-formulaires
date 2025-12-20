@@ -33,24 +33,44 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
-const SMTP_HOST = process.env.SMTP_HOST || "in-v3.mailjet.com";
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_HOST   = process.env.SMTP_HOST || "in-v3.mailjet.com";
+const SMTP_PORT   = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || "false") === "true";
-const SMTP_USER = process.env.SMTP_USER || ""; // souvent "apikey"
+
+const SMTP_USER = String(process.env.SMTP_USER || "").trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || "").replace(/["\s]/g, "");
 
-const FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_FROM || "";
-const FROM_NAME  = process.env.FROM_NAME  || "Demande de Ramasse";
+const FROM_EMAIL = String(process.env.FROM_EMAIL || process.env.SMTP_FROM || process.env.MAIL_FROM || "").trim();
+const FROM_NAME  = String(process.env.FROM_NAME  || "Demande de Ramasse").trim();
 
-const EFFECTIVE_FROM_EMAIL = FROM_EMAIL || process.env.MAIL_FROM || "";
+function mustHaveSmtpConfig() {
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("SMTP_USER/SMTP_PASS manquants (Mailjet API key / Secret key).");
+  }
+  if (!FROM_EMAIL) {
+    throw new Error("FROM_EMAIL manquant (ex: noreply@documentsdurand.fr).");
+  }
+}
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
   secure: SMTP_SECURE,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
+  auth: { user: SMTP_USER, pass: SMTP_PASS },
+
+  requireTLS: !SMTP_SECURE,
+
+  pool: true,
+  maxConnections: 2,
+  maxMessages: 50,
+
+  connectionTimeout: 25_000,
+  greetingTimeout: 25_000,
+  socketTimeout: 35_000,
+
+  tls: {
+    servername: SMTP_HOST,
+    rejectUnauthorized: true,
   },
 });
 
@@ -75,8 +95,7 @@ function loadJsonFrom(paths, fallback) {
         const raw = fs.readFileSync(p, "utf8");
         return JSON.parse(raw);
       }
-    } catch {
-    }
+    } catch {}
   }
   return fallback;
 }
@@ -107,9 +126,7 @@ function loadMagasins() {
 function findFournisseur(name) {
   const list = loadFournisseurs();
   const n = String(name || "").trim().toLowerCase();
-  return list.find(
-    s => String(s.name || "").trim().toLowerCase() === n
-  );
+  return list.find(s => String(s.name || "").trim().toLowerCase() === n);
 }
 
 function isValidEmail(e) {
@@ -118,7 +135,6 @@ function isValidEmail(e) {
 
 function uniqEmails(arr) {
   const flat = [];
-
   for (const x of arr || []) {
     String(x || "")
       .split(/[;,]/)
@@ -126,19 +142,12 @@ function uniqEmails(arr) {
       .filter(Boolean)
       .forEach(e => flat.push(e));
   }
-
   return Array.from(new Set(flat.filter(isValidEmail)));
 }
 
 function esc(t = "") {
   return String(t).replace(/[&<>"']/g, c =>
-    ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    }[c])
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
   );
 }
 
@@ -179,10 +188,8 @@ async function buildPdf({
   infoLivreur,
 }) {
   const safe = s => String(s || "").replace(/[^a-z0-9-_]+/gi, "_");
-  const pdfPath = path.join(
-    TMP_DIR,
-    `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`
-  );
+  const pdfPath = path.join(TMP_DIR, `Demande_Ramasse_${safe(fournisseur)}_${Date.now()}.pdf`);
+
   const doc = new PDFDocument({ size: "A4", margin: 56 });
   const stream = fs.createWriteStream(pdfPath);
   doc.pipe(stream);
@@ -206,13 +213,10 @@ async function buildPdf({
   const COMMENT_LINE_GAP   = 3;
 
   try {
-    const resp = await fetch(
-      "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
-    );
+    const resp = await fetch("https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png");
     const buf = Buffer.from(await resp.arrayBuffer());
     doc.image(buf, pageLeft, 36, { width: 90 });
-  } catch {
-  }
+  } catch {}
 
   const titleY = 140;
   doc
@@ -238,97 +242,41 @@ async function buildPdf({
   const valOpts   = { width: valW, lineBreak: false };
 
   const { dateStr, timeStr } = formatParisNow();
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(LABEL_FS)
-    .fillColor(gray)
-    .text("Date de demande :", pageLeft, y, labelOpts);
-  doc
-    .font("Helvetica")
-    .fontSize(VALUE_FS)
-    .fillColor("#000")
-    .text(`${dateStr} ${timeStr}`, valX, y, valOpts);
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Date de demande :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(`${dateStr} ${timeStr}`, valX, y, valOpts);
   y += ROW_GAP;
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(LABEL_FS)
-    .fillColor(gray)
-    .text("Fournisseur :", pageLeft, y, labelOpts);
-  doc
-    .font("Helvetica")
-    .fontSize(VALUE_FS)
-    .fillColor("#000")
-    .text(oneLine(fournisseur), valX, y, valOpts);
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Fournisseur :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(fournisseur), valX, y, valOpts);
   y += ROW_GAP;
 
   if (infoLivreur && String(infoLivreur).trim()) {
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(LABEL_FS)
-      .fillColor(gray)
-      .text("Info livreur :", pageLeft, y, labelOpts);
-    doc
-      .font("Helvetica")
-      .fontSize(VALUE_FS)
-      .fillColor("#000")
-      .text(oneLine(infoLivreur), valX, y, valOpts);
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Info livreur :", pageLeft, y, labelOpts);
+    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(infoLivreur), valX, y, valOpts);
     y += ROW_GAP;
   }
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(LABEL_FS)
-    .fillColor(gray)
-    .text("Références :", pageLeft, y, labelOpts);
-  doc
-    .font("Helvetica")
-    .fontSize(VALUE_FS)
-    .fillColor("#000")
-    .text(oneLine(pieces), valX, y, valOpts);
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Références :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(pieces), valX, y, valOpts);
   y += ROW_GAP;
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(LABEL_FS)
-    .fillColor(gray)
-    .text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
-  doc
-    .font("Helvetica")
-    .fontSize(VALUE_FS)
-    .fillColor("#000")
-    .text(oneLine(magasinDest), valX, y, valOpts);
+  doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Destinataire(s) magasin :", pageLeft, y, labelOpts);
+  doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(magasinDest), valX, y, valOpts);
   y += ROW_GAP;
 
   if (demandeurNomPrenom && String(demandeurNomPrenom).trim()) {
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(LABEL_FS)
-      .fillColor(gray)
-      .text("Nom Prénom du demandeur :", pageLeft, y, labelOpts);
-    doc
-      .font("Helvetica")
-      .fontSize(VALUE_FS)
-      .fillColor("#000")
-      .text(oneLine(demandeurNomPrenom), valX, y, valOpts);
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Nom Prénom du demandeur :", pageLeft, y, labelOpts);
+    doc.font("Helvetica").fontSize(VALUE_FS).fillColor("#000").text(oneLine(demandeurNomPrenom), valX, y, valOpts);
     y += ROW_GAP;
   }
 
   if (commentaire && String(commentaire).trim()) {
     y += COMMENT_TOP_GAP;
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(LABEL_FS)
-      .fillColor(gray)
-      .text("Commentaire :", pageLeft, y);
+    doc.font("Helvetica-Bold").fontSize(LABEL_FS).fillColor(gray).text("Commentaire :", pageLeft, y);
     y = doc.y + COMMENT_LINE_GAP;
-    doc
-      .font("Helvetica")
-      .fontSize(COMMENT_FS)
-      .fillColor("#000")
-      .text(String(commentaire), pageLeft, y, {
-        width: pageRight - pageLeft,
-      });
+    doc.font("Helvetica").fontSize(COMMENT_FS).fillColor("#000").text(String(commentaire), pageLeft, y, {
+      width: pageRight - pageLeft,
+    });
   }
 
   doc.end();
@@ -338,34 +286,16 @@ async function buildPdf({
   });
 }
 
-function buildMailHtml({
-  fournisseur,
-  magasinDest,
-  email,
-  pieces,
-  commentaire,
-  ackUrl,
-  demandeurNomPrenom,
-}) {
+function buildMailHtml({ fournisseur, magasinDest, email, pieces, commentaire, ackUrl, demandeurNomPrenom }) {
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
     <p>Bonjour,</p>
-    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(
-      fournisseur
-    )}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(
-      pieces || "—"
-    )}</em>.</p>
-    <p><strong>Destinataire(s) magasin :</strong> ${esc(
-      magasinDest || "—"
-    )}<br/>
-       <strong>Demandeur :</strong> ${esc(email)}${
-    demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""
-  }</p>
+    <p>Merci d'effectuer une <strong>ramasse</strong> chez <strong>${esc(fournisseur)}</strong> pour la/les référence(s) suivante(s) :<br/><em>${esc(pieces || "—")}</em>.</p>
+    <p><strong>Destinataire(s) magasin :</strong> ${esc(magasinDest || "—")}<br/>
+       <strong>Demandeur :</strong> ${esc(email)}${demandeurNomPrenom ? ` – ${esc(demandeurNomPrenom)}` : ""}</p>
     ${
       commentaire
-        ? `<p><strong>Commentaire :</strong><br/>${esc(
-            String(commentaire)
-          ).replace(/\n/g, "<br/>")}</p>`
+        ? `<p><strong>Commentaire :</strong><br/>${esc(String(commentaire)).replace(/\n/g, "<br/>")}</p>`
         : ""
     }
     <p>
@@ -402,8 +332,7 @@ async function ftpUpload(localPath, remoteDir) {
       password: process.env.FTP_PASSWORD,
       secure: String(process.env.FTP_SECURE || "false") === "true",
       secureOptions: {
-        rejectUnauthorized:
-          String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
+        rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
       },
     });
     const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
@@ -412,17 +341,14 @@ async function ftpUpload(localPath, remoteDir) {
     const filename = path.basename(localPath);
     await client.uploadFrom(localPath, `${targetDir}/${filename}`);
   } catch (e) {
-    console.error("[RAMASSE][FTP] upload error:", e.message);
+    console.error("[RAMASSE][FTP] upload error:", e?.message || e);
   } finally {
-    try {
-      client.close();
-    } catch {
-    }
+    try { client.close(); } catch {}
   }
 }
 
-const ackRecent   = new Map();
-const ACK_TTL_MS  = 60 * 1000;
+const ackRecent  = new Map();
+const ACK_TTL_MS = 60 * 1000;
 
 function shouldSendAckOnce(sig) {
   const now  = Date.now();
@@ -437,9 +363,7 @@ function shouldSendAckOnce(sig) {
 }
 
 router.get("/fournisseurs", (_req, res) => {
-  const out = loadFournisseurs().map(
-    ({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur })
-  );
+  const out = loadFournisseurs().map(({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur }));
   res.json(out);
 });
 
@@ -469,6 +393,8 @@ router.get("/stats", (_req, res) => {
 
 router.post("/", upload.single("file"), async (req, res) => {
   try {
+    mustHaveSmtpConfig();
+
     const {
       fournisseur,
       magasin,
@@ -487,9 +413,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     const four = findFournisseur(fournisseur);
     if (!four) {
-      return res
-        .status(400)
-        .json({ error: "Fournisseur inconnu dans fournisseur.json" });
+      return res.status(400).json({ error: "Fournisseur inconnu dans fournisseur.json" });
     }
 
     const mg         = four?.magasin || magasin || "";
@@ -498,8 +422,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     if (!recipients.length) {
       return res.status(500).json({
-        error:
-          "Aucun destinataire configuré pour ce fournisseur (fournisseur.json).",
+        error: "Aucun destinataire configuré pour ce fournisseur (fournisseur.json).",
       });
     }
 
@@ -535,27 +458,18 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     const attachmentsMagasin = [
-      {
-        filename: path.basename(pdfPath),
-        path: pdfPath,
-        contentType: "application/pdf",
-      },
+      { filename: path.basename(pdfPath), path: pdfPath, contentType: "application/pdf" },
     ];
 
     if (req.file) {
       attachmentsMagasin.push({
         filename: req.file.originalname,
         path: req.file.path,
-        contentType:
-          req.file.mimetype ||
-          mime.lookup(req.file.originalname) ||
-          "application/octet-stream",
+        contentType: req.file.mimetype || mime.lookup(req.file.originalname) || "application/octet-stream",
       });
     }
 
-    const fromHeader = EFFECTIVE_FROM_EMAIL
-      ? `"${FROM_NAME}" <${EFFECTIVE_FROM_EMAIL}>`
-      : undefined;
+    const fromHeader = `"${FROM_NAME}" <${FROM_EMAIL}>`;
 
     await transporter.sendMail({
       from: fromHeader,
@@ -572,10 +486,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       attachmentsUser.push({
         filename: req.file.originalname,
         path: req.file.path,
-        contentType:
-          req.file.mimetype ||
-          mime.lookup(req.file.originalname) ||
-          "application/octet-stream",
+        contentType: req.file.mimetype || mime.lookup(req.file.originalname) || "application/octet-stream",
       });
     }
 
@@ -598,18 +509,8 @@ router.post("/", upload.single("file"), async (req, res) => {
             <li><strong>Fournisseur :</strong> ${esc(four?.name || fournisseur)}</li>
             <li><strong>Magasin destinataire :</strong> ${esc(magasinDest || mg || "—")}</li>
             <li><strong>Références :</strong> ${esc(pieces || "—")}</li>
-            ${
-              demandeurNomPrenom
-                ? `<li><strong>Demandeur :</strong> ${esc(demandeurNomPrenom)}</li>`
-                : ""
-            }
-            ${
-              commentaire
-                ? `<li><strong>Commentaire :</strong> ${esc(
-                    String(commentaire)
-                  )}</li>`
-                : ""
-            }
+            ${demandeurNomPrenom ? `<li><strong>Demandeur :</strong> ${esc(demandeurNomPrenom)}</li>` : ""}
+            ${commentaire ? `<li><strong>Commentaire :</strong> ${esc(String(commentaire))}</li>` : ""}
           </ul>
           <p style="margin-top:16px;">
             Vous trouverez en pièce jointe une copie du document que vous avez ajouté à votre demande.
@@ -631,17 +532,21 @@ router.post("/", upload.single("file"), async (req, res) => {
     await ftpUpload(pdfPath, `ramasse/${yyyy}/${mm}`);
 
     setTimeout(() => {
-      try {
-        fs.unlinkSync(pdfPath);
-      } catch {}
-      try {
-        if (req.file) fs.unlinkSync(req.file.path);
-      } catch {}
+      try { fs.unlinkSync(pdfPath); } catch {}
+      try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
     }, 15_000);
 
     res.json({ ok: true });
   } catch (e) {
-    console.error("[RAMASSE] POST error:", e);
+    console.error("[RAMASSE] POST error:", {
+      message: e?.message,
+      code: e?.code,
+      command: e?.command,
+      response: e?.response,
+      responseCode: e?.responseCode,
+      stack: e?.stack,
+    });
+
     res.status(500).json({
       error: "Échec de l'envoi. Vérifiez la config SMTP/Mailjet / PDF / FTP.",
     });
@@ -650,6 +555,8 @@ router.post("/", upload.single("file"), async (req, res) => {
 
 router.get("/ack", async (req, res) => {
   try {
+    mustHaveSmtpConfig();
+
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
     if (!email || !fournisseur || !ts || !nonce || !sig) {
       return res.status(400).send("Lien incomplet");
@@ -667,10 +574,8 @@ router.get("/ack", async (req, res) => {
     const expected = signAck(params);
     const ok =
       expected.length === String(sig).length &&
-      crypto.timingSafeEqual(
-        Buffer.from(expected),
-        Buffer.from(String(sig))
-      );
+      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(sig)));
+
     if (!ok) return res.status(400).send("Signature invalide");
 
     const age = Date.now() - Number(ts);
@@ -681,16 +586,10 @@ router.get("/ack", async (req, res) => {
     const sendNow = shouldSendAckOnce(String(sig));
 
     if (sendNow) {
-      const fromHeader = EFFECTIVE_FROM_EMAIL
-        ? `"Accusé Demande de Ramasse" <${EFFECTIVE_FROM_EMAIL}>`
-        : undefined;
-
       await transporter.sendMail({
-        from: fromHeader,
+        from: `"Accusé Demande de Ramasse" <${FROM_EMAIL}>`,
         to: String(email),
-        subject: `Accusé de réception – Demande de ramasse (${String(
-          fournisseur
-        )})`,
+        subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
         html: `
           <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
             <div style="text-align:center;margin:24px 0 32px;">
@@ -698,26 +597,25 @@ router.get("/ack", async (req, res) => {
               <span style="font-size:24px;font-weight:700;color:#16a34a;margin-left:8px;">Accusé de réception</span>
             </div>
             <p>Bonjour,</p>
-            <p>Votre demande de ramasse pour <strong>${esc(
-              fournisseur
-            )}</strong> concernant <em>${esc(
-          pieces || "—"
-        )}</em> a bien été prise en compte par le magasin <strong>${esc(
-          magasin || "—"
-        )}</strong>.</p>
+            <p>Votre demande de ramasse pour <strong>${esc(fournisseur)}</strong> concernant <em>${esc(pieces || "—")}</em> a bien été prise en compte par le magasin <strong>${esc(magasin || "—")}</strong>.</p>
             <p>Cordialement,<br/>L'équipe Ramasse</p>
           </div>
         `,
       });
     }
 
-    res
-      .status(200)
-      .send(
-        `<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`
-      );
+    res.status(200).send(
+      `<!doctype html><meta charset="utf-8"/><div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé au demandeur.</div>`
+    );
   } catch (e) {
-    console.error("[RAMASSE] ACK error:", e);
+    console.error("[RAMASSE] ACK error:", {
+      message: e?.message,
+      code: e?.code,
+      command: e?.command,
+      response: e?.response,
+      responseCode: e?.responseCode,
+      stack: e?.stack,
+    });
     res.status(400).send("Lien invalide ou erreur d'envoi.");
   }
 });
