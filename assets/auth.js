@@ -1,8 +1,12 @@
 const AUTH_KEY = "dd_auth_ok_v1";
 
-const SITE_PASSWORD = "Durand38!";
-
+// Le mot de passe n'est plus stocké en clair dans ce fichier ;
+// les identifiants sont désormais vérifiés côté serveur via l'endpoint /api/site/login.
+// Définir SITE_USERNAME via une variable d'environnement côté serveur si nécessaire.
 const SITE_USERNAME = "durand";
+
+// Endpoint d'authentification (voir server.js)
+const LOGIN_ENDPOINT = "/api/site/login";
 
 function getPrefix() {
   return (window.__SITE_PREFIX__ !== undefined) ? String(window.__SITE_PREFIX__) : "";
@@ -29,12 +33,26 @@ function requireAuth() {
   window.location.replace(prefix + "login.html?redirect=" + encodeURIComponent(dest));
 }
 
+/**
+ * Authentifie l'utilisateur en envoyant le mot de passe au serveur.
+ * Si la réponse est HTTP 200, la session est marquée comme authentifiée.
+ * @param {string} pwd
+ * @returns {Promise<boolean>} true si authentifié
+ */
 function loginWith(pwd) {
-  if (pwd === SITE_PASSWORD) {
-    setAuthed();
-    return true;
-  }
-  return false;
+  return fetch(LOGIN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: String(pwd || "") })
+  })
+    .then(res => {
+      if (res.ok) {
+        setAuthed();
+        return true;
+      }
+      return false;
+    })
+    .catch(() => false);
 }
 
 function logout() {
@@ -102,13 +120,13 @@ function wireLoginForm(options = {}) {
     pass.autocomplete = "current-password";
   }
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (err) err.textContent = "";
 
     const pwd = pass ? String(pass.value || "") : "";
-
-    if (loginWith(pwd)) {
+    const ok = await loginWith(pwd);
+    if (ok) {
       goAfterLogin();
     } else {
       if (err) err.textContent = "Mot de passe incorrect.";
