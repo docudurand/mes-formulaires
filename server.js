@@ -88,6 +88,21 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
+// Route d'authentification pour l'accès aux pages protégées.
+// Le mot de passe attendu est défini via la variable d'environnement SITE_PASSWORD.
+app.post("/api/site/login", (req, res) => {
+  try {
+    const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
+    const expected = String(process.env.SITE_PASSWORD || "");
+    if (pwd && expected && pwd === expected) {
+      return res.sendStatus(200);
+    }
+    return res.sendStatus(401);
+  } catch {
+    return res.sendStatus(500);
+  }
+});
+
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";
   const raw = String(dt);
