@@ -88,8 +88,6 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-// Route d'authentification pour l'accès aux pages protégées.
-// Le mot de passe attendu est défini via la variable d'environnement SITE_PASSWORD.
 app.post("/api/site/login", (req, res) => {
   try {
     const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
