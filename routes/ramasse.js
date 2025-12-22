@@ -26,18 +26,6 @@ const RAMASSE_SECRET =
   process.env.LEAVES_PASS ||
   "change-me";
 
-//
-// Chargement dynamique de la liste des fournisseurs.
-//
-// Pour renforcer la sécurité, les informations des fournisseurs (noms,
-// magasins et surtout leurs adresses e-mail de contact) ne doivent pas
-// être stockées en clair dans le code source. Ce tableau référence
-// uniquement les chemins de fichiers où, à titre de compatibilité,
-// l'ancienne liste JSON peut être stockée (par exemple dans un fichier
-// non versionné). Vous pouvez également définir l'ensemble de la liste
-// via la variable d'environnement `FOURNISSEUR_JSON`, contenant le
-// tableau JSON complet, pour que les e-mails n'apparaissent jamais dans
-// le dépôt.
 const FOURNISSEUR_PATHS = [
   path.resolve(__dirname, "fournisseur.json"),
   path.resolve(__dirname, "../fournisseur.json"),
@@ -74,33 +62,7 @@ function loadJsonFrom(paths, fallback) {
   return fallback;
 }
 
-// Précharge la liste des fournisseurs depuis l'environnement, si disponible.
-// On parse une éventuelle variable d'environnement "FOURNISSEUR_JSON"
-// contenant la liste complète au format JSON. Si cette variable est
-// définie et correctement parsée en tableau, elle est utilisée. Sinon,
-// on retombe sur l'ancienne logique de lecture depuis un fichier JSON.
-let ENV_FOURNISSEURS;
-(() => {
-  const raw = process.env.FOURNISSEUR_JSON;
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        ENV_FOURNISSEURS = parsed;
-        console.log("[CONF] Liste des fournisseurs chargée via l'env FOURNISSEUR_JSON (" + parsed.length + ")");
-      }
-    } catch (err) {
-      console.warn("[CONF] Impossible de parser FOURNISSEUR_JSON :", err && err.message ? err.message : err);
-    }
-  }
-})();
-
 function loadFournisseurs() {
-  // Si l'environnement fournit la liste, on la retourne directement.
-  if (Array.isArray(ENV_FOURNISSEURS)) {
-    return ENV_FOURNISSEURS;
-  }
-  // Sinon, on charge depuis les fichiers de compatibilité.
   const arr = loadJsonFrom(FOURNISSEUR_PATHS, []);
   return Array.isArray(arr) ? arr : [];
 }
