@@ -117,12 +117,10 @@ body{
 }
 
 .menu.util .dropdown{
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  width: max-content;
-  min-width: 420px;
-  max-width: 92vw;
+  left:auto;
+  right:0;
+  transform:none;
+  width: 460px;
 }
 
 .dropdown a{
