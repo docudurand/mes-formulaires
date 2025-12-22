@@ -474,6 +474,82 @@ $statusTabs.addEventListener("click", (e)=>{
 });
 
 let rows = [];
+let POLL_TIMER = null;
+let POLL_IN_FLIGHT = false;
+let LAST_MAX_NO = 0;
+
+function getMaxNo(list){
+  return list.reduce((m, r) => {
+    const n = parseInt(String(r.no).replace(/\D/g, ''), 10) || 0;
+    return Math.max(m, n);
+  }, 0);
+}
+
+async function fetchCasesNormalized(){
+  const r = await fetch(`${API_BASE}/atelier/api/cases`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const json = await r.json();
+  const data = (json && json.data) || [];
+
+  return data.map(x=>{
+    const h = (x.snapshot && x.snapshot.header) || {};
+    return {
+      ...x,
+      magasin: x.magasin || (h && h.magasin) || "",
+      compte:  x.compte  || (h && h.compte)  || "",
+      client:  x.client  || (h && h.client)  || "",
+      service: x.service || (h && h.service) || "",
+      demandeDate: x.demandeDate || (h && h.dateDemande) || "",
+      estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
+    };
+  });
+}
+
+function startPolling(ms = 45000){
+  stopPolling();
+POLL_TIMER = setInterval(async ()=>{
+  if (document.hidden) return;
+  if ($mask && $mask.style.display === "flex") return;
+  if (POLL_IN_FLIGHT) return;
+
+  POLL_IN_FLIGHT = true;
+  try{
+    const currentServiceSelected = ($filterService && $filterService.value) ? $filterService.value : "";
+    const fresh = await fetchCasesNormalized();
+
+      const newMax = getMaxNo(fresh);
+      const hadNew = newMax > (LAST_MAX_NO || 0);
+
+      rows = fresh;
+      LAST_MAX_NO = newMax;
+
+      if (LIMITED_VIEW) {
+        if ($serviceFilterContainer) $serviceFilterContainer.style.display = "inline-block";
+        buildServiceFilterOptions();
+        if ($filterService && currentServiceSelected) {
+          $filterService.value = currentServiceSelected;
+        }
+      }
+
+      draw();
+
+      if (hadNew && $legend){
+        const old = $legend.textContent;
+        $legend.textContent = `${old} • ✅ Nouveau dossier`;
+        setTimeout(()=>{ if($legend) $legend.textContent = old; }, 3500);
+      }
+    } catch(e){
+      console.warn("[SUIVI] Polling error:", e);
+    } finally {
+      POLL_IN_FLIGHT = false;
+    }
+  }, ms);
+}
+
+function stopPolling(){
+  if (POLL_TIMER) clearInterval(POLL_TIMER);
+  POLL_TIMER = null;
+}
 function buildEstimateSelect(value){
   const v = (value === "" || value === null || value === undefined) ? "" : Number(value);
   let opts = `<option value="" ${v==="" ? "selected":""}></option>`;
@@ -800,44 +876,34 @@ function load(){
     draw();
   }
 
-  fetch(`${API_BASE}/atelier/api/cases`)
-    .then(r=>r.json())
-    .then(json=>{
-      const data = (json && json.data) || [];
-      const fetched = data.map(x=>{
-        const h = (x.snapshot && x.snapshot.header) || {};
-        return {
-          ...x,
-          magasin: x.magasin || (h && h.magasin) || "",
-          compte:  x.compte  || (h && h.compte)  || "",
-          client:  x.client  || (h && h.client)  || "",
-          service: x.service || (h && h.service) || "",
-          demandeDate: x.demandeDate || (h && h.dateDemande) || "",
-          estimation: (x.estimation === undefined || x.estimation === null || x.estimation === "") ? "" : Number(x.estimation)
-        };
-      });
-      rows = fetched;
-    })
-    .catch(e=>{
-      console.error(e);
-      $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
-    })
-        .finally(()=>{
-      IS_LOADING = false;
+(async ()=>{
+  try{
+    const fresh = await fetchCasesNormalized();
+    rows = fresh;
+    LAST_MAX_NO = getMaxNo(fresh);
+  } catch(e){
+    console.error(e);
+    $tbody.innerHTML = `<tr><td colspan="9" style="padding:14px 10px;color:#b91c1c">Erreur de chargement.</td></tr>`;
+  } finally {
+    IS_LOADING = false;
 
-      if (LIMITED_VIEW) {
-        if ($serviceFilterContainer) {
-          $serviceFilterContainer.style.display = "inline-block";
-        }
-        buildServiceFilterOptions();
-      } else {
-        if ($serviceFilterContainer) {
-          $serviceFilterContainer.style.display = "none";
-        }
+    if (LIMITED_VIEW) {
+      if ($serviceFilterContainer) {
+        $serviceFilterContainer.style.display = "inline-block";
       }
+      buildServiceFilterOptions();
+    } else {
+      if ($serviceFilterContainer) {
+        $serviceFilterContainer.style.display = "none";
+      }
+    }
 
-      draw();
-    });
+    draw();
+
+    startPolling(45000);
+	window.addEventListener("beforeunload", stopPolling);
+  }
+})();
 }
 $filter.addEventListener("change", draw);
 $q.addEventListener("input", draw);
