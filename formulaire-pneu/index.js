@@ -90,7 +90,7 @@ router.post(
       const mailOptions = {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
         to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
-        subject: '📨 Demande création référence Pneumatique VL',
+        subject: '📨 Demande de création référence Pneumatique VL',
         replyTo: formData.email,
         html: generateHtml(formData),
         attachments
