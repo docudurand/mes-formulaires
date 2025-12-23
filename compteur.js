@@ -156,23 +156,3 @@ export function incrementRamasseMagasin(magasinRaw) {
 export function getCompteurs() {
   return loadCompteurs();
 }
-
-export function incrementPageVisit(page) {
-  const data = loadCompteurs();
-  if (!data.pageVisits) {
-    data.pageVisits = { __total: 0 };
-  }
-  const key = String(page || "").trim() || "/";
-  data.pageVisits[key] = (data.pageVisits[key] || 0) + 1;
-  data.pageVisits.__total = (data.pageVisits.__total || 0) + 1;
-  saveCompteurs(data);
-}
-
-export function getPageVisits() {
-  const data = loadCompteurs();
-  const visits = data.pageVisits || {};
-  const total = Number(visits.__total || 0);
-  const pages = { ...visits };
-  delete pages.__total;
-  return { total, pages };
-}

@@ -479,7 +479,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
 const APPS_SCRIPT_URL_LUB   = process.env.TELEVENTE_APPS_SCRIPT_URL_LUB   || "";
 const APPS_SCRIPT_URL_BOSCH = process.env.TELEVENTE_APPS_SCRIPT_URL_BOSCH || "";
 
@@ -527,34 +526,6 @@ app.get("/stats/counters", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
   catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); }
 });
-
-app.get("/stats/pageviews", async (_req, res) => {
-  try {
-    const data = await stats.getPageViews();
-    res.json({ ok: true, data });
-  } catch (e) {
-    console.error("Erreur /stats/pageviews:", e);
-    res.status(500).json({ ok: false, error: "Erreur lecture pageviews" });
-  }
-});
-
-const GIF_1x1 = Buffer.from(
-  "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
-  "base64"
-);
-
-app.get("/t.gif", async (req, res) => {
-  try {
-    const p = String(req.query.p || req.query.path || "/");
-    await stats.recordPageView(p);
-  } catch (e) {
-    console.warn("Erreur /t.gif:", e?.message || e);
-  }
-  res.setHeader("Content-Type", "image/gif");
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.end(GIF_1x1);
-});
-
 app.get("/admin/compteurs", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json(data); }
   catch (e) { console.error("Erreur /admin/compteurs:", e); res.status(500).json({ error: "Erreur de lecture des compteurs" }); }
