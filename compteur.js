@@ -157,24 +157,6 @@ export function getCompteurs() {
   return loadCompteurs();
 }
 
-// ---------------------------------------------------------------
-//  Nouvelle logique de suivi des visites des pages
-//
-// Pour tracer le nombre de visites par page ainsi qu'un total global,
-// nous stockons ces informations dans le même fichier `compteurs.json`
-// sous la clé `pageVisits`. Chaque appel à `incrementPageVisit()`
-// incrémente un compteur individuel pour la page ainsi qu'un
-// compteur global `__total`. La fonction `getPageVisits()` retourne
-// ces informations sous forme d'objet `{ total, pages }`, où
-// `pages` est un dictionnaire associant chaque page à son nombre de
-// visites et `total` est la somme de toutes les visites.
-
-/**
- * Incrémente le compteur de visites pour une page.
- *
- * @param {string} page - Chemin ou identifiant de la page visitée. Si vide,
- *   ce paramètre sera converti en "/".
- */
 export function incrementPageVisit(page) {
   const data = loadCompteurs();
   if (!data.pageVisits) {
@@ -186,12 +168,6 @@ export function incrementPageVisit(page) {
   saveCompteurs(data);
 }
 
-/**
- * Retourne les statistiques de visites enregistrées.
- *
- * @returns {{ total: number, pages: { [key: string]: number } }}
- *   Un objet contenant le total global et les visites par page.
- */
 export function getPageVisits() {
   const data = loadCompteurs();
   const visits = data.pageVisits || {};

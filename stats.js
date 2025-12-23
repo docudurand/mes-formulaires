@@ -16,46 +16,26 @@ const FTP_PORT = Number(process.env.FTP_PORT || 21);
 const FTP_USER = process.env.FTP_USER || "";
 const FTP_PASSWORD = process.env.FTP_PASSWORD || "";
 const FTP_SECURE = String(process.env.FTP_SECURE || "false").toLowerCase() === "true";
-const FTP_TLS_REJECT_UNAUTH = String(process.env.FTP_TLS_REJECT_UNAUTH || "1") === "1";
 
-const FTP_BASE_DIR =
-  process.env.FTP_BASE_DIR ||
-  process.env.FTP_BACKUP_FOLDER ||
-  "/Disque 1/sauvegardegarantie";
+const FTP_BASE_DIR = process.env.FTP_BASE_DIR || "/Disque 1/sauvegardegarantie";
 
 const REMOTE_COUNTERS  = "counters.json";
 const REMOTE_PAGEVIEWS = "pageviews.json";
-
-const FTP_RETRYABLE = /ECONNRESET|Client is closed|ETIMEDOUT|ENOTCONN|EPIPE|426|425/i;
 
 function canUseFTP() {
   return !!(FTP_HOST && FTP_USER && FTP_PASSWORD);
 }
 
-function tlsOptions() {
-  const servername = FTP_HOST || undefined;
-  return { rejectUnauthorized: FTP_TLS_REJECT_UNAUTH, servername };
-}
-
 async function connectFTP() {
-  const client = new ftp.Client(45_000);
+  const client = new ftp.Client();
   client.ftp.verbose = false;
-  client.prepareTransfer = ftp.enterPassiveModeIPv4;
-
   await client.access({
     host: FTP_HOST,
     port: FTP_PORT,
     user: FTP_USER,
     password: FTP_PASSWORD,
     secure: FTP_SECURE,
-    secureOptions: tlsOptions(),
   });
-
-  try {
-    client.ftp.socket?.setKeepAlive?.(true, 10_000);
-    client.ftp.timeout = 45_000;
-  } catch {}
-
   return client;
 }
 
@@ -68,7 +48,10 @@ function defaultCounters() {
 }
 
 function defaultPageviews() {
-  return { pages: {} };
+  return {
+    pages: {
+    },
+  };
 }
 
 function mergeCounters(obj) {
@@ -120,48 +103,44 @@ async function writeJson(filePath, obj) {
   await fs.writeFile(filePath, JSON.stringify(obj, null, 2), "utf-8");
 }
 
-async function ftpWithRetry(fn) {
-  if (!canUseFTP()) return null;
-  let lastErr;
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    let client;
-    try {
-      client = await connectFTP();
-      await client.ensureDir(FTP_BASE_DIR);
-      await client.cd(FTP_BASE_DIR);
-      const out = await fn(client);
-      try { client.close(); } catch {}
-      return out;
-    } catch (e) {
-      lastErr = e;
-      try { client?.close(); } catch {}
-      const msg = String(e?.message || "") + " " + String(e?.code || "");
-      if (attempt === 4 || !FTP_RETRYABLE.test(msg)) break;
-      await new Promise(r => setTimeout(r, 250 * attempt));
-    }
-  }
-  console.warn("[FTP] échec:", lastErr?.message || lastErr);
-  return null;
-}
-
 async function downloadFromFTP(remoteName, localPath) {
-  const ok = await ftpWithRetry(async (client) => {
+  if (!canUseFTP()) return false;
+  let client;
+  try {
+    client = await connectFTP();
+    await client.ensureDir(FTP_BASE_DIR);
+    await client.cd(FTP_BASE_DIR);
+
     const list = await client.list();
     const exists = list.some(f => f.name === remoteName);
     if (!exists) return false;
+
     await fs.mkdir(DATA_DIR, { recursive: true });
     await client.downloadTo(localPath, remoteName);
     return true;
-  });
-  return !!ok;
+  } catch (e) {
+    console.warn(`[FTP] download ${remoteName} échoué:`, e?.message || e);
+    return false;
+  } finally {
+    if (client) client.close();
+  }
 }
 
 async function uploadToFTP(remoteName, localPath) {
-  const ok = await ftpWithRetry(async (client) => {
+  if (!canUseFTP()) return false;
+  let client;
+  try {
+    client = await connectFTP();
+    await client.ensureDir(FTP_BASE_DIR);
+    await client.cd(FTP_BASE_DIR);
     await client.uploadFrom(localPath, remoteName);
     return true;
-  });
-  return !!ok;
+  } catch (e) {
+    console.warn(`[FTP] upload ${remoteName} échoué:`, e?.message || e);
+    return false;
+  } finally {
+    if (client) client.close();
+  }
 }
 
 export async function initCounters() {
@@ -184,6 +163,8 @@ export async function recordSubmission(formType) {
 
   await writeJson(COUNTERS_FILE, counters);
   await uploadToFTP(REMOTE_COUNTERS, COUNTERS_FILE);
+
+  console.log(`[COMPTEUR] +1 ${type} (${year})`);
 }
 
 export async function getCounters() {
@@ -218,6 +199,8 @@ export async function recordPageView(pathname) {
 
   await writeJson(PAGEVIEWS_FILE, pv);
   await uploadToFTP(REMOTE_PAGEVIEWS, PAGEVIEWS_FILE);
+
+  console.log(`[PAGEVIEW] +1 ${p} (${year})`);
 }
 
 export async function getPageViews() {

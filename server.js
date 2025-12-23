@@ -460,19 +460,23 @@ app.use("/api/ramasse", ramasseRouter);
 app.get("/ramasse", (req, res) => res.redirect("/public/ramasse.html"));
 
 app.use((req, res, next) => {
-  const url = req.originalUrl || req.url || "";
+  const url = (req.originalUrl || req.url || "");
+  const urlLower = url.toLowerCase();
   const method = req.method;
+
   res.on("finish", async () => {
     try {
-      const success = res.statusCode >= 200 && res.statusCode < 300;
+      const success = res.statusCode >= 200 && res.statusCode < 400;
       if (!success || method !== "POST") return;
-      if (url.startsWith("/formulaire-piece"))        await stats.recordSubmission("piece");
-      else if (url.startsWith("/formulaire-piecepl")) await stats.recordSubmission("piecepl");
-      else if (url.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
+
+      if (urlLower.startsWith("/formulaire-piecepl"))      await stats.recordSubmission("piecepl");
+      else if (urlLower.startsWith("/formulaire-piece"))   await stats.recordSubmission("piece");
+      else if (urlLower.startsWith("/formulaire-pneu"))    await stats.recordSubmission("pneu");
     } catch (e) {
       console.warn("[COMPTEUR] post-hook erreur:", e?.message || e);
     }
   });
+
   next();
 });
 

@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
+import { recordSubmission } from "../stats.js";
 
 dotenv.config();
 
@@ -93,6 +94,12 @@ router.post(
 
     try {
       await transporter.sendMail(mailOptions);
+	  try {
+  res.locals.__submissionCounted = true;
+  await recordSubmission("piecepl");
+} catch (e) {
+  console.warn("[COMPTEUR] recordSubmission(piecepl) échoué:", e?.message || e);
+}
 
       if (formData.email) {
         const accuserecepOptions = {
