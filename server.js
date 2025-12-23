@@ -15,6 +15,7 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 
 import * as stats from "./stats.js";
+import { incrementPageVisit, getPageVisits } from "./compteur.js";
 import formtelevente from "./formtelevente/index.js";
 import formulairePiece from "./formulaire-piece/index.js";
 import formulairePiecePL from "./formulaire-piecepl/index.js";
@@ -34,6 +35,28 @@ const __dirname  = path.dirname(__filename);
 const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
+
+// Enregistre chaque visite de page. Ce middleware s'exécute pour chaque
+// requête GET et tente d'incrémenter un compteur de visites lorsque
+// l'utilisateur demande une page HTML ou une route sans extension.
+// Nous filtrons les appels API et les ressources statiques (JS, CSS, images).
+app.use((req, _res, next) => {
+  try {
+    if (req.method === "GET") {
+      const urlPath = (req.path || "/").split("?")[0] || "/";
+      // Cherche l'extension du chemin (ex: .html, .js, .css). Si aucune
+      // extension ou si c'est .html/.htm, on considère que c'est une page.
+      const ext = path.extname(urlPath).toLowerCase();
+      if (!ext || ext === ".html" || ext === ".htm" || urlPath === "/") {
+        // Utilise le chemin complet comme identifiant de page
+        incrementPageVisit(urlPath);
+      }
+    }
+  } catch (err) {
+    console.warn("[VISITS] Erreur lors de l'enregistrement d'une visite:", err?.message || err);
+  }
+  next();
+});
 app.use((req, res, next) => {
 
 const ALLOWED_FRAME_ANCESTORS = [
@@ -88,6 +111,8 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
+// Route d'authentification pour l'accès aux pages protégées.
+// Le mot de passe attendu est défini via la variable d'environnement SITE_PASSWORD.
 app.post("/api/site/login", (req, res) => {
   try {
     const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
@@ -522,6 +547,19 @@ app.get("/api/sheets/televente-bosch", makeTeleventeProxy(APPS_SCRIPT_URL_BOSCH)
 app.get("/stats/counters", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json({ ok: true, data }); }
   catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); }
+});
+
+// Nouveau endpoint pour récupérer les statistiques de visites des pages.
+// Retourne un objet avec la clé `pages` contenant les visites par page et
+// la clé `total` pour le cumul global.
+app.get("/stats/visits", (_req, res) => {
+  try {
+    const data = getPageVisits();
+    res.json({ ok: true, data });
+  } catch (e) {
+    console.error("Erreur /stats/visits:", e);
+    res.status(500).json({ ok: false, error: "Erreur de lecture des visites" });
+  }
 });
 app.get("/admin/compteurs", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json(data); }

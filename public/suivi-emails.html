@@ -68,7 +68,7 @@
       <div class="row" style="margin-top:10px;">
         <label>
           <input type="checkbox" id="showCopies">
-          Afficher les copies vers <code>magvl4gleize@durandservices.fr</code>
+          Afficher les copies (emails en copie)
         </label>
       </div>
 
@@ -104,7 +104,9 @@
   </div>
 
 <script>
-const COPY_MAIL = "magvl4gleize@durandservices.fr";
+// Adresse utilisée pour filtrer les copies automatiques dans la liste.
+// Laisser vide pour ne pas filtrer.
+const COPY_MAIL = "";
 
 function getSelectedStates() {
   return new Set([...document.querySelectorAll('input.st:checked')].map(x => x.value));

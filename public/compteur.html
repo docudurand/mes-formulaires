@@ -133,16 +133,44 @@
         </tfoot>
       </table>
     </div>
+
+    <h2 style="margin: 32px 0 10px;">Visites des pages</h2>
+    <p class="hint">Nombre de fois où chaque page a été consultée (rechargement inclus).</p>
+    <div style="overflow-x:auto;">
+      <table id="visitTable">
+        <thead>
+          <tr>
+            <th>Page</th>
+            <th>Visites</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td id="visit_total">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </main>
 
   <script>
     const API_COUNTERS = "/stats/counters";
     const API_RAMASSE  = "/api/ramasse/stats";
+    const API_VISITS   = "/stats/visits";
 
     async function loadData() {
       const res = await fetch(API_COUNTERS, { cache: "no-store" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Erreur API /stats/counters");
+      return json.data;
+    }
+
+    async function loadVisits() {
+      const res = await fetch(API_VISITS, { cache: "no-store" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API /stats/visits");
       return json.data;
     }
 
@@ -258,11 +286,28 @@
       document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
+    function renderVisits(visits) {
+      const tbody = document.querySelector("#visitTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      let total = Number(visits.total || 0);
+      const pages = visits.pages || {};
+      const names = Object.keys(pages).sort((a,b) => a.localeCompare(b));
+      names.forEach(name => {
+        const count = Number(pages[name] || 0);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${name}</td><td>${count}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("visit_total").textContent = total;
+    }
+
     async function main() {
       try {
-        const [{ years, counters }, ramasseData] = await Promise.all([
+        const [{ years, counters }, ramasseData, visits] = await Promise.all([
           loadData(),
           loadRamasse(),
+          loadVisits(),
         ]);
 
         const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
@@ -274,6 +319,7 @@
         renderCards(counters, current);
         renderTable(allYears, counters);
         renderRamasse(ramasseData, current);
+        renderVisits(visits);
 
         document.getElementById("yearSelect").addEventListener("change", (e) => {
           const y = e.target.value;
