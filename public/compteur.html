@@ -133,44 +133,88 @@
         </tfoot>
       </table>
     </div>
+	<h2 style="margin: 32px 0 10px;">Visites du site (par page)</h2>
+<p class="hint">Nombre de visites par page (Render).</p>
 
-    <h2 style="margin: 32px 0 10px;">Visites des pages</h2>
-    <p class="hint">Nombre de fois où chaque page a été consultée (rechargement inclus).</p>
-    <div style="overflow-x:auto;">
-      <table id="visitTable">
-        <thead>
-          <tr>
-            <th>Page</th>
-            <th>Visites</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot>
-          <tr>
-            <td><strong>Total</strong></td>
-            <td id="visit_total">0</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+<div style="overflow-x:auto;">
+  <table id="pvTable">
+    <thead>
+      <tr>
+        <th>Page</th>
+        <th>Année sélectionnée</th>
+        <th>Visites année</th>
+        <th>Total cumulé</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td id="pv_year_label"></td>
+        <td id="pv_t_year">0</td>
+        <td id="pv_t_total">0</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
   </main>
 
   <script>
     const API_COUNTERS = "/stats/counters";
     const API_RAMASSE  = "/api/ramasse/stats";
-    const API_VISITS   = "/stats/visits";
+	const API_PAGEVIEWS = "/stats/pageviews";
+
+async function loadPageviews() {
+  const res = await fetch(API_PAGEVIEWS, { cache: "no-store" });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || "Erreur API /stats/pageviews");
+  return json.data;
+}
+
+function renderPageviews(pvData, yearSelected) {
+  const tbody = document.querySelector("#pvTable tbody");
+  if (!tbody) return;
+
+  const pages = pvData.pages || {};
+  const paths = Object.keys(pages).sort((a, b) => {
+    const ay = Number(pages[a]?.byYear?.[yearSelected] || 0);
+    const by = Number(pages[b]?.byYear?.[yearSelected] || 0);
+    if (by !== ay) return by - ay;
+    return Number(pages[b]?.total || 0) - Number(pages[a]?.total || 0);
+  });
+
+  tbody.innerHTML = "";
+  let sumYear = 0;
+  let sumTotal = 0;
+
+  paths.forEach(p => {
+    const total = Number(pages[p]?.total || 0);
+    const yearCount = Number(pages[p]?.byYear?.[yearSelected] || 0);
+
+    sumYear += yearCount;
+    sumTotal += total;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p}</td>
+      <td>${yearSelected}</td>
+      <td>${yearCount}</td>
+      <td>${total}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("pv_year_label").textContent = yearSelected;
+  document.getElementById("pv_t_year").textContent = sumYear;
+  document.getElementById("pv_t_total").textContent = sumTotal;
+}
+
 
     async function loadData() {
       const res = await fetch(API_COUNTERS, { cache: "no-store" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Erreur API /stats/counters");
-      return json.data;
-    }
-
-    async function loadVisits() {
-      const res = await fetch(API_VISITS, { cache: "no-store" });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Erreur API /stats/visits");
       return json.data;
     }
 
@@ -286,46 +330,31 @@
       document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
-    function renderVisits(visits) {
-      const tbody = document.querySelector("#visitTable tbody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-      let total = Number(visits.total || 0);
-      const pages = visits.pages || {};
-      const names = Object.keys(pages).sort((a,b) => a.localeCompare(b));
-      names.forEach(name => {
-        const count = Number(pages[name] || 0);
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${name}</td><td>${count}</td>`;
-        tbody.appendChild(tr);
-      });
-      document.getElementById("visit_total").textContent = total;
-    }
-
     async function main() {
       try {
-        const [{ years, counters }, ramasseData, visits] = await Promise.all([
-          loadData(),
-          loadRamasse(),
-          loadVisits(),
-        ]);
+const [{ years, counters }, ramasseData, pageviewsData] = await Promise.all([
+  loadData(),
+  loadRamasse(),
+  loadPageviews(),
+]);
 
-        const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
-        const allYears = Array.from(setYears).sort();
+const setYears = new Set([...(years || []), ...(ramasseData.years || []), ...(pageviewsData.years || [])]);
+const allYears = Array.from(setYears).sort();
 
-        fillYearSelect(allYears);
-        const current = document.getElementById("yearSelect").value;
+fillYearSelect(allYears);
+const current = document.getElementById("yearSelect").value;
 
-        renderCards(counters, current);
-        renderTable(allYears, counters);
-        renderRamasse(ramasseData, current);
-        renderVisits(visits);
+renderCards(counters, current);
+renderTable(allYears, counters);
+renderRamasse(ramasseData, current);
+renderPageviews(pageviewsData, current);
 
-        document.getElementById("yearSelect").addEventListener("change", (e) => {
-          const y = e.target.value;
-          renderCards(counters, y);
-          renderRamasse(ramasseData, y);
-        });
+document.getElementById("yearSelect").addEventListener("change", (e) => {
+  const y = e.target.value;
+  renderCards(counters, y);
+  renderRamasse(ramasseData, y);
+  renderPageviews(pageviewsData, y);
+});
       } catch (e) {
         alert("Impossible de charger les compteurs : " + e.message);
         console.error(e);

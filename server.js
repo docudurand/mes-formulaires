@@ -15,7 +15,6 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 
 import * as stats from "./stats.js";
-import { incrementPageVisit, getPageVisits } from "./compteur.js";
 import formtelevente from "./formtelevente/index.js";
 import formulairePiece from "./formulaire-piece/index.js";
 import formulairePiecePL from "./formulaire-piecepl/index.js";
@@ -35,28 +34,6 @@ const __dirname  = path.dirname(__filename);
 const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
-
-// Enregistre chaque visite de page. Ce middleware s'exécute pour chaque
-// requête GET et tente d'incrémenter un compteur de visites lorsque
-// l'utilisateur demande une page HTML ou une route sans extension.
-// Nous filtrons les appels API et les ressources statiques (JS, CSS, images).
-app.use((req, _res, next) => {
-  try {
-    if (req.method === "GET") {
-      const urlPath = (req.path || "/").split("?")[0] || "/";
-      // Cherche l'extension du chemin (ex: .html, .js, .css). Si aucune
-      // extension ou si c'est .html/.htm, on considère que c'est une page.
-      const ext = path.extname(urlPath).toLowerCase();
-      if (!ext || ext === ".html" || ext === ".htm" || urlPath === "/") {
-        // Utilise le chemin complet comme identifiant de page
-        incrementPageVisit(urlPath);
-      }
-    }
-  } catch (err) {
-    console.warn("[VISITS] Erreur lors de l'enregistrement d'une visite:", err?.message || err);
-  }
-  next();
-});
 app.use((req, res, next) => {
 
 const ALLOWED_FRAME_ANCESTORS = [
@@ -111,8 +88,6 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-// Route d'authentification pour l'accès aux pages protégées.
-// Le mot de passe attendu est défini via la variable d'environnement SITE_PASSWORD.
 app.post("/api/site/login", (req, res) => {
   try {
     const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
@@ -549,18 +524,33 @@ app.get("/stats/counters", async (_req, res) => {
   catch (e) { console.error("Erreur /stats/counters:", e); res.status(500).json({ ok: false, error: "Erreur de lecture des compteurs" }); }
 });
 
-// Nouveau endpoint pour récupérer les statistiques de visites des pages.
-// Retourne un objet avec la clé `pages` contenant les visites par page et
-// la clé `total` pour le cumul global.
-app.get("/stats/visits", (_req, res) => {
+app.get("/stats/pageviews", async (_req, res) => {
   try {
-    const data = getPageVisits();
+    const data = await stats.getPageViews();
     res.json({ ok: true, data });
   } catch (e) {
-    console.error("Erreur /stats/visits:", e);
-    res.status(500).json({ ok: false, error: "Erreur de lecture des visites" });
+    console.error("Erreur /stats/pageviews:", e);
+    res.status(500).json({ ok: false, error: "Erreur lecture pageviews" });
   }
 });
+
+const GIF_1x1 = Buffer.from(
+  "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+  "base64"
+);
+
+app.get("/t.gif", async (req, res) => {
+  try {
+    const p = String(req.query.p || req.query.path || "/");
+    await stats.recordPageView(p);
+  } catch (e) {
+    console.warn("Erreur /t.gif:", e?.message || e);
+  }
+  res.setHeader("Content-Type", "image/gif");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.end(GIF_1x1);
+});
+
 app.get("/admin/compteurs", async (_req, res) => {
   try { const data = await stats.getCounters(); res.json(data); }
   catch (e) { console.error("Erreur /admin/compteurs:", e); res.status(500).json({ error: "Erreur de lecture des compteurs" }); }
@@ -1236,4 +1226,3 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
-
