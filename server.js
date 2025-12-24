@@ -13,6 +13,7 @@ import PDFDocument from "pdfkit";
 import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
+import mailLogsRouter from "./routes/mail-logs.js";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -87,6 +88,7 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+app.use(mailLogsRouter);
 
 app.post("/api/site/login", (req, res) => {
   try {
