@@ -13,7 +13,78 @@ function getApiUrl() {
   return url;
 }
 
+/**
+ * POST /api/kilometrage/save
+ * Reçoit une saisie km (QR code) et la forward à Apps Script (doPost)
+ */
 router.post("/save", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    // On forward tel quel (le doPost attend notamment : agence, codeAgence, tournee, codeTournee,
+    // chauffeur, codeChauffeur, date, km, commentaire, id, ...)
+    const payload = req.body || {};
+
+    const response = await axios.post(apiUrl, payload, {
+      headers: { "Content-Type": "application/json" },
+      timeout: 20000
+    });
+
+    return res.json(response.data || { success: true });
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/save :", err.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erreur lors de l'enregistrement du kilométrage" });
+  }
+});
+
+/**
+ * POST /api/kilometrage/newid
+ * Déclare un nouveau chauffeur (génère un nouvel ID) -> Apps Script action=newId
+ */
+router.post("/newid", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    const { agence, codeTournee } = req.body || {};
+    if (!agence || !codeTournee) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Champs manquants (agence / codeTournee)" });
+    }
+
+    const payload = { action: "newId", agence, codeTournee };
+
+    const response = await axios.post(apiUrl, payload, {
+      headers: { "Content-Type": "application/json" },
+      timeout: 20000
+    });
+
+    return res.json(response.data || { success: true });
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/newid :", err.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erreur lors de la génération du nouvel ID" });
+  }
+});
+
+/**
+ * POST /api/kilometrage/absent
+ * Déclare un chauffeur absent -> Apps Script action=absent
+ */
+router.post("/absent", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
     if (!apiUrl) {
@@ -30,109 +101,46 @@ router.post("/save", async (req, res) => {
       chauffeur,
       codeChauffeur,
       date,
-      km,
-      commentaire,
-      id
+      note
     } = req.body || {};
 
-    if (!codeTournee || !date || km === undefined || km === null || km === "") {
+    if (!agence || !codeTournee || !date) {
       return res.status(400).json({
         success: false,
-        error: "Champs obligatoires manquants (codeTournee, date, km)"
+        error: "Champs obligatoires manquants (agence, codeTournee, date)"
       });
     }
 
     const payload = {
-      agence: agence || codeAgence || "",
-      codeAgence: codeAgence || agence || "",
+      action: "absent",
+      agence,
+      codeAgence: codeAgence || agence,
       tournee: tournee || "",
       codeTournee,
       chauffeur: chauffeur || "",
       codeChauffeur: codeChauffeur || "",
       date,
-      km: Number(km),
-      commentaire: commentaire || "",
-      id: id || ""
+      note: note || ""
     };
 
     const response = await axios.post(apiUrl, payload, {
       headers: { "Content-Type": "application/json" },
-      timeout: 60000
+      timeout: 20000
     });
 
     return res.json(response.data || { success: true });
   } catch (err) {
-    console.error("Erreur /api/kilometrage/save :", err.message);
+    console.error("Erreur /api/kilometrage/absent :", err.message);
     return res
       .status(500)
-      .json({ success: false, error: "Erreur lors de l'enregistrement du kilométrage" });
+      .json({ success: false, error: "Erreur lors de la déclaration d'absence" });
   }
 });
 
-router.post("/newid", async (req, res) => {
-  try {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) {
-      return res
-        .status(500)
-        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
-    }
-
-    const { agence, codeTournee } = req.body || {};
-
-    if (!agence || !codeTournee) {
-      return res.status(400).json({
-        success: false,
-        error: "Paramètres manquants (agence, codeTournee)"
-      });
-    }
-
-    const payload = {
-      action: "newId",
-      agence,
-      codeTournee
-    };
-
-    const response = await axios.post(apiUrl, payload, {
-      headers: { "Content-Type": "application/json" },
-      timeout: 10000
-    });
-
-    return res.json(response.data || { success: true });
-  } catch (err) {
-    console.error("Erreur /api/kilometrage/newid :", err.message);
-    return res
-      .status(500)
-      .json({ success: false, error: "Erreur lors de la génération du nouvel ID" });
-  }
-});
-
-router.get("/data", async (req, res) => {
-  try {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) {
-      return res
-        .status(500)
-        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
-    }
-
-    const { agence, year } = req.query;
-
-    const url =
-      apiUrl +
-      `?agence=${encodeURIComponent(agence || "")}&year=${encodeURIComponent(year || "")}`;
-
-    const response = await axios.get(url, { timeout: 10000 });
-
-    return res.json(response.data || []);
-  } catch (err) {
-    console.error("Erreur /api/kilometrage/data :", err.message);
-    return res
-      .status(500)
-      .json({ success: false, error: "Erreur lors de la récupération des données" });
-  }
-});
-
+/**
+ * GET /api/kilometrage/params?agence=...
+ * Récupère les tournées/transporteurs depuis Apps Script (doGet mode=params)
+ */
 router.get("/params", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -142,14 +150,11 @@ router.get("/params", async (req, res) => {
         .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
-    const { agence } = req.query;
-
-    const url =
-      apiUrl +
-      `?mode=params` +
-      (agence ? `&agence=${encodeURIComponent(agence)}` : "");
-
-    const response = await axios.get(url, { timeout: 10000 });
+    const { agence } = req.query || {};
+    const response = await axios.get(apiUrl, {
+      timeout: 20000,
+      params: { mode: "params", agence: agence || "" }
+    });
 
     return res.json(response.data || []);
   } catch (err) {
@@ -160,6 +165,38 @@ router.get("/params", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/kilometrage/data?agence=...&year=...
+ * Récupère les données depuis Apps Script (doGet mode=data)
+ */
+router.get("/data", async (req, res) => {
+  try {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      return res
+        .status(500)
+        .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
+    }
+
+    const { agence, year } = req.query || {};
+    const response = await axios.get(apiUrl, {
+      timeout: 20000,
+      params: { mode: "data", agence: agence || "", year: year || "" }
+    });
+
+    return res.json(response.data || []);
+  } catch (err) {
+    console.error("Erreur /api/kilometrage/data :", err.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erreur lors de la récupération des données" });
+  }
+});
+
+/**
+ * (Optionnel) GET /api/kilometrage/resume?agence=...&date=YYYY-MM-DD
+ * Retourne les lignes de la journée (filtre côté serveur)
+ */
 router.get("/resume", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -169,19 +206,27 @@ router.get("/resume", async (req, res) => {
         .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
-    const { agence, codeAgence, codeTournee, date } = req.query;
+    const { agence, date } = req.query || {};
+    if (!agence || !date) {
+      return res.status(400).json({ success: false, error: "Champs manquants (agence / date)" });
+    }
 
-    const url =
-      apiUrl +
-      `?mode=resume` +
-      `&agence=${encodeURIComponent(agence || "")}` +
-      `&codeAgence=${encodeURIComponent(codeAgence || "")}` +
-      `&codeTournee=${encodeURIComponent(codeTournee || "")}` +
-      `&date=${encodeURIComponent(date || "")}`;
+    const year = String(date).slice(0, 4);
 
-    const response = await axios.get(url, { timeout: 10000 });
+    const response = await axios.get(apiUrl, {
+      timeout: 20000,
+      params: { mode: "data", agence: agence || "", year: year || "" }
+    });
 
-    return res.json(response.data || { found: false });
+    const arr = Array.isArray(response.data) ? response.data : [];
+    const day = String(date);
+
+    const filtered = arr.filter((r) => {
+      const d = (r && r.date) ? String(r.date).slice(0, 10) : "";
+      return d === day;
+    });
+
+    return res.json({ success: true, rows: filtered });
   } catch (err) {
     console.error("Erreur /api/kilometrage/resume :", err.message);
     return res
