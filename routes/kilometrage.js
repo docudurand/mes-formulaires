@@ -13,10 +13,6 @@ function getApiUrl() {
   return url;
 }
 
-/**
- * POST /api/kilometrage/save
- * Reçoit une saisie km (QR code) et la forward à Apps Script (doPost)
- */
 router.post("/save", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -26,8 +22,6 @@ router.post("/save", async (req, res) => {
         .json({ success: false, error: "GS_KILOMETRAGE_URL non configuré" });
     }
 
-    // On forward tel quel (le doPost attend notamment : agence, codeAgence, tournee, codeTournee,
-    // chauffeur, codeChauffeur, date, km, commentaire, id, ...)
     const payload = req.body || {};
 
     const response = await axios.post(apiUrl, payload, {
@@ -44,10 +38,6 @@ router.post("/save", async (req, res) => {
   }
 });
 
-/**
- * POST /api/kilometrage/newid
- * Déclare un nouveau chauffeur (génère un nouvel ID) -> Apps Script action=newId
- */
 router.post("/newid", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -80,10 +70,6 @@ router.post("/newid", async (req, res) => {
   }
 });
 
-/**
- * POST /api/kilometrage/absent
- * Déclare un chauffeur absent -> Apps Script action=absent
- */
 router.post("/absent", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -137,10 +123,6 @@ router.post("/absent", async (req, res) => {
   }
 });
 
-/**
- * GET /api/kilometrage/params?agence=...
- * Récupère les tournées/transporteurs depuis Apps Script (doGet mode=params)
- */
 router.get("/params", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -165,10 +147,6 @@ router.get("/params", async (req, res) => {
   }
 });
 
-/**
- * GET /api/kilometrage/data?agence=...&year=...
- * Récupère les données depuis Apps Script (doGet mode=data)
- */
 router.get("/data", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -193,10 +171,6 @@ router.get("/data", async (req, res) => {
   }
 });
 
-/**
- * (Optionnel) GET /api/kilometrage/resume?agence=...&date=YYYY-MM-DD
- * Retourne les lignes de la journée (filtre côté serveur)
- */
 router.get("/resume", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
