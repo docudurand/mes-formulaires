@@ -10,6 +10,7 @@ import ftp from "basic-ftp";
 import { fileURLToPath } from "url";
 import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
 import { transporter, fromEmail } from "../mailer.js";
+import { sendMailWithLog } from "../mailLog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -557,15 +558,27 @@ router.post("/", upload.single("file"), async (req, res) => {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });
     }
-    await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
-      to: recipients.join(", "),
-      cc: cc.length ? cc.join(", ") : undefined,
-      subject,
-      html: htmlMagasin,
-      attachments: attachmentsMagasin,
-      replyTo: email,
-    });
+await sendMailWithLog(
+  transporter,
+  {
+    from: `"Demande de Ramasse" <${fromEmail}>`,
+    to: recipients.join(", "),
+    cc: cc.length ? cc.join(", ") : undefined,
+    subject,
+    html: htmlMagasin,
+    attachments: attachmentsMagasin,
+    replyTo: email,
+  },
+  "ramasse",
+  {
+    kind: "magasin",
+    fournisseur: four?.name || fournisseur,
+    magasinCharge: mg || "",
+    magasinDest: magasinDest || mg || "",
+    demandeur: email,
+    pieces: (pieces || "").slice(0, 180),
+  }
+);
 
     const attachmentsUser = [];
     if (req.file) {
@@ -579,10 +592,12 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
-    await transporter.sendMail({
-      from: `"Demande de Ramasse" <${fromEmail}>`,
-      to: String(email),
-      subject: "Votre demande de ramasse a bien été envoye",
+await sendMailWithLog(
+  transporter,
+  {
+    from: `"Demande de Ramasse" <${fromEmail}>`,
+    to: String(email),
+    subject: "Votre demande de ramasse a bien été envoye",
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111">
           <div style="text-align:center;margin:24px 0 32px;">
@@ -617,7 +632,16 @@ router.post("/", upload.single("file"), async (req, res) => {
         </div>
       `,
       attachments: attachmentsUser,
-    });
+    },
+  "ramasse",
+  {
+    kind: "demandeur",
+    fournisseur: four?.name || fournisseur,
+    magasinCharge: mg || "",
+    magasinDest: magasinDest || mg || "",
+    demandeur: email,
+  }
+);
 
     try {
   incrementRamasseMagasin(mg || "Inconnu");
@@ -749,8 +773,10 @@ router.post("/ack", async (req, res) => {
       return res.status(500).send("SMTP non configuré");
     }
 
-    await transporter.sendMail({
-      from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
+await sendMailWithLog(
+  transporter,
+  {
+    from: `"Accusé Demande de Ramasse" <${fromEmail}>`,
       to: String(email),
       subject: `Accusé de réception – Demande de ramasse (${String(fournisseur)})`,
       html: `
@@ -766,7 +792,16 @@ router.post("/ack", async (req, res) => {
           <p>Cordialement,<br/>L'équipe Ramasse</p>
         </div>
       `,
-    });
+     },
+  "ramasse",
+  {
+    kind: "ack",
+    fournisseur: String(fournisseur),
+    magasin: String(magasin || ""),
+    demandeur: String(email),
+    pieces: String(pieces || "").slice(0, 180),
+  }
+);
 
     res.status(200).send(`<!doctype html><meta charset="utf-8"/>
 <div style="font-family:system-ui;padding:24px">✅ Accusé de réception envoyé.</div>`);
