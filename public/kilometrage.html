@@ -57,7 +57,7 @@
 
     .create-tour-link{
       color:#ffffff;
-      font-weight:500; /* pas gras */
+      font-weight:500;
       font-size:1.35rem;
       text-decoration:none;
       line-height:1;
@@ -262,7 +262,6 @@
       color: #ffffff !important;
     }
 
-    /* ✅ ABSENCE */
     .absent-cell{
       background:#fee2e2 !important;
       color:#991b1b !important;
@@ -404,7 +403,6 @@
       <span id="newDriverMsg" class="status"></span>
     </div>
 
-    <!-- ✅ AJOUT : Absence -->
     <div class="replacement-bar" id="absenceBar">
       <span class="agency-label">Absence :</span>
       <select id="absenceTourneeSelect">
@@ -454,7 +452,6 @@
     const newDriverMsg = document.getElementById("newDriverMsg");
     const replacementBar = document.getElementById("replacementBar");
 
-    // ✅ Absence UI
     const absenceBar = document.getElementById("absenceBar");
     const absenceTourneeSelect = document.getElementById("absenceTourneeSelect");
     const absenceDate = document.getElementById("absenceDate");
@@ -555,13 +552,11 @@
           const lastFormatted = p.dernierRemplacement ? formatFRDateOnly(p.dernierRemplacement) : "";
           const lastInfo = lastFormatted ? " – Dernier rempla.: " + lastFormatted : "";
 
-          // select changement chauffeur
           const opt = document.createElement("option");
           opt.value = String(index);
           opt.textContent = labelTournee + " – " + labelChauffeur + idInfo + lastInfo;
           tourneeSelect.appendChild(opt);
 
-          // select absence
           const opt2 = document.createElement("option");
           opt2.value = String(index);
           opt2.textContent = labelTournee + " – " + labelChauffeur;
@@ -625,7 +620,6 @@
       }
     });
 
-    // ✅ Déclarer absent
     btnAbsent.addEventListener("click", async () => {
       absentMsg.textContent = "";
 
@@ -671,7 +665,7 @@
         }
 
         absentMsg.textContent = "Absence enregistrée.";
-        await loadData(); // refresh tableau + recap
+        await loadData();
       } catch (e) {
         console.error(e);
         absentMsg.textContent = "Erreur lors de l'enregistrement de l'absence.";
@@ -754,7 +748,6 @@
           const kmIsMissing = (row.km === "" || row.km === null || typeof row.km === "undefined");
           const km = kmIsMissing ? null : Number(row.km);
 
-          // ✅ garder l'entrée si ABSENT même sans km
           if (km === null && !isAbsent) return;
 
           if (!grouped[monthIndex]) grouped[monthIndex] = {};
@@ -771,7 +764,6 @@
             grouped[monthIndex][tourneeKey][day].km += km;
           }
 
-          // commentaires "normaux" (pas absent) -> orange
           if (commentaire && !isAbsent) {
             grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
           }
@@ -967,7 +959,6 @@
         table.appendChild(tbody);
         card.appendChild(table);
 
-        // ✅ Légende commentaires (orange)
         if (legendItemsComments.length > 0) {
           const legendDiv = document.createElement("div");
           legendDiv.className = "comments-legend";
@@ -989,7 +980,6 @@
           card.appendChild(legendDiv);
         }
 
-        // ✅ Légende absences (rouge)
         if (legendItemsAbsences.length > 0) {
           const legendDiv = document.createElement("div");
           legendDiv.className = "comments-legend";
