@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { transporter, fromEmail } from '../mailer.js';
+import { sendMailWithLog } from "../mailLog.js";
 
 dotenv.config();
 
