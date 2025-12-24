@@ -20,11 +20,8 @@ async function httpJson(url, options = {}) {
     const text = await res.text();
     let data;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
     if (!res.ok) {
-      throw new Error(
-        `[MAIL_LOG] HTTP ${res.status} ${res.statusText} :: ${text}`.slice(0, 500)
-      );
+      throw new Error(`[MAIL_LOG] HTTP ${res.status} ${res.statusText} :: ${text}`.slice(0, 500));
     }
     return data;
   } finally {
@@ -52,38 +49,26 @@ export async function getMailLogs({ limit = 200, q = "" } = {}) {
 }
 
 export async function sendMailWithLog(transporter, mailOptions, formType, meta = {}) {
-  const toField = Array.isArray(mailOptions?.to)
-    ? mailOptions.to.join(",")
-    : (mailOptions?.to || "");
+  const toField = Array.isArray(mailOptions?.to) ? mailOptions.to.join(",") : (mailOptions?.to || "");
+  const subject = String(mailOptions?.subject || "");
 
   const base = {
     ts: new Date().toISOString(),
-    to: toField,
+    to: String(toField || ""),
+    subject,
     formType: String(formType || "unknown"),
     meta,
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-
-    try {
-      await addMailLog({
-        ...base,
-        status: "sent",
-        messageId: info?.messageId || "",
-      });
-    } catch (e) {
-      console.warn("[MAIL_LOG] log SENT failed:", e?.message || e);
-    }
-
+    await addMailLog({ ...base, status: "sent", messageId: info?.messageId || "" });
     return info;
   } catch (err) {
     const msg = String(err?.message || err);
     try {
       await addMailLog({ ...base, status: "failed", error: msg });
-    } catch (e) {
-      console.warn("[MAIL_LOG] log FAILED failed:", e?.message || e);
-    }
+    } catch {}
     throw err;
   }
 }
