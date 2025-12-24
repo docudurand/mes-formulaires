@@ -90,6 +90,8 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 
+app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
+
 app.post("/api/site/login", (req, res) => {
   try {
     const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
@@ -535,7 +537,6 @@ app.get("/admin/compteurs", async (_req, res) => {
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
 });
-app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
 console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
 console.log("[BOOT] public/conges/index.html ?", fs.existsSync(path.join(__dirname, "public", "conges", "index.html")));
