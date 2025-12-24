@@ -1,393 +1,514 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Suivi des envois e-mail</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Suivi des envois mails</title>
   <style>
     :root{
-      --primary:#004080;
-      --accent:#00a7e1;
-      --bg:#f5f9fc;
+      --bg:#f3f6fb;
       --card:#ffffff;
-      --text:#073763;
-      --muted:#47607a;
-      --shadow:0 8px 26px rgba(0,0,0,0.08);
-      --radius:16px;
-      --border:#d3dbe6;
-      --thead:#eef5ff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --accent:#0f4c81;
+      --accent2:#2563eb;
       --ok:#16a34a;
-      --bad:#b00020;
+      --ko:#dc2626;
+      --shadow: 0 10px 24px rgba(2,6,23,.06);
+      --radius: 16px;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--text);
-      font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    header{
+
+    .wrap{
+      width:100%;
+      max-width:none;
+      margin:0;
+      padding:22px 26px 42px;
+    }
+
+    h1{
+      margin:0 0 14px 0;
+      font-size:22px;
+      font-weight:800;
+      letter-spacing:.2px;
+      color:var(--accent);
+    }
+    .sub{
+      margin:-6px 0 18px 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .card{
       background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
       box-shadow:var(--shadow);
-      padding:18px 22px;
-      position:sticky;
-      top:0;
-      z-index:10;
     }
-    .wrap{max-width:1200px;margin:0 auto}
-    h1{margin:0 0 8px;font-size:1.6rem;color:var(--primary)}
-    p.sub{margin:0;color:var(--muted)}
-    main.wrap{padding:18px 22px 40px}
 
     .toolbar{
-      display:flex;flex-wrap:wrap;gap:10px;
-      align-items:end;margin:18px 0;
-    }
-    .field{
-      display:flex;flex-direction:column;gap:6px;
-      min-width:180px;
-    }
-    .field label{font-size:.92rem;color:var(--muted)}
-    input, select, button{
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:#fff;
-      font-size:0.95rem;
-      outline:none;
-    }
-    input:focus, select:focus{border-color:var(--accent)}
-    button{
-      cursor:pointer;
-      border:0;
-      background:var(--primary);
-      color:#fff;
-      font-weight:700;
-      box-shadow:var(--shadow);
-    }
-    button.secondary{
-      background:#6b7280;
-      box-shadow:none;
+      padding:14px;
+      margin-bottom:14px;
     }
 
     .grid{
       display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:16px;
-      margin:14px 0 18px;
+      gap:12px;
     }
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .card{
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:18px;
-    }
-    .label{font-size:.95rem;color:var(--muted)}
-    .value{font-size:2.2rem;font-weight:800;margin-top:6px;color:var(--primary)}
-    .hint{color:var(--muted);font-size:.92rem;margin-top:8px}
 
+    .filters{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap:12px;
+      align-items:end;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      outline:none;
+      font-size:14px;
+      background:#fff;
+    }
+    input:focus, select:focus{
+      border-color: rgba(37,99,235,.6);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .row-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:800;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      min-width:140px;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{
+      background:#334155;
+      min-width:auto;
+    }
+
+    .remember{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      background:#fff;
+    }
+    .remember input{width:auto}
+    .remember span{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap:12px;
+      margin: 14px 0;
+    }
+    .stat{
+      grid-column: span 4;
+      padding:14px;
+    }
+    .stat .t{color:var(--muted); font-size:13px; font-weight:700}
+    .stat .v{font-size:34px; font-weight:900; color:var(--accent); margin-top:4px}
+    .stat .s{color:var(--muted); font-size:12px}
+
+    .tableWrap{
+      overflow:auto;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      background:#fff;
+    }
     table{
       width:100%;
       border-collapse:collapse;
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
+      min-width:900px;
     }
-    thead{background:var(--thead)}
-    th, td{
-      padding:12px 14px;
+    thead th{
       text-align:left;
-      border-bottom:1px solid #eef0f4;
+      font-size:13px;
+      padding:12px 12px;
+      background:#eef5ff;
+      color:#0b3a66;
+      border-bottom:1px solid var(--border);
+      position:sticky;
+      top:0;
+      z-index:1;
+      white-space:nowrap;
+    }
+    tbody td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      font-size:14px;
       vertical-align:top;
-      font-size:.95rem;
     }
-    th{font-weight:800;color:var(--primary)}
-    .ok{color:var(--ok);font-weight:800}
-    .bad{color:var(--bad);font-weight:800}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:.9rem}
-    .chip{
-      display:inline-block;
-      padding:4px 10px;
+    tbody tr:hover{background:#f8fbff}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
       border-radius:999px;
-      background:#eaf6ff;
-      color:var(--primary);
-      font-size:.85rem;
-      margin-left:8px;
-      font-weight:700;
+      font-weight:800;
+      font-size:12px;
+      border:1px solid var(--border);
+      white-space:nowrap;
     }
-    .rowline{
-      display:flex;gap:10px;flex-wrap:wrap;align-items:center;
-      margin-top:10px;
-    }
-    .checkbox{
-      display:flex;align-items:center;gap:8px;
-      color:var(--muted);font-size:.92rem;
+    .pill.ok{background:rgba(22,163,74,.08); color:var(--ok); border-color:rgba(22,163,74,.25)}
+    .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
+    .muted{color:var(--muted)}
+    .err{max-width:520px; white-space:normal; color:#991b1b}
+
+    .c12{grid-column: span 12}
+    .c6{grid-column: span 6}
+    .c5{grid-column: span 5}
+    .c4{grid-column: span 4}
+    .c3{grid-column: span 3}
+    .c2{grid-column: span 2}
+
+    @media (max-width: 1100px){
+      .stat{grid-column: span 12;}
+      .c6,.c5,.c4,.c3,.c2{grid-column: span 12;}
+      .btn{width:100%}
+      .remember{width:100%}
     }
   </style>
 </head>
 
 <body>
+  <main class="wrap">
+    <h1>Suivi des envois mails (SMTP)</h1>
+    <div class="sub">Filtres + statistiques sur la liste filtrée. Le token admin peut être mémorisé dans le navigateur.</div>
 
-<main class="wrap">
-  <div class="toolbar">
-    <div class="field" style="min-width:280px;">
-      <label for="token">Token admin</label>
-      <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)">
-      <div class="rowline">
-        <label class="checkbox">
-          <input id="remember" type="checkbox">
-          Mémoriser ce token sur ce navigateur
-        </label>
-        <button class="secondary" type="button" onclick="clearToken()">Effacer token</button>
+    <section class="card toolbar">
+      <div class="filters">
+        <div class="field c4">
+          <label>Token admin</label>
+          <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
+        </div>
+
+        <div class="field c3">
+          <label>&nbsp;</label>
+          <div class="remember">
+            <input id="remember" type="checkbox"/>
+            <span>Mémoriser ce token sur ce navigateur</span>
+          </div>
+        </div>
+
+        <div class="field c2">
+          <label>&nbsp;</label>
+          <button class="btn secondary" type="button" onclick="clearSavedToken()">Effacer token</button>
+        </div>
+
+        <div class="field c1">
+          <label>Limite</label>
+          <input id="limit" type="number" min="1" max="1000" value="200"/>
+        </div>
+
+        <div class="field c2">
+          <label>Formulaire</label>
+          <select id="formType">
+            <option value="">Tous</option>
+          </select>
+        </div>
+
+        <div class="field c2">
+          <label>Statut</label>
+          <select id="status">
+            <option value="">Tous</option>
+            <option value="sent">OK (sent)</option>
+            <option value="failed">Échecs (failed)</option>
+          </select>
+        </div>
+
+        <div class="field c3">
+          <label>Destinataire contient</label>
+          <input id="to" placeholder="ex: @durand.fr"/>
+        </div>
+
+        <div class="field c3">
+          <label>Objet contient</label>
+          <input id="subject" placeholder="ex: Demande de ramasse"/>
+        </div>
+
+        <div class="field c2">
+          <label>Date du</label>
+          <input id="dateFrom" type="date"/>
+        </div>
+
+        <div class="field c2">
+          <label>Date au</label>
+          <input id="dateTo" type="date"/>
+        </div>
+
+        <div class="field c4">
+          <label>Recherche globale</label>
+          <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
+        </div>
       </div>
-    </div>
 
-    <div class="field" style="min-width:140px;">
-      <label for="limit">Limite</label>
-      <input id="limit" type="number" value="200" min="1" max="1000">
-    </div>
+      <div class="row-actions">
+        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="formType">Formulaire</label>
-      <select id="formType">
-        <option value="">Tous</option>
-        <option value="ramasse">Ramasse</option>
-        <option value="creation-reference-vl">Création réf. VL</option>
-        <option value="creation-reference-pl">Création réf. PL</option>
-        <option value="creation-pneu-vl">Création pneu VL</option>
-      </select>
-    </div>
+    <section class="stats">
+      <div class="card stat">
+        <div class="t">Envois affichés</div>
+        <div class="v" id="kTotal">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+      <div class="card stat">
+        <div class="t">OK (sent)</div>
+        <div class="v" id="kOk">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+      <div class="card stat">
+        <div class="t">Échecs (failed)</div>
+        <div class="v" id="kKo">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="status">Statut</label>
-      <select id="status">
-        <option value="">Tous</option>
-        <option value="sent">sent</option>
-        <option value="failed">failed</option>
-      </select>
-    </div>
-
-    <div class="field" style="min-width:220px;">
-      <label for="to">Destinataire contient</label>
-      <input id="to" placeholder="ex: @durand.fr">
-    </div>
-
-    <div class="field" style="min-width:220px;">
-      <label for="subject">Objet contient</label>
-      <input id="subject" placeholder="ex: Demande de ramasse">
-    </div>
-
-    <div class="field" style="min-width:170px;">
-      <label for="dateFrom">Date du</label>
-      <input id="dateFrom" type="date">
-    </div>
-
-    <div class="field" style="min-width:170px;">
-      <label for="dateTo">Date au</label>
-      <input id="dateTo" type="date">
-    </div>
-
-    <div class="field" style="min-width:260px;">
-      <label for="q">Recherche globale</label>
-      <input id="q" placeholder="email, objet, formulaire, statut, meta…">
-    </div>
-
-    <div class="field" style="min-width:160px;">
-      <label>&nbsp;</label>
-      <button type="button" onclick="loadLogs()">Rafraîchir</button>
-    </div>
-  </div>
-
-  <section class="grid">
-    <div class="card">
-      <div class="label">Envois affichés</div>
-      <div class="value" id="k_count">0</div>
-      <div class="hint" id="k_info">—</div>
-    </div>
-    <div class="card">
-      <div class="label">OK (sent)</div>
-      <div class="value" id="k_sent">0</div>
-      <div class="hint">sur la liste filtrée</div>
-    </div>
-    <div class="card">
-      <div class="label">Échecs (failed)</div>
-      <div class="value" id="k_failed">0</div>
-      <div class="hint">sur la liste filtrée</div>
-    </div>
-  </section>
-
-  <div style="overflow-x:auto;">
-    <table>
-      <thead>
-        <tr>
-          <th style="min-width:160px;">Date</th>
-          <th style="min-width:260px;">Destinataire</th>
-          <th style="min-width:260px;">Objet</th>
-          <th style="min-width:190px;">Formulaire</th>
-          <th style="min-width:110px;">Statut</th>
-          <th>Erreur</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
-
-</main>
+    <section class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Destinataire</th>
+            <th>Objet</th>
+            <th>Formulaire</th>
+            <th>Statut</th>
+            <th>Erreur</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <!-- rows -->
+        </tbody>
+      </table>
+    </section>
+  </main>
 
 <script>
-const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN_v1";
+  const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
+  const REMEMBER_KEY = "MAILLOG_REMEMBER";
 
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[c]));
-}
+  const $ = (id) => document.getElementById(id);
 
-function parseISO(ts){
-  const d = new Date(ts);
-  return isNaN(d) ? null : d;
-}
-
-function fmtFR(ts){
-  const d = parseISO(ts);
-  return d ? d.toLocaleString("fr-FR") : (ts || "");
-}
-
-function readToken(){
-  const saved = localStorage.getItem(TOKEN_KEY) || "";
-  if (saved) {
-    document.getElementById("token").value = saved;
-    document.getElementById("remember").checked = true;
+  function saveTokenIfNeeded(){
+    const remember = $("remember").checked;
+    localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+    if (remember) {
+      localStorage.setItem(TOKEN_KEY, $("token").value || "");
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
   }
-}
 
-function persistToken(){
-  const remember = document.getElementById("remember").checked;
-  const token = document.getElementById("token").value.trim();
-  if (remember && token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
-function clearToken(){
-  localStorage.removeItem(TOKEN_KEY);
-  document.getElementById("token").value = "";
-  document.getElementById("remember").checked = false;
-}
-
-function buildServerQuery() {
-
-  const limit = encodeURIComponent(document.getElementById("limit").value.trim() || "200");
-  const q = encodeURIComponent(document.getElementById("q").value.trim());
-  return `/api/mail-logs?limit=${limit}&q=${q}`;
-}
-
-function applyClientFilters(rows){
-  const fForm = document.getElementById("formType").value.trim();
-  const fStatus = document.getElementById("status").value.trim();
-  const fTo = document.getElementById("to").value.trim().toLowerCase();
-  const fSub = document.getElementById("subject").value.trim().toLowerCase();
-
-  const df = document.getElementById("dateFrom").value;
-  const dt = document.getElementById("dateTo").value;
-
-  const dateFrom = df ? new Date(df + "T00:00:00") : null;
-  const dateTo   = dt ? new Date(dt + "T23:59:59") : null;
-
-  return rows.filter(x => {
-    if (fForm && String(x.formType || "") !== fForm) return false;
-    if (fStatus && String(x.status || "") !== fStatus) return false;
-
-    if (fTo) {
-      const to = String(x.to || "").toLowerCase();
-      if (!to.includes(fTo)) return false;
+  function restoreToken(){
+    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
+    $("remember").checked = remember;
+    if (remember) {
+      $("token").value = localStorage.getItem(TOKEN_KEY) || "";
     }
+  }
 
-    if (fSub) {
-      const sub = String(x.subject || "").toLowerCase();
-      if (!sub.includes(fSub)) return false;
+  function clearSavedToken(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(REMEMBER_KEY, "0");
+    $("remember").checked = false;
+    $("token").value = "";
+  }
+  window.clearSavedToken = clearSavedToken;
+
+  function fmtFR(iso){
+    if(!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("fr-FR", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" }).replace(",", "");
+  }
+
+  function inDateRange(ts, from, to){
+    if(!from && !to) return true;
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return true;
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if(from){
+      const f = new Date(from + "T00:00:00").getTime();
+      if(day < f) return false;
     }
-
-    if (dateFrom || dateTo) {
-      const d = parseISO(x.ts);
-      if (!d) return false;
-      if (dateFrom && d < dateFrom) return false;
-      if (dateTo && d > dateTo) return false;
+    if(to){
+      const t = new Date(to + "T00:00:00").getTime();
+      if(day > t) return false;
     }
-
     return true;
-  });
-}
-
-function render(rows){
-  const tbody = document.getElementById("tbody");
-  tbody.innerHTML = "";
-
-  let sent = 0, failed = 0;
-
-  for (const x of rows){
-    if (x.status === "sent") sent++;
-    if (x.status === "failed") failed++;
-
-    const tr = document.createElement("tr");
-    const cls = x.status === "sent" ? "ok" : (x.status === "failed" ? "bad" : "");
-    tr.innerHTML = `
-      <td>${escapeHtml(fmtFR(x.ts))}</td>
-      <td>${escapeHtml(x.to || "")}</td>
-      <td>${escapeHtml(x.subject || "")}</td>
-      <td>${escapeHtml(x.formType || "")}</td>
-      <td class="${cls}">${escapeHtml(x.status || "")}</td>
-      <td>${escapeHtml(x.error || "")}</td>
-    `;
-    tbody.appendChild(tr);
   }
 
-  document.getElementById("k_count").textContent = String(rows.length);
-  document.getElementById("k_sent").textContent = String(sent);
-  document.getElementById("k_failed").textContent = String(failed);
-  document.getElementById("k_info").textContent = rows.length ? "OK" : "Aucun résultat (avec les filtres actuels)";
-}
+  function norm(s){ return String(s||"").toLowerCase(); }
 
-async function loadLogs(){
-  persistToken();
-
-  const token = document.getElementById("token").value.trim();
-  const url = buildServerQuery();
-
-  document.getElementById("k_info").textContent = "Chargement…";
-  document.getElementById("tbody").innerHTML = "";
-
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: { "x-admin-token": token }
-  });
-
-  if(!res.ok){
-    const t = await res.text().catch(()=> "");
-    document.getElementById("k_info").textContent = "Erreur API / accès refusé : " + t;
-    render([]);
-    return;
+  function parseMeta(meta){
+    if(!meta) return null;
+    if(typeof meta === "object") return meta;
+    try { return JSON.parse(meta); } catch { return { raw: String(meta) }; }
   }
 
-  const data = await res.json();
-  const rows = Array.isArray(data) ? data : (data.logs || []);
-  const filtered = applyClientFilters(rows);
-  render(filtered);
-}
+  async function apiListLogs(){
+    const token = $("token").value || "";
+    const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
+    const url = new URL(location.origin + "/api/mail-logs");
+    url.searchParams.set("limit", String(limit));
+    const res = await fetch(url.toString(), {
+      headers: token ? { "X-Admin-Token": token } : {}
+    });
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok || !j.ok) throw new Error(j.error || ("HTTP " + res.status));
+    return j.logs || [];
+  }
 
-readToken();
+  function rebuildFormTypeOptions(logs){
+    const sel = $("formType");
+    const cur = sel.value;
+    const set = new Set();
+    logs.forEach(x => set.add(String(x.formType||"").trim()).delete(""));
+    const all = Array.from(set).filter(Boolean).sort();
+    sel.innerHTML = `<option value="">Tous</option>` + all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    if (all.includes(cur)) sel.value = cur;
+  }
 
-["formType","status","to","subject","dateFrom","dateTo"].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener("change", () => loadLogs());
-});
-document.getElementById("q").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") loadLogs();
-});
-document.getElementById("remember").addEventListener("change", persistToken);
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function applyFilters(logs){
+    const fTo = norm($("to").value);
+    const fSub = norm($("subject").value);
+    const fForm = $("formType").value;
+    const fStatus = $("status").value;
+    const fFrom = $("dateFrom").value;
+    const fToD = $("dateTo").value;
+    const fQ = norm($("q").value);
+
+    return logs.filter(x=>{
+      const to = String(x.to||"");
+      const subject = String(x.subject||"");
+      const formType = String(x.formType||"");
+      const status = String(x.status||"");
+      const error = String(x.error||"");
+      const meta = String(x.meta||"");
+
+      if (fForm && formType !== fForm) return false;
+      if (fStatus && status !== fStatus) return false;
+
+      if (fTo && !norm(to).includes(fTo)) return false;
+      if (fSub && !norm(subject).includes(fSub)) return false;
+
+      if (!inDateRange(x.ts, fFrom, fToD)) return false;
+
+      if (fQ){
+        const hay = norm([x.ts, to, subject, formType, status, error, meta].join(" "));
+        if (!hay.includes(fQ)) return false;
+      }
+      return true;
+    });
+  }
+
+  function render(logs){
+    const tb = $("tbody");
+    tb.innerHTML = logs.map(x=>{
+      const status = String(x.status||"");
+      const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
+      const pillTxt = status || "—";
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(fmtFR(x.ts))}</td>
+          <td>${escapeHtml(x.to || "—")}</td>
+          <td>${escapeHtml(x.subject || "—")}</td>
+          <td>${escapeHtml(x.formType || "—")}</td>
+          <td><span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span></td>
+          <td class="err">${escapeHtml(x.error || "")}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const total = logs.length;
+    const ok = logs.filter(x=>x.status==="sent").length;
+    const ko = logs.filter(x=>x.status==="failed").length;
+    $("kTotal").textContent = String(total);
+    $("kOk").textContent = String(ok);
+    $("kKo").textContent = String(ko);
+  }
+
+  async function loadLogs(){
+    try{
+      saveTokenIfNeeded();
+      const logs = await apiListLogs();
+
+      rebuildFormTypeOptions(logs);
+
+      const filtered = applyFilters(logs);
+      render(filtered);
+    }catch(e){
+      console.error(e);
+      $("tbody").innerHTML = `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
+      $("kTotal").textContent = "0";
+      $("kOk").textContent = "0";
+      $("kKo").textContent = "0";
+    }
+  }
+  window.loadLogs = loadLogs;
+
+  ["to","subject","q"].forEach(id=>{
+    $(id).addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); } });
+  });
+
+  ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
+    $(id).addEventListener("change", ()=>loadLogs());
+  });
+
+  $("token").addEventListener("input", ()=>{
+    if ($("remember").checked) saveTokenIfNeeded();
+  });
+
+  restoreToken();
+  loadLogs();
 </script>
-
 </body>
 </html>
