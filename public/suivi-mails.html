@@ -30,7 +30,7 @@
       width:100%;
       max-width:none;
       margin:0;
-      padding:22px 26px 42px;
+      padding:22px 22px 42px;
     }
 
     h1{
@@ -58,11 +58,6 @@
       margin-bottom:14px;
     }
 
-    .grid{
-      display:grid;
-      gap:12px;
-    }
-
     .filters{
       display:grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -81,6 +76,7 @@
       color:var(--muted);
       font-weight:700;
     }
+
     input, select{
       width:100%;
       padding:10px 12px;
@@ -100,7 +96,21 @@
       gap:10px;
       align-items:center;
       flex-wrap:wrap;
-      margin-top:10px;
+      margin-top:12px;
+      justify-content:space-between;
+    }
+    .row-actions .left{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .row-actions .right{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
     }
 
     .btn{
@@ -112,7 +122,7 @@
       cursor:pointer;
       background:var(--accent);
       color:#fff;
-      min-width:140px;
+      min-width:160px;
     }
     .btn:active{transform:translateY(1px)}
     .btn.secondary{
@@ -128,9 +138,17 @@
       border:1px dashed var(--border);
       border-radius:12px;
       background:#fff;
+      height:42px;
     }
     .remember input{width:auto}
     .remember span{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .hint{
       color:var(--muted);
       font-size:13px;
       font-weight:700;
@@ -159,7 +177,7 @@
     table{
       width:100%;
       border-collapse:collapse;
-      min-width:900px;
+      min-width:1100px;
     }
     thead th{
       text-align:left;
@@ -195,7 +213,7 @@
     .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
     .muted{color:var(--muted)}
-    .err{max-width:520px; white-space:normal; color:#991b1b}
+    .err{max-width:620px; white-space:normal; color:#991b1b}
 
     .c12{grid-column: span 12}
     .c6{grid-column: span 6}
@@ -203,12 +221,16 @@
     .c4{grid-column: span 4}
     .c3{grid-column: span 3}
     .c2{grid-column: span 2}
+    .c1{grid-column: span 1}
 
-    @media (max-width: 1100px){
+    @media (max-width: 1200px){
       .stat{grid-column: span 12;}
-      .c6,.c5,.c4,.c3,.c2{grid-column: span 12;}
+      .c6,.c5,.c4,.c3,.c2,.c1{grid-column: span 12;}
       .btn{width:100%}
       .remember{width:100%}
+      .row-actions{justify-content:stretch}
+      .row-actions .left, .row-actions .right{width:100%}
+      .row-actions .right{justify-content:flex-start}
     }
   </style>
 </head>
@@ -216,10 +238,14 @@
 <body>
   <main class="wrap">
     <h1>Suivi des envois mails (SMTP)</h1>
-    <div class="sub">Filtres + statistiques sur la liste filtrée. Le token admin peut être mémorisé dans le navigateur.</div>
+    <div class="sub">
+      Filtres + statistiques sur la liste filtrée. Le token admin peut être mémorisé dans le navigateur.
+      (Actualisation auto toutes les 30s, désactivable)
+    </div>
 
     <section class="card toolbar">
       <div class="filters">
+
         <div class="field c4">
           <label>Token admin</label>
           <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
@@ -286,7 +312,13 @@
       </div>
 
       <div class="row-actions">
-        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+        <div class="left">
+          <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+          <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">⏸ Pause auto</button>
+        </div>
+        <div class="right">
+          <span class="hint" id="autoInfo"></span>
+        </div>
       </div>
     </section>
 
@@ -320,9 +352,7 @@
             <th>Erreur</th>
           </tr>
         </thead>
-        <tbody id="tbody">
-          <!-- rows -->
-        </tbody>
+        <tbody id="tbody"></tbody>
       </table>
     </section>
   </main>
@@ -330,25 +360,23 @@
 <script>
   const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
   const REMEMBER_KEY = "MAILLOG_REMEMBER";
-
   const $ = (id) => document.getElementById(id);
+
+  let autoTimer = null;
+  let autoEnabled = true;
+  let isLoading = false;
 
   function saveTokenIfNeeded(){
     const remember = $("remember").checked;
     localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
-    if (remember) {
-      localStorage.setItem(TOKEN_KEY, $("token").value || "");
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-    }
+    if (remember) localStorage.setItem(TOKEN_KEY, $("token").value || "");
+    else localStorage.removeItem(TOKEN_KEY);
   }
 
   function restoreToken(){
     const remember = localStorage.getItem(REMEMBER_KEY) === "1";
     $("remember").checked = remember;
-    if (remember) {
-      $("token").value = localStorage.getItem(TOKEN_KEY) || "";
-    }
+    if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";
   }
 
   function clearSavedToken(){
@@ -359,18 +387,30 @@
   }
   window.clearSavedToken = clearSavedToken;
 
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
   function fmtFR(iso){
     if(!iso) return "";
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleString("fr-FR", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" }).replace(",", "");
+    return d.toLocaleString("fr-FR", {
+      timeZone: "Europe/Paris",
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit"
+    }).replace(",", "");
   }
 
   function inDateRange(ts, from, to){
     if(!from && !to) return true;
     const d = new Date(ts);
     if (Number.isNaN(d.getTime())) return true;
+
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
     if(from){
       const f = new Date(from + "T00:00:00").getTime();
       if(day < f) return false;
@@ -384,20 +424,16 @@
 
   function norm(s){ return String(s||"").toLowerCase(); }
 
-  function parseMeta(meta){
-    if(!meta) return null;
-    if(typeof meta === "object") return meta;
-    try { return JSON.parse(meta); } catch { return { raw: String(meta) }; }
-  }
-
   async function apiListLogs(){
     const token = $("token").value || "";
     const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
     const url = new URL(location.origin + "/api/mail-logs");
     url.searchParams.set("limit", String(limit));
+
     const res = await fetch(url.toString(), {
       headers: token ? { "X-Admin-Token": token } : {}
     });
+
     const j = await res.json().catch(()=>({}));
     if(!res.ok || !j.ok) throw new Error(j.error || ("HTTP " + res.status));
     return j.logs || [];
@@ -407,14 +443,16 @@
     const sel = $("formType");
     const cur = sel.value;
     const set = new Set();
-    logs.forEach(x => set.add(String(x.formType||"").trim()).delete(""));
-    const all = Array.from(set).filter(Boolean).sort();
-    sel.innerHTML = `<option value="">Tous</option>` + all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
-    if (all.includes(cur)) sel.value = cur;
-  }
+    logs.forEach(x=>{
+      const v = String(x.formType||"").trim();
+      if (v) set.add(v);
+    });
+    const all = Array.from(set).sort();
+    sel.innerHTML =
+      `<option value="">Tous</option>` +
+      all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
 
-  function escapeHtml(s){
-    return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    if (cur && all.includes(cur)) sel.value = cur;
   }
 
   function applyFilters(logs){
@@ -477,26 +515,71 @@
   }
 
   async function loadLogs(){
+    if (isLoading) return;
+    isLoading = true;
+
     try{
       saveTokenIfNeeded();
-      const logs = await apiListLogs();
 
+      const logs = await apiListLogs();
       rebuildFormTypeOptions(logs);
 
       const filtered = applyFilters(logs);
       render(filtered);
     }catch(e){
       console.error(e);
-      $("tbody").innerHTML = `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
+      $("tbody").innerHTML =
+        `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
       $("kTotal").textContent = "0";
       $("kOk").textContent = "0";
       $("kKo").textContent = "0";
+    }finally{
+      isLoading = false;
     }
   }
   window.loadLogs = loadLogs;
 
+  function startAutoRefresh(){
+    stopAutoRefresh();
+    autoTimer = setInterval(() => {
+      if (!autoEnabled) return;
+      if (isLoading) return;
+      loadLogs();
+    }, 30_000);
+    updateAutoUI();
+  }
+
+  function stopAutoRefresh(){
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = null;
+    updateAutoUI();
+  }
+
+  function toggleAutoRefresh(){
+    autoEnabled = !autoEnabled;
+    if (autoEnabled) startAutoRefresh();
+    else stopAutoRefresh();
+  }
+  window.toggleAutoRefresh = toggleAutoRefresh;
+
+  function updateAutoUI(){
+    const btn = $("btnAuto");
+    const info = $("autoInfo");
+    if (!btn || !info) return;
+
+    if (autoEnabled){
+      btn.textContent = "⏸ Pause auto";
+      info.textContent = "Actualisation automatique : toutes les 30 secondes";
+    } else {
+      btn.textContent = "▶ Reprendre auto";
+      info.textContent = "Actualisation automatique : en pause";
+    }
+  }
+
   ["to","subject","q"].forEach(id=>{
-    $(id).addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); } });
+    $(id).addEventListener("keydown", (ev)=>{
+      if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); }
+    });
   });
 
   ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
@@ -509,6 +592,7 @@
 
   restoreToken();
   loadLogs();
+  startAutoRefresh();
 </script>
 </body>
 </html>
