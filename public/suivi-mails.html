@@ -1,664 +1,99 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Suivi des envois mails</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Suivi des envois e-mail</title>
   <style>
-    :root{
-      --bg:#f3f6fb;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --border:#e5e7eb;
-      --accent:#0f4c81;
-      --accent2:#2563eb;
-      --ok:#16a34a;
-      --ko:#dc2626;
-      --shadow: 0 10px 24px rgba(2,6,23,.06);
-      --radius: 16px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      background:var(--bg);
-      color:var(--text);
-    }
-
-    .wrap{
-      width:100%;
-      max-width:none;
-      margin:0;
-      padding:18px 22px 42px;
-    }
-
-    h1{
-      margin:0 0 10px 0;
-      font-size:22px;
-      font-weight:900;
-      letter-spacing:.2px;
-      color:var(--accent);
-    }
-    .sub{
-      margin:0 0 16px 0;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.35;
-    }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-    }
-
-    .toolbar{
-      padding:14px;
-      margin-bottom:14px;
-    }
-
-    .filters{
-      display:grid;
-      grid-template-columns: repeat(24, minmax(0, 1fr));
-      gap:12px;
-      align-items:end;
-    }
-
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      min-width:0;
-    }
-    .field label{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-      letter-spacing:.2px;
-    }
-
-    input, select{
-      width:100%;
-      padding:10px 12px;
-      border:1px solid var(--border);
-      border-radius:12px;
-      outline:none;
-      font-size:14px;
-      background:#fff;
-    }
-    input:focus, select:focus{
-      border-color: rgba(37,99,235,.6);
-      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-    }
-
-    .row-actions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-
-    .btn{
-      appearance:none;
-      border:0;
-      border-radius:12px;
-      padding:10px 14px;
-      font-weight:900;
-      cursor:pointer;
-      background:var(--accent);
-      color:#fff;
-      min-width:160px;
-    }
-    .btn:active{transform:translateY(1px)}
-    .btn.secondary{
-      background:#334155;
-      min-width:auto;
-    }
-
-    .remember{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:8px 10px;
-      border:1px dashed var(--border);
-      border-radius:12px;
-      background:#fff;
-      height:42px;
-    }
-    .remember input{width:auto}
-    .remember span{
-      color:var(--muted);
-      font-size:13px;
-      font-weight:800;
-    }
-
-    .hint{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-      margin-top:6px;
-    }
-
-    .stats{
-      display:grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap:12px;
-      margin: 14px 0;
-    }
-    .stat{
-      grid-column: span 4;
-      padding:14px;
-    }
-    .stat .t{color:var(--muted); font-size:13px; font-weight:800}
-    .stat .v{font-size:34px; font-weight:950; color:var(--accent); margin-top:4px}
-    .stat .s{color:var(--muted); font-size:12px}
-
-    .tableWrap{
-      overflow:auto;
-      border-radius:var(--radius);
-      border:1px solid var(--border);
-      background:#fff;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      min-width:1050px;
-    }
-    thead th{
-      text-align:left;
-      font-size:13px;
-      padding:12px 12px;
-      background:#eef5ff;
-      color:#0b3a66;
-      border-bottom:1px solid var(--border);
-      position:sticky;
-      top:0;
-      z-index:1;
-      white-space:nowrap;
-    }
-    tbody td{
-      padding:10px 12px;
-      border-bottom:1px solid var(--border);
-      font-size:14px;
-      vertical-align:top;
-    }
-    tbody tr:hover{background:#f8fbff}
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      font-weight:900;
-      font-size:12px;
-      border:1px solid var(--border);
-      white-space:nowrap;
-    }
-    .pill.ok{background:rgba(22,163,74,.08); color:var(--ok); border-color:rgba(22,163,74,.25)}
-    .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
-    .muted{color:var(--muted)}
-    .err{white-space:normal; color:#991b1b}
-    .pre{
-      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-      font-size:12px;
-      background:#fff5f5;
-      border:1px solid #fecaca;
-      padding:10px;
-      border-radius:12px;
-      overflow:auto;
-      max-height:180px;
-    }
-
-    /* colonnes (24) */
-    .c24{grid-column: span 24}
-    .c12{grid-column: span 12}
-    .c10{grid-column: span 10}
-    .c9{grid-column: span 9}
-    .c8{grid-column: span 8}
-    .c7{grid-column: span 7}
-    .c6{grid-column: span 6}
-    .c5{grid-column: span 5}
-    .c4{grid-column: span 4}
-    .c3{grid-column: span 3}
-    .c2{grid-column: span 2}
-
-    @media (max-width: 1200px){
-      .stat{grid-column: span 12;}
-      .c12,.c10,.c9,.c8,.c7,.c6,.c5,.c4,.c3,.c2{grid-column: span 24;}
-      .btn{width:100%}
-      .remember{width:100%}
-    }
+    body{font-family:Arial, sans-serif; margin:20px;}
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+    input,button{padding:10px; font-size:14px;}
+    table{width:100%; border-collapse:collapse;}
+    th,td{border:1px solid #ddd; padding:8px; font-size:13px; vertical-align:top;}
+    th{background:#f5f5f5; text-align:left;}
+    .ok{color:green; font-weight:bold;}
+    .bad{color:#b00020; font-weight:bold;}
+    .muted{color:#666;}
+    code{background:#f6f6f6; padding:2px 4px; border-radius:4px;}
   </style>
 </head>
-
 <body>
-  <main class="wrap">
-    <h1>Suivi des envois mails (SMTP)</h1>
-    <div class="sub">
-      ⚠️ Si cette page est sur Wix (ou ouverte en local), renseigne <b>Serveur API (Render)</b> sinon <code>/api/mail-logs</code> ne pointe pas au bon endroit.
-    </div>
+  <h2>Suivi des envois e-mail (SMTP OVH)</h2>
 
-    <section class="card toolbar">
-      <div class="filters">
+  <div class="row">
+    <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)" style="min-width:260px;">
+    <input id="q" placeholder="Recherche (email, objet, formulaire, statut...)" style="min-width:320px;">
+    <input id="limit" type="number" value="200" min="1" max="1000" style="width:120px;">
+    <button onclick="loadLogs()">Rafraîchir</button>
+  </div>
 
-        <!-- Bloc API + Token (bien aligné) -->
-        <div class="field c9">
-          <label>Serveur API (Render)</label>
-          <input id="apiBase" placeholder="ex: https://ton-app.onrender.com"/>
-          <div class="hint">Laisse vide si la page est hébergée sur le même serveur que l’API.</div>
-        </div>
+  <div class="muted" id="info">
+    Astuce : ajoute le token dans <code>ADMIN_TOKEN</code> sur Render puis colle-le ici.
+  </div>
 
-        <div class="field c6">
-          <label>Token admin</label>
-          <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
-        </div>
-
-        <div class="field c5">
-          <label>&nbsp;</label>
-          <div class="remember">
-            <input id="remember" type="checkbox"/>
-            <span>Mémoriser token + API</span>
-          </div>
-        </div>
-
-        <div class="field c4">
-          <label>&nbsp;</label>
-          <button class="btn secondary" type="button" onclick="clearSaved()">Effacer</button>
-        </div>
-
-        <!-- Filtres -->
-        <div class="field c3">
-          <label>Limite</label>
-          <input id="limit" type="number" min="1" max="1000" value="200"/>
-        </div>
-
-        <div class="field c4">
-          <label>Formulaire</label>
-          <select id="formType">
-            <option value="">Tous</option>
-          </select>
-        </div>
-
-        <div class="field c4">
-          <label>Statut</label>
-          <select id="status">
-            <option value="">Tous</option>
-            <option value="sent">OK (sent)</option>
-            <option value="failed">Échecs (failed)</option>
-          </select>
-        </div>
-
-        <div class="field c6">
-          <label>Destinataire contient</label>
-          <input id="to" placeholder="ex: @durand.fr"/>
-        </div>
-
-        <div class="field c6">
-          <label>Objet contient</label>
-          <input id="subject" placeholder="ex: Demande de ramasse"/>
-        </div>
-
-        <div class="field c4">
-          <label>Date du</label>
-          <input id="dateFrom" type="date"/>
-        </div>
-
-        <div class="field c4">
-          <label>Date au</label>
-          <input id="dateTo" type="date"/>
-        </div>
-
-        <div class="field c8">
-          <label>Recherche globale</label>
-          <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
-        </div>
-      </div>
-
-      <div class="row-actions">
-        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
-        <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">⏸ Pause auto</button>
-        <span class="muted" id="autoInfo" style="font-size:13px;font-weight:800;"></span>
-        <span class="muted" id="lastInfo" style="font-size:13px;font-weight:800;"></span>
-      </div>
-    </section>
-
-    <section class="stats">
-      <div class="card stat">
-        <div class="t">Envois affichés</div>
-        <div class="v" id="kTotal">0</div>
-        <div class="s muted">sur la liste filtrée</div>
-      </div>
-      <div class="card stat">
-        <div class="t">OK (sent)</div>
-        <div class="v" id="kOk">0</div>
-        <div class="s muted">sur la liste filtrée</div>
-      </div>
-      <div class="card stat">
-        <div class="t">Échecs (failed)</div>
-        <div class="v" id="kKo">0</div>
-        <div class="s muted">sur la liste filtrée</div>
-      </div>
-    </section>
-
-    <section class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Destinataire</th>
-            <th>Objet</th>
-            <th>Formulaire</th>
-            <th>Statut</th>
-            <th>Erreur</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </section>
-  </main>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Destinataire</th>
+        <th>Objet</th>
+        <th>Formulaire</th>
+        <th>Statut</th>
+        <th>Erreur</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
 
 <script>
-  const TOKEN_KEY    = "MAILLOG_ADMIN_TOKEN";
-  const API_KEY      = "MAILLOG_API_BASE";
-  const REMEMBER_KEY = "MAILLOG_REMEMBER";
+async function loadLogs(){
+  const token = document.getElementById("token").value.trim();
+  const q = encodeURIComponent(document.getElementById("q").value.trim());
+  const limit = encodeURIComponent(document.getElementById("limit").value.trim() || "200");
 
-  const $ = (id) => document.getElementById(id);
+  const info = document.getElementById("info");
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  info.textContent = "Chargement...";
 
-  function escapeHtml(s){
-    return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-  }
-
-  function saveIfNeeded(){
-    const remember = $("remember").checked;
-    localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
-
-    if (remember) {
-      localStorage.setItem(TOKEN_KEY, $("token").value || "");
-      localStorage.setItem(API_KEY, $("apiBase").value || "");
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(API_KEY);
-    }
-  }
-
-  function restoreSaved(){
-    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
-    $("remember").checked = remember;
-    if (remember) {
-      $("token").value   = localStorage.getItem(TOKEN_KEY) || "";
-      $("apiBase").value = localStorage.getItem(API_KEY) || "";
-    }
-  }
-
-  function clearSaved(){
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(API_KEY);
-    localStorage.setItem(REMEMBER_KEY, "0");
-    $("remember").checked = false;
-    $("token").value = "";
-    $("apiBase").value = "";
-  }
-  window.clearSaved = clearSaved;
-
-  function fmtFR(iso){
-    if(!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleString("fr-FR", {
-      timeZone: "Europe/Paris",
-      year:"numeric", month:"2-digit", day:"2-digit",
-      hour:"2-digit", minute:"2-digit"
-    }).replace(",", "");
-  }
-
-  function inDateRange(ts, from, to){
-    if(!from && !to) return true;
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return true;
-
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-    if(from){
-      const f = new Date(from + "T00:00:00").getTime();
-      if(day < f) return false;
-    }
-    if(to){
-      const t = new Date(to + "T00:00:00").getTime();
-      if(day > t) return false;
-    }
-    return true;
-  }
-
-  function norm(s){ return String(s||"").toLowerCase(); }
-
-  function getApiBase(){
-    const raw = ($("apiBase").value || "").trim();
-    if (!raw) return location.origin;
-    return raw.replace(/\/+$/, "");
-  }
-
-  async function apiListLogs(){
-    const token = ($("token").value || "").trim();
-    const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
-
-    const base = getApiBase();
-    const url = new URL(base + "/api/mail-logs");
-    url.searchParams.set("limit", String(limit));
-
-    const res = await fetch(url.toString(), {
-      headers: token ? { "X-Admin-Token": token } : {}
-    });
-
-    const text = await res.text();
-    let j = null;
-    try { j = JSON.parse(text); } catch { j = null; }
-
-    // Si le serveur renvoie du HTML (Wix, 404, etc.), on te le montre clairement
-    const looksHtml = /<(!doctype|html|head|body)\b/i.test(text);
-
-    if (!res.ok) {
-      const errMsg = (j && (j.error || j.message)) ? (j.error || j.message) : ("HTTP " + res.status);
-      throw new Error(errMsg);
-    }
-
-    if (!j || j.ok !== true) {
-      if (looksHtml) {
-        throw new Error("Réponse HTML reçue (mauvais Serveur API). Renseigne 'Serveur API (Render)'.");
-      }
-      const errMsg = (j && (j.error || j.message)) ? (j.error || j.message) : "Réponse JSON inattendue (HTTP 200)";
-      // on ajoute un extrait utile
-      const preview = text.slice(0, 280);
-      throw new Error(errMsg + " :: " + preview);
-    }
-
-    return Array.isArray(j.logs) ? j.logs : [];
-  }
-
-  function rebuildFormTypeOptions(logs){
-    const sel = $("formType");
-    const cur = sel.value;
-
-    const set = new Set();
-    for (const x of logs) {
-      const v = String(x.formType || "").trim();
-      if (v) set.add(v);
-    }
-    const all = Array.from(set).sort();
-
-    sel.innerHTML = `<option value="">Tous</option>` + all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
-    if (all.includes(cur)) sel.value = cur;
-  }
-
-  function applyFilters(logs){
-    const fTo     = norm($("to").value);
-    const fSub    = norm($("subject").value);
-    const fForm   = $("formType").value;
-    const fStatus = $("status").value;
-    const fFrom   = $("dateFrom").value;
-    const fToD    = $("dateTo").value;
-    const fQ      = norm($("q").value);
-
-    return logs.filter(x=>{
-      const to       = String(x.to||"");
-      const subject  = String(x.subject||"");
-      const formType = String(x.formType||"");
-      const status   = String(x.status||"");
-      const error    = String(x.error||"");
-      const meta     = String(x.meta||"");
-
-      if (fForm && formType !== fForm) return false;
-      if (fStatus && status !== fStatus) return false;
-
-      if (fTo  && !norm(to).includes(fTo)) return false;
-      if (fSub && !norm(subject).includes(fSub)) return false;
-
-      if (!inDateRange(x.ts, fFrom, fToD)) return false;
-
-      if (fQ){
-        const hay = norm([x.ts, to, subject, formType, status, error, meta].join(" "));
-        if (!hay.includes(fQ)) return false;
-      }
-      return true;
-    });
-  }
-
-  function render(logs){
-    const tb = $("tbody");
-    if (!logs.length) {
-      tb.innerHTML = `<tr><td colspan="6" class="muted" style="padding:18px;">Aucun log (avec les filtres actuels).</td></tr>`;
-    } else {
-      tb.innerHTML = logs.map(x=>{
-        const status = String(x.status||"");
-        const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
-        const pillTxt = status || "—";
-        return `
-          <tr>
-            <td class="mono">${escapeHtml(fmtFR(x.ts))}</td>
-            <td>${escapeHtml(x.to || "—")}</td>
-            <td>${escapeHtml(x.subject || "—")}</td>
-            <td>${escapeHtml(x.formType || "—")}</td>
-            <td><span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span></td>
-            <td class="err">${escapeHtml(x.error || "")}</td>
-          </tr>
-        `;
-      }).join("");
-    }
-
-    const total = logs.length;
-    const ok = logs.filter(x=>x.status==="sent").length;
-    const ko = logs.filter(x=>x.status==="failed").length;
-    $("kTotal").textContent = String(total);
-    $("kOk").textContent = String(ok);
-    $("kKo").textContent = String(ko);
-  }
-
-  let isLoading = false;
-
-  async function loadLogs(){
-    if (isLoading) return;
-    isLoading = true;
-
-    try{
-      saveIfNeeded();
-
-      const logs = await apiListLogs();
-      rebuildFormTypeOptions(logs);
-
-      const filtered = applyFilters(logs);
-      render(filtered);
-
-      $("lastInfo").textContent = "Dernière maj : " + fmtFR(new Date().toISOString());
-    }catch(e){
-      console.error(e);
-      const msg = String(e?.message || e);
-
-      $("tbody").innerHTML =
-        `<tr>
-          <td colspan="6" class="err" style="padding:14px;">
-            <div style="font-weight:900;margin-bottom:8px;">Erreur</div>
-            <div>${escapeHtml(msg)}</div>
-            <div class="hint" style="margin-top:10px;">
-              Si tu es sur Wix : mets <b>Serveur API (Render)</b> (ex: https://xxxx.onrender.com)
-            </div>
-          </td>
-        </tr>`;
-
-      $("kTotal").textContent = "0";
-      $("kOk").textContent = "0";
-      $("kKo").textContent = "0";
-    } finally {
-      isLoading = false;
-    }
-  }
-  window.loadLogs = loadLogs;
-
-  // Entrée = rafraîchir
-  ["to","subject","q","apiBase"].forEach(id=>{
-    $(id).addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); } });
+  const res = await fetch(`/api/mail-logs?limit=${limit}&q=${q}`, {
+    headers: { "x-admin-token": token }
   });
 
-  // Changement = rafraîchir
-  ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
-    $(id).addEventListener("change", ()=>loadLogs());
-  });
-
-  $("token").addEventListener("input", ()=>{
-    if ($("remember").checked) saveIfNeeded();
-  });
-  $("apiBase").addEventListener("input", ()=>{
-    if ($("remember").checked) saveIfNeeded();
-  });
-
-  // Auto refresh 30s
-  let autoTimer = null;
-  let autoEnabled = true;
-
-  function updateAutoUI() {
-    const btn = $("btnAuto");
-    const info = $("autoInfo");
-    if (!btn || !info) return;
-
-    if (autoEnabled) {
-      btn.textContent = "⏸ Pause auto";
-      info.textContent = "Actualisation automatique : toutes les 30 secondes";
-    } else {
-      btn.textContent = "▶ Reprendre auto";
-      info.textContent = "Actualisation automatique : en pause";
-    }
+  if(!res.ok){
+    const t = await res.text().catch(()=> "");
+    info.textContent = "Erreur: accès refusé ou API indisponible. " + t;
+    return;
   }
 
-  function startAutoRefresh() {
-    stopAutoRefresh();
-    autoTimer = setInterval(() => {
-      if (!autoEnabled) return;
-      if (isLoading) return;
-      loadLogs();
-    }, 30000);
-    updateAutoUI();
-  }
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.logs || []);
+  info.textContent = `${rows.length} envoi(s) affiché(s).`;
 
-  function stopAutoRefresh() {
-    if (autoTimer) clearInterval(autoTimer);
-    autoTimer = null;
-    updateAutoUI();
-  }
+  for(const x of rows){
+    const tr = document.createElement("tr");
+    const d = new Date(x.ts);
+    const dateStr = isNaN(d) ? (x.ts || "") : d.toLocaleString("fr-FR");
 
-  function toggleAutoRefresh() {
-    autoEnabled = !autoEnabled;
-    if (autoEnabled) startAutoRefresh();
-    else stopAutoRefresh();
-  }
-  window.toggleAutoRefresh = toggleAutoRefresh;
+    const statusClass = x.status === "sent" ? "ok" : (x.status === "failed" ? "bad" : "");
 
-  // init
-  restoreSaved();
-  updateAutoUI();
-  loadLogs();
-  startAutoRefresh();
+    tr.innerHTML = `
+      <td>${escapeHtml(dateStr)}</td>
+      <td>${escapeHtml(x.to || "")}</td>
+      <td>${escapeHtml(x.subject || "")}</td>
+      <td>${escapeHtml(x.formType || "")}</td>
+      <td class="${statusClass}">${escapeHtml(x.status || "")}</td>
+      <td>${escapeHtml(x.error || "")}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
 </script>
 </body>
 </html>
