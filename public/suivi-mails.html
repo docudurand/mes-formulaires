@@ -12,7 +12,6 @@
       --muted:#64748b;
       --border:#e5e7eb;
       --accent:#0f4c81;
-      --accent2:#2563eb;
       --ok:#16a34a;
       --ko:#dc2626;
       --shadow: 0 10px 24px rgba(2,6,23,.06);
@@ -26,7 +25,6 @@
       color:var(--text);
     }
 
-    /* pleine largeur */
     .wrap{
       width:100%;
       max-width:none;
@@ -35,7 +33,7 @@
     }
 
     h1{
-      margin:0 0 10px 0;
+      margin:0 0 8px 0;
       font-size:22px;
       font-weight:900;
       letter-spacing:.2px;
@@ -45,7 +43,7 @@
       margin:0 0 14px 0;
       color:var(--muted);
       font-size:13px;
-      font-weight:600;
+      font-weight:700;
     }
 
     .card{
@@ -60,7 +58,6 @@
       margin-bottom:14px;
     }
 
-    /* disposition filtres (2 rangées propres) */
     .filters{
       display:grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -77,7 +74,7 @@
     .field label{
       font-size:12px;
       color:var(--muted);
-      font-weight:800;
+      font-weight:900;
     }
 
     input, select{
@@ -92,6 +89,24 @@
     input:focus, select:focus{
       border-color: rgba(37,99,235,.7);
       box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .remember{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      background:#fff;
+      height:42px;
+    }
+    .remember input{width:auto}
+    .remember span{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:900;
+      line-height:1.1;
     }
 
     .row-actions{
@@ -117,24 +132,6 @@
     .btn.secondary{background:#334155; min-width:auto}
     .btn.ghost{background:#eef2ff; color:#1e293b; border:1px solid var(--border); min-width:auto}
 
-    .remember{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:8px 10px;
-      border:1px dashed var(--border);
-      border-radius:12px;
-      background:#fff;
-      height:42px;
-    }
-    .remember input{width:auto}
-    .remember span{
-      color:var(--muted);
-      font-size:13px;
-      font-weight:800;
-      line-height:1.1;
-    }
-
     .stats{
       display:grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -145,9 +142,9 @@
       grid-column: span 4;
       padding:14px;
     }
-    .stat .t{color:var(--muted); font-size:13px; font-weight:800}
+    .stat .t{color:var(--muted); font-size:13px; font-weight:900}
     .stat .v{font-size:34px; font-weight:950; color:var(--accent); margin-top:4px}
-    .stat .s{color:var(--muted); font-size:12px; font-weight:700}
+    .stat .s{color:var(--muted); font-size:12px; font-weight:800}
 
     .tableWrap{
       overflow:auto;
@@ -183,10 +180,9 @@
     .pill{
       display:inline-flex;
       align-items:center;
-      gap:8px;
       padding:6px 10px;
       border-radius:999px;
-      font-weight:900;
+      font-weight:950;
       font-size:12px;
       border:1px solid var(--border);
       white-space:nowrap;
@@ -196,9 +192,8 @@
 
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
     .muted{color:var(--muted)}
-    .err{white-space:normal; color:#991b1b; font-weight:800}
+    .err{white-space:normal; color:#991b1b; font-weight:900}
 
-    /* colonnes helpers */
     .c12{grid-column: span 12}
     .c6{grid-column: span 6}
     .c5{grid-column: span 5}
@@ -217,15 +212,9 @@
 </head>
 
 <body>
-  <main class="wrap">
-    <h1>Suivi des envois mails (SMTP)</h1>
-    <div class="sub">
-      Filtre + stats sur la liste filtrée. Auto-refresh toutes les 30 secondes (désactivable).
-    </div>
 
     <section class="card toolbar">
       <div class="filters">
-        <!-- Rangée 1 -->
         <div class="field c4">
           <label>Token admin</label>
           <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
@@ -245,19 +234,6 @@
         </div>
 
         <div class="field c2">
-          <label>Limite</label>
-          <input id="limit" type="number" min="1" max="1000" value="200"/>
-        </div>
-
-        <!-- Rangée 2 -->
-        <div class="field c2">
-          <label>Formulaire</label>
-          <select id="formType">
-            <option value="">Tous</option>
-          </select>
-        </div>
-
-        <div class="field c2">
           <label>Statut</label>
           <select id="status">
             <option value="">Tous</option>
@@ -267,26 +243,18 @@
         </div>
 
         <div class="field c3">
-          <label>Destinataire contient</label>
-          <input id="to" placeholder="ex: @durandservices.fr"/>
+          <label>Formulaire</label>
+          <select id="formType">
+            <option value="">Tous</option>
+          </select>
         </div>
 
-        <div class="field c3">
-          <label>Objet contient</label>
+        <div class="field c4">
+          <label>Objet contient (filtre en direct)</label>
           <input id="subject" placeholder="ex: Demande de ramasse"/>
         </div>
 
-        <div class="field c2">
-          <label>Date du</label>
-          <input id="dateFrom" type="date"/>
-        </div>
-
-        <div class="field c2">
-          <label>Date au</label>
-          <input id="dateTo" type="date"/>
-        </div>
-
-        <div class="field c12">
+        <div class="field c5">
           <label>Recherche globale</label>
           <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
         </div>
@@ -299,8 +267,8 @@
           ⏸ Pause auto
         </button>
 
-        <span class="muted" id="autoInfo" style="font-size:13px;font-weight:800;"></span>
-        <span class="muted" id="info" style="font-size:13px;font-weight:800;"></span>
+        <span class="muted" id="autoInfo" style="font-size:13px;font-weight:900;"></span>
+        <span class="muted" id="info" style="font-size:13px;font-weight:900;"></span>
       </div>
     </section>
 
@@ -343,7 +311,12 @@
   const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
   const REMEMBER_KEY = "MAILLOG_REMEMBER";
 
+  const FIXED_LIMIT = 500;
+
   const $ = (id) => document.getElementById(id);
+
+  let allLogs = [];
+  let isLoading = false;
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -369,6 +342,8 @@
     localStorage.setItem(REMEMBER_KEY, "0");
     $("remember").checked = false;
     $("token").value = "";
+    allLogs = [];
+    render([]);
   }
   window.clearSavedToken = clearSavedToken;
 
@@ -383,31 +358,16 @@
     }).replace(",", "");
   }
 
-  function inDateRange(ts, from, to){
-    if(!from && !to) return true;
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return true;
-
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-    if(from){
-      const f = new Date(from + "T00:00:00").getTime();
-      if(day < f) return false;
-    }
-    if(to){
-      const t = new Date(to + "T00:00:00").getTime();
-      if(day > t) return false;
-    }
-    return true;
-  }
-
   function norm(s){ return String(s||"").toLowerCase(); }
 
   async function apiListLogs(){
     const token = ($("token").value || "").trim();
-    const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
 
-    const url = `/api/mail-logs?limit=${encodeURIComponent(String(limit))}`;
+    const q = encodeURIComponent(($("q").value || "").trim());
+    const limit = encodeURIComponent(String(FIXED_LIMIT));
+
+    const url = `/api/mail-logs?limit=${limit}&q=${q}`;
+
     const res = await fetch(url, {
       headers: token ? { "x-admin-token": token } : {}
     });
@@ -415,19 +375,20 @@
     const text = await res.text();
 
     if(!res.ok){
-      // si l'API renvoie du texte (unauthorized etc)
       throw new Error(text || ("HTTP " + res.status));
     }
 
-    // Important : ton API peut renvoyer soit un tableau, soit un objet
     let data;
     try { data = JSON.parse(text); }
-    catch { throw new Error("Réponse JSON invalide (HTTP 200) :: " + text.slice(0, 280)); }
+    catch {
+      throw new Error("Réponse JSON invalide (HTTP 200) :: " + text.slice(0, 280));
+    }
 
     const rows = Array.isArray(data) ? data : (data.logs || []);
     if (!Array.isArray(rows)) {
       throw new Error("Réponse JSON inattendue (HTTP 200) :: " + text.slice(0, 280));
     }
+
     return rows;
   }
 
@@ -450,12 +411,9 @@
   }
 
   function applyFilters(logs){
-    const fTo = norm($("to").value);
     const fSub = norm($("subject").value);
     const fForm = $("formType").value;
     const fStatus = $("status").value;
-    const fFrom = $("dateFrom").value;
-    const fToD = $("dateTo").value;
     const fQ = norm($("q").value);
 
     return logs.filter(x=>{
@@ -469,15 +427,13 @@
       if (fForm && formType !== fForm) return false;
       if (fStatus && status !== fStatus) return false;
 
-      if (fTo && !norm(to).includes(fTo)) return false;
       if (fSub && !norm(subject).includes(fSub)) return false;
-
-      if (!inDateRange(x.ts, fFrom, fToD)) return false;
 
       if (fQ){
         const hay = norm([x.ts, to, subject, formType, status, error, meta].join(" "));
         if (!hay.includes(fQ)) return false;
       }
+
       return true;
     });
   }
@@ -508,7 +464,11 @@
     $("kKo").textContent = String(ko);
   }
 
-  let isLoading = false;
+  function renderFromCache(){
+    const filtered = applyFilters(allLogs);
+    render(filtered);
+    $("info").textContent = `Dernière mise à jour : ${fmtFR(new Date().toISOString())} — ${filtered.length} ligne(s)`;
+  }
 
   async function loadLogs(){
     if (isLoading) return;
@@ -518,14 +478,12 @@
     try{
       saveTokenIfNeeded();
       info.textContent = "Chargement...";
+
       const logs = await apiListLogs();
+      allLogs = logs;
 
-      rebuildFormTypeOptions(logs);
-
-      const filtered = applyFilters(logs);
-      render(filtered);
-
-      info.textContent = `Dernière mise à jour : ${fmtFR(new Date().toISOString())} — ${filtered.length} ligne(s)`;
+      rebuildFormTypeOptions(allLogs);
+      renderFromCache();
     }catch(e){
       console.error(e);
       $("tbody").innerHTML =
@@ -540,21 +498,30 @@
   }
   window.loadLogs = loadLogs;
 
-  ["to","subject","q"].forEach(id=>{
-    $(id).addEventListener("keydown", (ev)=>{
-      if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); }
-    });
+  let tSubject = null;
+  $("subject").addEventListener("input", ()=>{
+    clearTimeout(tSubject);
+    tSubject = setTimeout(renderFromCache, 120);
   });
 
-  ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
-    $(id).addEventListener("change", ()=>loadLogs());
+  let tQ = null;
+  $("q").addEventListener("input", ()=>{
+    clearTimeout(tQ);
+    tQ = setTimeout(()=> {
+
+      renderFromCache();
+    }, 120);
   });
 
+  ["formType","status"].forEach(id=>{
+    $(id).addEventListener("change", renderFromCache);
+  });
+
+  $("remember").addEventListener("change", saveTokenIfNeeded);
   $("token").addEventListener("input", ()=>{
     if ($("remember").checked) saveTokenIfNeeded();
   });
 
-  // Auto refresh 30s
   let autoTimer = null;
   let autoEnabled = true;
 
