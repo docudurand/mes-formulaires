@@ -1,180 +1,636 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin – Outils</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Suivi des envois mails</title>
+
+  <link rel="icon" href="data:,">
+
   <style>
     :root{
-      --primary:#004080;
-      --ink:#073763;
-      --bg:#f5f9fc;
+      --bg:#f3f6fb;
       --card:#ffffff;
-      --line:#e5e7eb;
-      --shadow:0 8px 26px rgba(0,0,0,0.08);
-      --radius:16px;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --accent:#0f4c81;
+      --accent2:#2563eb;
+      --ok:#16a34a;
+      --ko:#dc2626;
+      --shadow: 0 10px 24px rgba(2,6,23,.06);
+      --radius: 16px;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
+      color:var(--text);
     }
+
+    .wrap{
+      width:100%;
+      max-width:none;
+      margin:0;
+      padding:18px 22px 42px;
+    }
+
     header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    h1{
+      margin:0;
+      font-size:22px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color:var(--accent);
+    }
+    .sub{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .card{
       background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
       box-shadow:var(--shadow);
+    }
+
+    .toolbar{
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .filters{
+      display:grid;
+      grid-template-columns: 2fr 1.4fr 1fr 1fr 1fr 1fr;
+      gap:12px;
+      align-items:end;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      outline:none;
+      font-size:14px;
+      background:#fff;
+    }
+    input:focus, select:focus{
+      border-color: rgba(37,99,235,.6);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .tokenRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .remember{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      background:#fff;
+      flex:1;
+      min-width:260px;
+    }
+    .remember input{width:auto}
+    .remember span{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .row-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      min-width:160px;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{ background:#334155; min-width:auto; }
+    .btn.ghost{
+      background:#fff;
+      border:1px solid var(--border);
+      color:#111827;
+      min-width:auto;
+    }
+
+    .rightInfo{
+      margin-left:auto;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap:12px;
+      margin: 14px 0;
+    }
+    .stat{
+      grid-column: span 4;
+      padding:14px;
+    }
+    .stat .t{color:var(--muted); font-size:13px; font-weight:900}
+    .stat .v{font-size:34px; font-weight:1000; color:var(--accent); margin-top:4px}
+    .stat .s{color:var(--muted); font-size:12px; font-weight:700}
+
+    .tableWrap{
+      overflow:auto;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:1100px;
+    }
+    thead th{
+      text-align:left;
+      font-size:13px;
+      padding:12px 12px;
+      background:#eef5ff;
+      color:#0b3a66;
+      border-bottom:1px solid var(--border);
       position:sticky;
       top:0;
-      z-index:50;
+      z-index:1;
+      white-space:nowrap;
     }
-    .wrap{width:100%;margin:0;padding:14px 16px}
-    .titleRow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    h1{margin:0;font-size:1.2rem;color:var(--primary)}
-    .sub{margin:4px 0 0;color:#47607a;font-size:.95rem}
+    tbody td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      font-size:14px;
+      vertical-align:top;
+    }
+    tbody tr:hover{background:#f8fbff}
 
-    .tabs{
-      display:flex;
+    .pill{
+      display:inline-flex;
+      align-items:center;
       gap:8px;
-      flex-wrap:wrap;
-      padding:10px 16px 14px;
-      border-top:1px solid var(--line);
-    }
-    .tab{
-      appearance:none;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--ink);
-      padding:8px 12px;
+      padding:6px 10px;
       border-radius:999px;
-      font-weight:700;
-      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+      border:1px solid var(--border);
+      white-space:nowrap;
     }
-    .tab[aria-selected="true"]{
-      background:var(--primary);
-      border-color:var(--primary);
-      color:#fff;
-    }
+    .pill.ok{background:rgba(22,163,74,.08); color:var(--ok); border-color:rgba(22,163,74,.25)}
+    .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
 
-.panelWrap{
-  width:100%;
-  margin:0;
-  padding:14px 16px 18px;
-}
-    .panel{
-      display:none;
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      overflow:hidden;
-      box-shadow:var(--shadow);
-    }
-    .panel.active{display:block}
-
-.frame{
-  width:100%;
-  height:calc(100vh - 140px);
-  border:0;
-  display:block;
-  background:#fff;
-}
-@media (max-width:600px){
-  .frame{
-    height:calc(100vh - 150px);
-    min-height:620px;
-  }
-}
-
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
+    .muted{color:var(--muted)}
+    .err{white-space:normal; color:#991b1b; max-width:620px}
 
     .hint{
-      margin:0 0 10px;
-      color:#47607a;
-      font-size:.92rem;
-    }
-    .pill{
-      display:inline-block;
-      padding:2px 10px;
-      border-radius:999px;
-      background:#eaf6ff;
-      color:var(--primary);
+      margin-top:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      color:var(--muted);
+      font-size:13px;
       font-weight:700;
-      font-size:.85rem;
-      margin-left:8px;
+    }
+
+    @media (max-width: 1280px){
+      .filters{ grid-template-columns: 2fr 1fr 1fr 1fr; }
+    }
+    @media (max-width: 980px){
+      .filters{ grid-template-columns: 1fr 1fr; }
+      .stat{grid-column: span 12;}
+      .btn{width:100%}
+      .remember{width:100%}
+      .rightInfo{margin-left:0; width:100%}
     }
   </style>
 </head>
+
 <body>
+  <main class="wrap">
+    <header>
+      <div>
+        <h1>Suivi des envois mails (SMTP)</h1>
+        <div class="sub">Filtres + stats sur la liste filtrée • Auto-refresh 30s • Token admin mémorisable</div>
+      </div>
+    </header>
 
-<header>
+    <section class="card toolbar">
+      <div class="filters">
+        <div class="field">
+          <label>Token admin</label>
+          <input id="token" type="password" placeholder="Colle ici le token ADMIN (Render)"/>
+        </div>
 
-  <div class="tabs" role="tablist" aria-label="Outils admin">
-    <button class="tab" role="tab" id="tab-parc"  aria-controls="panel-parc"  aria-selected="true"  data-target="parc">Parc & prêts</button>
-    <button class="tab" role="tab" id="tab-comp"  aria-controls="panel-comp"  aria-selected="false" data-target="comp">Compteurs</button>
-    <button class="tab" role="tab" id="tab-mails" aria-controls="panel-mails" aria-selected="false" data-target="mails">Suivi e-mails</button>
-  </div>
-</header>
+        <div class="field">
+          <label>Limite</label>
+          <input id="limit" type="number" min="1" max="1000" value="200"/>
+        </div>
 
-<div class="panelWrap">
+        <div class="field">
+          <label>Formulaire</label>
+          <select id="formType">
+            <option value="">Tous</option>
+          </select>
+        </div>
 
-  <section class="panel active" id="panel-parc" role="tabpanel" aria-labelledby="tab-parc">
-    <iframe class="frame" title="Parc & prêts véhicules" data-src="/pret/admin"></iframe>
-  </section>
+        <div class="field">
+          <label>Statut</label>
+          <select id="status">
+            <option value="">Tous</option>
+            <option value="sent">OK (sent)</option>
+            <option value="failed">Échecs (failed)</option>
+          </select>
+        </div>
 
-  <section class="panel" id="panel-comp" role="tabpanel" aria-labelledby="tab-comp">
-    <iframe class="frame" title="Compteurs" data-src="/compteur.html"></iframe>
-  </section>
+        <div class="field">
+          <label>Date du</label>
+          <input id="dateFrom" type="date"/>
+        </div>
 
-  <section class="panel" id="panel-mails" role="tabpanel" aria-labelledby="tab-mails">
-    <iframe class="frame" title="Suivi e-mails" data-src="/suivi-mails.html"></iframe>
-  </section>
-</div>
+        <div class="field">
+          <label>Date au</label>
+          <input id="dateTo" type="date"/>
+        </div>
+
+        <div class="field">
+          <label>Destinataire contient</label>
+          <input id="to" placeholder="ex: @durand.fr"/>
+        </div>
+
+        <div class="field">
+          <label>Objet contient</label>
+          <input id="subject" placeholder="ex: Demande de ramasse"/>
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Recherche globale</label>
+          <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
+        </div>
+      </div>
+
+      <div class="tokenRow">
+        <div class="remember">
+          <input id="remember" type="checkbox"/>
+          <span>Mémoriser ce token sur ce navigateur</span>
+        </div>
+
+        <button class="btn ghost" type="button" onclick="clearSavedToken()">Effacer token</button>
+
+        <div class="rightInfo" id="autoInfo"></div>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+        <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">⏸ Pause auto</button>
+      </div>
+
+      <div class="hint" id="hintBox" style="display:none;"></div>
+    </section>
+
+    <section class="stats">
+      <div class="card stat">
+        <div class="t">Envois affichés</div>
+        <div class="v" id="kTotal">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+      <div class="card stat">
+        <div class="t">OK (sent)</div>
+        <div class="v" id="kOk">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+      <div class="card stat">
+        <div class="t">Échecs (failed)</div>
+        <div class="v" id="kKo">0</div>
+        <div class="s muted">sur la liste filtrée</div>
+      </div>
+    </section>
+
+    <section class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Destinataire</th>
+            <th>Objet</th>
+            <th>Formulaire</th>
+            <th>Statut</th>
+            <th>Erreur</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
 
 <script>
-  const tabs = Array.from(document.querySelectorAll(".tab"));
-  const panels = {
-    parc:  document.getElementById("panel-parc"),
-    comp:  document.getElementById("panel-comp"),
-    mails: document.getElementById("panel-mails"),
-  };
+  const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
+  const REMEMBER_KEY = "MAILLOG_REMEMBER";
 
-  function ensureIframeLoaded(panel){
-    const iframe = panel.querySelector("iframe[data-src]");
-    if(!iframe) return;
-    if(!iframe.src){
-      iframe.src = iframe.dataset.src;
+  const $ = (id) => document.getElementById(id);
+
+  function showHint(msg){
+    const box = $("hintBox");
+    if(!box) return;
+    if(!msg){
+      box.style.display = "none";
+      box.textContent = "";
+      return;
     }
+    box.style.display = "block";
+    box.textContent = msg;
   }
 
-  function setActive(key, pushHash=true){
-    tabs.forEach(t => {
-      const on = (t.dataset.target === key);
-      t.setAttribute("aria-selected", on ? "true" : "false");
-    });
-
-    Object.entries(panels).forEach(([k, p]) => {
-      const on = (k === key);
-      p.classList.toggle("active", on);
-      if(on) ensureIframeLoaded(p);
-    });
-
-    if(pushHash){
-      location.hash = key;
-    }
+  function saveTokenIfNeeded(){
+    const remember = $("remember").checked;
+    localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+    if (remember) localStorage.setItem(TOKEN_KEY, $("token").value || "");
+    else localStorage.removeItem(TOKEN_KEY);
   }
 
-  document.querySelector(".tabs").addEventListener("click", (e) => {
-    const btn = e.target.closest(".tab");
-    if(!btn) return;
-    setActive(btn.dataset.target, true);
+  function restoreToken(){
+    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
+    $("remember").checked = remember;
+    if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";
+  }
+
+  function clearSavedToken(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(REMEMBER_KEY, "0");
+    $("remember").checked = false;
+    $("token").value = "";
+    showHint("Token effacé du navigateur.");
+  }
+  window.clearSavedToken = clearSavedToken;
+
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function fmtFR(iso){
+    if(!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("fr-FR", {
+      timeZone: "Europe/Paris",
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit"
+    }).replace(",", "");
+  }
+
+  function inDateRange(ts, from, to){
+    if(!from && !to) return true;
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return true;
+
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if(from){
+      const f = new Date(from + "T00:00:00").getTime();
+      if(day < f) return false;
+    }
+    if(to){
+      const t = new Date(to + "T00:00:00").getTime();
+      if(day > t) return false;
+    }
+    return true;
+  }
+
+  function norm(s){ return String(s||"").toLowerCase(); }
+
+  async function apiListLogs(){
+    const token = $("token").value || "";
+    const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
+
+    const url = new URL("/api/mail-logs", window.location.href);
+    url.searchParams.set("limit", String(limit));
+
+    if (token) url.searchParams.set("token", token);
+
+    const headers = {};
+    if (token) {
+      headers["X-Admin-Token"] = token;
+      headers["Authorization"] = "Bearer " + token;
+    }
+
+    const res = await fetch(url.toString(), { headers });
+
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    const rawText = await res.text();
+
+    if (res.status === 401) {
+      throw new Error("unauthorized");
+    }
+
+    if (!contentType.includes("application/json")) {
+      const sample = rawText.slice(0, 220).replace(/\s+/g, " ").trim();
+      throw new Error("Réponse non-JSON (" + res.status + "). Extrait: " + sample);
+    }
+
+    let j = {};
+    try { j = JSON.parse(rawText); } catch {}
+    if (!res.ok || !j || j.ok !== true) {
+      throw new Error((j && j.error) ? j.error : ("HTTP " + res.status));
+    }
+    return j.logs || [];
+  }
+
+  function rebuildFormTypeOptions(logs){
+    const sel = $("formType");
+    const cur = sel.value;
+    const set = new Set();
+    logs.forEach(x => {
+      const v = String(x.formType || "").trim();
+      if (v) set.add(v);
+    });
+    const all = Array.from(set).sort();
+    sel.innerHTML = `<option value="">Tous</option>` + all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    if (all.includes(cur)) sel.value = cur;
+  }
+
+  function applyFilters(logs){
+    const fTo = norm($("to").value);
+    const fSub = norm($("subject").value);
+    const fForm = $("formType").value;
+    const fStatus = $("status").value;
+    const fFrom = $("dateFrom").value;
+    const fToD = $("dateTo").value;
+    const fQ = norm($("q").value);
+
+    return logs.filter(x=>{
+      const to = String(x.to||"");
+      const subject = String(x.subject||"");
+      const formType = String(x.formType||"");
+      const status = String(x.status||"");
+      const error = String(x.error||"");
+      const meta = String(x.meta||"");
+
+      if (fForm && formType !== fForm) return false;
+      if (fStatus && status !== fStatus) return false;
+      if (fTo && !norm(to).includes(fTo)) return false;
+      if (fSub && !norm(subject).includes(fSub)) return false;
+      if (!inDateRange(x.ts, fFrom, fToD)) return false;
+
+      if (fQ){
+        const hay = norm([x.ts, to, subject, formType, status, error, meta].join(" "));
+        if (!hay.includes(fQ)) return false;
+      }
+      return true;
+    });
+  }
+
+  function render(logs){
+    const tb = $("tbody");
+    tb.innerHTML = logs.map(x=>{
+      const status = String(x.status||"");
+      const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
+      const pillTxt = status || "—";
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(fmtFR(x.ts))}</td>
+          <td>${escapeHtml(x.to || "—")}</td>
+          <td>${escapeHtml(x.subject || "—")}</td>
+          <td>${escapeHtml(x.formType || "—")}</td>
+          <td><span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span></td>
+          <td class="err">${escapeHtml(x.error || "")}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const total = logs.length;
+    const ok = logs.filter(x=>x.status==="sent").length;
+    const ko = logs.filter(x=>x.status==="failed").length;
+    $("kTotal").textContent = String(total);
+    $("kOk").textContent = String(ok);
+    $("kKo").textContent = String(ko);
+  }
+
+  let isLoading = false;
+
+  async function loadLogs(){
+    if (isLoading) return;
+    isLoading = true;
+    try{
+      showHint("");
+      saveTokenIfNeeded();
+
+      const logs = await apiListLogs();
+      rebuildFormTypeOptions(logs);
+
+      const filtered = applyFilters(logs);
+      render(filtered);
+    }catch(e){
+      console.error(e);
+
+      if (String(e?.message || e) === "unauthorized") {
+        showHint("❌ Token refusé (401). Vérifie : (1) tu as collé le vrai token, (2) ton backend accepte bien X-Admin-Token / Authorization / token=.");
+      } else {
+        showHint("❌ " + String(e?.message || e));
+      }
+
+      $("tbody").innerHTML = `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
+      $("kTotal").textContent = "0";
+      $("kOk").textContent = "0";
+      $("kKo").textContent = "0";
+    } finally {
+      isLoading = false;
+    }
+  }
+  window.loadLogs = loadLogs;
+
+  ["to","subject","q"].forEach(id=>{
+    $(id).addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); } });
   });
 
-  const initial = (location.hash || "#parc").replace("#", "");
-  if(panels[initial]){
-    setActive(initial, false);
-  }else{
-    ensureIframeLoaded(panels.parc);
-  }
-</script>
+  ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
+    $(id).addEventListener("change", ()=>loadLogs());
+  });
 
+  $("token").addEventListener("input", ()=>{
+    if ($("remember").checked) saveTokenIfNeeded();
+  });
+
+  let autoTimer = null;
+  let autoEnabled = true;
+
+  function updateAutoUI() {
+    const btn = $("btnAuto");
+    const info = $("autoInfo");
+    if (!btn || !info) return;
+
+    if (autoEnabled) {
+      btn.textContent = "⏸ Pause auto";
+      info.textContent = "Actualisation automatique : toutes les 30 secondes";
+    } else {
+      btn.textContent = "▶ Reprendre auto";
+      info.textContent = "Actualisation automatique : en pause";
+    }
+  }
+
+  function startAutoRefresh() {
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = setInterval(() => {
+      if (!autoEnabled) return;
+      loadLogs();
+    }, 30_000);
+    updateAutoUI();
+  }
+
+  function toggleAutoRefresh() {
+    autoEnabled = !autoEnabled;
+    updateAutoUI();
+  }
+  window.toggleAutoRefresh = toggleAutoRefresh;
+
+  restoreToken();
+  updateAutoUI();
+  loadLogs();
+  startAutoRefresh();
+</script>
 </body>
 </html>
