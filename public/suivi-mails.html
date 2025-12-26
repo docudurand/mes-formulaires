@@ -32,18 +32,27 @@
       padding:18px 22px 38px;
     }
 
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+
     h1{
-      margin:0 0 8px 0;
+      margin:0;
       font-size:22px;
       font-weight:900;
       letter-spacing:.2px;
       color:var(--accent);
     }
     .sub{
-      margin:0 0 14px 0;
+      margin:2px 0 0 0;
       color:var(--muted);
       font-size:13px;
-      font-weight:700;
+      font-weight:800;
     }
 
     .card{
@@ -132,20 +141,6 @@
     .btn.secondary{background:#334155; min-width:auto}
     .btn.ghost{background:#eef2ff; color:#1e293b; border:1px solid var(--border); min-width:auto}
 
-    .stats{
-      display:grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap:12px;
-      margin: 14px 0;
-    }
-    .stat{
-      grid-column: span 4;
-      padding:14px;
-    }
-    .stat .t{color:var(--muted); font-size:13px; font-weight:900}
-    .stat .v{font-size:34px; font-weight:950; color:var(--accent); margin-top:4px}
-    .stat .s{color:var(--muted); font-size:12px; font-weight:800}
-
     .tableWrap{
       overflow:auto;
       border-radius:var(--radius);
@@ -155,7 +150,7 @@
     table{
       width:100%;
       border-collapse:collapse;
-      min-width:1100px;
+      min-width:1000px;
     }
     thead th{
       text-align:left;
@@ -191,7 +186,7 @@
     .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
 
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
-    .muted{color:var(--muted)}
+    .muted{color:var(--muted); font-weight:900}
     .err{white-space:normal; color:#991b1b; font-weight:900}
 
     .c12{grid-column: span 12}
@@ -202,7 +197,6 @@
     .c2{grid-column: span 2}
 
     @media (max-width: 1100px){
-      .stat{grid-column: span 12;}
       .c6,.c5,.c4,.c3,.c2{grid-column: span 12;}
       .btn{width:100%}
       .remember{width:100%}
@@ -249,12 +243,12 @@
           </select>
         </div>
 
-        <div class="field c4">
+        <div class="field c5">
           <label>Objet contient (filtre en direct)</label>
           <input id="subject" placeholder="ex: Demande de ramasse"/>
         </div>
 
-        <div class="field c5">
+        <div class="field c4">
           <label>Recherche globale</label>
           <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
         </div>
@@ -267,26 +261,8 @@
           ⏸ Pause auto
         </button>
 
-        <span class="muted" id="autoInfo" style="font-size:13px;font-weight:900;"></span>
-        <span class="muted" id="info" style="font-size:13px;font-weight:900;"></span>
-      </div>
-    </section>
-
-    <section class="stats">
-      <div class="card stat">
-        <div class="t">Envois affichés</div>
-        <div class="v" id="kTotal">0</div>
-        <div class="s muted">sur la liste filtrée</div>
-      </div>
-      <div class="card stat">
-        <div class="t">OK (sent)</div>
-        <div class="v" id="kOk">0</div>
-        <div class="s muted">sur la liste filtrée</div>
-      </div>
-      <div class="card stat">
-        <div class="t">Échecs (failed)</div>
-        <div class="v" id="kKo">0</div>
-        <div class="s muted">sur la liste filtrée</div>
+        <span class="muted" id="autoInfo" style="font-size:13px;"></span>
+        <span class="muted" id="info" style="font-size:13px;"></span>
       </div>
     </section>
 
@@ -344,6 +320,7 @@
     $("token").value = "";
     allLogs = [];
     render([]);
+    $("info").textContent = "";
   }
   window.clearSavedToken = clearSavedToken;
 
@@ -362,7 +339,6 @@
 
   async function apiListLogs(){
     const token = ($("token").value || "").trim();
-
     const q = encodeURIComponent(($("q").value || "").trim());
     const limit = encodeURIComponent(String(FIXED_LIMIT));
 
@@ -379,14 +355,15 @@
     }
 
     let data;
-    try { data = JSON.parse(text); }
-    catch {
-      throw new Error("Réponse JSON invalide (HTTP 200) :: " + text.slice(0, 280));
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Réponse JSON invalide (HTTP " + res.status + ") :: " + text.slice(0, 280));
     }
 
-    const rows = Array.isArray(data) ? data : (data.logs || []);
+    const rows = Array.isArray(data) ? data : (data?.logs || data?.data?.logs || []);
     if (!Array.isArray(rows)) {
-      throw new Error("Réponse JSON inattendue (HTTP 200) :: " + text.slice(0, 280));
+      throw new Error("Réponse JSON inattendue (HTTP " + res.status + ") :: " + text.slice(0, 280));
     }
 
     return rows;
@@ -440,6 +417,11 @@
 
   function render(logs){
     const tb = $("tbody");
+    if (!logs.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="muted">Aucune ligne à afficher.</td></tr>`;
+      return;
+    }
+
     tb.innerHTML = logs.map(x=>{
       const status = String(x.status||"");
       const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
@@ -455,19 +437,13 @@
         </tr>
       `;
     }).join("");
-
-    const total = logs.length;
-    const ok = logs.filter(x=>x.status==="sent").length;
-    const ko = logs.filter(x=>x.status==="failed").length;
-    $("kTotal").textContent = String(total);
-    $("kOk").textContent = String(ok);
-    $("kKo").textContent = String(ko);
   }
 
   function renderFromCache(){
     const filtered = applyFilters(allLogs);
     render(filtered);
-    $("info").textContent = `Dernière mise à jour : ${fmtFR(new Date().toISOString())} — ${filtered.length} ligne(s)`;
+    $("info").textContent =
+      `Dernière mise à jour : ${fmtFR(new Date().toISOString())} — ${filtered.length} ligne(s)`;
   }
 
   async function loadLogs(){
@@ -488,9 +464,6 @@
       console.error(e);
       $("tbody").innerHTML =
         `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
-      $("kTotal").textContent = "0";
-      $("kOk").textContent = "0";
-      $("kKo").textContent = "0";
       info.textContent = "";
     } finally {
       isLoading = false;
@@ -507,10 +480,7 @@
   let tQ = null;
   $("q").addEventListener("input", ()=>{
     clearTimeout(tQ);
-    tQ = setTimeout(()=> {
-
-      renderFromCache();
-    }, 120);
+    tQ = setTimeout(renderFromCache, 120);
   });
 
   ["formType","status"].forEach(id=>{
@@ -543,7 +513,6 @@
       if (!autoEnabled) return;
       loadLogs();
     }, 30000);
-    updateAutoUI();
   }
 
   function toggleAutoRefresh(){
