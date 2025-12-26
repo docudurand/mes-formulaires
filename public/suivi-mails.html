@@ -4,6 +4,10 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Suivi des envois mails</title>
+
+  <!-- évite l’erreur favicon 404 -->
+  <link rel="icon" href="data:,">
+
   <style>
     :root{
       --bg:#f3f6fb;
@@ -26,24 +30,34 @@
       color:var(--text);
     }
 
+    /* ✅ pleine largeur */
     .wrap{
       width:100%;
       max-width:none;
       margin:0;
-      padding:22px 22px 42px;
+      padding:18px 22px 42px;
     }
 
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
     h1{
-      margin:0 0 14px 0;
+      margin:0;
       font-size:22px;
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.2px;
       color:var(--accent);
     }
     .sub{
-      margin:-6px 0 18px 0;
+      margin:6px 0 0 0;
       color:var(--muted);
       font-size:13px;
+      font-weight:700;
     }
 
     .card{
@@ -58,9 +72,10 @@
       margin-bottom:14px;
     }
 
+    /* ✅ disposition filtres améliorée */
     .filters{
       display:grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-columns: 2fr 1.4fr 1fr 1fr 1fr 1fr;
       gap:12px;
       align-items:end;
     }
@@ -74,9 +89,9 @@
     .field label{
       font-size:12px;
       color:var(--muted);
-      font-weight:700;
+      font-weight:900;
+      letter-spacing:.2px;
     }
-
     input, select{
       width:100%;
       padding:10px 12px;
@@ -91,43 +106,12 @@
       box-shadow: 0 0 0 4px rgba(37,99,235,.12);
     }
 
-    .row-actions{
+    .tokenRow{
       display:flex;
       gap:10px;
       align-items:center;
       flex-wrap:wrap;
-      margin-top:12px;
-      justify-content:space-between;
-    }
-    .row-actions .left{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .row-actions .right{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .btn{
-      appearance:none;
-      border:0;
-      border-radius:12px;
-      padding:10px 14px;
-      font-weight:800;
-      cursor:pointer;
-      background:var(--accent);
-      color:#fff;
-      min-width:160px;
-    }
-    .btn:active{transform:translateY(1px)}
-    .btn.secondary{
-      background:#334155;
-      min-width:auto;
+      margin-top:10px;
     }
 
     .remember{
@@ -138,20 +122,50 @@
       border:1px dashed var(--border);
       border-radius:12px;
       background:#fff;
-      height:42px;
+      flex:1;
+      min-width:260px;
     }
     .remember input{width:auto}
     .remember span{
       color:var(--muted);
       font-size:13px;
-      font-weight:700;
-      white-space:nowrap;
+      font-weight:800;
     }
 
-    .hint{
+    .row-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      min-width:160px;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{ background:#334155; min-width:auto; }
+    .btn.ghost{
+      background:#fff;
+      border:1px solid var(--border);
+      color:#111827;
+      min-width:auto;
+    }
+
+    .rightInfo{
+      margin-left:auto;
       color:var(--muted);
       font-size:13px;
-      font-weight:700;
+      font-weight:800;
+      white-space:nowrap;
     }
 
     .stats{
@@ -164,9 +178,9 @@
       grid-column: span 4;
       padding:14px;
     }
-    .stat .t{color:var(--muted); font-size:13px; font-weight:700}
-    .stat .v{font-size:34px; font-weight:900; color:var(--accent); margin-top:4px}
-    .stat .s{color:var(--muted); font-size:12px}
+    .stat .t{color:var(--muted); font-size:13px; font-weight:900}
+    .stat .v{font-size:34px; font-weight:1000; color:var(--accent); margin-top:4px}
+    .stat .s{color:var(--muted); font-size:12px; font-weight:700}
 
     .tableWrap{
       overflow:auto;
@@ -198,85 +212,78 @@
       vertical-align:top;
     }
     tbody tr:hover{background:#f8fbff}
+
     .pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
       padding:6px 10px;
       border-radius:999px;
-      font-weight:800;
+      font-weight:900;
       font-size:12px;
       border:1px solid var(--border);
       white-space:nowrap;
     }
     .pill.ok{background:rgba(22,163,74,.08); color:var(--ok); border-color:rgba(22,163,74,.25)}
     .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
+
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
     .muted{color:var(--muted)}
-    .err{max-width:620px; white-space:normal; color:#991b1b}
+    .err{white-space:normal; color:#991b1b; max-width:620px}
 
-    .c12{grid-column: span 12}
-    .c6{grid-column: span 6}
-    .c5{grid-column: span 5}
-    .c4{grid-column: span 4}
-    .c3{grid-column: span 3}
-    .c2{grid-column: span 2}
-    .c1{grid-column: span 1}
+    .hint{
+      margin-top:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
 
-    @media (max-width: 1200px){
+    @media (max-width: 1280px){
+      .filters{ grid-template-columns: 2fr 1fr 1fr 1fr; }
+    }
+    @media (max-width: 980px){
+      .filters{ grid-template-columns: 1fr 1fr; }
       .stat{grid-column: span 12;}
-      .c6,.c5,.c4,.c3,.c2,.c1{grid-column: span 12;}
       .btn{width:100%}
       .remember{width:100%}
-      .row-actions{justify-content:stretch}
-      .row-actions .left, .row-actions .right{width:100%}
-      .row-actions .right{justify-content:flex-start}
+      .rightInfo{margin-left:0; width:100%}
     }
   </style>
 </head>
 
 <body>
   <main class="wrap">
-    <h1>Suivi des envois mails (SMTP)</h1>
-    <div class="sub">
-      Filtres + statistiques sur la liste filtrée. Le token admin peut être mémorisé dans le navigateur.
-      (Actualisation auto toutes les 30s, désactivable)
-    </div>
+    <header>
+      <div>
+        <h1>Suivi des envois mails (SMTP)</h1>
+        <div class="sub">Filtres + stats sur la liste filtrée • Auto-refresh 30s • Token admin mémorisable</div>
+      </div>
+    </header>
 
     <section class="card toolbar">
       <div class="filters">
-
-        <div class="field c4">
+        <div class="field">
           <label>Token admin</label>
-          <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
+          <input id="token" type="password" placeholder="Colle ici le token ADMIN (Render)"/>
         </div>
 
-        <div class="field c3">
-          <label>&nbsp;</label>
-          <div class="remember">
-            <input id="remember" type="checkbox"/>
-            <span>Mémoriser ce token sur ce navigateur</span>
-          </div>
-        </div>
-
-        <div class="field c2">
-          <label>&nbsp;</label>
-          <button class="btn secondary" type="button" onclick="clearSavedToken()">Effacer token</button>
-        </div>
-
-        <div class="field c1">
+        <div class="field">
           <label>Limite</label>
           <input id="limit" type="number" min="1" max="1000" value="200"/>
         </div>
 
-        <div class="field c2">
+        <div class="field">
           <label>Formulaire</label>
           <select id="formType">
             <option value="">Tous</option>
           </select>
         </div>
 
-        <div class="field c2">
+        <div class="field">
           <label>Statut</label>
           <select id="status">
             <option value="">Tous</option>
@@ -285,41 +292,49 @@
           </select>
         </div>
 
-        <div class="field c3">
-          <label>Destinataire contient</label>
-          <input id="to" placeholder="ex: @durand.fr"/>
-        </div>
-
-        <div class="field c3">
-          <label>Objet contient</label>
-          <input id="subject" placeholder="ex: Demande de ramasse"/>
-        </div>
-
-        <div class="field c2">
+        <div class="field">
           <label>Date du</label>
           <input id="dateFrom" type="date"/>
         </div>
 
-        <div class="field c2">
+        <div class="field">
           <label>Date au</label>
           <input id="dateTo" type="date"/>
         </div>
 
-        <div class="field c4">
+        <div class="field">
+          <label>Destinataire contient</label>
+          <input id="to" placeholder="ex: @durand.fr"/>
+        </div>
+
+        <div class="field">
+          <label>Objet contient</label>
+          <input id="subject" placeholder="ex: Demande de ramasse"/>
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
           <label>Recherche globale</label>
           <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
         </div>
       </div>
 
-      <div class="row-actions">
-        <div class="left">
-          <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
-          <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">⏸ Pause auto</button>
+      <div class="tokenRow">
+        <div class="remember">
+          <input id="remember" type="checkbox"/>
+          <span>Mémoriser ce token sur ce navigateur</span>
         </div>
-        <div class="right">
-          <span class="hint" id="autoInfo"></span>
-        </div>
+
+        <button class="btn ghost" type="button" onclick="clearSavedToken()">Effacer token</button>
+
+        <div class="rightInfo" id="autoInfo"></div>
       </div>
+
+      <div class="row-actions">
+        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+        <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">⏸ Pause auto</button>
+      </div>
+
+      <div class="hint" id="hintBox" style="display:none;"></div>
     </section>
 
     <section class="stats">
@@ -360,11 +375,20 @@
 <script>
   const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
   const REMEMBER_KEY = "MAILLOG_REMEMBER";
+
   const $ = (id) => document.getElementById(id);
 
-  let autoTimer = null;
-  let autoEnabled = true;
-  let isLoading = false;
+  function showHint(msg){
+    const box = $("hintBox");
+    if(!box) return;
+    if(!msg){
+      box.style.display = "none";
+      box.textContent = "";
+      return;
+    }
+    box.style.display = "block";
+    box.textContent = msg;
+  }
 
   function saveTokenIfNeeded(){
     const remember = $("remember").checked;
@@ -384,13 +408,12 @@
     localStorage.setItem(REMEMBER_KEY, "0");
     $("remember").checked = false;
     $("token").value = "";
+    showHint("Token effacé du navigateur.");
   }
   window.clearSavedToken = clearSavedToken;
 
   function escapeHtml(s){
-    return String(s||"").replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
+    return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
   function fmtFR(iso){
@@ -410,7 +433,6 @@
     if (Number.isNaN(d.getTime())) return true;
 
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
     if(from){
       const f = new Date(from + "T00:00:00").getTime();
       if(day < f) return false;
@@ -427,15 +449,41 @@
   async function apiListLogs(){
     const token = $("token").value || "";
     const limit = Math.min(1000, Math.max(1, Number($("limit").value || 200)));
-    const url = new URL(location.origin + "/api/mail-logs");
+
+    // ✅ URL relative (marche mieux selon Wix/Render)
+    const url = new URL("/api/mail-logs", window.location.href);
     url.searchParams.set("limit", String(limit));
 
-    const res = await fetch(url.toString(), {
-      headers: token ? { "X-Admin-Token": token } : {}
-    });
+    // ✅ important : on envoie le token de 3 façons (header + bearer + query)
+    if (token) url.searchParams.set("token", token);
 
-    const j = await res.json().catch(()=>({}));
-    if(!res.ok || !j.ok) throw new Error(j.error || ("HTTP " + res.status));
+    const headers = {};
+    if (token) {
+      headers["X-Admin-Token"] = token;
+      headers["Authorization"] = "Bearer " + token;
+    }
+
+    const res = await fetch(url.toString(), { headers });
+
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    const rawText = await res.text();
+
+    // 401 direct
+    if (res.status === 401) {
+      throw new Error("unauthorized");
+    }
+
+    // pas du JSON => on montre un extrait (c’est ça qui te faisait “HTTP 200”)
+    if (!contentType.includes("application/json")) {
+      const sample = rawText.slice(0, 220).replace(/\s+/g, " ").trim();
+      throw new Error("Réponse non-JSON (" + res.status + "). Extrait: " + sample);
+    }
+
+    let j = {};
+    try { j = JSON.parse(rawText); } catch {}
+    if (!res.ok || !j || j.ok !== true) {
+      throw new Error((j && j.error) ? j.error : ("HTTP " + res.status));
+    }
     return j.logs || [];
   }
 
@@ -443,16 +491,13 @@
     const sel = $("formType");
     const cur = sel.value;
     const set = new Set();
-    logs.forEach(x=>{
-      const v = String(x.formType||"").trim();
+    logs.forEach(x => {
+      const v = String(x.formType || "").trim();
       if (v) set.add(v);
     });
     const all = Array.from(set).sort();
-    sel.innerHTML =
-      `<option value="">Tous</option>` +
-      all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
-
-    if (cur && all.includes(cur)) sel.value = cur;
+    sel.innerHTML = `<option value="">Tous</option>` + all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    if (all.includes(cur)) sel.value = cur;
   }
 
   function applyFilters(logs){
@@ -474,10 +519,8 @@
 
       if (fForm && formType !== fForm) return false;
       if (fStatus && status !== fStatus) return false;
-
       if (fTo && !norm(to).includes(fTo)) return false;
       if (fSub && !norm(subject).includes(fSub)) return false;
-
       if (!inDateRange(x.ts, fFrom, fToD)) return false;
 
       if (fQ){
@@ -514,11 +557,13 @@
     $("kKo").textContent = String(ko);
   }
 
+  let isLoading = false;
+
   async function loadLogs(){
     if (isLoading) return;
     isLoading = true;
-
     try{
+      showHint("");
       saveTokenIfNeeded();
 
       const logs = await apiListLogs();
@@ -528,58 +573,26 @@
       render(filtered);
     }catch(e){
       console.error(e);
-      $("tbody").innerHTML =
-        `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
+
+      if (String(e?.message || e) === "unauthorized") {
+        showHint("❌ Token refusé (401). Vérifie : (1) tu as collé le vrai token, (2) ton backend accepte bien X-Admin-Token / Authorization / token=.");
+      } else {
+        showHint("❌ " + String(e?.message || e));
+      }
+
+      $("tbody").innerHTML = `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
       $("kTotal").textContent = "0";
       $("kOk").textContent = "0";
       $("kKo").textContent = "0";
-    }finally{
+    } finally {
       isLoading = false;
     }
   }
   window.loadLogs = loadLogs;
 
-  function startAutoRefresh(){
-    stopAutoRefresh();
-    autoTimer = setInterval(() => {
-      if (!autoEnabled) return;
-      if (isLoading) return;
-      loadLogs();
-    }, 30_000);
-    updateAutoUI();
-  }
-
-  function stopAutoRefresh(){
-    if (autoTimer) clearInterval(autoTimer);
-    autoTimer = null;
-    updateAutoUI();
-  }
-
-  function toggleAutoRefresh(){
-    autoEnabled = !autoEnabled;
-    if (autoEnabled) startAutoRefresh();
-    else stopAutoRefresh();
-  }
-  window.toggleAutoRefresh = toggleAutoRefresh;
-
-  function updateAutoUI(){
-    const btn = $("btnAuto");
-    const info = $("autoInfo");
-    if (!btn || !info) return;
-
-    if (autoEnabled){
-      btn.textContent = "⏸ Pause auto";
-      info.textContent = "Actualisation automatique : toutes les 30 secondes";
-    } else {
-      btn.textContent = "▶ Reprendre auto";
-      info.textContent = "Actualisation automatique : en pause";
-    }
-  }
-
+  // ✅ interactions
   ["to","subject","q"].forEach(id=>{
-    $(id).addEventListener("keydown", (ev)=>{
-      if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); }
-    });
+    $(id).addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); loadLogs(); } });
   });
 
   ["limit","formType","status","dateFrom","dateTo","remember"].forEach(id=>{
@@ -590,7 +603,41 @@
     if ($("remember").checked) saveTokenIfNeeded();
   });
 
+  // ✅ auto-refresh 30s
+  let autoTimer = null;
+  let autoEnabled = true;
+
+  function updateAutoUI() {
+    const btn = $("btnAuto");
+    const info = $("autoInfo");
+    if (!btn || !info) return;
+
+    if (autoEnabled) {
+      btn.textContent = "⏸ Pause auto";
+      info.textContent = "Actualisation automatique : toutes les 30 secondes";
+    } else {
+      btn.textContent = "▶ Reprendre auto";
+      info.textContent = "Actualisation automatique : en pause";
+    }
+  }
+
+  function startAutoRefresh() {
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = setInterval(() => {
+      if (!autoEnabled) return;
+      loadLogs();
+    }, 30_000);
+    updateAutoUI();
+  }
+
+  function toggleAutoRefresh() {
+    autoEnabled = !autoEnabled;
+    updateAutoUI();
+  }
+  window.toggleAutoRefresh = toggleAutoRefresh;
+
   restoreToken();
+  updateAutoUI();
   loadLogs();
   startAutoRefresh();
 </script>
