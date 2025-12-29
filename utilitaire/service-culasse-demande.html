@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#e9efff">
   
 </head>
-<body>
+<body class="embed-main">
   
 <header class="topbar">
   <div class="brand-left">
@@ -70,15 +70,19 @@
   <main class="wrap">
     <section class="card">
       
-<div class="content" style="padding-top:26px;">
-  <div style="display:flex;justify-content:center;gap:30px;flex-wrap:wrap;margin:6px 0 20px;">
-    <a href="../utilitaire/service-culasse-demande.html" style="display:inline-block;padding:12px 26px;border-radius:999px;background:var(--pill);color:#fff;font-weight:900;letter-spacing:.8px;text-transform:uppercase;text-decoration:none;">DEMANDE</a>
-    <a href="../utilitaire/service-culasse-suivi.html" style="display:inline-block;padding:12px 26px;border-radius:999px;background:var(--pill-muted);color:#fff;font-weight:900;letter-spacing:.8px;text-transform:uppercase;text-decoration:none;">SUIVI</a>
+<div class="content">
+  <div class="embed-tabs">
+    <a href="../utilitaire/service-culasse-demande.html" class="is-active">DEMANDE</a>
+    <a href="../utilitaire/service-culasse-suivi.html">SUIVI</a>
   </div>
-  <div style="display:flex;justify-content:center;">
-    <iframe src="https://mes-formulaires.onrender.com/atelier" width="1680" height="900"
-      style="max-width:96vw;width:1680px;border:0;background:#fff;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,.15)">
-    </iframe>
+  <div class="embed-viewport">
+    <iframe
+      class="embed-frame"
+      title="Formulaire Atelier - Demande"
+      src="https://mes-formulaires.onrender.com/atelier"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+    ></iframe>
   </div>
 </div>
 

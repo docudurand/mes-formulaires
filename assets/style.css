@@ -31,10 +31,13 @@ body{
 .topbar{
   background: var(--topbar);
   border-top: 4px solid #6b2aa6;
-  padding: 14px 18px;
-  display:flex;
+  padding: 14px clamp(10px, 1.2vw, 18px);
+
+  /* grille: logo gauche | 5 boutons | logo droit */
+  display:grid;
+  grid-template-columns: auto 1fr auto;
   align-items:center;
-  gap:18px;
+  column-gap: clamp(10px, 1.2vw, 18px);
 
   position: sticky;
   top: 0;
@@ -44,29 +47,27 @@ body{
 .brand-left, .brand-right{
   display:flex;
   align-items:center;
-  min-width: 140px;
+  /* le logo se réduit automatiquement pour laisser la place aux 5 boutons */
+  width: clamp(90px, 12vw, 170px);
+  min-width: 0;
 }
 .brand-left img,
 .brand-right img{
-  height: 34px;
-  width:auto;
+  height: clamp(28px, 3.2vw, 40px);
+  width: 100%;
+  max-width: 100%;
+  object-fit: contain;
   display:block;
 }
-.brand-right{
-  margin-left:auto;
-  justify-content:flex-end;
-}
+.brand-right{ justify-content:flex-end; }
 
 .nav{
-  display:flex;
+  /* 5 colonnes fixes -> 5 boutons alignés */
+  display:grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(8px, 1.1vw, 22px);
   align-items:center;
-  justify-content:center;
-  gap:22px;
-  flex:1;
   min-width:0;
-
-  /* responsive: les boutons peuvent passer à la ligne */
-  flex-wrap: wrap;
 }
 
 .menu{
@@ -93,7 +94,8 @@ body{
   background: var(--pill-muted);
   box-shadow: 0 8px 18px rgba(0,0,0,.18);
 
-  min-width: clamp(150px, 12vw, 220px);
+  width: 100%;
+  min-width: 0;
   white-space: nowrap;
 }
 
@@ -350,20 +352,20 @@ body.embed-main{
 .embed-card{ height: 100%; }
 
 @media (max-width: 980px){
-  .menu-btn{ min-width: 180px; font-size:16px; padding: 12px 18px; }
-  .brand-left, .brand-right{ min-width: 110px; }
-  .brand-left img, .brand-right img{ height:34px; }
-  .nav{ gap:12px; }
+  .menu-btn{ font-size:14px; padding: 10px 12px; }
+  .brand-left, .brand-right{ width: clamp(70px, 16vw, 120px); }
+  .nav{ gap:10px; }
   .subbar{ height: 28px; }
   .h1{ font-size: 40px; }
 }
 
 @media (max-width: 640px){
-  .topbar{ flex-wrap: wrap; }
-  .nav{ width:100%; order: 3; justify-content:space-between; }
-  .brand-right{ order:2; margin-left:0; }
-  .menu-btn{ width: 100%; min-width: 0; }
-  .menu{ flex:1; }
+  /* sur très petit écran, on passe en 2 lignes plutôt que de casser les boutons */
+  .topbar{ grid-template-columns: 1fr 1fr; grid-template-areas: "left right" "nav nav"; row-gap: 10px; }
+  .brand-left{ grid-area: left; }
+  .brand-right{ grid-area: right; justify-content:flex-end; }
+  .nav{ grid-area: nav; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .menu{ width:100%; }
   .dropdown{ left:0; transform:none; width:100%; }
   .menu.util .dropdown{ right:auto; width:100%; }
   .h1{ font-size: 32px; }
