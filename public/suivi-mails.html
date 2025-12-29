@@ -229,11 +229,11 @@
 
         <div class="field c2">
           <label>Statut</label>
-          <select id="status">
-            <option value="">Tous</option>
-            <option value="sent">OK (sent)</option>
-            <option value="failed">Échecs (failed)</option>
-          </select>
+<select id="status">
+  <option value="">Tous</option>
+  <option value="sent">OK (envoyé)</option>
+  <option value="failed">Échecs (échoué)</option>
+</select>
         </div>
 
         <div class="field c3">
@@ -423,9 +423,12 @@
     }
 
     tb.innerHTML = logs.map(x=>{
-      const status = String(x.status||"");
-      const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
-      const pillTxt = status || "—";
+const status = String(x.status || "");
+const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
+const pillTxt =
+  status === "sent" ? "envoyé" :
+  status === "failed" ? "échoué" :
+  (status || "—");
       return `
         <tr>
           <td class="mono">${escapeHtml(fmtFR(x.ts))}</td>
