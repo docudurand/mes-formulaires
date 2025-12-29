@@ -12,6 +12,105 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#e9efff">
   
+
+  <style>
+    html{ scroll-behavior:smooth; }
+    .ds-page{ padding: 22px 22px 40px; background:#fff; }
+    .ds-layout{
+      display:grid;
+      grid-template-columns: 220px 1fr;
+      gap: 28px;
+      align-items:start;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .ds-sidenav{
+      position: sticky;
+      top: calc(var(--header-h, 74px) + 18px);
+      align-self:start;
+      padding-top: 6px;
+    }
+    .ds-navlink{
+      display:block;
+      padding: 10px 0;
+      text-decoration:none;
+      color:#6b6f7a;
+      font-weight: 700;
+      letter-spacing:.2px;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+    .ds-navlink:hover{ color:#1e2f57; }
+    .ds-title{
+      text-align:center;
+      font-size: clamp(34px, 3vw, 54px);
+      letter-spacing: 2px;
+      margin: 18px 0 34px;
+      color:#1d2336;
+      font-weight: 400;
+    }
+    .ds-subtitle{
+      margin: 28px 0 10px;
+      font-size: 12px;
+      letter-spacing:.6px;
+      text-transform: uppercase;
+      color:#1d2336;
+      font-weight: 800;
+    }
+    .ds-anchor{ scroll-margin-top: calc(var(--header-h, 74px) + 18px); }
+    .table-wrap{ width:100%; overflow-x:auto; }
+    .ds-table{
+      width:100%;
+      border-collapse: collapse;
+      min-width: 780px;
+      background:#fff;
+    }
+    .ds-table th, .ds-table td{
+      border: 1px solid rgba(0,0,0,.14);
+      padding: 12px 12px;
+      vertical-align: top;
+      font-size: 13px;
+    }
+    .ds-table th{
+      background:#f4f6fb;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing:.4px;
+      font-size: 12px;
+    }
+    .ds-table td:nth-child(2), .ds-table td:nth-child(3){
+      text-align:center;
+      white-space: nowrap;
+    }
+    .ds-placeholder{
+      border:1px dashed rgba(0,0,0,.25);
+      border-radius: 12px;
+      padding: 16px;
+      background:#fafbff;
+      color:#333;
+    }
+
+    @media (max-width: 980px){
+      .ds-layout{ grid-template-columns: 180px 1fr; gap: 18px; }
+      .ds-page{ padding: 18px 14px 28px; }
+    }
+    @media (max-width: 760px){
+      .ds-layout{ grid-template-columns: 1fr; }
+      .ds-sidenav{
+        position: static;
+        display:flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+        border-bottom: 1px solid rgba(0,0,0,.10);
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+      }
+      .ds-navlink{ padding: 6px 10px; border-radius: 999px; background:#eef0ff; }
+      .ds-table{ min-width: 720px; }
+    }
+  </style>
+
 </head>
 <body>
   
@@ -73,11 +172,152 @@
 </header>
 <div class="subbar"></div>
 
-  <main class="wrap">
-    <section class="card">
-      <iframe class="embed-frame" src="https://docugarantiedurand.odoo.com/fournisseur"></iframe>
+  
+<main class="wrap">
+  <section class="card">
+    <div class="content ds-page">
+      
+<div class="ds-layout">
+  <aside class="ds-sidenav" aria-label="Navigation fournisseur">
+    <a class="ds-navlink" href="#fournisseur">FOURNISSEUR</a>
+    <a class="ds-navlink" href="#liste-depot">LISTE DEPOT</a>
+    <a class="ds-navlink" href="#code-back2car">CODE BACK 2 CAR</a>
+    <a class="ds-navlink" href="#code-hub">CODE FOURNISSEUR HUB</a>
+  </aside>
+
+  <div class="ds-main">
+    <section id="fournisseur" class="ds-anchor">
+      <h1 class="ds-title">FOURNISSEUR</h1>
+      
+    <section class="ds-section" data-title="ACCESSOIRE / ECLAIRAGE / QUINCAILLERIE">
+      <h2 class="ds-subtitle">ACCESSOIRE / ECLAIRAGE / QUINCAILLERIE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>PLANET LINE (1363)</td><td>24H</td><td></td><td>VIA MAG CHASSE</td></tr><tr><td>SILIM ACCESSOIRE RADIO (750)</td><td>24H</td><td></td><td>GTI</td></tr><tr><td>WESTFALIA (1089)</td><td>48H</td><td></td><td>FRAIS DE PORT</td></tr><tr><td>INTFRADIS (1125)</td><td></td><td></td><td></td></tr><tr><td>CHARNOUD EQUIPIECE (593)</td><td>24H</td><td></td><td>RAMASSE PAR CHASSIEU</td></tr></tbody></table></div>
     </section>
-  </main>
+    
+
+    <section class="ds-section" data-title="BATTERIE">
+      <h2 class="ds-subtitle">BATTERIE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>VOLTEO (5024)</td><td></td><td></td><td>RAMASSE PAR CHASSIEU</td></tr><tr><td>batterie 69</td><td></td><td></td><td></td></tr><tr><td>YUASA (2014)</td><td>24H</td><td></td><td>RAMASSE PAR BENJAMIN TRESSE (9044) AVANT 9H30 POUR LIVRAISON DANS LA JOURNEE</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="COURROIE INDUSTRIELLE">
+      <h2 class="ds-subtitle">COURROIE INDUSTRIELLE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>GUIFFRAY (6026)</td><td></td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="FILTRE SPECIAL TP ET CHARIOT">
+      <h2 class="ds-subtitle">FILTRE SPECIAL TP ET CHARIOT</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>SF FILTER (1602)</td><td>48h</td><td></td><td>FRAIS DE PORT</td></tr><tr><td>RHONADIS (1828)</td><td></td><td></td><td>FRAIS DE PORT</td></tr><tr><td>FILGUARD</td><td></td><td></td><td></td></tr><tr><td>JURA FILTRATION</td><td></td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="FOURNISSEUR TOUTES PIECES">
+      <h2 class="ds-subtitle">FOURNISSEUR TOUTES PIECES</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>BARET (1092)</td><td>24H</td><td></td><td>RAMASSE CHASSIEU</td></tr><tr><td>FERDINANT FEBI (1248)</td><td>24H</td><td>17H / 16H VENDREDI</td><td></td></tr><tr><td>QH (971)</td><td>24H</td><td>17H</td><td>LIVRAISON</td></tr><tr><td>SEIM (214)</td><td></td><td></td><td></td></tr><tr><td>TECCOM</td><td>24H</td><td></td><td>GTI</td></tr><tr><td>LUK SCHAEFFLER (1282)</td><td></td><td></td><td></td></tr><tr><td>MGA</td><td>24H</td><td></td><td>GTI</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="HUILE / GRAISSE / ADDITIF">
+      <h2 class="ds-subtitle">HUILE / GRAISSE / ADDITIF</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>YACCO (6537)</td><td></td><td></td><td>Vos demandes sont à faire directement à adv@yacco.com en mettant en copie Olivier et moi-même.</td></tr><tr><td>MECATECH (1278)</td><td>24/48H</td><td></td><td>RAMASSE PAR CHASSE SUR RHONE</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="JANTES">
+      <h2 class="ds-subtitle">JANTES</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>RCSPORT (1310)</td><td>24H</td><td></td><td>RAMASSE BOURGOIN</td></tr><tr><td>DISTRI CASH (8788)</td><td>48h/72h</td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="MACHINE TOURNANTE CARDAN CREMAILLERE">
+      <h2 class="ds-subtitle">MACHINE TOURNANTE CARDAN CREMAILLERE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>CEVAM (1399)</td><td>24H</td><td>17H</td><td>CIBLEX FRAIS DE PORT</td></tr><tr><td>DA SILVA (1013)</td><td>24H</td><td>17H</td><td>FRAIS DE PORT 15 EUROS (FRANCO 200EURO)</td></tr><tr><td>DAPEX (Machine tournante) 1740</td><td>24H</td><td>18H</td><td>FRANCO 100E</td></tr><tr><td>DEPA (1072)</td><td>48H</td><td>12H</td><td>LIVRAISON FRAIS DE PORT 8E</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="PARE BRISE">
+      <h2 class="ds-subtitle">PARE BRISE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>AUTOVERT (80)</td><td>24H</td><td>18H</td><td>LIVRAISON NUIT</td></tr><tr><td>PILKINGTHON (1244)</td><td>24H</td><td></td><td>RAMASSE PAR CHASSIEU</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="PIECE CARROSSERIE">
+      <h2 class="ds-subtitle">PIECE CARROSSERIE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>ANIEL (1406)</td><td>48H</td><td></td><td>LIVRAISON FRAIS DE PORT</td></tr><tr><td>BACK TO CAR (1700)</td><td>48H</td><td></td><td>FRAIS DE PORT 10 E FRANCO 120 E</td></tr><tr><td>PREFERENCE CARROSSERIE (1589)</td><td>24H SI PETITE PIECE</td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="PIECE CULASSE JT MOTEUR TURBO">
+      <h2 class="ds-subtitle">PIECE CULASSE JT MOTEUR TURBO</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>BG DIFFUSION (254)</td><td></td><td></td><td>RAMASSE CHASSIEU</td></tr><tr><td>MS MOTORS CODE (116)</td><td>24H</td><td></td><td>GTI</td></tr><tr><td>TURBO HOET</td><td></td><td></td><td></td></tr><tr><td>GAMOTECH</td><td></td><td></td><td>RECHERCHE TURBO VIA REF ORIGINE A CDER SUR LE HUB</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="ECHAPPEMENT">
+      <h2 class="ds-subtitle">ECHAPPEMENT</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>BOSAL 382</td><td></td><td></td><td>GTI</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="PIECE VOITURE SANS PERMIS">
+      <h2 class="ds-subtitle">PIECE VOITURE SANS PERMIS</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>ST FON PLAISANCE (1598)</td><td>48H</td><td></td><td>RAMASSE MAG 18</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="IHLE PNEU">
+      <h2 class="ds-subtitle">IHLE PNEU</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>DIPRO (476)</td><td>24H/72H</td><td></td><td>LIVRAISON GEODIS SANS FRAIS DE PORT</td></tr><tr><td>DIPROCASH</td><td></td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="POIDS LOURD">
+      <h2 class="ds-subtitle">POIDS LOURD</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>SYNCRO DIFFUSION</td><td></td><td></td><td>ACCESSOIRE PL ET CAMPING CAR</td></tr><tr><td>TODDCHRONO</td><td></td><td></td><td></td></tr><tr><td>DIESEL TECHNIC (1314)</td><td></td><td></td><td></td></tr><tr><td>LYRA ACI (1701)</td><td></td><td></td><td>ECLAIRAGE / FAISCEAU / ACCESSOIRE / CHASSIS CABINE</td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="OUTILLAGE">
+      <h2 class="ds-subtitle">OUTILLAGE</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>CLAS (6146)</td><td>24H</td><td></td><td>RAMASSE LA MOTTE</td></tr><tr><td>KS TOOLS (1281)</td><td>24H</td><td></td><td></td></tr></tbody></table></div>
+    </section>
+    
+
+    <section class="ds-section" data-title="RADIATEUR ECHANGEUR">
+      <h2 class="ds-subtitle">RADIATEUR ECHANGEUR</h2>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>NRF (1611)</td><td>24/48H</td><td></td><td>LIVRAISON FRAIS DE PORT ENTRE 15 ET 20 EUROS</td></tr><tr><td>VERTAT (578)</td><td>24H</td><td>11H</td><td>RAMASSE GTI OU CIBLEX</td></tr></tbody></table></div>
+    </section>
+    
+    </section>
+
+    <section id="liste-depot" class="ds-anchor">
+      <h1 class="ds-title">LISTE DEPOT</h1>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Groupe</th><th>Dépôt</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td></td><td>CDAL (3822)</td><td>10h45</td><td>LIVRAISON A 14H SUR SITE</td></tr><tr><td></td><td>DASIR (814)</td><td>11H</td><td>LIVRAISON A 14H SUR SITE</td></tr><tr><td></td><td>PAP SUD RIAL (262)</td><td>10H45</td><td>LIVRAISON A 14H SUR SITE</td></tr><tr><td>DIVERS</td><td>EUROGESTE (1024)</td><td></td><td>REF TUYAUX CUIVRE FREINS</td></tr></tbody></table></div>
+    </section>
+
+    <section id="code-back2car" class="ds-anchor">
+      <h1 class="ds-title">CODE BACK 2 CAR</h1>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Site / Agence</th><th>Code</th></tr></thead><tbody><tr><td>A1 - GENEVE OCCASION (BOITE ET MOTEUR OCCASION)</td><td>1688</td></tr><tr><td>B1 - ST QUANTIN</td><td>6072</td></tr><tr><td>B2 - LAON</td><td>6072</td></tr><tr><td>C1 - LIMAY</td><td>534</td></tr><tr><td>D1 - AXIOMAUTO</td><td>1825</td></tr><tr><td>EI - DUPAS</td><td>6190</td></tr><tr><td>FA - FERRON VERINS</td><td>1101</td></tr></tbody></table></div>
+    </section>
+
+    <section id="code-hub" class="ds-anchor">
+      <h1 class="ds-title">CODE FOURNISSEUR HUB</h1>
+      
+<div class="ds-placeholder">
+  <p><strong>Code Fournisseur HUB</strong> : données non présentes dans le fichier Excel fourni.</p>
+  <p>Si tu me donnes l’export (ou un onglet dédié), je te l’intègre au même format.</p>
+</div>
+
+    </section>
+  </div>
+</div>
+
+    </div>
+  </section>
+</main>
+
 
   <script>window.__SITE_PREFIX__="../";</script>
   <script src="../assets/auth.js"></script>
