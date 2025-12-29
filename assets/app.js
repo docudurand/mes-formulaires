@@ -51,33 +51,6 @@
     });
 
     window.addEventListener("load", resizeEmbeds);
-
     resizeEmbeds();
-  }
-
-  function syncHeaderHeight() {
-    const header =
-      document.querySelector("header") ||
-      document.querySelector(".header") ||
-      document.querySelector(".topbar") ||
-      document.querySelector(".navbar") ||
-      document.querySelector(".nav");
-
-    if (!header) return;
-    document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
-  }
-
-  window.addEventListener("load", syncHeaderHeight);
-  window.addEventListener("resize", syncHeaderHeight);
-
-  const obsTarget =
-    document.querySelector("header") ||
-    document.querySelector(".header") ||
-    document.querySelector(".topbar") ||
-    document.querySelector(".navbar") ||
-    document.querySelector(".nav");
-
-  if (obsTarget && "ResizeObserver" in window) {
-    new ResizeObserver(syncHeaderHeight).observe(obsTarget);
   }
 })();

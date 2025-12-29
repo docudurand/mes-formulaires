@@ -38,12 +38,14 @@ body{
   z-index: 1000;
 
   flex-wrap: wrap;
+  row-gap: 12px;
 }
 
 .brand-left, .brand-right{
   display:flex;
   align-items:center;
   min-width: 140px;
+  flex: 0 0 auto;
 }
 
 .brand-left img,
@@ -63,10 +65,20 @@ body{
   align-items:center;
   justify-content:center;
   gap:22px;
+
   flex:1;
   min-width:0;
 
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+
+@media (max-width: 1500px){
+  .nav{
+    width: 100%;
+    flex: 0 0 100%;
+    justify-content: center;
+  }
 }
 
 .menu{
