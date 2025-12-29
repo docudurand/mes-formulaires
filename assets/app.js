@@ -26,4 +26,24 @@
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') closeAll();
   });
+
+  // Responsive embed iframes: make them tall enough so the main page scrolls,
+  // instead of showing a scrollbar inside the iframe container.
+  const embeds = Array.from(document.querySelectorAll('iframe.embed-frame'));
+  if (embeds.length) {
+    const resizeEmbeds = () => {
+      const vh = window.innerHeight || 900;
+      // generous height (outer page scroll), with sensible minimum
+      const h = Math.max(900, Math.round(vh * 1.65));
+      embeds.forEach(fr => {
+        fr.style.height = h + 'px';
+      });
+    };
+    let t;
+    window.addEventListener('resize', () => {
+      clearTimeout(t);
+      t = setTimeout(resizeEmbeds, 150);
+    });
+    resizeEmbeds();
+  }
 })();

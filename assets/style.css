@@ -163,7 +163,9 @@ body{
 }
 
 .card{
-  width: min(1680px, 98vw);
+  /* Full-width responsive container (no hard cap at 1680px) */
+  width: 98vw;
+  max-width: 100%;
   display:flex;
   flex-direction:column;
   flex: 1;
@@ -232,14 +234,22 @@ body{
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
+/*
+  Embedded (iframe) pages:
+  We want scrolling on the main page (not inside the iframe container).
+  Since most embedded targets are cross-domain, we can't auto-resize to content;
+  instead we let the page scroll and give the iframe a generous responsive height.
+*/
 body.embed-main{
-  height: 100vh;
-  overflow: hidden;
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
 }
 
 .embed-main .wrap,
 .embed-main .card{
-  overflow: hidden;
+  /* Allow tall iframe to expand page (no internal scroll container) */
+  overflow: visible;
 }
 
 .embed-main .wrap,
@@ -249,8 +259,7 @@ body.embed-main{
 }
 
 .embed-main .content{
-  display:flex;
-  flex-direction:column;
+  display:block;
   padding: 12px 18px 14px;
   min-height: 0;
 }
@@ -278,16 +287,15 @@ body.embed-main{
 .embed-tabs a.is-active{ background: var(--pill); }
 
 .embed-viewport{
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  justify-content: stretch;
-  align-items: stretch;
+  /* Don't force a fixed viewport height; let the iframe define the page height */
+  display:block;
 }
 
 .embed-frame{
   width: 100%;
-  height: 100%;
+  /* Height is set by JS to be responsive (see assets/app.js) */
+  height: 1400px;
+  min-height: 900px;
   border: 0;
   background: #fff;
   border-radius: 10px;
