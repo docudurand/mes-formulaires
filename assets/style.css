@@ -23,6 +23,9 @@ body{
   min-height: 100vh;
   display:flex;
   flex-direction:column;
+
+  /* Évite le scroll horizontal (souvent causé par des boutons trop larges) */
+  overflow-x: hidden;
 }
 
 .topbar{
@@ -45,7 +48,8 @@ body{
 }
 .brand-left img,
 .brand-right img{
-  height: 34px;
+  /* Les logos s'adaptent à la résolution */
+  height: clamp(28px, 2.2vw, 34px);
   width:auto;
   display:block;
 }
@@ -58,9 +62,13 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:22px;
+  /* Les espacements s'adaptent à la résolution */
+  gap: clamp(10px, 1.2vw, 22px);
   flex:1;
   min-width:0;
+
+  /* Permet au menu de se réorganiser si l'écran est plus étroit */
+  flex-wrap: wrap;
 }
 
 .menu{
@@ -74,19 +82,20 @@ body{
   border:0;
   cursor:pointer;
 
-  padding: 12px 22px;
+  /* Boutons responsives (taille/espacement selon la résolution) */
+  padding: clamp(10px, 0.95vw, 12px) clamp(14px, 1.6vw, 22px);
   border-radius: var(--radius-pill);
 
   color:#fff;
   font-weight:900;
   letter-spacing:.6px;
-  font-size: 17px;
+  font-size: clamp(14px, 1.0vw, 17px);
   text-transform: uppercase;
 
   background: var(--pill-muted);
   box-shadow: 0 8px 18px rgba(0,0,0,.18);
 
-  min-width: 210px;
+  min-width: clamp(150px, 11vw, 210px);
   white-space: nowrap;
 }
 
@@ -160,6 +169,26 @@ body{
   display:flex;
   justify-content:center;
   align-items:stretch;
+}
+
+/*
+  Pages avec iframe (cadres) :
+  - on évite le scroll À L'INTÉRIEUR du cadre
+  - on laisse la page grandir, donc le scroll n'existe que sur la page
+*/
+body.page-embed .wrap{
+  /* ne force plus une hauteur "plein écran" */
+  flex: 0;
+  display: block;
+  padding: 10px 12px 16px;
+}
+body.page-embed .card{
+  flex: initial;
+}
+body.page-embed .embed-frame{
+  /* hauteur ajustée en JS (fallback ci-dessous) */
+  height: 1600px;
+  max-height: none;
 }
 
 .card{
@@ -287,20 +316,21 @@ body.embed-main{
 
 .embed-frame{
   width: 100%;
-  height: 100%;
+  /* IMPORTANT : ne pas contraindre à 100% sinon l'iframe scroll à l'intérieur */
+  height: 1600px;
   border: 0;
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 10px 25px rgba(0,0,0,.15);
 }
 
+/* Utilisable sur certaines pages très longues (si besoin) */
+.embed-frame--tall{ height: 2200px; }
+.embed-frame--xl{ height: 3200px; }
+
 .embed-card{ height: 100%; }
 
 @media (max-width: 980px){
-  .menu-btn{ min-width: 180px; font-size:16px; padding: 12px 18px; }
-  .brand-left, .brand-right{ min-width: 110px; }
-  .brand-left img, .brand-right img{ height:34px; }
-  .nav{ gap:12px; }
   .subbar{ height: 28px; }
   .h1{ font-size: 40px; }
 }
