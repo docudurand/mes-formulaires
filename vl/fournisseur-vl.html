@@ -347,5 +347,32 @@
   <script src="../assets/auth.js"></script>
   <script>requireAuth();</script>
   <script src="../assets/app.js"></script>
+
+<script>
+(function(){
+  const links = Array.from(document.querySelectorAll('.ds-sidenav a[href^="#"]'));
+  if(!links.length) return;
+
+  function headerOffset(){
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim();
+    const h = parseFloat(v || '0') || 0;
+    return h + 12;
+  }
+
+  links.forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      const hash = a.getAttribute('href');
+      const el = document.querySelector(hash);
+      if(!el) return;
+      e.preventDefault();
+      el.scrollIntoView({behavior:'smooth', block:'start'});
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        window.scrollBy({top: -headerOffset(), left: 0, behavior: 'smooth'});
+      }));
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
