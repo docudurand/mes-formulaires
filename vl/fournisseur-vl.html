@@ -58,11 +58,11 @@
       font-weight: 800;
     }
     .ds-anchor{ scroll-margin-top: calc(var(--header-h, 74px) + 18px); }
-    .table-wrap{ width:100%; overflow-x:auto; }
+    .table-wrap{ width:100%; overflow-x:visible; }
     .ds-table{
       width:100%;
       border-collapse: collapse;
-      min-width: 780px;
+      min-width: 0; table-layout: fixed;
       background:#fff;
     }
     .ds-table th, .ds-table td{
@@ -109,7 +109,19 @@
       .ds-navlink{ padding: 6px 10px; border-radius: 999px; background:#eef0ff; }
       .ds-table{ min-width: 720px; }
     }
-  </style>
+  
+
+    .ds-section{ max-width: 1100px; margin: 0 auto 38px; }
+    .ds-subtitle{ margin: 10px 0 14px; font-size: 14px; letter-spacing:.35px; color:#333; text-transform: uppercase; }
+    .ds-table th, .ds-table td{ word-break: break-word; }
+    .supplier-link{ color: var(--link, #2a46ff); text-decoration: none; font-weight: 700; }
+    .supplier-link:hover{ text-decoration: underline; }
+    .hub-table td{ font-weight: 700; font-size: 16px; padding: 14px 16px; }
+    @media (max-width: 900px){
+      .table-wrap{ overflow-x:auto; }
+      .ds-table{ table-layout:auto; }
+    }
+</style>
 
 </head>
 <body>
@@ -191,7 +203,7 @@
       
     <section class="ds-section" data-title="ACCESSOIRE / ECLAIRAGE / QUINCAILLERIE">
       <h2 class="ds-subtitle">ACCESSOIRE / ECLAIRAGE / QUINCAILLERIE</h2>
-      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td>PLANET LINE (1363)</td><td>24H</td><td></td><td>VIA MAG CHASSE</td></tr><tr><td>SILIM ACCESSOIRE RADIO (750)</td><td>24H</td><td></td><td>GTI</td></tr><tr><td>WESTFALIA (1089)</td><td>48H</td><td></td><td>FRAIS DE PORT</td></tr><tr><td>INTFRADIS (1125)</td><td></td><td></td><td></td></tr><tr><td>CHARNOUD EQUIPIECE (593)</td><td>24H</td><td></td><td>RAMASSE PAR CHASSIEU</td></tr></tbody></table></div>
+      <div class='table-wrap'><table class='ds-table'><thead><tr><th>Fournisseur</th><th>Délais</th><th>Heure limite</th><th>Infos</th></tr></thead><tbody><tr><td><a class="supplier-link" href="https://planet-line.com/" target="_blank" rel="noopener">PLANET LINE (1363)</a></td><td>24H</td><td></td><td>VIA MAG CHASSE</td></tr><tr><td>SILIM ACCESSOIRE RADIO (750)</td><td>24H</td><td></td><td>GTI</td></tr><tr><td>WESTFALIA (1089)</td><td>48H</td><td></td><td>FRAIS DE PORT</td></tr><tr><td>INTFRADIS (1125)</td><td></td><td></td><td></td></tr><tr><td>CHARNOUD EQUIPIECE (593)</td><td>24H</td><td></td><td>RAMASSE PAR CHASSIEU</td></tr></tbody></table></div>
     </section>
     
 
@@ -304,11 +316,23 @@
 
     <section id="code-hub" class="ds-anchor">
       <h1 class="ds-title">CODE FOURNISSEUR HUB</h1>
-      
-<div class="ds-placeholder">
-  <p><strong>Code Fournisseur HUB</strong> : données non présentes dans le fichier Excel fourni.</p>
-  <p>Si tu me donnes l’export (ou un onglet dédié), je te l’intègre au même format.</p>
-</div>
+
+      <section class="ds-section" data-title="CODE FOURNISSEUR HUB">
+        <div class="table-wrap">
+          <table class="ds-table hub-table">
+            <tbody>
+              <tr><td>1255 Blois (frais de port)</td></tr>
+<tr><td>1191 Le Hello</td></tr>
+<tr><td>1402 SGDB precisium (frais de port)</td></tr>
+<tr><td>1589 st amand preference carrosserie</td></tr>
+<tr><td>1220 Aprevia (frais de port)</td></tr>
+<tr><td>863 L e Rhu</td></tr>
+<tr><td>1776 PLATEFORME FIRST</td></tr>
+<tr><td>1600 PLATEFORME PREF SHELL NAP</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
     </section>
   </div>
