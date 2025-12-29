@@ -1,4 +1,7 @@
 (function(){
+  // -------------------------------
+  // Menus (mobile/tablette)
+  // -------------------------------
   const menus = Array.from(document.querySelectorAll('.menu'));
   function closeAll(except=null){
     menus.forEach(m => { if(m !== except) m.classList.remove('open'); });
@@ -26,41 +29,24 @@
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') closeAll();
   });
-})();
 
-/*
-  Responsive des pages "embed" (iframe) :
-  Objectif : pas de scroll dans le cadre, uniquement sur la page.
-  Comme certaines iframes sont cross-domain (odoo/onrender), on ne peut pas
-  mesurer leur hauteur. On applique donc :
-  - une hauteur généreuse par défaut
-  - une adaptation minimale à la hauteur d'écran
-  - la possibilité d'override via classes CSS (.embed-frame--tall/.embed-frame--xl)
-*/
-(function(){
-  const frames = Array.from(document.querySelectorAll('iframe.embed-frame'));
-  if (!frames.length) return;
+  // -------------------------------
+  // Pages avec iframe embarqué
+  // -> un seul scroll (sur la page)
+  // -------------------------------
+  const frame = document.querySelector('iframe.embed-frame');
+  if(frame){
+    document.body.classList.add('page-embed');
 
-  document.body.classList.add('page-embed');
+    const setH = () => {
+      // On ne peut pas mesurer le contenu si l'iframe est cross-domain.
+      // Donc: hauteur "confort" + responsive.
+      const vh = Math.max(600, window.innerHeight || 900);
+      const h = Math.max(1400, Math.floor(vh * 1.55));
+      frame.style.height = h + 'px';
+    };
 
-  function computeFrameHeight(){
-    const topbar = document.querySelector('.topbar');
-    const subbar = document.querySelector('.subbar');
-    const headerH = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
-    const base = Math.max(0, window.innerHeight - headerH - 28);
-
-    frames.forEach((frame) => {
-      // si la page a explicitement demandé "tall" / "xl", on ne touche pas
-      if (frame.classList.contains('embed-frame--tall') || frame.classList.contains('embed-frame--xl')) return;
-
-      const h = Math.max(1400, base); // 1400px évite la plupart des scrolls internes
-      frame.style.height = `${h}px`;
-      frame.setAttribute('scrolling', 'no');
-      frame.style.overflow = 'hidden';
-    });
+    setH();
+    window.addEventListener('resize', setH, { passive:true });
   }
-
-  // 1er calcul + recalcul au resize
-  window.addEventListener('load', computeFrameHeight);
-  window.addEventListener('resize', computeFrameHeight);
 })();
