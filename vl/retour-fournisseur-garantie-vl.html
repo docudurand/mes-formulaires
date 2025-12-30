@@ -14,154 +14,119 @@
   <meta name="theme-color" content="#e9efff">
 
   <style>
-    .panel {
-      width: min(1600px, 100%);
-      margin: 0 auto;
-      padding: 18px 18px 26px;
-    }
+    .panel { width:min(1600px,100%); margin:0 auto; padding:18px 18px 26px; }
 
     .accordion {
-      border: 1px solid rgba(0,0,0,.12);
-      border-radius: 10px;
-      overflow: hidden;
-      background: #fff;
-      box-shadow: 0 10px 25px rgba(0,0,0,.10);
-      margin-bottom: 14px;
+      border:1px solid rgba(0,0,0,.12);
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow:0 10px 25px rgba(0,0,0,.10);
+      margin-bottom:14px;
     }
-
-    .accordion details + details {
-      border-top: 1px solid rgba(0,0,0,.10);
+    .accordion details + details { border-top:1px solid rgba(0,0,0,.10); }
+    .accordion summary{
+      list-style:none;
+      cursor:pointer;
+      padding:16px 18px;
+      background:#eef1f6;
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      user-select:none;
     }
+    .accordion summary::-webkit-details-marker{ display:none; }
+    .acc-title{ display:flex; align-items:center; gap:10px; }
+    .acc-body{ padding:16px 18px 18px; background:#fff; }
 
-    .accordion summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 16px 18px;
-      background: #eef1f6;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      user-select: none;
+    .mail-list{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      font-size:15px;
+      line-height:1.35;
     }
-    .accordion summary::-webkit-details-marker { display:none; }
+    .mail-line b{ display:inline-block; min-width:120px; }
+    .mail-line a{ color:var(--link); text-decoration:none; }
+    .mail-line a:hover{ text-decoration:underline; }
 
-    .acc-title {
+    .tools-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin:0 0 12px;
+    }
+    .search{
+      flex:1;
+      min-width:260px;
       display:flex;
       align-items:center;
       gap:10px;
     }
-
-    .acc-body {
-      padding: 16px 18px 18px;
-      background: #fff;
-    }
-
-    .mail-list {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      font-size: 15px;
-      line-height: 1.35;
-    }
-    .mail-line b { display:inline-block; min-width: 120px; }
-    .mail-line a { color: var(--link); text-decoration: none; }
-    .mail-line a:hover { text-decoration: underline; }
-
-    .tools-row {
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-      justify-content: space-between;
-      margin: 0 0 12px;
-    }
-
-    .search {
-      flex: 1;
-      min-width: 260px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-
     .search input{
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid rgba(0,0,0,.2);
-      border-radius: 10px;
-      font-size: 15px;
+      width:100%;
+      padding:11px 12px;
+      border:1px solid rgba(0,0,0,.2);
+      border-radius:10px;
+      font-size:15px;
       background:#fff;
     }
-
-    .hint {
-      font-size: 12px;
-      color: #555;
-      white-space: nowrap;
-    }
+    .hint{ font-size:12px; color:#555; white-space:nowrap; }
 
     .table-wrap{
-      width: 100%;
+      width:100%;
       overflow:auto;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,.12);
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.12);
     }
-
     table.contacts{
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 980px;
+      width:100%;
+      border-collapse:collapse;
+      min-width:980px;
       background:#fff;
     }
-
     table.contacts th, table.contacts td{
-      border-bottom: 1px solid rgba(0,0,0,.10);
-      border-right: 1px solid rgba(0,0,0,.08);
-      padding: 12px 12px;
-      vertical-align: top;
-      font-size: 14px;
-      line-height: 1.3;
-      background: #eef1f6;
+      border-bottom:1px solid rgba(0,0,0,.10);
+      border-right:1px solid rgba(0,0,0,.08);
+      padding:12px 12px;
+      vertical-align:top;
+      font-size:14px;
+      line-height:1.3;
+      background:#eef1f6;
     }
-
-    table.contacts td{ background: #eef1f6; }
-
+    table.contacts td{ background:#eef1f6; }
     table.contacts th{
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      font-weight: 900;
-      text-transform: lowercase;
+      position:sticky;
+      top:0;
+      z-index:2;
+      font-weight:900;
+      text-transform:lowercase;
     }
-
     table.contacts td:nth-child(1){
-      font-weight: 900;
-      width: 220px;
-      background: #eef1f6;
+      font-weight:900;
+      width:220px;
+      background:#eef1f6;
     }
-
     table.contacts a{
-      color: var(--link);
-      text-decoration: none;
-      font-weight: 700;
+      color:var(--link);
+      text-decoration:none;
+      font-weight:700;
     }
-    table.contacts a:hover{ text-decoration: underline; }
+    table.contacts a:hover{ text-decoration:underline; }
+    .notes{ white-space:pre-line; }
 
-    .notes{ white-space: pre-line; }
+    .status{ margin:6px 0 0; font-size:13px; opacity:.85; }
+    .status.ok{ color:#0f5132; }
+    .status.err{ color:#842029; }
 
-    .status {
-      margin: 6px 0 0;
-      font-size: 13px;
-      opacity: .85;
-    }
-    .status.ok { color:#0f5132; }
-    .status.err { color:#842029; }
-
-    @media (max-width: 640px){
-      .panel{ padding: 12px 10px 18px; }
-      .accordion summary{ padding: 14px 14px; }
-      .acc-body{ padding: 14px 14px 16px; }
+    @media (max-width:640px){
+      .panel{ padding:12px 10px 18px; }
+      .accordion summary{ padding:14px 14px; }
+      .acc-body{ padding:14px 14px 16px; }
       .hint{ display:none; }
     }
   </style>
@@ -181,7 +146,7 @@
       <button class="menu-btn" type="button">MENU PL</button>
       <div class="dropdown" role="menu" aria-label="Menu PL">
         <a href="../pl/formulaire-creation-reference-pl.html" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
-        <a href="../pl/fournisseur-pl.html" rel="noopener" role="menuitem">FOURNISSEUR PL</a>
+        <a href="../pl/fournisseur-pl.html" role="menuitem">FOURNISSEUR PL</a>
         <a href="../pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
       </div>
     </div>
@@ -191,8 +156,8 @@
       <div class="dropdown" role="menu" aria-label="Menu VL">
         <a href="../vl/formulaire-creation-reference-vl.html" role="menuitem">FORMULAIRE CREATION REFERENCE VL / VUL</a>
         <a href="../vl/formulaire-creation-reference-pneumatique.html" role="menuitem">FORMULAIRE CREATION PNEUMATIQUE</a>
-        <a href="../vl/fournisseur-vl.html" rel="noopener" role="menuitem">FOURNISSEUR VL</a>
-        <a href="../vl/retour-fournisseur-garantie-vl.html" rel="noopener" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
+        <a href="../vl/fournisseur-vl.html" role="menuitem">FOURNISSEUR VL</a>
+        <a href="../vl/retour-fournisseur-garantie-vl.html" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
         <a href="../vl/liens-formulaire-garantie.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
       </div>
     </div>
@@ -200,8 +165,8 @@
     <div class="menu" data-menu="util">
       <button class="menu-btn" type="button">UTILITAIRE</button>
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
-        <a href="../utilitaire/pret-vehicule.html" rel="noopener" role="menuitem">PRET VEHICULE</a>
-        <a href="../utilitaire/demande-ramasse.html" rel="noopener" role="menuitem">DEMANDE RAMASSE</a>
+        <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
+        <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
         <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
         <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
         <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
@@ -275,8 +240,7 @@
                     <th>notes</th>
                   </tr>
                 </thead>
-                <tbody id="contactsTbody">
-                </tbody>
+                <tbody id="contactsTbody"></tbody>
               </table>
             </div>
 
@@ -289,26 +253,25 @@
   </section>
 </main>
 
-<script>
-  window.__SITE_PREFIX__="../";
-</script>
+<script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
 
 <script>
 (function(){
-  const API_URL = "/api/vl/retour-garantie";
+  const API_PATH = "/api/vl/retour-garantie";
+  const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
 
-  const mailStatus = document.getElementById("mailStatus");
-  const mailList   = document.getElementById("mailList");
+  const mailStatus  = document.getElementById("mailStatus");
+  const mailList    = document.getElementById("mailList");
 
   const tableStatus = document.getElementById("tableStatus");
   const tbody       = document.getElementById("contactsTbody");
 
   const filterInput = document.getElementById("filterInput");
 
-  let contactsRows = [];
+  let contactTRs = [];
 
   function esc(s){
     return String(s ?? "")
@@ -320,11 +283,11 @@
   }
 
   function normalize(s){
-    return (s || '')
+    return (s || "")
       .toString()
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'');
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"");
   }
 
   function toMailLink(value){
@@ -349,7 +312,6 @@
     mailStatus.textContent = mails.length + " ligne(s).";
 
     mails.forEach(item => {
-
       let fournisseur = "";
       let email = "";
 
@@ -373,40 +335,20 @@
     });
   }
 
-  function adaptContacts(raw){
-
-    if (!raw || typeof raw !== "object") return [];
-
-    const candidates = [
-      raw.contacts_garantie,
-      raw.contacts,
-      raw.garantie,
-      raw.data,
-      raw.items
-    ].find(Array.isArray);
-
-    const arr = Array.isArray(candidates) ? candidates : [];
-    return arr.map(x => {
-      const fournisseur = String(x?.fournisseur ?? x?.supplier ?? x?.nom ?? x?.name ?? x?.Fournisseur ?? "").trim();
-
-      const suivie = x?.contact_suivie ?? x?.suivie ?? x?.suivi ?? x?.contactSuivie ?? x?.suive ?? x?.["contact suivie"];
-      const demande = x?.contact_demande ?? x?.demande ?? x?.contactDemande ?? x?.["contact demande"];
-      const commercial = x?.contact_commercial ?? x?.commercial ?? x?.contactCommercial ?? x?.["contact commercial"];
-      const notes = x?.notes ?? x?.note ?? x?.commentaire ?? x?.commentaires ?? "";
-
-      return {
-        fournisseur,
-        suivie: String(suivie ?? "").trim(),
-        demande: String(demande ?? "").trim(),
-        commercial: String(commercial ?? "").trim(),
-        notes: String(notes ?? "").trim()
-      };
-    }).filter(r => r.fournisseur || r.suivie || r.demande || r.commercial || r.notes);
+  function adaptContacts(arr){
+    if (!Array.isArray(arr)) return [];
+    return arr.map(x => ({
+      fournisseur: String(x?.fournisseur ?? "").trim(),
+      suivie: String(x?.contactSuivie ?? x?.contact_suivie ?? x?.suivie ?? x?.suivi ?? "").trim(),
+      demande: String(x?.contactDemande ?? x?.contact_demande ?? x?.demande ?? "").trim(),
+      commercial: String(x?.contactCommercial ?? x?.contact_commercial ?? x?.commercial ?? "").trim(),
+      notes: String(x?.notes ?? x?.note ?? "").trim(),
+    })).filter(r => r.fournisseur || r.suivie || r.demande || r.commercial || r.notes);
   }
 
   function renderContacts(rows){
     tbody.innerHTML = "";
-    contactsRows = [];
+    contactTRs = [];
 
     if (!Array.isArray(rows) || rows.length === 0) {
       tableStatus.className = "status ok";
@@ -442,16 +384,22 @@
       tr.appendChild(td5);
 
       tbody.appendChild(tr);
-      contactsRows.push(tr);
+      contactTRs.push(tr);
     });
   }
 
   function applyFilter(){
     const q = normalize(filterInput.value.trim());
-    contactsRows.forEach(tr => {
+    contactTRs.forEach(tr => {
       const txt = normalize(tr.innerText);
       tr.style.display = (!q || txt.includes(q)) ? "" : "none";
     });
+  }
+
+  async function fetchJSON(url){
+    const r = await fetch(url, { cache:"no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
   }
 
   async function load(){
@@ -460,17 +408,21 @@
     tableStatus.className = "status";
     tableStatus.textContent = "Chargement…";
 
-    const r = await fetch(API_URL, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
+    let raw;
 
-    const raw = await r.json();
+    try {
+      raw = await fetchJSON(location.origin + API_PATH);
+    } catch (e1) {
+      const msg = String(e1?.message || e1);
+      if (!msg.includes("HTTP 404")) throw e1;
+      raw = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
+    }
 
-    const mails = (raw && typeof raw === "object")
-      ? (raw.mails_retour || raw.mail_retour || raw.retour_fournisseurs || raw.mails || raw.mail || raw.retour || raw.mailRetour)
-      : null;
+    const mails = raw?.mailsRetour || raw?.mails_retour || raw?.mailRetour || raw?.mails || [];
+    const contacts = raw?.contactsGarantie || raw?.contacts_garantie || raw?.contacts || [];
 
     renderMailRetour(Array.isArray(mails) ? mails : []);
-    renderContacts(adaptContacts(raw));
+    renderContacts(adaptContacts(Array.isArray(contacts) ? contacts : []));
 
     applyFilter();
   }
@@ -481,11 +433,11 @@
     console.error(err);
 
     mailStatus.className = "status err";
-    mailStatus.textContent = "Erreur chargement JSON (" + API_URL + ") : " + err.message;
+    mailStatus.textContent = "Erreur chargement JSON : " + err.message;
     mailList.innerHTML = "";
 
     tableStatus.className = "status err";
-    tableStatus.textContent = "Erreur chargement JSON (" + API_URL + ") : " + err.message;
+    tableStatus.textContent = "Erreur chargement JSON : " + err.message;
     tbody.innerHTML = "";
   });
 })();
