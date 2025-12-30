@@ -174,3 +174,18 @@ body{
 .frame.frame--home .homeVideo{
   margin-bottom: 0;
 }
+
+
+.homeTitle{
+  margin: 0 0 12px;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+@media (max-width: 520px){
+  .homeTitle{ font-size: 18px; }
+}
