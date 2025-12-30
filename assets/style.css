@@ -292,10 +292,12 @@ body.embed-main{
 
 .embed-frame{
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  height: 1400px;
+  min-height: 900px;
   border: 0;
-  display:block;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.15);
 }
 
 .embed-card{ height: 100%; }
@@ -489,141 +491,81 @@ body.login-page{
 }
 
 
-/* DSG_VIEWPORT_MODE_V2
-   Objectif :
-   - pas de scroll sur la page principale
-   - zone contenu = hauteur écran restante
-   - scroll uniquement dans .content (pages sans iframe) ou dans le cadre (iframe) */
-
-:root{ --chrome-h: 0px; } /* recalculé par JS */
+/* DSG_VIEWPORT_MODE_V3
+   - La page principale ne scrolle pas.
+   - Le contenu visible (main) prend EXACTEMENT la hauteur restante après header + subbar.
+   - Le scroll se fait dans le contenu interne (.content) ou dans l'iframe (scrolling="yes").
+   NOTE: on utilise flex (plus fiable que calc(100vh - ...)). */
 
 html, body{
   height: 100%;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
-/* la zone centrale remplit l'écran restant */
-main.wrap{
-  height: calc(100vh - var(--chrome-h));
-  overflow: hidden;
-  padding: 0;              /* évite les erreurs de calcul */
-}
-
-/* la carte remplit la zone */
-.wrap > .card,
-main.wrap .card{
-  height: 100%;
-}
-
-/* pages "classiques" : scroll interne dans la zone contenu */
-body:not(.embed-main) .content{
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-}
-
-/* pages avec iframe : on met la zone en colonne et le cadre prend le reste */
-body.embed-main .content{
-  height: 100%;
-  min-height: 0;
+body{
+  height: 100dvh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding: 12px 18px 14px;   /* padding léger (déjà le cas en embed-main) */
+  overflow: hidden !important;
 }
 
-.embed-tabs{ flex: 0 0 auto; }
+/* certains fichiers avaient un override embed-main en "height:auto; overflow:auto" : on l'annule */
+body.embed-main{
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
 
-.embed-viewport{
+/* header + subbar ne grandissent jamais */
+.topbar, .subbar{
+  flex: 0 0 auto;
+}
+
+/* main prend le reste de l'écran */
+main.wrap{
   flex: 1 1 auto;
   min-height: 0;
-  height: auto;
+  height: auto !important;     /* annule l'ancien calc(100vh - ...) */
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-.embed-frame{
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  border: 0;
-  display: block;
-}
-
-/* pages "panel" (ex: retour fournisseurs/garantie VL) : pas de .content -> on scroll sur .panel */
-.card > .panel{
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-}
-
-
-/* DSG_VIEWPORT_MODE_V4
-   Fix : on calcule la hauteur VISIBLE réelle via visualViewport (plus fiable que 100vh),
-   puis on enlève la hauteur du header (topbar+subbar) et une petite marge de sécurité.
-   => le cadre NE descend plus trop bas (pas de coupe en bas). */
-
-:root{
-  --chrome-h: 0px;   /* topbar+subbar (JS) */
-  --vvh: 100vh;      /* hauteur visible (JS: visualViewport.height) */
-  --fudge: 8px;      /* marge de sécurité bas */
-}
-
-html, body{
-  height: 100%;
-  overflow: hidden;
-}
-
-/* IMPORTANT : écrase l’ancien mode embed-main */
-body.embed-main{
-  height: 100% !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-.embed-main .wrap,
-.embed-main .card{
-  overflow: hidden !important;
-}
-
-/* la zone centrale remplit l'écran restant (hauteur visible - chrome - marge) */
-main.wrap{
-  height: calc(var(--vvh) - var(--chrome-h) - var(--fudge));
-  overflow: hidden;
-  padding: 0;
-}
-
-/* la carte remplit la zone */
-.wrap > .card,
+/* la carte et son contenu doivent pouvoir rétrécir pour laisser le scroll interne fonctionner */
+main.wrap > .card,
 main.wrap .card{
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
-/* pages "classiques" : scroll interne dans la zone contenu */
-body:not(.embed-main) .content{
+main.wrap .content{
   height: 100%;
   min-height: 0;
+}
+
+/* pages sans iframe : scroll interne sur .content */
+body:not(.embed-main) .content{
   overflow: auto;
 }
 
-/* pages avec iframe : colonne + le cadre prend le reste */
+/* pages avec iframe : onglets en haut, iframe prend le reste */
 body.embed-main .content{
-  height: 100%;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   padding: 12px 18px 14px;
 }
 
-.embed-tabs{ flex: 0 0 auto; }
+body.embed-main .embed-tabs{ flex: 0 0 auto; }
 
-.embed-viewport{
+body.embed-main .embed-viewport{
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.embed-frame{
+body.embed-main .embed-frame{
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -631,7 +573,7 @@ body.embed-main .content{
   display: block;
 }
 
-/* pages "panel" (pas de .content) : scroll sur .panel */
+/* pages basées sur .panel (ex: retour fournisseurs/garantie VL) */
 .card > .panel{
   height: 100%;
   min-height: 0;

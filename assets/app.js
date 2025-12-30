@@ -1,28 +1,6 @@
 (function () {
 
-  // DSG_CHROME_HEIGHT_V4 : calcule hauteur visible (visualViewport) + hauteur header (topbar+subbar)
-  function dsgUpdateViewportVars(){
-    const vv = window.visualViewport;
-    const visibleH = vv && vv.height ? vv.height : window.innerHeight;
-    document.documentElement.style.setProperty('--vvh', visibleH + 'px');
-
-    const topbar = document.querySelector('.topbar');
-    const subbar = document.querySelector('.subbar');
-
-    const h = (topbar ? topbar.getBoundingClientRect().height : 0) + (subbar ? subbar.getBoundingClientRect().height : 0);
-    document.documentElement.style.setProperty('--chrome-h', h + 'px');
-  }
-
-  window.addEventListener('load', dsgUpdateViewportVars, { once:true });
-  window.addEventListener('resize', dsgUpdateViewportVars);
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', dsgUpdateViewportVars);
-    // sur certains navigateurs, la hauteur visible bouge pendant scroll (barre d'URL)
-    window.visualViewport.addEventListener('scroll', dsgUpdateViewportVars);
-  }
-
-const menus = Array.from(document.querySelectorAll(".menu"));
+  const menus = Array.from(document.querySelectorAll(".menu"));
 
   function closeAll(except = null) {
     menus.forEach((m) => {
