@@ -1,11 +1,13 @@
 {
   "name": "Durand Commerce",
   "short_name": "Durand Commerce",
+  "description": "Accès Commerce Durand",
   "start_url": "/commerce/commerce",
   "scope": "/commerce/",
   "display": "standalone",
   "background_color": "#e9ecff",
   "theme_color": "#e9efff",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/assets/icons/android-chrome-192x192.png",
