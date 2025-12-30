@@ -38,9 +38,47 @@
     .sig-wrap.invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);}
     .muted{ color:var(--muted); font-size:.9rem; margin-top:6px; }
     .hint{ color:#374151; font-size:.95rem; background:#f9fafb; border:1px solid var(--border); padding:8px 10px; border-radius:8px; }
-  </style>
+  
+
+/* DSG: éviter double scroll dans iframe (la hauteur est gérée par le parent) */
+html, body { height: auto !important; overflow: hidden !important; }
+
+</style>
 </head>
 <body>
+<!-- DSG iframe auto-resize -->
+<script>
+(function () {
+  function heightNow() {
+    return Math.max(
+      document.documentElement.scrollHeight || 0,
+      document.body ? document.body.scrollHeight : 0
+    );
+  }
+  function send() {
+    parent.postMessage({ type: "dsg-iframe-size", height: heightNow() }, "*");
+  }
+
+  window.addEventListener("load", send, { once: true });
+
+  try {
+    const ro = new ResizeObserver(() => send());
+    ro.observe(document.documentElement);
+  } catch (e) {}
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 12) clearInterval(it);
+  }, 400);
+})();
+</script>
+
+
   <div class="wrap">
     <div class="desktop-gate">
       <h2>Accès mobile requis</h2>

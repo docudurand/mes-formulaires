@@ -53,9 +53,47 @@
       margin-top: 30px;
       color: #2c3e50;
     }
-  </style>
+  
+
+/* DSG: éviter double scroll dans iframe (la hauteur est gérée par le parent) */
+html, body { height: auto !important; overflow: hidden !important; }
+
+</style>
 </head>
 <body>
+<!-- DSG iframe auto-resize -->
+<script>
+(function () {
+  function heightNow() {
+    return Math.max(
+      document.documentElement.scrollHeight || 0,
+      document.body ? document.body.scrollHeight : 0
+    );
+  }
+  function send() {
+    parent.postMessage({ type: "dsg-iframe-size", height: heightNow() }, "*");
+  }
+
+  window.addEventListener("load", send, { once: true });
+
+  try {
+    const ro = new ResizeObserver(() => send());
+    ro.observe(document.documentElement);
+  } catch (e) {}
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 12) clearInterval(it);
+  }, 400);
+})();
+</script>
+
+
   <header>
     <h1>📊 Tableau de bord des formulaires</h1>
   </header>
