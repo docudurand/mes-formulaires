@@ -1194,6 +1194,33 @@ app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-
 app.get("/pret/admin", (_req, res) => res.sendFile(path.join(pretPublic, "admin-parc.html")));
 app.use("/pret/api", loansRouter);
 
+function parseEnvJSON(raw, fallback) {
+  let s = String(raw ?? "").trim();
+  if (!s) return fallback;
+
+  if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) {
+    s = s.slice(1, -1);
+  }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return fallback;
+  }
+}
+
+app.get("/api/pl/liens-garantie-retour", (_req, res) => {
+  const data = parseEnvJSON(process.env.PL_LIENS_GARANTIE_RETOUR_JSON, []);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(data);
+});
+
+app.get("/api/vl/retour-garantie", (_req, res) => {
+  const data = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
+  res.setHeader("Cache-Control", "no-store");
+  res.json(data);
+});
+
+
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
