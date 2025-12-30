@@ -1,30 +1,24 @@
 (function () {
 
-  const menus = Array.from(document.querySelectorAll(".menu"));
 
-  function closeAll(except = null) {
-    menus.forEach((m) => {
-      if (m !== except) m.classList.remove("open");
-    });
+    
+  // DSG_FIXED_LAYOUT_V6 : calcule les hauteurs réelles des barres et positionne le contenu fixe
+  function dsgUpdateFixedHeights(){
+    const topbar = document.querySelector('.topbar');
+    const subbar = document.querySelector('.subbar');
+
+    const topH = topbar ? topbar.getBoundingClientRect().height : 0;
+    const subH = subbar ? subbar.getBoundingClientRect().height : 0;
+
+    document.documentElement.style.setProperty('--topbar-h', topH + 'px');
+    document.documentElement.style.setProperty('--subbar-h', subH + 'px');
+    document.documentElement.style.setProperty('--main-top', (topH + subH) + 'px');
   }
 
-  const enableClickMenus = window.matchMedia("(hover: none)").matches;
+  window.addEventListener('load', dsgUpdateFixedHeights, { once:true });
+  window.addEventListener('resize', dsgUpdateFixedHeights);
 
-  if (enableClickMenus && menus.length) {
-    menus.forEach((menu) => {
-      const btn = menu.querySelector(".menu-btn");
-      if (!btn) return;
-
-      btn.addEventListener("click", (e) => {
-        if (btn.tagName === "A") e.preventDefault();
-
-        const isOpen = menu.classList.contains("open");
-        closeAll();
-        menu.classList.toggle("open", !isOpen);
-      });
-    });
-
-    document.addEventListener("click", (e) => {
+document.addEventListener("click", (e) => {
       if (!e.target.closest(".menu")) closeAll();
     });
   }

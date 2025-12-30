@@ -292,12 +292,10 @@ body.embed-main{
 
 .embed-frame{
   width: 100%;
-  height: 1400px;
-  min-height: 900px;
+  height: 100%;
+  min-height: 0;
   border: 0;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0,0,0,.15);
+  display:block;
 }
 
 .embed-card{ height: 100%; }
@@ -491,92 +489,75 @@ body.login-page{
 }
 
 
-/* DSG_VIEWPORT_MODE_V3
-   - La page principale ne scrolle pas.
-   - Le contenu visible (main) prend EXACTEMENT la hauteur restante après header + subbar.
-   - Le scroll se fait dans le contenu interne (.content) ou dans l'iframe (scrolling="yes").
-   NOTE: on utilise flex (plus fiable que calc(100vh - ...)). */
+/* DSG_FIXED_LAYOUT_V6
+   Objectif : AUCUN scroll sur la page principale.
+   Les barres (topbar + subbar) sont FIXES, et le contenu (main) est FIXE entre (top) et (bottom:0).
+   => impossible que le cadre "descende trop bas" (pas de dépendance à 100vh/visualViewport). */
+
+:root{
+  --topbar-h: 0px;
+  --subbar-h: 0px;
+  --main-top: 0px;
+}
 
 html, body{
   height: 100%;
-  overflow: hidden !important;
-}
-
-body{
-  height: 100dvh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden !important;
-}
-
-/* certains fichiers avaient un override embed-main en "height:auto; overflow:auto" : on l'annule */
-body.embed-main{
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  overflow: hidden !important;
-}
-
-/* header + subbar ne grandissent jamais */
-.topbar, .subbar{
-  flex: 0 0 auto;
-}
-
-/* main prend le reste de l'écran */
-main.wrap{
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto !important;     /* annule l'ancien calc(100vh - ...) */
   overflow: hidden;
-  box-sizing: border-box;
 }
 
-/* la carte et son contenu doivent pouvoir rétrécir pour laisser le scroll interne fonctionner */
-main.wrap > .card,
+/* Barres fixées en haut */
+.topbar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+}
+
+.subbar{
+  position: fixed;
+  left: 0; right: 0;
+  top: var(--topbar-h);
+  z-index: 999;
+}
+
+/* Le contenu prend exactement le reste de l'écran */
+main.wrap{
+  position: fixed;
+  top: var(--main-top);
+  left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  padding: 6px 12px 12px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+/* Card et contenu = hauteur pleine */
+.wrap > .card,
 main.wrap .card{
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  display:flex;
+  flex-direction:column;
 }
 
-main.wrap .content{
+.content{
   height: 100%;
   min-height: 0;
 }
 
-/* pages sans iframe : scroll interne sur .content */
+/* Pages sans iframe : scroll interne dans .content */
 body:not(.embed-main) .content{
   overflow: auto;
 }
 
-/* pages avec iframe : onglets en haut, iframe prend le reste */
+/* Pages avec iframe : scroll DANS l’iframe */
 body.embed-main .content{
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 12px 18px 14px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
 }
-
-body.embed-main .embed-tabs{ flex: 0 0 auto; }
-
-body.embed-main .embed-viewport{
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-body.embed-main .embed-frame{
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  border: 0;
-  display: block;
-}
-
-/* pages basées sur .panel (ex: retour fournisseurs/garantie VL) */
-.card > .panel{
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-}
+.embed-tabs{ flex: 0 0 auto; }
+.embed-viewport{ flex: 1 1 auto; min-height: 0; overflow:hidden; }
+.embed-frame{ width:100%; height:100%; min-height:0; border:0; display:block; }
 
