@@ -1,16 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700&display=swap");
-
 :root{
   --bg: #e9ecff;
   --pill: #1f2c56;
   --pillText: #ffffff;
   --shadow: 0 14px 30px rgba(0,0,0,.12);
+  --radius: 18px;
   --ipadW: 980px;
 }
 
 *{ box-sizing: border-box; }
-html, body{ height: 100%; }
-
+html,body{ height: 100%; }
 body{
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -25,7 +23,6 @@ body{
   justify-content: center;
   padding: 8px 10px;
 }
-
 .burger{
   width: 44px;
   height: 44px;
@@ -35,9 +32,7 @@ body{
   cursor: pointer;
   display: grid;
   place-items: center;
-  -webkit-tap-highlight-color: transparent;
 }
-
 .burger span{
   display: block;
   width: 28px;
@@ -52,38 +47,15 @@ body{
   display: flex;
   justify-content: center;
 }
-
 .frame{
   width: min(100%, var(--ipadW));
   background: rgba(255,255,255,.55);
   border-radius: 10px;
   box-shadow: var(--shadow);
   overflow: hidden;
-  min-height: calc(100vh - 44px - 26px);
+  min-height: calc(100vh - 44px - 46px);
   position: relative;
 }
-
-.welcome{
-  display: grid;
-  place-items: center;
-  padding: 26px 14px 22px;
-  gap: 14px;
-}
-
-.homeTitle{
-  margin: 0;
-  text-align: center;
-  font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 300;
-  letter-spacing: .04em;
-  line-height: 1.05;
-  font-size: 40px;
-  color: #1f8bff;
-  text-rendering: geometricPrecision;
-}
-.homeTitle__d{ font-weight: 700; }
-.homeTitle__rest{ font-weight: 300; }
-.homeTitle__light{ font-weight: 300; }
 
 .homeVideo{
   width: min(100%, var(--ipadW));
@@ -100,11 +72,22 @@ body{
   border: 0;
   display: block;
 }
+.welcome{
+  display: grid;
+  place-items: center;
+  padding: 42px 14px;
+}
+.logo{
+  width: min(720px, 92%);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.10));
+}
 
 .contentFrame{
   width: 100%;
   height: 100%;
-  min-height: calc(100vh - 44px - 26px);
+  min-height: calc(100vh - 44px - 46px);
   border: 0;
   display: none;
   background: #fff;
@@ -130,14 +113,12 @@ body{
   transition: transform .22s ease;
   padding: 18px 16px;
 }
-
 .drawer.open{ transform: translateX(0); }
 
 .drawerTop{
   display: flex;
   justify-content: flex-end;
 }
-
 .close{
   border: 0;
   background: transparent;
@@ -174,14 +155,39 @@ body{
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-
 .navBtn:active{ transform: translateY(1px); }
+
+.navLink{ display: inline-block; text-decoration: none; }
 
 @media (max-width: 520px){
   :root{ --ipadW: 100%; }
   .navBtn{ width: 240px; }
-  .welcome{ padding: 18px 14px 22px; }
-  .homeTitle{ font-size: 28px; }
+}
+
+.frame.frame--home{
+  min-height: auto;
+  padding-bottom: 0;
+}
+.frame.frame--home .welcome{
+  padding: 18px 14px 22px;
+}
+.frame.frame--home .homeVideo{
+  margin-bottom: 0;
+}
+
+
+.homeTitle{
+  margin: 0 0 12px;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+@media (max-width: 520px){
+  .homeTitle{ font-size: 18px; }
 }
 
 .homeBrand{
@@ -190,10 +196,10 @@ body{
   place-items: center;
 }
 .homeBrand__logo{
-  width: min(640px, 92vw);
+  width: min(360px, 80vw);
   height: auto;
   display: block;
 }
 @media (max-width: 520px){
-  .homeBrand__logo{ width: min(420px, 92vw); }
+  .homeBrand__logo{ width: min(260px, 86vw); }
 }

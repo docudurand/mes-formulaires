@@ -1,18 +1,14 @@
 {
   "name": "Durand Commerce",
-  "short_name": "Durand Commerce",
-  "id": "/commerce/commerce",
+  "short_name": "Durand\nCommerce",
+  "description": "Accès Commerce Durand",
   "start_url": "/commerce/commerce",
   "scope": "/commerce/",
   "display": "standalone",
   "background_color": "#e9ecff",
   "theme_color": "#e9efff",
+  "orientation": "portrait",
   "icons": [
-    {
-      "src": "/assets/icons/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
     {
       "src": "/assets/icons/android-chrome-192x192.png",
       "sizes": "192x192",
@@ -22,6 +18,12 @@
       "src": "/assets/icons/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
-  ]
+  ],
+  "id": "/commerce/commerce"
 }
