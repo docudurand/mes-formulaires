@@ -121,13 +121,15 @@
     listEl.innerHTML = "";
 
     if (!items.length){
+      statusEl.style.display = "";
       statusEl.className = "status ok";
       statusEl.textContent = "Aucun lien configuré (JSON vide).";
       return;
     }
 
     statusEl.className = "status ok";
-    statusEl.textContent = items.length + " lien(s).";
+    statusEl.textContent = "";
+    statusEl.style.display = "none";
 
     items.forEach(it => {
       const a = document.createElement("a");
@@ -164,6 +166,7 @@
   }
 
   async function load(){
+    statusEl.style.display = "";
     statusEl.className = "status";
     statusEl.textContent = "Chargement…";
 
