@@ -90,26 +90,6 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 
-app.get("/api/pl/liens-garantie-retour", (req, res) => {
-  try {
-    const raw = process.env.PL_LIENS_GARANTIE_RETOUR_JSON || "[]";
-    res.setHeader("Cache-Control", "no-store");
-    return res.json(JSON.parse(raw));
-  } catch (e) {
-    return res.status(500).json({ error: "PL_LIENS_GARANTIE_RETOUR_JSON invalide" });
-  }
-});
-
-app.get("/api/vl/retour-garantie", (req, res) => {
-  try {
-    const raw = process.env.VL_RETOUR_GARANTIE_JSON || "{}";
-    res.setHeader("Cache-Control", "no-store");
-    return res.json(JSON.parse(raw));
-  } catch (e) {
-    return res.status(500).json({ error: "VL_RETOUR_GARANTIE_JSON invalide" });
-  }
-});
-
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
 app.post("/api/site/login", (req, res) => {

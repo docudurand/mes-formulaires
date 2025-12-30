@@ -11,6 +11,36 @@ const router = express.Router();
 router.use(cors());
 router.use(express.json({ limit: '15mb' }));
 
+function parseEnvJSON(raw, fallback) {
+  let s = String(raw ?? "").trim();
+  if (!s) return fallback;
+
+  if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) {
+    s = s.slice(1, -1);
+  }
+  return JSON.parse(s);
+}
+
+router.get("/api/pl/liens-garantie-retour", (_req, res) => {
+  try {
+    const data = parseEnvJSON(process.env.PL_LIENS_GARANTIE_RETOUR_JSON, []);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(data);
+  } catch {
+    return res.status(500).json({ error: "PL_LIENS_GARANTIE_RETOUR_JSON invalide" });
+  }
+});
+
+router.get("/api/vl/retour-garantie", (_req, res) => {
+  try {
+    const data = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(data);
+  } catch {
+    return res.status(500).json({ error: "VL_RETOUR_GARANTIE_JSON invalide" });
+  }
+});
+
 router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
