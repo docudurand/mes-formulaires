@@ -1,6 +1,21 @@
 (function () {
 
-  const menus = Array.from(document.querySelectorAll(".menu"));
+  
+  // DSG_CHROME_HEIGHT : calcule la hauteur des barres (topbar + subbar) pour que les iframes remplissent l'écran
+  function dsgUpdateChromeHeight(){
+    const topbar = document.querySelector('.topbar');
+    const subbar = document.querySelector('.subbar');
+    const h = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
+    // + marges/paddings main (.wrap padding-top + bottom)
+    const wrap = document.querySelector('main.wrap');
+    const cs = wrap ? getComputedStyle(wrap) : null;
+    const pad = cs ? (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0) : 0;
+    document.documentElement.style.setProperty('--chrome-h', (h + pad) + 'px');
+  }
+  window.addEventListener('load', dsgUpdateChromeHeight, { once:true });
+  window.addEventListener('resize', dsgUpdateChromeHeight);
+
+const menus = Array.from(document.querySelectorAll(".menu"));
 
   function closeAll(except = null) {
     menus.forEach((m) => {
