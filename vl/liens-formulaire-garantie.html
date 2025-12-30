@@ -24,16 +24,6 @@
       text-decoration:none; font-weight:800; line-height:1.25;
     }
     .list a:hover{ filter:brightness(0.98); }
-    .tools{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      margin:10px 0 14px;
-    }
-    .tools input{
-      flex:1; min-width:240px; padding:11px 12px;
-      border:1px solid rgba(0,0,0,.2); border-radius:10px;
-      font-size:15px; background:#fff;
-    }
-    .tools .hint{ font-size:12px; opacity:.75; white-space:nowrap; }
   </style>
 </head>
 
@@ -105,11 +95,6 @@
     <div class="content">
       <div class="h1">LIENS FORMULAIRE GARANTIE VL</div>
 
-      <div class="tools">
-        <input id="q" type="text" placeholder="Rechercher un lien…" autocomplete="off">
-        <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
-      </div>
-
       <div id="status" class="status">Chargement…</div>
       <div id="list" class="list" aria-label="Liste des liens"></div>
     </div>
@@ -128,37 +113,22 @@
 
   const statusEl = document.getElementById("status");
   const listEl   = document.getElementById("list");
-  const qEl      = document.getElementById("q");
 
   let items = [];
 
-  function norm(s){
-    return (s || "")
-      .toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"");
-  }
-
   function render(){
-    const q = norm(qEl.value.trim());
     listEl.innerHTML = "";
 
-    const filtered = !q ? items : items.filter(it => {
-      const t = norm((it.label||"") + " " + (it.url||""));
-      return t.includes(q);
-    });
-
-    if (!filtered.length){
+    if (!items.length){
       statusEl.className = "status ok";
-      statusEl.textContent = items.length ? "Aucun résultat." : "Aucun lien configuré (JSON vide).";
+      statusEl.textContent = "Aucun lien configuré (JSON vide).";
       return;
     }
 
     statusEl.className = "status ok";
-    statusEl.textContent = filtered.length + " lien(s).";
+    statusEl.textContent = items.length + " lien(s).";
 
-    filtered.forEach(it => {
+    items.forEach(it => {
       const a = document.createElement("a");
       a.href = it.url;
       a.target = "_blank";
@@ -211,8 +181,6 @@
     items = adaptData(raw2);
     render();
   }
-
-  qEl.addEventListener("input", render);
 
   load().catch(err => {
     console.error(err);
