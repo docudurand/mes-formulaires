@@ -6,7 +6,6 @@
   --shadow: 0 14px 30px rgba(0,0,0,.12);
   --radius: 18px;
   --ipadW: 980px;
-}
 
 *{ box-sizing: border-box; }
 html,body{ height: 100%; }
@@ -15,7 +14,6 @@ body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: var(--bg);
   color: #0f172a;
-}
 
 .topbar{
   height: 44px;
@@ -23,7 +21,7 @@ body{
   align-items: center;
   justify-content: center;
   padding: 8px 10px;
-}
+
 .burger{
   width: 44px;
   height: 44px;
@@ -33,7 +31,7 @@ body{
   cursor: pointer;
   display: grid;
   place-items: center;
-}
+
 .burger span{
   display: block;
   width: 28px;
@@ -41,13 +39,12 @@ body{
   background: #0f172a;
   border-radius: 999px;
   margin: 3px 0;
-}
 
 .stage{
   padding: 10px 14px 26px;
   display: flex;
   justify-content: center;
-}
+
 .frame{
   width: min(100%, var(--ipadW));
   background: rgba(255,255,255,.55);
@@ -56,7 +53,6 @@ body{
   overflow: hidden;
   min-height: calc(100vh - 44px - 46px);
   position: relative;
-}
 
 .homeVideo{
   width: min(100%, var(--ipadW));
@@ -65,25 +61,23 @@ body{
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 14px 30px rgba(0,0,0,.12);
-}
 
 .homeVideo iframe{
   width: 100%;
   height: 100%;
   border: 0;
   display: block;
-}
+
 .welcome{
   display: grid;
   place-items: center;
   padding: 42px 14px;
-}
+
 .logo{
   width: min(720px, 92%);
   height: auto;
   display: block;
   filter: drop-shadow(0 10px 24px rgba(0,0,0,.10));
-}
 
 .contentFrame{
   width: 100%;
@@ -92,14 +86,12 @@ body{
   border: 0;
   display: none;
   background: #fff;
-}
 
 .backdrop{
   position: fixed;
   inset: 0;
   background: rgba(15,23,42,.25);
   z-index: 50;
-}
 
 .drawer{
   position: fixed;
@@ -113,13 +105,13 @@ body{
   transform: translateX(-110%);
   transition: transform .22s ease;
   padding: 18px 16px;
-}
+
 .drawer.open{ transform: translateX(0); }
 
 .drawerTop{
   display: flex;
   justify-content: flex-end;
-}
+
 .close{
   border: 0;
   background: transparent;
@@ -129,14 +121,12 @@ body{
   color: #111827;
   padding: 6px 10px;
   border-radius: 10px;
-}
 
 .drawerNav{
   margin-top: 18px;
   display: grid;
   gap: 18px;
   justify-items: start;
-}
 
 .navBtn{
   width: 260px;
@@ -155,7 +145,7 @@ body{
   text-align: center;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
+
 .navBtn:active{ transform: translateY(1px); }
 
 .navLink{ display: inline-block; text-decoration: none; }
@@ -163,41 +153,40 @@ body{
 @media (max-width: 520px){
   :root{ --ipadW: 100%; }
   .navBtn{ width: 240px; }
-}
 
 .frame.frame--home{
   min-height: auto;
   padding-bottom: 0;
-}
+
 .frame.frame--home .welcome{
   padding: 18px 14px 22px;
-}
+
 .frame.frame--home .homeVideo{
   margin-bottom: 0;
-}
-
-
-}
 
 .homeTitle{
-  margin: 0 0 14px;
+  margin: 0 0 12px;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: 20px;
+  color: #0f172a;
+
+@media (max-width: 520px){
+  .homeTitle{ font-size: 18px; }
+
+.homeTitle{
+  margin: 0 0 16px;
   text-align: center;
   font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   font-weight: 300;
-  letter-spacing: .02em;
-  text-transform: none;
+  letter-spacing: .04em;
   line-height: 1.05;
   font-size: 40px;
   color: #1f8bff;
-  text-rendering: geometricPrecision;
 }
-
-.homeTitle__d{
-  font-weight: 700;
-  -webkit-text-stroke: 1px rgba(15,23,42,.15);
-  text-shadow: 0 8px 18px rgba(0,0,0,.10);
-}
-
+.homeTitle__d{ font-weight: 700; }
 .homeTitle__rest{ font-weight: 300; }
 .homeTitle__light{ font-weight: 300; }
 
