@@ -12,6 +12,159 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#e9efff">
+
+  <style>
+    .panel {
+      width: min(1600px, 100%);
+      margin: 0 auto;
+      padding: 18px 18px 26px;
+    }
+
+    .accordion {
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 10px 25px rgba(0,0,0,.10);
+      margin-bottom: 14px;
+    }
+
+    .accordion details + details {
+      border-top: 1px solid rgba(0,0,0,.10);
+    }
+
+    .accordion summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 16px 18px;
+      background: #eef1f6;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      user-select: none;
+    }
+    .accordion summary::-webkit-details-marker { display:none; }
+
+    .acc-title {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .acc-body {
+      padding: 16px 18px 18px;
+      background: #fff;
+    }
+
+    .mail-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .mail-line b { display:inline-block; min-width: 120px; }
+    .mail-line a { color: var(--link); text-decoration: none; }
+    .mail-line a:hover { text-decoration: underline; }
+
+    .tools-row {
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+      margin: 0 0 12px;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 260px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .search input{
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid rgba(0,0,0,.2);
+      border-radius: 10px;
+      font-size: 15px;
+      background:#fff;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    .table-wrap{
+      width: 100%;
+      overflow:auto;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,.12);
+    }
+
+    table.contacts{
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background:#fff;
+    }
+
+    table.contacts th, table.contacts td{
+      border-bottom: 1px solid rgba(0,0,0,.10);
+      border-right: 1px solid rgba(0,0,0,.08);
+      padding: 12px 12px;
+      vertical-align: top;
+      font-size: 14px;
+      line-height: 1.3;
+      background: #eef1f6;
+    }
+
+    table.contacts td{ background: #eef1f6; }
+
+    table.contacts th{
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 900;
+      text-transform: lowercase;
+    }
+
+    table.contacts td:nth-child(1){
+      font-weight: 900;
+      width: 220px;
+      background: #eef1f6;
+    }
+
+    table.contacts a{
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    table.contacts a:hover{ text-decoration: underline; }
+
+    .notes{ white-space: pre-line; }
+
+    .status {
+      margin: 6px 0 0;
+      font-size: 13px;
+      opacity: .85;
+    }
+    .status.ok { color:#0f5132; }
+    .status.err { color:#842029; }
+
+    @media (max-width: 640px){
+      .panel{ padding: 12px 10px 18px; }
+      .accordion summary{ padding: 14px 14px; }
+      .acc-body{ padding: 14px 14px 16px; }
+      .hint{ display:none; }
+    }
+  </style>
 </head>
 
 <body>
@@ -28,7 +181,7 @@
       <button class="menu-btn" type="button">MENU PL</button>
       <div class="dropdown" role="menu" aria-label="Menu PL">
         <a href="../pl/formulaire-creation-reference-pl.html" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
-        <a href="../pl/fournisseur-pl.html" role="menuitem">FOURNISSEUR PL</a>
+        <a href="../pl/fournisseur-pl.html" rel="noopener" role="menuitem">FOURNISSEUR PL</a>
         <a href="../pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
       </div>
     </div>
@@ -38,17 +191,17 @@
       <div class="dropdown" role="menu" aria-label="Menu VL">
         <a href="../vl/formulaire-creation-reference-vl.html" role="menuitem">FORMULAIRE CREATION REFERENCE VL / VUL</a>
         <a href="../vl/formulaire-creation-reference-pneumatique.html" role="menuitem">FORMULAIRE CREATION PNEUMATIQUE</a>
-        <a href="../vl/fournisseur-vl.html" role="menuitem">FOURNISSEUR VL</a>
-        <a href="../vl/retour-fournisseur-garantie-vl.html" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
+        <a href="../vl/fournisseur-vl.html" rel="noopener" role="menuitem">FOURNISSEUR VL</a>
+        <a href="../vl/retour-fournisseur-garantie-vl.html" rel="noopener" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
         <a href="../vl/liens-formulaire-garantie.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
       </div>
     </div>
 
-    <div class="menu is-active" data-menu="util">
+    <div class="menu" data-menu="util">
       <button class="menu-btn" type="button">UTILITAIRE</button>
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
-        <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
-        <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
+        <a href="../utilitaire/pret-vehicule.html" rel="noopener" role="menuitem">PRET VEHICULE</a>
+        <a href="../utilitaire/demande-ramasse.html" rel="noopener" role="menuitem">DEMANDE RAMASSE</a>
         <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
         <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
         <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
@@ -79,13 +232,264 @@
 
 <main class="wrap">
   <section class="card">
-    <iframe class="embed-frame" src="https://mes-formulaires.onrender.com/vl/retour-fournisseur-garantie-vl.html"></iframe>
+    <div class="panel">
+
+      <div class="accordion">
+
+        <details open>
+          <summary>
+            <span class="acc-title">Mail Retour Fournisseurs</span>
+            <span aria-hidden="true">▾</span>
+          </summary>
+          <div class="acc-body">
+            <div id="mailStatus" class="status">Chargement…</div>
+            <div class="mail-list" id="mailList"></div>
+          </div>
+        </details>
+
+        <details open>
+          <summary>
+            <span class="acc-title">Contact Garantie</span>
+            <span aria-hidden="true">▾</span>
+          </summary>
+
+          <div class="acc-body">
+
+            <div class="tools-row">
+              <div class="search">
+                <input id="filterInput" type="text" placeholder="Rechercher un fournisseur / email / note…" autocomplete="off">
+              </div>
+              <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
+            </div>
+
+            <div id="tableStatus" class="status">Chargement…</div>
+
+            <div class="table-wrap" role="region" aria-label="Tableau contacts garantie" tabindex="0">
+              <table class="contacts" id="contactsTable">
+                <thead>
+                  <tr>
+                    <th>fournisseur</th>
+                    <th>contact suivie</th>
+                    <th>contact demande</th>
+                    <th>contact commercial</th>
+                    <th>notes</th>
+                  </tr>
+                </thead>
+                <tbody id="contactsTbody">
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </details>
+
+      </div>
+
+    </div>
   </section>
 </main>
 
-<script>window.__SITE_PREFIX__="../";</script>
+<script>
+  window.__SITE_PREFIX__="../";
+</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
+
+<script>
+(function(){
+  const API_URL = "/api/vl/retour-garantie";
+
+  const mailStatus = document.getElementById("mailStatus");
+  const mailList   = document.getElementById("mailList");
+
+  const tableStatus = document.getElementById("tableStatus");
+  const tbody       = document.getElementById("contactsTbody");
+
+  const filterInput = document.getElementById("filterInput");
+
+  let contactsRows = [];
+
+  function esc(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function normalize(s){
+    return (s || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'');
+  }
+
+  function toMailLink(value){
+    const v = String(value || "").trim();
+    if (!v) return "";
+    const m = v.match(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
+    const email = m ? m[1] : "";
+    if (!email) return esc(v);
+    return `<a href="mailto:${esc(email)}">${esc(email)}</a>`;
+  }
+
+  function renderMailRetour(mails){
+    mailList.innerHTML = "";
+
+    if (!Array.isArray(mails) || mails.length === 0) {
+      mailStatus.className = "status ok";
+      mailStatus.textContent = "Aucun mail de retour configuré (JSON vide).";
+      return;
+    }
+
+    mailStatus.className = "status ok";
+    mailStatus.textContent = mails.length + " ligne(s).";
+
+    mails.forEach(item => {
+
+      let fournisseur = "";
+      let email = "";
+
+      if (typeof item === "string") {
+        const parts = item.split(":");
+        if (parts.length >= 2) {
+          fournisseur = parts[0].trim();
+          email = parts.slice(1).join(":").trim();
+        } else {
+          email = item.trim();
+        }
+      } else if (item && typeof item === "object") {
+        fournisseur = String(item.fournisseur ?? item.label ?? item.nom ?? "").trim();
+        email = String(item.email ?? item.mail ?? item.value ?? "").trim();
+      }
+
+      const line = document.createElement("div");
+      line.className = "mail-line";
+      line.innerHTML = `<b>${esc(fournisseur || "MAIL")} :</b> ${toMailLink(email)}`;
+      mailList.appendChild(line);
+    });
+  }
+
+  function adaptContacts(raw){
+
+    if (!raw || typeof raw !== "object") return [];
+
+    const candidates = [
+      raw.contacts_garantie,
+      raw.contacts,
+      raw.garantie,
+      raw.data,
+      raw.items
+    ].find(Array.isArray);
+
+    const arr = Array.isArray(candidates) ? candidates : [];
+    return arr.map(x => {
+      const fournisseur = String(x?.fournisseur ?? x?.supplier ?? x?.nom ?? x?.name ?? x?.Fournisseur ?? "").trim();
+
+      const suivie = x?.contact_suivie ?? x?.suivie ?? x?.suivi ?? x?.contactSuivie ?? x?.suive ?? x?.["contact suivie"];
+      const demande = x?.contact_demande ?? x?.demande ?? x?.contactDemande ?? x?.["contact demande"];
+      const commercial = x?.contact_commercial ?? x?.commercial ?? x?.contactCommercial ?? x?.["contact commercial"];
+      const notes = x?.notes ?? x?.note ?? x?.commentaire ?? x?.commentaires ?? "";
+
+      return {
+        fournisseur,
+        suivie: String(suivie ?? "").trim(),
+        demande: String(demande ?? "").trim(),
+        commercial: String(commercial ?? "").trim(),
+        notes: String(notes ?? "").trim()
+      };
+    }).filter(r => r.fournisseur || r.suivie || r.demande || r.commercial || r.notes);
+  }
+
+  function renderContacts(rows){
+    tbody.innerHTML = "";
+    contactsRows = [];
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      tableStatus.className = "status ok";
+      tableStatus.textContent = "Aucun contact configuré (JSON vide).";
+      return;
+    }
+
+    tableStatus.className = "status ok";
+    tableStatus.textContent = rows.length + " ligne(s).";
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+
+      const td1 = document.createElement("td");
+      td1.textContent = r.fournisseur || "";
+      tr.appendChild(td1);
+
+      const td2 = document.createElement("td");
+      td2.innerHTML = toMailLink(r.suivie);
+      tr.appendChild(td2);
+
+      const td3 = document.createElement("td");
+      td3.innerHTML = toMailLink(r.demande);
+      tr.appendChild(td3);
+
+      const td4 = document.createElement("td");
+      td4.innerHTML = toMailLink(r.commercial);
+      tr.appendChild(td4);
+
+      const td5 = document.createElement("td");
+      td5.className = "notes";
+      td5.textContent = r.notes || "";
+      tr.appendChild(td5);
+
+      tbody.appendChild(tr);
+      contactsRows.push(tr);
+    });
+  }
+
+  function applyFilter(){
+    const q = normalize(filterInput.value.trim());
+    contactsRows.forEach(tr => {
+      const txt = normalize(tr.innerText);
+      tr.style.display = (!q || txt.includes(q)) ? "" : "none";
+    });
+  }
+
+  async function load(){
+    mailStatus.className = "status";
+    mailStatus.textContent = "Chargement…";
+    tableStatus.className = "status";
+    tableStatus.textContent = "Chargement…";
+
+    const r = await fetch(API_URL, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+
+    const raw = await r.json();
+
+    const mails = (raw && typeof raw === "object")
+      ? (raw.mails_retour || raw.mail_retour || raw.retour_fournisseurs || raw.mails || raw.mail || raw.retour || raw.mailRetour)
+      : null;
+
+    renderMailRetour(Array.isArray(mails) ? mails : []);
+    renderContacts(adaptContacts(raw));
+
+    applyFilter();
+  }
+
+  filterInput.addEventListener("input", applyFilter);
+
+  load().catch(err => {
+    console.error(err);
+
+    mailStatus.className = "status err";
+    mailStatus.textContent = "Erreur chargement JSON (" + API_URL + ") : " + err.message;
+    mailList.innerHTML = "";
+
+    tableStatus.className = "status err";
+    tableStatus.textContent = "Erreur chargement JSON (" + API_URL + ") : " + err.message;
+    tbody.innerHTML = "";
+  });
+})();
+</script>
+
 </body>
 </html>
