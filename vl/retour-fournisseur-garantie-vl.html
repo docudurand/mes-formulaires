@@ -335,13 +335,15 @@
     mailList.innerHTML = "";
 
     if (!Array.isArray(mails) || mails.length === 0) {
+      mailStatus.style.display = "";
       mailStatus.className = "status ok";
       mailStatus.textContent = "Aucun mail de retour configuré (JSON vide).";
       return;
     }
 
     mailStatus.className = "status ok";
-    mailStatus.textContent = mails.length + " ligne(s).";
+    mailStatus.textContent = "";
+    mailStatus.style.display = "none";
 
     mails.forEach(item => {
       let fournisseur = "";
@@ -383,13 +385,15 @@
     contactTRs = [];
 
     if (!Array.isArray(rows) || rows.length === 0) {
+      tableStatus.style.display = "";
       tableStatus.className = "status ok";
       tableStatus.textContent = "Aucun contact configuré (JSON vide).";
       return;
     }
 
     tableStatus.className = "status ok";
-    tableStatus.textContent = rows.length + " ligne(s).";
+    tableStatus.textContent = "";
+    tableStatus.style.display = "none";
 
     rows.forEach(r => {
       const tr = document.createElement("tr");
@@ -435,6 +439,8 @@
   }
 
   async function load(){
+    mailStatus.style.display = "";
+    tableStatus.style.display = "";
     mailStatus.className = "status";
     mailStatus.textContent = "Chargement…";
     tableStatus.className = "status";
@@ -464,10 +470,12 @@
   load().catch(err => {
     console.error(err);
 
+    mailStatus.style.display = "";
     mailStatus.className = "status err";
     mailStatus.textContent = "Erreur chargement JSON : " + err.message;
     mailList.innerHTML = "";
 
+    tableStatus.style.display = "";
     tableStatus.className = "status err";
     tableStatus.textContent = "Erreur chargement JSON : " + err.message;
     tbody.innerHTML = "";
