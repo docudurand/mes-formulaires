@@ -4,22 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Liens Formulaire Garantie VL</title>
+
   <link rel="stylesheet" href="../assets/style.css" />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#e9efff">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#e9efff">
 
+  <style>
+    .status { margin-top: 10px; font-size: 14px; opacity: .9; }
+    .status.ok { color: #0f5132; }
+    .status.err { color: #842029; }
+    .list a{
+      display:block; margin:8px 0; padding:12px 14px;
+      border-radius:10px; background:rgba(255,255,255,.65);
+      border:1px solid rgba(0,0,0,.08);
+      text-decoration:none; font-weight:800; line-height:1.25;
+    }
+    .list a:hover{ filter:brightness(0.98); }
+    .tools{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin:10px 0 14px;
+    }
+    .tools input{
+      flex:1; min-width:240px; padding:11px 12px;
+      border:1px solid rgba(0,0,0,.2); border-radius:10px;
+      font-size:15px; background:#fff;
+    }
+    .tools .hint{ font-size:12px; opacity:.75; white-space:nowrap; }
+  </style>
 </head>
+
 <body>
 
 <header class="topbar">
   <div class="brand-left">
-  <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
-    <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png" alt="Documents Durand">
-	</a>
+    <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png" alt="Documents Durand">
+    </a>
   </div>
 
   <nav class="nav" aria-label="Menus">
@@ -28,7 +52,7 @@
       <div class="dropdown" role="menu" aria-label="Menu PL">
         <a href="../pl/formulaire-creation-reference-pl.html" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
         <a href="../pl/fournisseur-pl.html" role="menuitem">FOURNISSEUR PL</a>
-        <a href="../pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
+        <a href="../pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
       </div>
     </div>
 
@@ -55,6 +79,7 @@
         <a href="../utilitaire/reference-compliques.html" role="menuitem">REFERENCE COMPLIQUES</a>
       </div>
     </div>
+
     <div class="menu" data-menu="atelier">
       <button class="menu-btn" type="button">ATELIER</button>
       <div class="dropdown" role="menu" aria-label="Menu Atelier">
@@ -62,6 +87,7 @@
         <a href="../docatelier/documents-atelier.html" role="menuitem">DOCUMENTS ATELIER</a>
       </div>
     </div>
+
     <div class="menu" data-menu="garantie">
       <a class="menu-btn menu-link" href="../gestion-garantie.html">GESTION GARANTIE</a>
     </div>
@@ -76,39 +102,17 @@
 
 <main class="wrap">
   <section class="card">
-
     <div class="content">
-      <div class="h1">LIENS FORMULAIRE GARANTIE</div>
+      <div class="h1">LIENS FORMULAIRE GARANTIE VL</div>
 
-      <div class="list">
-        <a href="https://docs.google.com/spreadsheets/d/1hoMgJYdjPM2DBF85hT5AylhT9qrbLx8Voc-tlEeQT-Q/edit?usp=sharing" target="_blank" rel="noopener noreferrer">AUTOGAMMA VERTAT</a>
-        <a href="https://drive.google.com/file/d/1XfHFCHjht0WgO7T7wPA4ggaX7lmSI7tO/view" target="_blank" rel="noopener noreferrer">ETIQUETTE FACOM EXPERT</a>
-        <a href="https://drive.google.com/file/d/1NauKnEm5CJkS9mcubnfLt7njPx9X5627/view?usp=sharing" target="_blank" rel="noopener noreferrer">BOSCH MACHINE TOURNANTE INFO VEHICULE</a>
-        <a href="https://docs.google.com/spreadsheets/d/122Xgk9VobWISxXzXkpJI4LMCQKoK0qE8/edit?usp=sharing&ouid=113127601077999246400&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">BOSCH MACHINE TOURNANT DEMANDE TRANSPORT</a>
-        <a href="https://docs.google.com/document/d/16Ih5yFUpiNpsS6G8Xs4tUe_9WdJoFJiK/edit?usp=drive_link&ouid=113127601077999246400&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">DELPHI PROCEDURE GARANTIE INJECTEURS / POMPES HP</a>
-        <a href="https://docs.google.com/spreadsheets/d/1im-mz1pRXNxXG6Ay_XIEgbhiOwJ9warr/edit?usp=sharing&ouid=113127601077999246400&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">DELPHI</a>
-        <a href="https://drive.google.com/file/d/1C8o_Zdk1kjz_omiLG_1Eu9QzxHpHIn8Z/view?usp=sharing" target="_blank" rel="noopener noreferrer">EFI AUTOMOTIVE</a>
-        <a href="https://docs.google.com/spreadsheets/d/1kbc2iQwxY00NnkFw1Dv8FIfZ1UH9xwKhcXYvrFuk0k8/edit?usp=sharing" target="_blank" rel="noopener noreferrer">FEBI</a>
-        <a href="https://docs.google.com/spreadsheets/d/1Dl0PdaXfN5W1Z6fatLDs4mtTRyWqnq0j/edit?gid=582185838#gid=582185838" target="_blank" rel="noopener noreferrer">GATES</a>
-        <a href="https://docs.google.com/spreadsheets/d/1paZygbt8E8NfUwq_6wJLOE03kl3BmgPn/edit?usp=sharing&ouid=113127601077999246400&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">HELLA</a>
-        <a href="https://drive.google.com/file/d/1f_bzvpKN3xUCpslm_G_--n0aQvqW5LUR/view?usp=sharing" target="_blank" rel="noopener noreferrer">INFRADIS</a>
-        <a href="https://drive.google.com/file/d/1TmL_AvO135ou5GDIkr8F1A3ofETKZmET/view?usp=sharing" target="_blank" rel="noopener noreferrer">MAGNETI</a>
-        <a href="https://drive.google.com/file/d/1Jhj9lQZ7zu9OmrSrMVPqqhM-zWuLUhhG/view" target="_blank" rel="noopener noreferrer">METELLI</a>
-        <a href="https://docs.google.com/spreadsheets/d/1-j6V-azbVEXF-mIKG2vlLULekY1kqs2o7m4m5fxcySc/edit?usp=sharing" target="_blank" rel="noopener noreferrer">MS MOTORS</a>
-        <a href="https://drive.google.com/file/d/14d3IsQgCN2Dkhr3kO7wIZsbChyHkC6w6/view?usp=sharing" target="_blank" rel="noopener noreferrer">NAPA</a>
-        <a href="https://docs.google.com/spreadsheets/d/1agx_MCY8m1nlMxPO1d-Q7Fn6iVVQnMGg/edit?gid=699435034#gid=699435034" target="_blank" rel="noopener noreferrer">NGK</a>
-        <a href="https://docs.google.com/spreadsheets/d/1qvGC7ttzOYS3HBijCiRbpotceGks5sPQ/edit?gid=951445499#gid=951445499" target="_blank" rel="noopener noreferrer">NRF</a>
-        <a href="https://drive.google.com/file/d/1Z9ihXftvLLrJGTjWp5hY4E8PmEzVlGfY/view?usp=sharing" target="_blank" rel="noopener noreferrer">QUINTON HAZELL</a>
-        <a href="https://drive.google.com/file/d/1ElLgJcaiAmu6J55KtSDRrx0P4Hc5-Z3V/view?usp=sharing" target="_blank" rel="noopener noreferrer">RIAL</a>
-        <a href="https://docs.google.com/spreadsheets/d/1wofsj8iGdYccdkDb-qJ6sCA2wVUv0HB_/edit?gid=171463525#gid=171463525" target="_blank" rel="noopener noreferrer">ROBERT LYE</a>
-        <a href="https://docs.google.com/spreadsheets/d/15mXFV5Xz-lo0Yg7ba4pAZdfPTGJxbZzY/edit?gid=156879081#gid=156879081" target="_blank" rel="noopener noreferrer">SCHAEFFLER LUK</a>
-        <a href="https://drive.google.com/file/d/1XM7LoYGafTgKwQFSbat3tNPf9FJ_KRjf/view" target="_blank" rel="noopener noreferrer">SEIM</a>
-        <a href="https://docs.google.com/spreadsheets/d/1K1L5DKRcjEQETfD3IOZNLShmMTnoCCyU/edit?gid=1151402303#gid=1151402303" target="_blank" rel="noopener noreferrer">SPILU</a>
-        <a href="https://drive.google.com/file/d/127CSefCP8Fed-qquru84lfCwLPXphkRF/view" target="_blank" rel="noopener noreferrer">TUTO PRE-ACCORD VALEO EMBRAYAGE</a>
-        <a href="https://drive.google.com/file/d/1sJnnM7F2oHxagLGxm08x5pe84zb_GA4d/view?usp=sharing" target="_blank" rel="noopener noreferrer">TUTO VALEO TOUTE PIECE</a>
+      <div class="tools">
+        <input id="q" type="text" placeholder="Rechercher un lien…" autocomplete="off">
+        <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
       </div>
-    </div>
 
+      <div id="status" class="status">Chargement…</div>
+      <div id="list" class="list" aria-label="Liste des liens"></div>
+    </div>
   </section>
 </main>
 
@@ -116,6 +120,108 @@
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
+
+<script>
+(function(){
+  const API_PATH = "/api/vl/liens-formulaire-garantie";
+  const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
+
+  const statusEl = document.getElementById("status");
+  const listEl   = document.getElementById("list");
+  const qEl      = document.getElementById("q");
+
+  let items = [];
+
+  function norm(s){
+    return (s || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"");
+  }
+
+  function render(){
+    const q = norm(qEl.value.trim());
+    listEl.innerHTML = "";
+
+    const filtered = !q ? items : items.filter(it => {
+      const t = norm((it.label||"") + " " + (it.url||""));
+      return t.includes(q);
+    });
+
+    if (!filtered.length){
+      statusEl.className = "status ok";
+      statusEl.textContent = items.length ? "Aucun résultat." : "Aucun lien configuré (JSON vide).";
+      return;
+    }
+
+    statusEl.className = "status ok";
+    statusEl.textContent = filtered.length + " lien(s).";
+
+    filtered.forEach(it => {
+      const a = document.createElement("a");
+      a.href = it.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = it.label || it.url;
+      listEl.appendChild(a);
+    });
+  }
+
+  function adaptData(raw){
+    let arr = raw;
+
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      if (Array.isArray(raw.links)) arr = raw.links;
+      else if (Array.isArray(raw.data)) arr = raw.data;
+      else if (Array.isArray(raw.items)) arr = raw.items;
+    }
+
+    if (!Array.isArray(arr)) return [];
+
+    return arr.map(x => {
+      const label = (x?.label ?? x?.titre ?? x?.name ?? x?.title ?? "").toString().trim();
+      const url   = (x?.url   ?? x?.lien  ?? x?.link ?? x?.href  ?? "").toString().trim();
+      return { label, url };
+    }).filter(x => x.url);
+  }
+
+  async function fetchJSON(url){
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+
+  async function load(){
+    statusEl.className = "status";
+    statusEl.textContent = "Chargement…";
+
+    try {
+      const raw = await fetchJSON(location.origin + API_PATH);
+      items = adaptData(raw);
+      render();
+      return;
+    } catch (e1) {
+
+      const msg = String(e1?.message || e1);
+      if (!msg.includes("HTTP 404")) throw e1;
+    }
+
+    const raw2 = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
+    items = adaptData(raw2);
+    render();
+  }
+
+  qEl.addEventListener("input", render);
+
+  load().catch(err => {
+    console.error(err);
+    statusEl.className = "status err";
+    statusEl.textContent = "Erreur chargement JSON : " + err.message;
+    listEl.innerHTML = "";
+  });
+})();
+</script>
 
 </body>
 </html>
