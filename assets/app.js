@@ -1,4 +1,15 @@
 (function () {
+
+  // DSG_CHROME_HEIGHT (V2) : calcule la hauteur réelle du haut (topbar + subbar)
+  function dsgUpdateChromeHeight(){
+    const topbar = document.querySelector('.topbar');
+    const subbar = document.querySelector('.subbar');
+    const h = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
+    document.documentElement.style.setProperty('--chrome-h', h + 'px');
+  }
+  window.addEventListener('load', dsgUpdateChromeHeight, { once:true });
+  window.addEventListener('resize', dsgUpdateChromeHeight);
+
 const menus = Array.from(document.querySelectorAll(".menu"));
 
   function closeAll(except = null) {

@@ -241,28 +241,9 @@ body{
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
-body.embed-main{
-  height: auto;
-  min-height: 100vh;
-  overflow: auto;
-}
 
-.embed-main .wrap,
-.embed-main .card{
-  overflow: visible;
-}
 
-.embed-main .wrap,
-.embed-main .card,
-.embed-main .content{
-  min-height: 0;
-}
 
-.embed-main .content{
-  display:block;
-  padding: 12px 18px 14px;
-  min-height: 0;
-}
 
 .embed-tabs{
   display:flex;
@@ -489,72 +470,74 @@ body.login-page{
 }
 
 
-/* DSG_GRID_LAYOUT_V7
-   Objectif : header visible en permanence SANS position:fixed (pas besoin car la page ne scrolle pas),
-   et main prend exactement l'espace restant. => plus de haut/bas coupés. */
+/* DSG_EMBED_SCROLL_V8
+   Objectif :
+   - la page principale NE scrolle PAS
+   - la zone centrale prend EXACTEMENT le reste (flex:1 + min-height:0)
+   - sur les pages avec iframe (body.embed-main) : scroll uniquement DANS l’iframe
+   - sur les pages sans iframe : scroll uniquement dans .content
+   Notes :
+   - on privilégie 100dvh (hauteur visible réelle), fallback 100vh.
+*/
 
-html, body{
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Layout en grille : topbar + subbar + zone contenu */
+html, body{ height:100%; }
 body{
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  min-height: 100vh;
+  height: 100vh;        /* fallback */
+  height: 100dvh;       /* moderne (barre d'URL, etc.) */
+  overflow: hidden;     /* pas de scroll page */
 }
 
-/* On annule tout positionnement "fixed" éventuel */
-.topbar, .subbar{
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  right: auto !important;
-}
-
-/* main remplit la 3e ligne */
-main.wrap{
-  height: 100%;
+/* la structure principale est déjà en flex-column : on sécurise le "reste" */
+.wrap{
+  flex: 1 1 auto;
+  min-height: 0;        /* IMPORTANT : autorise le shrink */
   overflow: hidden;
-  padding: 6px 12px 12px;
-  box-sizing: border-box;
-  display:flex;
-  justify-content:center;
-  align-items:stretch;
 }
 
-.wrap > .card,
-main.wrap .card{
+/* card pleine hauteur */
+.card{
   height: 100%;
   min-height: 0;
-  display:flex;
-  flex-direction:column;
 }
 
-/* Pages sans iframe : scroll interne dans .content */
+/* pages "classiques" : scroll interne */
 body:not(.embed-main) .content{
   height: 100%;
   min-height: 0;
   overflow: auto;
 }
 
-/* Pages avec iframe : le cadre prend le reste */
+/* pages avec iframe : la zone devient colonne, et l'iframe prend le reste */
 body.embed-main .content{
   height: 100%;
   min-height: 0;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  padding: 12px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.embed-tabs{ flex: 0 0 auto; }
-.embed-viewport{ flex: 1 1 auto; min-height:0; overflow:hidden; }
-.embed-frame{ width:100%; height:100%; min-height:0; border:0; display:block; }
 
-/* Pages avec .panel direct */
-.card > .panel{
+/* onglets en haut */
+.embed-tabs{ flex: 0 0 auto; }
+
+/* viewport prend le reste */
+.embed-viewport{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden; /* l'iframe gère son propre scroll */
+}
+
+/* iframe pleine zone */
+.embed-frame{
+  width: 100%;
   height: 100%;
+  min-height: 0;
+  border: 0;
+  display:block;
+}
+
+/* pages qui utilisent .panel (ex: retour fournisseurs/garantie VL) */
+.card > .panel{
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
