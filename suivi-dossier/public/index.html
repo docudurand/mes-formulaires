@@ -207,12 +207,67 @@
   }
 
 
-/* DSG: éviter double scroll dans iframe (la hauteur est gérée par le parent) */
-html, body { height: auto !important; overflow: hidden !important; }
+
+
+/* DSG: iframe — éviter double scroll SANS couper la page */
+html.dsg-in-iframe, html.dsg-in-iframe body {
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important; /* fallback si le parent ne resize pas */
+}
 
 </style>
 </head>
 <body>
+<!-- DSG iframe auto-resize -->
+<script>
+(function () {
+  // Marqueur : on est dans une iframe ?
+  try {
+    if (window.self !== window.top) {
+      document.documentElement.classList.add("dsg-in-iframe");
+    }
+  } catch (e) {
+    document.documentElement.classList.add("dsg-in-iframe");
+  }
+
+  function heightNow() {
+    const b = document.body;
+    const d = document.documentElement;
+    return Math.max(
+      d ? d.scrollHeight : 0,
+      d ? d.offsetHeight : 0,
+      d ? d.clientHeight : 0,
+      b ? b.scrollHeight : 0,
+      b ? b.offsetHeight : 0,
+      b ? b.clientHeight : 0
+    );
+  }
+
+  function send() {
+    // petite marge pour éviter la coupe (ombres, marges, fonts)
+    parent.postMessage({ type: "dsg-iframe-size", height: heightNow() + 24 }, "*");
+  }
+
+  window.addEventListener("load", send, { once: true });
+
+  try {
+    const ro = new ResizeObserver(() => send());
+    ro.observe(document.documentElement);
+  } catch (e) {}
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 20) clearInterval(it);
+  }, 300);
+})();
+</script>
+
 
 <div class="loginOverlay" id="loginOverlay">
   <div class="loginBox">
@@ -1009,32 +1064,6 @@ if ($filterService) {
     overlay.style.display = "none";
     startApp();
   }
-})();
-</script>
-<script>
-(function () {
-  function send() {
-    const h = Math.max(
-      document.documentElement.scrollHeight || 0,
-      document.body ? document.body.scrollHeight : 0
-    );
-    parent.postMessage({ type: "dsg-iframe-size", height: h }, "*");
-  }
-
-  window.addEventListener("load", send);
-
-  const ro = new ResizeObserver(() => send());
-  ro.observe(document.documentElement);
-
-  window.addEventListener("message", (e) => {
-    if (e.data && e.data.type === "dsg-iframe-request-size") send();
-  });
-
-  let n = 0;
-  const it = setInterval(() => {
-    send();
-    if (++n >= 12) clearInterval(it);
-  }, 400);
 })();
 </script>
 </body>
