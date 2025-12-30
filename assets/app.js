@@ -1,16 +1,21 @@
 (function () {
+  // DSG_CHROME_HEIGHT
+  // Calcule la hauteur réelle du "chrome" (topbar + subbar) pour que le cadre
+  // prenne EXACTEMENT la hauteur visible restante.
+  function dsgUpdateChromeHeight() {
+    const topbar = document.querySelector(".topbar");
+    const subbar = document.querySelector(".subbar");
 
-  // DSG_CHROME_HEIGHT (V2) : calcule la hauteur réelle du haut (topbar + subbar)
-  function dsgUpdateChromeHeight(){
-    const topbar = document.querySelector('.topbar');
-    const subbar = document.querySelector('.subbar');
+    // offsetHeight inclut le padding + border -> c'est ce qu'on veut ici.
     const h = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
-    document.documentElement.style.setProperty('--chrome-h', h + 'px');
+    document.documentElement.style.setProperty("--chrome-h", h + "px");
   }
-  window.addEventListener('load', dsgUpdateChromeHeight, { once:true });
-  window.addEventListener('resize', dsgUpdateChromeHeight);
 
-const menus = Array.from(document.querySelectorAll(".menu"));
+  window.addEventListener("load", dsgUpdateChromeHeight, { once: true });
+  window.addEventListener("resize", dsgUpdateChromeHeight);
+
+  // Menus (mobile)
+  const menus = Array.from(document.querySelectorAll(".menu"));
 
   function closeAll(except = null) {
     menus.forEach((m) => {
@@ -43,24 +48,6 @@ const menus = Array.from(document.querySelectorAll(".menu"));
     if (e.key === "Escape") closeAll();
   });
 
-  const embeds = Array.from(document.querySelectorAll("iframe.embed-frame"));
-
-  if (embeds.length) {
-    const resizeEmbeds = () => {
-      const vh = window.innerHeight || 900;
-      const h = Math.max(900, Math.round(vh * 1.65));
-      embeds.forEach((fr) => {
-        fr.style.height = h + "px";
-      });
-    };
-
-    let t;
-    window.addEventListener("resize", () => {
-      clearTimeout(t);
-      t = setTimeout(resizeEmbeds, 150);
-    });
-
-    window.addEventListener("load", resizeEmbeds);
-    resizeEmbeds();
-  }
+  // IMPORTANT : on ne force PAS de hauteur fixe sur les iframes.
+  // Le cadre (iframe) est en height:100% via le CSS et le scroll se fait dedans.
 })();

@@ -23,6 +23,7 @@ body{
   min-height: 100vh;
   display:flex;
   flex-direction:column;
+  overflow: hidden; /* pas de scroll sur la page principale */
 }
 
 .topbar{
@@ -168,6 +169,8 @@ body{
   display:flex;
   justify-content:center;
   align-items:stretch;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .card{
@@ -176,6 +179,7 @@ body{
   display:flex;
   flex-direction:column;
   flex: 1;
+  min-height: 0;
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
@@ -185,8 +189,9 @@ body{
 .content{
   background: #eef0ff;
   padding: 42px 24px 60px;
-  min-height: 60vh;
+  min-height: 0;
   flex: 1;
+  overflow: auto; /* scroll interne */
 }
 
 .h1{
@@ -241,9 +246,29 @@ body{
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
+/* Pages "embed" (cadres iframe) : pas de scroll sur la page principale, scroll dans l'iframe */
+body.embed-main{
+  overflow: hidden;
+}
 
+.embed-main .wrap,
+.embed-main .card{
+  overflow: hidden;
+}
 
+.embed-main .wrap,
+.embed-main .card,
+.embed-main .content{
+  min-height: 0;
+}
 
+.embed-main .content{
+  display:flex;
+  flex-direction: column;
+  padding: 12px 18px 14px;
+  min-height: 0;
+  overflow: hidden;
+}
 
 .embed-tabs{
   display:flex;
@@ -268,7 +293,10 @@ body{
 .embed-tabs a.is-active{ background: var(--pill); }
 
 .embed-viewport{
-  display:block;
+  display:flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .embed-frame{
@@ -276,7 +304,11 @@ body{
   height: 100%;
   min-height: 0;
   border: 0;
-  display:block;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.15);
+  display: block;
+  overflow: auto;
 }
 
 .embed-card{ height: 100%; }
@@ -468,77 +500,3 @@ body{
 body.login-page{
   background: #e9edfb;
 }
-
-
-/* DSG_EMBED_SCROLL_V8
-   Objectif :
-   - la page principale NE scrolle PAS
-   - la zone centrale prend EXACTEMENT le reste (flex:1 + min-height:0)
-   - sur les pages avec iframe (body.embed-main) : scroll uniquement DANS l’iframe
-   - sur les pages sans iframe : scroll uniquement dans .content
-   Notes :
-   - on privilégie 100dvh (hauteur visible réelle), fallback 100vh.
-*/
-
-html, body{ height:100%; }
-body{
-  height: 100vh;        /* fallback */
-  height: 100dvh;       /* moderne (barre d'URL, etc.) */
-  overflow: hidden;     /* pas de scroll page */
-}
-
-/* la structure principale est déjà en flex-column : on sécurise le "reste" */
-.wrap{
-  flex: 1 1 auto;
-  min-height: 0;        /* IMPORTANT : autorise le shrink */
-  overflow: hidden;
-}
-
-/* card pleine hauteur */
-.card{
-  height: 100%;
-  min-height: 0;
-}
-
-/* pages "classiques" : scroll interne */
-body:not(.embed-main) .content{
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-}
-
-/* pages avec iframe : la zone devient colonne, et l'iframe prend le reste */
-body.embed-main .content{
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* onglets en haut */
-.embed-tabs{ flex: 0 0 auto; }
-
-/* viewport prend le reste */
-.embed-viewport{
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden; /* l'iframe gère son propre scroll */
-}
-
-/* iframe pleine zone */
-.embed-frame{
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  border: 0;
-  display:block;
-}
-
-/* pages qui utilisent .panel (ex: retour fournisseurs/garantie VL) */
-.card > .panel{
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
-
