@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Retour fournisseur et garantie VL</title>
+  <title>Retour Fournisseur & Garantie VL</title>
 
   <link rel="stylesheet" href="../assets/style.css" />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -14,126 +14,120 @@
   <meta name="theme-color" content="#e9efff">
 
   <style>
-    .panel { width:min(1600px,100%); margin:0 auto; padding:18px 18px 26px; }
+    :root{ --bg:#eef1f6; --line:rgba(0,0,0,.10); }
 
-    .accordion {
-      border:1px solid rgba(0,0,0,.12);
-      border-radius:10px;
-      overflow:hidden;
-      background:#fff;
-      box-shadow:0 10px 25px rgba(0,0,0,.10);
-      margin-bottom:14px;
+    .card.padless{ padding:0; }
+
+    .panel{
+      padding: 18px 18px 22px;
+      max-height: calc(100vh - 170px);
+      overflow: auto;
     }
-    .accordion details + details { border-top:1px solid rgba(0,0,0,.10); }
+
+    .accordion{
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255,255,255,.55);
+      margin-bottom: 14px;
+    }
     .accordion summary{
-      list-style:none;
       cursor:pointer;
-      padding:16px 18px;
-      background:#eef1f6;
-      font-weight:800;
+      list-style:none;
+      user-select:none;
+      padding: 16px 18px;
+      font-weight: 900;
+      background: rgba(255,255,255,.55);
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      user-select:none;
     }
     .accordion summary::-webkit-details-marker{ display:none; }
-    .acc-title{ display:flex; align-items:center; gap:10px; }
-    .acc-body{ padding:16px 18px 18px; background:#fff; }
-
-    .mail-list{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-      font-size:15px;
-      line-height:1.35;
+    .acc-body{
+      padding: 16px 18px 18px;
+      background: var(--bg);
+      border-top: 1px solid rgba(0,0,0,.08);
     }
-    .mail-line b{ display:inline-block; min-width:120px; }
-    .mail-line a{ color:var(--link); text-decoration:none; }
-    .mail-line a:hover{ text-decoration:underline; }
+
+    .status { margin: 8px 0 0; font-size: 13px; opacity:.85; }
+    .status.ok { color:#0f5132; }
+    .status.err { color:#842029; font-weight:800; }
+
+    .hint{ font-size:12px; opacity:.7; white-space:nowrap; }
+
+    table.simple, table.contacts{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      table-layout:fixed;
+    }
+
+    table.simple td{
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+      font-size: 14px;
+    }
+    table.simple td:nth-child(1){ font-weight:900; width: 220px; }
+    table.simple a{ color: var(--link); text-decoration:none; font-weight:800; }
+    table.simple a:hover{ text-decoration:underline; }
 
     .tools-row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:space-between;
-      margin:0 0 12px;
+      display:flex; align-items:center; gap:12px;
+      margin: 8px 0 12px;
     }
-    .search{
+    .tools-row input{
       flex:1;
-      min-width:260px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .search input{
-      width:100%;
-      padding:11px 12px;
-      border:1px solid rgba(0,0,0,.2);
-      border-radius:10px;
-      font-size:15px;
+      padding: 11px 12px;
+      border:1px solid rgba(0,0,0,.18);
+      border-radius: 10px;
+      font-size: 14px;
       background:#fff;
+      min-width: 240px;
     }
-    .hint{ font-size:12px; color:#555; white-space:nowrap; }
 
-    .table-wrap{
-      width:100%;
-      overflow:auto;
-      border-radius:10px;
-      border:1px solid rgba(0,0,0,.12);
-    }
-    table.contacts{
-      width:100%;
-      border-collapse:collapse;
-      min-width:980px;
-      background:#fff;
-    }
     table.contacts th, table.contacts td{
-      border-bottom:1px solid rgba(0,0,0,.10);
-      border-right:1px solid rgba(0,0,0,.08);
-      padding:12px 12px;
-      vertical-align:top;
-      font-size:14px;
-      line-height:1.3;
-      background:#eef1f6;
+      border-bottom: 1px solid rgba(0,0,0,.10);
+      border-right: 1px solid rgba(0,0,0,.08);
+      padding: 12px 12px;
+      vertical-align: top;
+      font-size: 14px;
+      line-height: 1.3;
+      background: var(--bg);
+      word-break: break-word;
     }
-    table.contacts td{ background:#eef1f6; }
     table.contacts th{
-      position:sticky;
-      top:0;
-      z-index:2;
-      font-weight:900;
-      text-transform:lowercase;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 900;
+      text-transform: lowercase;
+      background: #e6eaf2;
     }
     table.contacts td:nth-child(1){
-      font-weight:900;
-      width:220px;
-      background:#eef1f6;
+      font-weight: 900;
+      width: 220px;
+      background: var(--bg);
     }
     table.contacts a{
-      color:var(--link);
-      text-decoration:none;
-      font-weight:700;
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 700;
     }
-    table.contacts a:hover{ text-decoration:underline; }
-    .notes{ white-space:pre-line; }
+    table.contacts a:hover{ text-decoration: underline; }
+    .notes{ white-space: pre-line; }
 
-    .status{ margin:6px 0 0; font-size:13px; opacity:.85; }
-    .status.ok{ color:#0f5132; }
-    .status.err{ color:#842029; }
-
-    @media (max-width:640px){
-      .panel{ padding:12px 10px 18px; }
-      .accordion summary{ padding:14px 14px; }
-      .acc-body{ padding:14px 14px 16px; }
+    @media (max-width: 640px){
+      .panel{ padding: 12px 10px 18px; max-height: calc(100vh - 160px); }
+      .accordion summary{ padding: 14px 14px; }
+      .acc-body{ padding: 14px 14px 16px; }
       .hint{ display:none; }
     }
   </style>
 </head>
 
 <body>
-
 <header class="topbar">
   <div class="brand-left">
     <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
@@ -167,7 +161,7 @@
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
         <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
         <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
-        <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
+        <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR</a>
         <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
         <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
         <a href="../utilitaire/contact-fournisseur.html" role="menuitem">CONTACTS FOURNISSEURS</a>
@@ -196,252 +190,153 @@
 <div class="subbar"></div>
 
 <main class="wrap">
-  <section class="card">
+  <section class="card padless">
     <div class="panel">
+      <div class="h1">RETOUR FOURNISSEUR ET GARANTIE VL</div>
 
-      <div class="accordion">
+      <details class="accordion" open>
+        <summary>
+          <span>Mail Retour Fournisseurs</span>
+          <span class="status" id="mailStatus">Chargement…</span>
+        </summary>
+        <div class="acc-body">
+          <table class="simple" id="mailTable"></table>
+          <div class="status err" id="mailErr" style="display:none;">❌ Impossible de charger les mails retour.</div>
+        </div>
+      </details>
 
-        <details open>
-          <summary>
-            <span class="acc-title">Mail Retour Fournisseurs</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <div class="acc-body">
-            <div id="mailStatus" class="status">Chargement…</div>
-            <div class="mail-list" id="mailList"></div>
+      <details class="accordion" open>
+        <summary>
+          <span>Contact Garantie</span>
+          <span class="status" id="cgStatus">Chargement…</span>
+        </summary>
+        <div class="acc-body">
+          <div class="tools-row">
+            <input id="q" type="text" placeholder="Rechercher un fournisseur / email / note…" />
+            <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
           </div>
-        </details>
 
-        <details open>
-          <summary>
-            <span class="acc-title">Contact Garantie</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-
-          <div class="acc-body">
-
-            <div class="tools-row">
-              <div class="search">
-                <input id="filterInput" type="text" placeholder="Rechercher un fournisseur / email / note…" autocomplete="off">
-              </div>
-              <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
-            </div>
-
-            <div id="tableStatus" class="status">Chargement…</div>
-
-            <div class="table-wrap" role="region" aria-label="Tableau contacts garantie" tabindex="0">
-              <table class="contacts" id="contactsTable">
-                <thead>
-                  <tr>
-                    <th>fournisseur</th>
-                    <th>contact suivie</th>
-                    <th>contact demande</th>
-                    <th>contact commercial</th>
-                    <th>notes</th>
-                  </tr>
-                </thead>
-                <tbody id="contactsTbody"></tbody>
-              </table>
-            </div>
-
+          <div style="overflow:auto; border-radius:12px;">
+            <table class="contacts" id="cgTable">
+              <thead>
+                <tr>
+                  <th>fournisseur</th>
+                  <th>contact suivie</th>
+                  <th>contact demande</th>
+                  <th>contact commercial</th>
+                  <th>notes</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
-        </details>
 
-      </div>
+          <div class="status err" id="cgErr" style="display:none;">❌ Impossible de charger les contacts garantie.</div>
+        </div>
+      </details>
 
     </div>
   </section>
 </main>
 
+<script>
+  let rawMail = [];
+  let rawContacts = [];
+
+  function esc(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function mailRow(fournisseur, email){
+    const f = esc(fournisseur);
+    const e = esc(email);
+    const link = email ? `<a href="mailto:${e}">${e}</a>` : "";
+    return `<tr><td>${f}</td><td>${link}</td></tr>`;
+  }
+
+  function setMailTable(){
+    const tbl = document.getElementById("mailTable");
+    const arr = Array.isArray(rawMail) ? rawMail : [];
+    tbl.innerHTML = arr.map(x => mailRow(x.fournisseur, x.email)).join("");
+  }
+
+  function setContactsTable(filterText){
+    const q = String(filterText || "").trim().toLowerCase();
+    const tbody = document.querySelector("#cgTable tbody");
+    const arr = Array.isArray(rawContacts) ? rawContacts : [];
+
+    const rows = arr.filter(x => {
+      if(!q) return true;
+      const blob = [
+        x.fournisseur, x.contactSuivie, x.contactDemande, x.contactCommercial, x.notes
+      ].join(" ").toLowerCase();
+      return blob.includes(q);
+    });
+
+    tbody.innerHTML = rows.map(x => {
+      const f = esc(x.fournisseur);
+      const suivie = x.contactSuivie ? `<a href="mailto:${esc(x.contactSuivie)}">${esc(x.contactSuivie)}</a>` : "";
+      const demande = x.contactDemande ? `<a href="mailto:${esc(x.contactDemande)}">${esc(x.contactDemande)}</a>` : "";
+      const comm = x.contactCommercial ? `<a href="mailto:${esc(x.contactCommercial)}">${esc(x.contactCommercial)}</a>` : "";
+      const notes = `<div class="notes">${esc(x.notes || "")}</div>`;
+      return `<tr>
+        <td>${f}</td>
+        <td>${suivie}</td>
+        <td>${demande}</td>
+        <td>${comm}</td>
+        <td>${notes}</td>
+      </tr>`;
+    }).join("");
+
+    const st = document.getElementById("cgStatus");
+    st.className = "status ok";
+    st.textContent = `${rows.length} ligne(s).`;
+  }
+
+  async function load(){
+    const mailStatus = document.getElementById("mailStatus");
+    const cgStatus = document.getElementById("cgStatus");
+
+    try{
+      const r = await fetch("/api/vl/retour-garantie", { cache:"no-store", credentials:"include" });
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+
+      rawMail = Array.isArray(data.mailRetour) ? data.mailRetour : [];
+      rawContacts = Array.isArray(data.contactsGarantie) ? data.contactsGarantie : [];
+
+      setMailTable();
+      mailStatus.className = "status ok";
+      mailStatus.textContent = `${rawMail.length} ligne(s).`;
+
+      setContactsTable("");
+      cgStatus.className = "status ok";
+
+      document.getElementById("q").addEventListener("input", (e) => {
+        setContactsTable(e.target.value);
+      });
+
+    }catch(e){
+      console.error(e);
+
+      mailStatus.className = "status err";
+      mailStatus.textContent = "Erreur";
+      document.getElementById("mailErr").style.display = "block";
+
+      cgStatus.className = "status err";
+      cgStatus.textContent = "Erreur";
+      document.getElementById("cgErr").style.display = "block";
+    }
+  }
+
+  load();
+</script>
+
 <script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
-
-<script>
-(function(){
-  const API_PATH = "/api/vl/retour-garantie";
-  const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
-
-  const mailStatus  = document.getElementById("mailStatus");
-  const mailList    = document.getElementById("mailList");
-
-  const tableStatus = document.getElementById("tableStatus");
-  const tbody       = document.getElementById("contactsTbody");
-
-  const filterInput = document.getElementById("filterInput");
-
-  let contactTRs = [];
-
-  function esc(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  function normalize(s){
-    return (s || "")
-      .toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"");
-  }
-
-  function toMailLink(value){
-    const v = String(value || "").trim();
-    if (!v) return "";
-    const m = v.match(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
-    const email = m ? m[1] : "";
-    if (!email) return esc(v);
-    return `<a href="mailto:${esc(email)}">${esc(email)}</a>`;
-  }
-
-  function renderMailRetour(mails){
-    mailList.innerHTML = "";
-
-    if (!Array.isArray(mails) || mails.length === 0) {
-      mailStatus.className = "status ok";
-      mailStatus.textContent = "Aucun mail de retour configuré (JSON vide).";
-      return;
-    }
-
-    mailStatus.className = "status ok";
-    mailStatus.textContent = mails.length + " ligne(s).";
-
-    mails.forEach(item => {
-      let fournisseur = "";
-      let email = "";
-
-      if (typeof item === "string") {
-        const parts = item.split(":");
-        if (parts.length >= 2) {
-          fournisseur = parts[0].trim();
-          email = parts.slice(1).join(":").trim();
-        } else {
-          email = item.trim();
-        }
-      } else if (item && typeof item === "object") {
-        fournisseur = String(item.fournisseur ?? item.label ?? item.nom ?? "").trim();
-        email = String(item.email ?? item.mail ?? item.value ?? "").trim();
-      }
-
-      const line = document.createElement("div");
-      line.className = "mail-line";
-      line.innerHTML = `<b>${esc(fournisseur || "MAIL")} :</b> ${toMailLink(email)}`;
-      mailList.appendChild(line);
-    });
-  }
-
-  function adaptContacts(arr){
-    if (!Array.isArray(arr)) return [];
-    return arr.map(x => ({
-      fournisseur: String(x?.fournisseur ?? "").trim(),
-      suivie: String(x?.contactSuivie ?? x?.contact_suivie ?? x?.suivie ?? x?.suivi ?? "").trim(),
-      demande: String(x?.contactDemande ?? x?.contact_demande ?? x?.demande ?? "").trim(),
-      commercial: String(x?.contactCommercial ?? x?.contact_commercial ?? x?.commercial ?? "").trim(),
-      notes: String(x?.notes ?? x?.note ?? "").trim(),
-    })).filter(r => r.fournisseur || r.suivie || r.demande || r.commercial || r.notes);
-  }
-
-  function renderContacts(rows){
-    tbody.innerHTML = "";
-    contactTRs = [];
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      tableStatus.className = "status ok";
-      tableStatus.textContent = "Aucun contact configuré (JSON vide).";
-      return;
-    }
-
-    tableStatus.className = "status ok";
-    tableStatus.textContent = rows.length + " ligne(s).";
-
-    rows.forEach(r => {
-      const tr = document.createElement("tr");
-
-      const td1 = document.createElement("td");
-      td1.textContent = r.fournisseur || "";
-      tr.appendChild(td1);
-
-      const td2 = document.createElement("td");
-      td2.innerHTML = toMailLink(r.suivie);
-      tr.appendChild(td2);
-
-      const td3 = document.createElement("td");
-      td3.innerHTML = toMailLink(r.demande);
-      tr.appendChild(td3);
-
-      const td4 = document.createElement("td");
-      td4.innerHTML = toMailLink(r.commercial);
-      tr.appendChild(td4);
-
-      const td5 = document.createElement("td");
-      td5.className = "notes";
-      td5.textContent = r.notes || "";
-      tr.appendChild(td5);
-
-      tbody.appendChild(tr);
-      contactTRs.push(tr);
-    });
-  }
-
-  function applyFilter(){
-    const q = normalize(filterInput.value.trim());
-    contactTRs.forEach(tr => {
-      const txt = normalize(tr.innerText);
-      tr.style.display = (!q || txt.includes(q)) ? "" : "none";
-    });
-  }
-
-  async function fetchJSON(url){
-    const r = await fetch(url, { cache:"no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
-  }
-
-  async function load(){
-    mailStatus.className = "status";
-    mailStatus.textContent = "Chargement…";
-    tableStatus.className = "status";
-    tableStatus.textContent = "Chargement…";
-
-    let raw;
-
-    try {
-      raw = await fetchJSON(location.origin + API_PATH);
-    } catch (e1) {
-      const msg = String(e1?.message || e1);
-      if (!msg.includes("HTTP 404")) throw e1;
-      raw = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
-    }
-
-    const mails = raw?.mailsRetour || raw?.mails_retour || raw?.mailRetour || raw?.mails || [];
-    const contacts = raw?.contactsGarantie || raw?.contacts_garantie || raw?.contacts || [];
-
-    renderMailRetour(Array.isArray(mails) ? mails : []);
-    renderContacts(adaptContacts(Array.isArray(contacts) ? contacts : []));
-
-    applyFilter();
-  }
-
-  filterInput.addEventListener("input", applyFilter);
-
-  load().catch(err => {
-    console.error(err);
-
-    mailStatus.className = "status err";
-    mailStatus.textContent = "Erreur chargement JSON : " + err.message;
-    mailList.innerHTML = "";
-
-    tableStatus.className = "status err";
-    tableStatus.textContent = "Erreur chargement JSON : " + err.message;
-    tbody.innerHTML = "";
-  });
-})();
-</script>
-
 </body>
 </html>
