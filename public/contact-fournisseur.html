@@ -199,5 +199,33 @@
       renderRows(filtered);
     });
   </script>
+
+<script>
+(function () {
+  function send() {
+    const h = Math.max(
+      document.documentElement.scrollHeight || 0,
+      document.body ? document.body.scrollHeight : 0
+    );
+    parent.postMessage({ type: "dsg-iframe-size", height: h }, "*");
+  }
+
+  window.addEventListener("load", send);
+
+  const ro = new ResizeObserver(() => send());
+  ro.observe(document.documentElement);
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 12) clearInterval(it);
+  }, 400);
+})();
+</script>
+
 </body>
 </html>
