@@ -489,142 +489,73 @@ body.login-page{
 }
 
 
-/* DSG_VIEWPORT_MODE_V2
-   Objectif :
-   - pas de scroll sur la page principale
-   - zone contenu = hauteur écran restante
-   - scroll uniquement dans .content (pages sans iframe) ou dans le cadre (iframe) */
-
-:root{ --chrome-h: 0px; } /* recalculé par JS */
+/* DSG_GRID_LAYOUT_V7
+   Objectif : header visible en permanence SANS position:fixed (pas besoin car la page ne scrolle pas),
+   et main prend exactement l'espace restant. => plus de haut/bas coupés. */
 
 html, body{
   height: 100%;
   overflow: hidden;
 }
 
-/* la zone centrale remplit l'écran restant */
-main.wrap{
-  height: calc(100vh - var(--chrome-h));
-  overflow: hidden;
-  padding: 0;              /* évite les erreurs de calcul */
+/* Layout en grille : topbar + subbar + zone contenu */
+body{
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: 100vh;
 }
 
-/* la carte remplit la zone */
+/* On annule tout positionnement "fixed" éventuel */
+.topbar, .subbar{
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+/* main remplit la 3e ligne */
+main.wrap{
+  height: 100%;
+  overflow: hidden;
+  padding: 6px 12px 12px;
+  box-sizing: border-box;
+  display:flex;
+  justify-content:center;
+  align-items:stretch;
+}
+
 .wrap > .card,
 main.wrap .card{
   height: 100%;
+  min-height: 0;
+  display:flex;
+  flex-direction:column;
 }
 
-/* pages "classiques" : scroll interne dans la zone contenu */
+/* Pages sans iframe : scroll interne dans .content */
 body:not(.embed-main) .content{
   height: 100%;
   min-height: 0;
   overflow: auto;
 }
 
-/* pages avec iframe : on met la zone en colonne et le cadre prend le reste */
+/* Pages avec iframe : le cadre prend le reste */
 body.embed-main .content{
   height: 100%;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 12px 18px 14px;   /* padding léger (déjà le cas en embed-main) */
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  padding: 12px 18px 14px;
 }
-
 .embed-tabs{ flex: 0 0 auto; }
+.embed-viewport{ flex: 1 1 auto; min-height:0; overflow:hidden; }
+.embed-frame{ width:100%; height:100%; min-height:0; border:0; display:block; }
 
-.embed-viewport{
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto;
-  overflow: hidden;
-}
-
-.embed-frame{
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  border: 0;
-  display: block;
-}
-
-/* pages "panel" (ex: retour fournisseurs/garantie VL) : pas de .content -> on scroll sur .panel */
+/* Pages avec .panel direct */
 .card > .panel{
   height: 100%;
   min-height: 0;
   overflow: auto;
 }
-
-
-/* DSG_FIXED_LAYOUT_V6_1
-   Fix : le haut était coupé le temps que le JS calcule les hauteurs.
-   => on met des valeurs fallback (approx) + recalcul très tôt en JS. */
-
-:root{
-  --topbar-h: 78px;   /* fallback */
-  --subbar-h: 32px;   /* fallback (si absent, JS mettra 0) */
-  --main-top: 110px;  /* fallback */
-}
-
-html, body{
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Barres fixées en haut */
-.topbar{
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 1000;
-}
-
-.subbar{
-  position: fixed;
-  left: 0; right: 0;
-  top: var(--topbar-h);
-  z-index: 999;
-}
-
-/* Le contenu prend exactement le reste de l'écran */
-main.wrap{
-  position: fixed;
-  top: var(--main-top);
-  left: 0; right: 0; bottom: 0;
-  overflow: hidden;
-  padding: 6px 12px 12px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-}
-
-/* Card et contenu = hauteur pleine */
-.wrap > .card,
-main.wrap .card{
-  height: 100%;
-  min-height: 0;
-  display:flex;
-  flex-direction:column;
-}
-
-.content{
-  height: 100%;
-  min-height: 0;
-}
-
-/* Pages sans iframe : scroll interne dans .content */
-body:not(.embed-main) .content{
-  overflow: auto;
-}
-
-/* Pages avec iframe : scroll DANS l’iframe */
-body.embed-main .content{
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.embed-tabs{ flex: 0 0 auto; }
-.embed-viewport{ flex: 1 1 auto; min-height: 0; overflow:hidden; }
-.embed-frame{ width:100%; height:100%; min-height:0; border:0; display:block; }
 
