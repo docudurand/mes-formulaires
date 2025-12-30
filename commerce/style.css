@@ -5,7 +5,6 @@
   --pill: #1f2c56;
   --pillText: #ffffff;
   --shadow: 0 14px 30px rgba(0,0,0,.12);
-  --radius: 18px;
   --ipadW: 980px;
 }
 
@@ -19,7 +18,6 @@ body{
   color: #0f172a;
 }
 
-/* Top bar + burger */
 .topbar{
   height: 44px;
   display: flex;
@@ -49,7 +47,6 @@ body{
   margin: 3px 0;
 }
 
-/* Main frame */
 .stage{
   padding: 10px 14px 26px;
   display: flex;
@@ -66,13 +63,27 @@ body{
   position: relative;
 }
 
-/* Home (video) */
 .welcome{
   display: grid;
   place-items: center;
   padding: 26px 14px 22px;
   gap: 14px;
 }
+
+.homeTitle{
+  margin: 0;
+  text-align: center;
+  font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 300;
+  letter-spacing: .04em;
+  line-height: 1.05;
+  font-size: 40px;
+  color: #1f8bff;
+  text-rendering: geometricPrecision;
+}
+.homeTitle__d{ font-weight: 700; }
+.homeTitle__rest{ font-weight: 300; }
+.homeTitle__light{ font-weight: 300; }
 
 .homeVideo{
   width: min(100%, var(--ipadW));
@@ -90,24 +101,6 @@ body{
   display: block;
 }
 
-/* Titre style logo */
-.homeTitle{
-  margin: 0;
-  text-align: center;
-  font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 300;
-  letter-spacing: .04em;
-  line-height: 1.05;
-  font-size: 40px;
-  color: #1f8bff;
-  text-rendering: geometricPrecision;
-}
-
-.homeTitle__d{ font-weight: 700; }
-.homeTitle__rest{ font-weight: 300; }
-.homeTitle__light{ font-weight: 300; }
-
-/* Embedded content */
 .contentFrame{
   width: 100%;
   height: 100%;
@@ -117,7 +110,6 @@ body{
   background: #fff;
 }
 
-/* Drawer + backdrop */
 .backdrop{
   position: fixed;
   inset: 0;
@@ -164,7 +156,6 @@ body{
   justify-items: start;
 }
 
-/* Buttons */
 .navBtn{
   width: 260px;
   max-width: 100%;
@@ -186,7 +177,6 @@ body{
 
 .navBtn:active{ transform: translateY(1px); }
 
-/* Mobile */
 @media (max-width: 520px){
   :root{ --ipadW: 100%; }
   .navBtn{ width: 240px; }

@@ -12,6 +12,7 @@
     btnBurger.setAttribute('aria-expanded','true');
     backdrop.hidden = false;
   }
+
   function closeDrawer(){
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden','true');
@@ -23,17 +24,19 @@
   btnClose.addEventListener('click', closeDrawer);
   backdrop.addEventListener('click', closeDrawer);
 
-  function loadInFrame(src){
-    frame.src = src;
-    welcome.style.display = 'none';
-    frame.style.display = 'block';
+  function openInFrame(url){
+    try{
+      frame.src = url;
+      frame.style.display = 'block';
+      if (welcome) welcome.style.display = 'none';
+      closeDrawer();
+    }catch(e){}
   }
 
-  document.querySelectorAll('.navBtn[data-src]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const src = btn.getAttribute('data-src');
-      if(src) loadInFrame(src);
-      closeDrawer();
+  document.querySelectorAll('[data-src]').forEach((btn)=>{
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-src');
+      if (url) openInFrame(url);
     });
   });
 
@@ -41,6 +44,7 @@
   drawer.addEventListener('touchstart', (e)=>{
     startX = e.touches && e.touches[0] ? e.touches[0].clientX : null;
   }, {passive:true});
+
   drawer.addEventListener('touchend', (e)=>{
     if(startX == null) return;
     const endX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : startX;

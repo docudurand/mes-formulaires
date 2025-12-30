@@ -3,25 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Durand Commerce</title>
+
   <link rel="stylesheet" href="./style.css" />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#e9efff">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#e9efff">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Durand Commerce">
+  <meta name="apple-mobile-web-app-title" content="Durand&#10;Commerce">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="./manifest.webmanifest">
-
 </head>
+
 <script>window.__SITE_PREFIX__ = "../";</script>
 <script src="../assets/auth.js"></script>
 <script>
   requireAuth();
 </script>
+
 <body>
   <header class="topbar">
     <button class="burger" id="btnBurger" type="button" aria-label="Ouvrir le menu" aria-controls="drawer" aria-expanded="false">
@@ -32,22 +35,27 @@
   <main class="stage">
     <section class="frame frame--home" aria-label="Contenu">
       <div class="welcome" id="welcome">
-  <div class="homeVideo">
-    <iframe
-      src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0&playsinline=1"
-      frameborder="0"
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowfullscreen>
-    </iframe>
-  </div>
-</div>
+        <h1 class="homeTitle">
+          <span class="homeTitle__d">D</span><span class="homeTitle__rest">urand</span>
+          <span class="homeTitle__light">Commerce</span>
+        </h1>
+
+        <div class="homeVideo">
+          <iframe
+            src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0&playsinline=1"
+            frameborder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+      </div>
 
       <iframe id="contentFrame"
               class="contentFrame"
               title="Contenu Commerce"
               loading="lazy"
               referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+              sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation"
               allow="fullscreen; autoplay; clipboard-read; clipboard-write">
       </iframe>
     </section>
@@ -69,12 +77,9 @@
         TELEVENTE LUB 2026
       </button>
 
-      <a class="navBtn navLink"
-         href="https://durandservicesgarantie.onrender.com/admin"
-         target="_blank"
-         rel="noopener noreferrer">
+      <button class="navBtn" type="button" data-src="https://durandservicesgarantie.onrender.com/admin">
         SUIVI GARANTIE
-      </a>
+      </button>
 
       <button class="navBtn" type="button" data-src="https://mes-formulaires.onrender.com/castrol">
         REFERENCE CASTROL
@@ -92,6 +97,5 @@
       }
     })();
   </script>
-
 </body>
 </html>
