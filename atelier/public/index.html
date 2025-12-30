@@ -57,22 +57,17 @@
     .help{font-size:0.9rem;color:#6b7280;margin-top:8px}
   
 
-
-
-/* DSG: iframe — éviter double scroll SANS couper la page */
 html.dsg-in-iframe, html.dsg-in-iframe body {
   height: auto !important;
   overflow-x: hidden !important;
-  overflow-y: auto !important; /* fallback si le parent ne resize pas */
+  overflow-y: auto !important;
 }
 
 </style>
 </head>
 <body>
-<!-- DSG iframe auto-resize -->
 <script>
 (function () {
-  // Marqueur : on est dans une iframe ?
   try {
     if (window.self !== window.top) {
       document.documentElement.classList.add("dsg-in-iframe");
@@ -95,7 +90,6 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
   }
 
   function send() {
-    // petite marge pour éviter la coupe (ombres, marges, fonts)
     parent.postMessage({ type: "dsg-iframe-size", height: heightNow() + 24 }, "*");
   }
 

@@ -23,7 +23,7 @@ body{
   min-height: 100vh;
   display:flex;
   flex-direction:column;
-  overflow: hidden; /* pas de scroll sur la page principale */
+  overflow: hidden;
 }
 
 .topbar{
@@ -83,7 +83,7 @@ body{
   border:0;
   cursor:pointer;
 
-  padding: clamp(7px, 0.85vw, 12px) clamp(10px, 1.35vw, 22px);
+  padding: clamp(7px, 0.85vw, 12px) clamp(14px, 1.8vw, 28px);
   border-radius: var(--radius-pill);
 
   color:#fff;
@@ -191,7 +191,7 @@ body{
   padding: 42px 24px 60px;
   min-height: 0;
   flex: 1;
-  overflow: auto; /* scroll interne */
+  overflow: auto;
 }
 
 .h1{
@@ -246,7 +246,6 @@ body{
   .content .video{ width: 96vw; border-radius: 12px; }
 }
 
-/* Pages "embed" (cadres iframe) : pas de scroll sur la page principale, scroll dans l'iframe */
 body.embed-main{
   overflow: hidden;
 }
