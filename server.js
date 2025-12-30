@@ -1219,6 +1219,18 @@ app.get("/api/vl/retour-garantie", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
+app.use("/pl", express.static(path.join(__dirname, "pl"), {
+  extensions: ["html", "htm"],
+  index: false
+}));
+
+app.use("/vl", express.static(path.join(__dirname, "vl"), {
+  extensions: ["html", "htm"],
+  index: false
+}));
+
+app.use("/assets", express.static(path.join(__dirname, "assets")));
+
 
 
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
