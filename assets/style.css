@@ -489,17 +489,29 @@ body.login-page{
 }
 
 
-/* DSG_VIEWPORT_MODE_V2
+/* DSG_VIEWPORT_MODE_V3
+   Fix : les anciennes règles .embed-main (height:auto / overflow:auto / overflow:visible) cassaient la hauteur.
    Objectif :
    - pas de scroll sur la page principale
    - zone contenu = hauteur écran restante
-   - scroll uniquement dans .content (pages sans iframe) ou dans le cadre (iframe) */
+   - scroll uniquement dans l’iframe (ou panel/content interne) */
 
 :root{ --chrome-h: 0px; } /* recalculé par JS */
 
 html, body{
   height: 100%;
   overflow: hidden;
+}
+
+/* IMPORTANT : écrase l’ancien mode embed-main */
+body.embed-main{
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.embed-main .wrap,
+.embed-main .card{
+  overflow: hidden !important;
 }
 
 /* la zone centrale remplit l'écran restant */
@@ -513,6 +525,7 @@ main.wrap{
 .wrap > .card,
 main.wrap .card{
   height: 100%;
+  min-height: 0;
 }
 
 /* pages "classiques" : scroll interne dans la zone contenu */
@@ -522,14 +535,14 @@ body:not(.embed-main) .content{
   overflow: auto;
 }
 
-/* pages avec iframe : on met la zone en colonne et le cadre prend le reste */
+/* pages avec iframe : colonne + le cadre prend le reste */
 body.embed-main .content{
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 12px 18px 14px;   /* padding léger (déjà le cas en embed-main) */
+  padding: 12px 18px 14px;
 }
 
 .embed-tabs{ flex: 0 0 auto; }
@@ -537,7 +550,6 @@ body.embed-main .content{
 .embed-viewport{
   flex: 1 1 auto;
   min-height: 0;
-  height: auto;
   overflow: hidden;
 }
 
@@ -549,7 +561,7 @@ body.embed-main .content{
   display: block;
 }
 
-/* pages "panel" (ex: retour fournisseurs/garantie VL) : pas de .content -> on scroll sur .panel */
+/* pages "panel" (pas de .content) : scroll sur .panel */
 .card > .panel{
   height: 100%;
   min-height: 0;
