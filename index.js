@@ -31,6 +31,17 @@ router.get("/api/pl/liens-garantie-retour", (_req, res) => {
   }
 });
 
+router.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
+  try {
+    const data = parseEnvJSON(process.env.VL_LIENS_FORMULAIRE_GARANTIE_JSON, []);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(data);
+  } catch {
+    return res.status(500).json({ error: "VL_LIENS_FORMULAIRE_GARANTIE_JSON invalide" });
+  }
+});
+
+
 router.get("/api/vl/retour-garantie", (_req, res) => {
   try {
     const data = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
