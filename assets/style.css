@@ -489,15 +489,82 @@ body.login-page{
 }
 
 
-/* DSG_FIXED_LAYOUT_V6
-   Objectif : AUCUN scroll sur la page principale.
-   Les barres (topbar + subbar) sont FIXES, et le contenu (main) est FIXE entre (top) et (bottom:0).
-   => impossible que le cadre "descende trop bas" (pas de dépendance à 100vh/visualViewport). */
+/* DSG_VIEWPORT_MODE_V2
+   Objectif :
+   - pas de scroll sur la page principale
+   - zone contenu = hauteur écran restante
+   - scroll uniquement dans .content (pages sans iframe) ou dans le cadre (iframe) */
+
+:root{ --chrome-h: 0px; } /* recalculé par JS */
+
+html, body{
+  height: 100%;
+  overflow: hidden;
+}
+
+/* la zone centrale remplit l'écran restant */
+main.wrap{
+  height: calc(100vh - var(--chrome-h));
+  overflow: hidden;
+  padding: 0;              /* évite les erreurs de calcul */
+}
+
+/* la carte remplit la zone */
+.wrap > .card,
+main.wrap .card{
+  height: 100%;
+}
+
+/* pages "classiques" : scroll interne dans la zone contenu */
+body:not(.embed-main) .content{
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* pages avec iframe : on met la zone en colonne et le cadre prend le reste */
+body.embed-main .content{
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 18px 14px;   /* padding léger (déjà le cas en embed-main) */
+}
+
+.embed-tabs{ flex: 0 0 auto; }
+
+.embed-viewport{
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+.embed-frame{
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  display: block;
+}
+
+/* pages "panel" (ex: retour fournisseurs/garantie VL) : pas de .content -> on scroll sur .panel */
+.card > .panel{
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+
+/* DSG_FIXED_LAYOUT_V6_1
+   Fix : le haut était coupé le temps que le JS calcule les hauteurs.
+   => on met des valeurs fallback (approx) + recalcul très tôt en JS. */
 
 :root{
-  --topbar-h: 0px;
-  --subbar-h: 0px;
-  --main-top: 0px;
+  --topbar-h: 78px;   /* fallback */
+  --subbar-h: 32px;   /* fallback (si absent, JS mettra 0) */
+  --main-top: 110px;  /* fallback */
 }
 
 html, body{
