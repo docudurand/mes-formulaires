@@ -489,14 +489,84 @@ body.login-page{
 }
 
 
-/* DSG_VIEWPORT_MODE_V3
-   Fix : les anciennes règles .embed-main (height:auto / overflow:auto / overflow:visible) cassaient la hauteur.
+/* DSG_VIEWPORT_MODE_V2
    Objectif :
    - pas de scroll sur la page principale
    - zone contenu = hauteur écran restante
-   - scroll uniquement dans l’iframe (ou panel/content interne) */
+   - scroll uniquement dans .content (pages sans iframe) ou dans le cadre (iframe) */
 
 :root{ --chrome-h: 0px; } /* recalculé par JS */
+
+html, body{
+  height: 100%;
+  overflow: hidden;
+}
+
+/* la zone centrale remplit l'écran restant */
+main.wrap{
+  height: calc(100vh - var(--chrome-h));
+  overflow: hidden;
+  padding: 0;              /* évite les erreurs de calcul */
+}
+
+/* la carte remplit la zone */
+.wrap > .card,
+main.wrap .card{
+  height: 100%;
+}
+
+/* pages "classiques" : scroll interne dans la zone contenu */
+body:not(.embed-main) .content{
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* pages avec iframe : on met la zone en colonne et le cadre prend le reste */
+body.embed-main .content{
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 18px 14px;   /* padding léger (déjà le cas en embed-main) */
+}
+
+.embed-tabs{ flex: 0 0 auto; }
+
+.embed-viewport{
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+.embed-frame{
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  display: block;
+}
+
+/* pages "panel" (ex: retour fournisseurs/garantie VL) : pas de .content -> on scroll sur .panel */
+.card > .panel{
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+
+/* DSG_VIEWPORT_MODE_V4
+   Fix : on calcule la hauteur VISIBLE réelle via visualViewport (plus fiable que 100vh),
+   puis on enlève la hauteur du header (topbar+subbar) et une petite marge de sécurité.
+   => le cadre NE descend plus trop bas (pas de coupe en bas). */
+
+:root{
+  --chrome-h: 0px;   /* topbar+subbar (JS) */
+  --vvh: 100vh;      /* hauteur visible (JS: visualViewport.height) */
+  --fudge: 8px;      /* marge de sécurité bas */
+}
 
 html, body{
   height: 100%;
@@ -514,11 +584,11 @@ body.embed-main{
   overflow: hidden !important;
 }
 
-/* la zone centrale remplit l'écran restant */
+/* la zone centrale remplit l'écran restant (hauteur visible - chrome - marge) */
 main.wrap{
-  height: calc(100vh - var(--chrome-h));
+  height: calc(var(--vvh) - var(--chrome-h) - var(--fudge));
   overflow: hidden;
-  padding: 0;              /* évite les erreurs de calcul */
+  padding: 0;
 }
 
 /* la carte remplit la zone */
