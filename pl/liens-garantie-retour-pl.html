@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Liens Formulaire Garantie et Retour PL</title>
+  <title>Liens Garantie et Retour PL</title>
 
   <link rel="stylesheet" href="../assets/style.css" />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
@@ -14,70 +14,31 @@
   <meta name="theme-color" content="#e9efff">
 
   <style>
-    .page-title{
-      text-align:center;
-      font-size: clamp(22px, 2.2vw, 34px);
-      font-weight: 900;
-      letter-spacing:.5px;
-      margin: 10px 0 18px;
-      color:#1d2336;
-      text-transform: uppercase;
+    .status { margin-top: 10px; font-size: 14px; opacity: .9; }
+    .status.ok { color: #0f5132; }
+    .status.err { color: #842029; }
+    .list a{
+      display:block; margin:8px 0; padding:12px 14px;
+      border-radius:10px; background:rgba(255,255,255,.65);
+      border:1px solid rgba(0,0,0,.08);
+      text-decoration:none; font-weight:800; line-height:1.25;
     }
-
-    .links{
-      max-width: 1050px;
-      margin: 0 auto;
-      display:grid;
-      gap:12px;
+    .list a:hover{ filter:brightness(0.98); }
+    .tools{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin:10px 0 14px;
     }
-    .link-card{
-      background:#fff;
-      border:1px solid #dfe5f5;
-      border-radius:14px;
-      padding:14px 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
+    .tools input{
+      flex:1; min-width:240px; padding:11px 12px;
+      border:1px solid rgba(0,0,0,.2); border-radius:10px;
+      font-size:15px; background:#fff;
     }
-    .link-label{
-      font-weight:900;
-      letter-spacing:.2px;
-    }
-    .link-actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-    .btn{
-      appearance:none;
-      border:0;
-      border-radius:999px;
-      padding:10px 14px;
-      font-weight:900;
-      cursor:pointer;
-      background:#1e2f57;
-      color:#fff;
-      box-shadow:0 8px 18px rgba(0,0,0,.12);
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
-    }
-    .btn.secondary{ background:#6a748f; }
-    .err{
-      display:none;
-      margin-top:12px;
-      color:#b00020;
-      font-weight:900;
-      text-align:center;
-    }
+    .tools .hint{ font-size:12px; opacity:.75; white-space:nowrap; }
   </style>
 </head>
 
 <body>
+
 <header class="topbar">
   <div class="brand-left">
     <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
@@ -86,8 +47,8 @@
   </div>
 
   <nav class="nav" aria-label="Menus">
-    <div class="menu" data-menu="pl">
-      <button class="menu-btn is-active" type="button">MENU PL</button>
+    <div class="menu is-active" data-menu="pl">
+      <button class="menu-btn" type="button">MENU PL</button>
       <div class="dropdown" role="menu" aria-label="Menu PL">
         <a href="../pl/formulaire-creation-reference-pl.html" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
         <a href="../pl/fournisseur-pl.html" role="menuitem">FOURNISSEUR PL</a>
@@ -98,110 +59,169 @@
     <div class="menu" data-menu="vl">
       <button class="menu-btn" type="button">MENU VL</button>
       <div class="dropdown" role="menu" aria-label="Menu VL">
-        <a href="../vl/contact-fournisseur.html" role="menuitem">CONTACT FOURNISSEURS</a>
+        <a href="../vl/formulaire-creation-reference-vl.html" role="menuitem">FORMULAIRE CREATION REFERENCE VL / VUL</a>
+        <a href="../vl/formulaire-creation-reference-pneumatique.html" role="menuitem">FORMULAIRE CREATION PNEUMATIQUE</a>
+        <a href="../vl/fournisseur-vl.html" role="menuitem">FOURNISSEUR VL</a>
         <a href="../vl/retour-fournisseur-garantie-vl.html" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
+        <a href="../vl/liens-formulaire-garantie.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
       </div>
     </div>
 
-    <a class="menu-btn" href="/utilitaire/index.html">UTILITAIRE</a>
-    <a class="menu-btn" href="/atelier/index.html">ATELIER</a>
-    <a class="menu-btn" href="/gestion-garantie/index.html">GESTION GARANTIE</a>
+    <div class="menu" data-menu="util">
+      <button class="menu-btn" type="button">UTILITAIRE</button>
+      <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
+        <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
+        <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
+        <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
+        <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
+        <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
+        <a href="../utilitaire/contact-fournisseur.html" role="menuitem">CONTACTS FOURNISSEURS</a>
+        <a href="../utilitaire/reference-compliques.html" role="menuitem">REFERENCE COMPLIQUES</a>
+      </div>
+    </div>
+
+    <div class="menu" data-menu="atelier">
+      <button class="menu-btn" type="button">ATELIER</button>
+      <div class="dropdown" role="menu" aria-label="Menu Atelier">
+        <a href="../docatelier/service-culasse-demande.html" role="menuitem">SERVICE CULASSE ET INJECTION</a>
+        <a href="../docatelier/documents-atelier.html" role="menuitem">DOCUMENTS ATELIER</a>
+      </div>
+    </div>
+
+    <div class="menu" data-menu="garantie">
+      <a class="menu-btn menu-link" href="../gestion-garantie.html">GESTION GARANTIE</a>
+    </div>
   </nav>
 
   <div class="brand-right">
-    <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logod.png" alt="D" style="height:34px;">
+    <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/durand_services_logo.png" alt="Durand Services">
   </div>
 </header>
+
+<div class="subbar"></div>
 
 <main class="wrap">
   <section class="card">
     <div class="content">
-      <div class="page-title">LIENS FORMULAIRE GARANTIE ET RETOUR PL</div>
+      <div class="h1">LIENS FORMULAIRE GARANTIE ET RETOUR PL</div>
 
-      <div class="links" id="linksList"></div>
+      <div class="tools">
+        <input id="q" type="text" placeholder="Rechercher un lien…" autocomplete="off">
+        <div class="hint">Astuce : tape “GARANTIE”, “RETOUR”, “PF”, etc.</div>
+      </div>
 
-      <div id="linksErr" class="err">❌ Impossible de charger les liens.</div>
+      <div id="status" class="status">Chargement…</div>
+      <div id="list" class="list" aria-label="Liste des liens"></div>
     </div>
   </section>
 </main>
 
-<script>
-  window.__SITE_PREFIX__ = "../";
-</script>
+<script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
 
 <script>
 (function(){
-  const API_URL = "/api/pl/liens-garantie-retour";
-  const listEl = document.getElementById("linksList");
-  const errEl  = document.getElementById("linksErr");
+  const API_PATH = "/api/pl/liens-garantie-retour";
+  const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
 
-  function esc(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  const statusEl = document.getElementById("status");
+  const listEl   = document.getElementById("list");
+  const qEl      = document.getElementById("q");
+
+  let items = [];
+
+  function norm(s){
+    return (s || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"");
   }
 
-  function normalizeItem(x){
-    if (!x) return null;
-
-    const label = (x.label ?? x.title ?? x.name ?? "").toString().trim();
-    const url   = (x.url ?? x.href ?? "").toString().trim();
-    if (!label || !url) return null;
-    return { label, url };
-  }
-
-  function render(items){
+  function render(){
+    const q = norm(qEl.value.trim());
     listEl.innerHTML = "";
-    for (const it of items){
-      const card = document.createElement("div");
-      card.className = "link-card";
-      card.innerHTML = `
-        <div class="link-label">${esc(it.label)}</div>
-        <div class="link-actions">
-          <a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener">Ouvrir</a>
-          <button class="btn secondary" type="button" data-copy="${esc(it.url)}">Copier</button>
-        </div>
-      `;
-      listEl.appendChild(card);
+
+    const filtered = !q ? items : items.filter(it => {
+      const t = norm((it.label||"") + " " + (it.url||""));
+      return t.includes(q);
+    });
+
+    if (!filtered.length){
+      statusEl.className = "status ok";
+      statusEl.textContent = items.length ? "Aucun résultat." : "Aucun lien configuré (JSON vide).";
+      return;
     }
 
-    listEl.querySelectorAll("button[data-copy]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const url = btn.getAttribute("data-copy") || "";
-        try{
-          await navigator.clipboard.writeText(url);
-          const old = btn.textContent;
-          btn.textContent = "✅ Copié";
-          setTimeout(()=>btn.textContent = old, 900);
-        }catch{
-          alert("Impossible de copier automatiquement. Voici le lien :\n\n" + url);
-        }
-      });
+    statusEl.className = "status ok";
+    statusEl.textContent = filtered.length + " lien(s).";
+
+    filtered.forEach(it => {
+      const a = document.createElement("a");
+      a.href = it.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = it.label || it.url;
+      listEl.appendChild(a);
     });
   }
 
-  async function load(){
-    errEl.style.display = "none";
-    try{
-      const r = await fetch(API_URL, { cache:"no-store" });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const data = await r.json();
+  function adaptData(raw){
+    let arr = raw;
 
-      const arr = Array.isArray(data) ? data : (Array.isArray(data?.links) ? data.links : []);
-      const items = arr.map(normalizeItem).filter(Boolean);
-
-      render(items);
-    }catch(e){
-      console.error(e);
-      errEl.style.display = "block";
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      if (Array.isArray(raw.links)) arr = raw.links;
+      else if (Array.isArray(raw.data)) arr = raw.data;
+      else if (Array.isArray(raw.items)) arr = raw.items;
     }
+
+    if (!Array.isArray(arr)) return [];
+
+    return arr.map(x => {
+      const label = (x?.label ?? x?.titre ?? x?.name ?? x?.title ?? "").toString().trim();
+      const url   = (x?.url   ?? x?.lien  ?? x?.link ?? x?.href  ?? "").toString().trim();
+      return { label, url };
+    }).filter(x => x.url);
   }
 
-  load();
+  async function fetchJSON(url){
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+
+  async function load(){
+    statusEl.className = "status";
+    statusEl.textContent = "Chargement…";
+
+    try {
+      const raw = await fetchJSON(location.origin + API_PATH);
+      items = adaptData(raw);
+      render();
+      return;
+    } catch (e1) {
+
+      const msg = String(e1?.message || e1);
+      if (!msg.includes("HTTP 404")) throw e1;
+    }
+
+    const raw2 = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
+    items = adaptData(raw2);
+    render();
+  }
+
+  qEl.addEventListener("input", render);
+
+  load().catch(err => {
+    console.error(err);
+    statusEl.className = "status err";
+    statusEl.textContent = "Erreur chargement JSON : " + err.message;
+    listEl.innerHTML = "";
+  });
 })();
 </script>
+
 </body>
 </html>
