@@ -1,6 +1,6 @@
 {
   "name": "Durand Commerce",
-  "short_name": "Durand\nCommerce",
+  "short_name": "Commerce",
   "description": "Accès Commerce Durand",
   "start_url": "/commerce/commerce",
   "scope": "/commerce/",

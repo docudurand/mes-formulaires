@@ -191,6 +191,7 @@ body{
 }
 
 .homeBrand{
+  margin-bottom: 18px;
   margin: 0;
   display: grid;
   place-items: center;
