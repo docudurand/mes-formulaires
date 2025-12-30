@@ -237,14 +237,7 @@
             <span aria-hidden="true">▾</span>
           </summary>
           <div class="acc-body">
-            <div class="mail-list">
-              <div class="mail-line"><b>MAHLE :</b> <a href="mailto:gael.lathuilliere@mahle.com">gael.lathuilliere@mahle.com</a></div>
-              <div class="mail-line"><b>LUK :</b> <a href="mailto:audrey.gerry@schaeffler.com">audrey.gerry@schaeffler.com</a></div>
-              <div class="mail-line"><b>Quinton :</b> <a href="mailto:sabine.peirs@quintonhazell.fr">sabine.peirs@quintonhazell.fr</a></div>
-              <div class="mail-line"><b>BOSAL :</b> <a href="mailto:bonnie.liegeois@bosaldistribution.fr">bonnie.liegeois@bosaldistribution.fr</a></div>
-              <div class="mail-line"><b>MS MOTORS :</b> <a href="mailto:lionel.doutre@fr.rheinmetall.com">lionel.doutre@fr.rheinmetall.com</a></div>
-              <div class="mail-line"><b>SILIM :</b> <a href="mailto:retour@silim.com">retour@silim.com</a></div>
-            </div>
+            <div class="mail-list" id="mailRetourList"></div>
           </div>
         </details>
 
@@ -273,55 +266,12 @@
                     <th>notes</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr><td>ATE</td><td></td><td></td><td></td><td class="notes">A ENVOYER A GEORGES A PAVI AVEC DOSSIER DURAND</td></tr>
-                  <tr><td>AUTOGAMMA VERTAT</td><td><a href="mailto:retours@autogamma.com">retours@autogamma.com</a></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>B2K</td><td></td><td><a href="mailto:callcenter@back2car.fr">callcenter@back2car.fr</a></td><td><a href="mailto:g.lozachmeur@allianceautomotive.fr">g.lozachmeur@allianceautomotive.fr</a></td><td class="notes"></td></tr>
-                  <tr><td>BLOIS</td><td></td><td></td><td><a href="mailto:advblois@allianceautomotive.fr">advblois@allianceautomotive.fr</a></td><td class="notes">DEMANDE A EFFECTUER SUR LE HUB</td></tr>
-                  <tr><td>BOSAL</td><td><a href="mailto:bonnie.liegeois@bosaldistribution.fr">bonnie.liegeois@bosaldistribution.fr</a></td><td><a href="mailto:bonnie.liegeois@bosaldistribution.fr">bonnie.liegeois@bosaldistribution.fr</a></td><td></td><td class="notes"></td></tr>
-                  <tr><td>BOSCH (BATTERIE)</td><td></td><td></td><td></td><td class="notes">EFFECTUER UN TEST BATTERIE, SI BATTERIE HS FAIRE AVOIR DIRECT CLIENT AVEC
-ANNOTATION N° DE COMMANDE "GARANTIE SUITE TEST BATTERIE"</td></tr>
-                  <tr><td>BOSCH (FREINAGE)</td><td><a href="mailto:garantiebosch@durandservices.fr">garantiebosch@durandservices.fr</a></td><td><a href="mailto:garantiebosch@durandservices.fr">garantiebosch@durandservices.fr</a></td><td><a href="mailto:stephan.roux@fr.bosch.com">stephan.roux@fr.bosch.com</a></td><td class="notes">ENVOIE MAIL GARANTIE BOSCH</td></tr>
-                  <tr><td>BOSCH (INJECTEUR)</td><td></td><td></td><td></td><td class="notes">ENVOIE DE L INJECTEUR AVEC FORMULAIRE GARANTIE DURAND SERVICE A ST EGREVE
-POUR CONTROLE, SUIVANT LE RESULTAT IL EST ENVOYER EN ALLEMAGNE
-OU RENVOYER AU CLIENT</td></tr>
-                  <tr><td>BOSCH (MACHINES TOURNANTES)</td><td></td><td><a href="mailto:Bnl_AA-CG_Warranty_Pic-200@de.bosch.com">Bnl_AA-CG_Warranty_Pic-200@de.bosch.com</a></td><td></td><td class="notes">LES PIECES SONT A ENVOYER A L'ADRESSE MAIL, BOSCH ORGANISE
-LA RAMASSE DE LA PIECE</td></tr>
-                  <tr><td>CONTITECH</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>CORTECO</td><td></td><td></td><td><a href="mailto:frederic.jannet@corteco.fr">frederic.jannet@corteco.fr</a></td><td class="notes">DEMANDE PAR MAIL AU COMMERCIAL</td></tr>
-                  <tr><td>DA SILVA</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>DELPHI</td><td></td><td><a href="mailto:rfalcot@phinia.com">rfalcot@phinia.com</a></td><td><a href="mailto:rfalcot@phinia.com">rfalcot@phinia.com</a></td><td class="notes">⚠️ POUR LES PIECES TECHNIQUE ENVOYER RAPPORT DE DIAGNOSTIQUE</td></tr>
-                  <tr><td>EFI</td><td></td><td><a href="mailto:sophie.pierret@efiautomotive.com">sophie.pierret@efiautomotive.com</a></td><td></td><td class="notes">ENVOYER DEMANDE PAR MAIL AVEC FORMULAIRE REMPLI</td></tr>
-                  <tr><td>FEBI</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>FERODO</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>FTE</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>GROUPE IDLP 
-( PAP RIAL)</td><td><a href="mailto:celine.loridant@pap-sud.fr">celine.loridant@pap-sud.fr</a></td><td><a href="mailto:celine.loridant@pap-sud.fr">celine.loridant@pap-sud.fr</a></td><td></td><td class="notes">REMPLIR FORMULAIRE ET ENVOYER A L ADRESSE MAIL</td></tr>
-                  <tr><td>GYS</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>HELLA</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>HENGST</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>INA</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>KSTOOLS</td><td><a href="mailto:alexandre.leger@kstools.fr">alexandre.leger@kstools.fr</a></td><td><a href="mailto:alexandre.leger@kstools.fr">alexandre.leger@kstools.fr</a></td><td><a href="mailto:alexandre.leger@kstools.fr">alexandre.leger@kstools.fr</a></td><td class="notes">DEMANDE PAR MAIL PLUS PHOTO DES OUTILS</td></tr>
-                  <tr><td>KYB</td><td></td><td></td><td><a href="mailto:s.mainetti@kyb-europe.com">s.mainetti@kyb-europe.com</a></td><td class="notes">DEMANDE PAR MAIL AU COMMERCIAL</td></tr>
-                  <tr><td>LPR</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>MAGNETI MARELLI</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>METELLI</td><td><a href="mailto:chiaraagazzi@metellispa.it">chiaraagazzi@metellispa.it</a></td><td><a href="mailto:chiaraagazzi@metellispa.it">chiaraagazzi@metellispa.it</a></td><td></td><td class="notes">ENVOYER DEMANDE PAR MAIL AVEC FORMULAIRE METELLI</td></tr>
-                  <tr><td>MS/PIERBURG</td><td><a href="mailto:anais.honorat@fr.rheinmetall.com">anais.honorat@fr.rheinmetall.com</a></td><td><a href="mailto:anais.honorat@fr.rheinmetall.com">anais.honorat@fr.rheinmetall.com</a></td><td></td><td class="notes">FAIRE DEMANDE PAR MAIL A ANAIS AVEC JORIS EN COPIE</td></tr>
-                  <tr><td>NGK</td><td><a href="mailto:ngk-service-technique@ngkntk.fr">ngk-service-technique@ngkntk.fr</a></td><td><a href="mailto:ngk-service-technique@ngkntk.fr">ngk-service-technique@ngkntk.fr</a></td><td></td><td class="notes">REMPLIR FORMULAIRE ET ENVOYER A L ADRESSE MAIL</td></tr>
-                  <tr><td>NRF</td><td><a href="mailto:l.bailleul@nrf.eu">l.bailleul@nrf.eu</a></td><td><a href="mailto:litiges@nrf.eu">litiges@nrf.eu</a></td><td><a href="mailto:t.barbaux@nrf.eu">t.barbaux@nrf.eu</a></td><td class="notes">ENVOYER DEMANDE PAR MAIL AVEC FORMULAIRE NRF</td></tr>
-                  <tr><td>PIERBURG</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>QH</td><td><a href="mailto:commandes@quintonhazell.fr">commandes@quintonhazell.fr</a></td><td><a href="mailto:a.radoux@tetrosyl.eu">a.radoux@tetrosyl.eu</a></td><td></td><td class="notes">ENVOYER DEMANDE AVEC FORMULAIRE A L'ADRESSE MAIL
-commandes@quintonhazell.fr</td></tr>
-                  <tr><td>SACHS</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>SKF</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>SNR</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>TEXTAR</td><td></td><td><a href="mailto:jean-pierre.damiani@tmdfriction.com">jean-pierre.damiani@tmdfriction.com</a></td><td><a href="mailto:jean-pierre.damiani@tmdfriction.com">jean-pierre.damiani@tmdfriction.com</a></td><td class="notes">ENVOYER DEMANDE PAR MAIL A JEAN-PIERRE</td></tr>
-                  <tr><td>TRISCAN</td><td><a href="mailto:richard.teulat@orange.fr">richard.teulat@orange.fr</a></td><td><a href="mailto:richard.teulat@orange.fr">richard.teulat@orange.fr</a></td><td></td><td class="notes">DEMANDE A ENVOYER PAR MAIL margain@turbo-tec.eu</td></tr>
-                  <tr><td>TURBO-TEC</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>VALEO</td><td></td><td></td><td></td><td class="notes"></td></tr>
-                  <tr><td>VERNET-CALORSTAT</td><td></td><td></td><td><a href="mailto:coste@vernet.fr">coste@vernet.fr</a></td><td class="notes">ENVOYER DEMANDE PAR MAIL coste@vernet.fr</td></tr>
-                </tbody>
+                <tbody id="contactsTbody"></tbody>
               </table>
+            </div>
+
+            <div id="vlErr" style="display:none;margin-top:10px;color:#b00020;font-weight:700;">
+              ❌ Impossible de charger les données.
             </div>
 
           </div>
@@ -333,33 +283,81 @@ commandes@quintonhazell.fr</td></tr>
 </main>
 
 <script>
-  window.__SITE_PREFIX__="../";
+  let __VL_DATA__ = { mailsRetour: [], contactsGarantie: [] };
+
+  function mailtoLink(email){
+    if(!email) return "";
+    const a = document.createElement("a");
+    a.href = "mailto:" + email;
+    a.textContent = email;
+    return a.outerHTML;
+  }
+
+  function renderMails(){
+    const wrap = document.getElementById("mailRetourList");
+    wrap.innerHTML = "";
+    (__VL_DATA__.mailsRetour || []).forEach(m => {
+      const div = document.createElement("div");
+      div.className = "mail-line";
+      const label = (m.fournisseur || "").trim();
+      const email = (m.email || "").trim();
+      div.innerHTML = `<b>${label} :</b> ${mailtoLink(email)}`;
+      wrap.appendChild(div);
+    });
+  }
+
+  function renderTable(filter=""){
+    const q = (filter || "").toLowerCase().trim();
+    const tbody = document.getElementById("contactsTbody");
+    tbody.innerHTML = "";
+
+    const rows = (__VL_DATA__.contactsGarantie || []).filter(r => {
+      if(!q) return true;
+      const blob = [
+        r.fournisseur, r.contactSuivie, r.contactDemande, r.contactCommercial, r.notes
+      ].join(" ").toLowerCase();
+      return blob.includes(q);
+    });
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${(r.fournisseur||"").replace(/\n/g,"<br>")}</td>
+        <td>${r.contactSuivie ? mailtoLink(r.contactSuivie) : ""}</td>
+        <td>${r.contactDemande ? mailtoLink(r.contactDemande) : ""}</td>
+        <td>${r.contactCommercial ? mailtoLink(r.contactCommercial) : ""}</td>
+        <td class="notes">${(r.notes||"")}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function loadVL(){
+    try{
+      const r = await fetch("/api/vl/retour-garantie", { credentials: "include" });
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      __VL_DATA__ = await r.json();
+      renderMails();
+      renderTable("");
+    }catch(e){
+      document.getElementById("vlErr").style.display = "block";
+      console.error(e);
+    }
+  }
+
+  document.addEventListener("input", (e) => {
+    if(e.target && e.target.id === "filterInput"){
+      renderTable(e.target.value);
+    }
+  });
+
+  loadVL();
 </script>
+
+<script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
-
-<script>
-  (function(){
-    const input = document.getElementById('filterInput');
-    const table = document.getElementById('contactsTable');
-    if(!input || !table) return;
-
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-
-    function normalize(s){
-      return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    }
-
-    input.addEventListener('input', () => {
-      const q = normalize(input.value.trim());
-      rows.forEach(tr => {
-        const txt = normalize(tr.innerText);
-        tr.style.display = (!q || txt.includes(q)) ? '' : 'none';
-      });
-    });
-  })();
-</script>
 
 </body>
 </html>
