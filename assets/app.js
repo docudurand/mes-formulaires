@@ -1,16 +1,11 @@
 (function () {
 
-  
-  // DSG_CHROME_HEIGHT : calcule la hauteur des barres (topbar + subbar) pour que les iframes remplissent l'écran
+  // DSG_CHROME_HEIGHT (V2) : calcule la hauteur réelle du haut (topbar + subbar)
   function dsgUpdateChromeHeight(){
     const topbar = document.querySelector('.topbar');
     const subbar = document.querySelector('.subbar');
     const h = (topbar ? topbar.offsetHeight : 0) + (subbar ? subbar.offsetHeight : 0);
-    // + marges/paddings main (.wrap padding-top + bottom)
-    const wrap = document.querySelector('main.wrap');
-    const cs = wrap ? getComputedStyle(wrap) : null;
-    const pad = cs ? (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0) : 0;
-    document.documentElement.style.setProperty('--chrome-h', (h + pad) + 'px');
+    document.documentElement.style.setProperty('--chrome-h', h + 'px');
   }
   window.addEventListener('load', dsgUpdateChromeHeight, { once:true });
   window.addEventListener('resize', dsgUpdateChromeHeight);
