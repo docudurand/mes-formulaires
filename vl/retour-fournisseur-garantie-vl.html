@@ -12,155 +12,6 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#e9efff">
-
-  <style>
-    .panel {
-      width: min(1600px, 100%);
-      margin: 0 auto;
-      padding: 18px 18px 26px;
-    }
-
-    .accordion {
-      border: 1px solid rgba(0,0,0,.12);
-      border-radius: 10px;
-      overflow: hidden;
-      background: #fff;
-      box-shadow: 0 10px 25px rgba(0,0,0,.10);
-      margin-bottom: 14px;
-    }
-
-    .accordion details + details {
-      border-top: 1px solid rgba(0,0,0,.10);
-    }
-
-    .accordion summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 16px 18px;
-      background: #eef1f6;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      user-select: none;
-    }
-    .accordion summary::-webkit-details-marker { display:none; }
-
-    .acc-title {
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-
-    .acc-body {
-      padding: 16px 18px 18px;
-      background: #fff;
-    }
-
-    .mail-list {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      font-size: 15px;
-      line-height: 1.35;
-    }
-    .mail-line b { display:inline-block; min-width: 120px; }
-    .mail-line a { color: var(--link); text-decoration: none; }
-    .mail-line a:hover { text-decoration: underline; }
-
-    .tools-row {
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-      justify-content: space-between;
-      margin: 0 0 12px;
-    }
-
-    .search {
-      flex: 1;
-      min-width: 260px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-
-    .search input{
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid rgba(0,0,0,.2);
-      border-radius: 10px;
-      font-size: 15px;
-      background:#fff;
-    }
-
-    .hint {
-      font-size: 12px;
-      color: #555;
-      white-space: nowrap;
-    }
-
-    .table-wrap{
-      width: 100%;
-      overflow:auto;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,.12);
-    }
-
-    table.contacts{
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 980px;
-      background:#fff;
-    }
-
-    table.contacts th, table.contacts td{
-      border-bottom: 1px solid rgba(0,0,0,.10);
-      border-right: 1px solid rgba(0,0,0,.08);
-      padding: 12px 12px;
-      vertical-align: top;
-      font-size: 14px;
-      line-height: 1.3;
-      background: #eef1f6;
-    }
-
-    table.contacts td{
-      background: #eef1f6;
-    }
-
-    table.contacts th{
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      font-weight: 900;
-      text-transform: lowercase;
-    }
-
-    table.contacts td:nth-child(1){
-      font-weight: 900;
-      width: 220px;
-      background: #eef1f6;
-    }
-
-    table.contacts a{
-      color: var(--link);
-      text-decoration: none;
-      font-weight: 700;
-    }
-    table.contacts a:hover{ text-decoration: underline; }
-
-    .notes{
-      white-space: pre-line;
-    }
-
-    @media (max-width: 640px){
-      .panel{ padding: 12px 10px 18px; }
-      .accordion summary{ padding: 14px 14px; }
-      .acc-body{ padding: 14px 14px 16px; }
-      .hint{ display:none; }
-    }
-  </style>
 </head>
 
 <body>
@@ -177,7 +28,7 @@
       <button class="menu-btn" type="button">MENU PL</button>
       <div class="dropdown" role="menu" aria-label="Menu PL">
         <a href="../pl/formulaire-creation-reference-pl.html" role="menuitem">FORMULAIRE CREATION REFERENCE PL</a>
-        <a href="../pl/fournisseur-pl.html" rel="noopener" role="menuitem">FOURNISSEUR PL</a>
+        <a href="../pl/fournisseur-pl.html" role="menuitem">FOURNISSEUR PL</a>
         <a href="../pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
       </div>
     </div>
@@ -187,17 +38,17 @@
       <div class="dropdown" role="menu" aria-label="Menu VL">
         <a href="../vl/formulaire-creation-reference-vl.html" role="menuitem">FORMULAIRE CREATION REFERENCE VL / VUL</a>
         <a href="../vl/formulaire-creation-reference-pneumatique.html" role="menuitem">FORMULAIRE CREATION PNEUMATIQUE</a>
-        <a href="../vl/fournisseur-vl.html" rel="noopener" role="menuitem">FOURNISSEUR VL</a>
-        <a href="../vl/retour-fournisseur-garantie-vl.html" rel="noopener" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
+        <a href="../vl/fournisseur-vl.html" role="menuitem">FOURNISSEUR VL</a>
+        <a href="../vl/retour-fournisseur-garantie-vl.html" role="menuitem">RETOUR FOURNISSEUR ET GARANTIE VL</a>
         <a href="../vl/liens-formulaire-garantie.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
       </div>
     </div>
 
-    <div class="menu" data-menu="util">
+    <div class="menu is-active" data-menu="util">
       <button class="menu-btn" type="button">UTILITAIRE</button>
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
-        <a href="../utilitaire/pret-vehicule.html" rel="noopener" role="menuitem">PRET VEHICULE</a>
-        <a href="../utilitaire/demande-ramasse.html" rel="noopener" role="menuitem">DEMANDE RAMASSE</a>
+        <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
+        <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
         <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
         <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
         <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
@@ -228,136 +79,13 @@
 
 <main class="wrap">
   <section class="card">
-    <div class="panel">
-
-      <div class="accordion">
-        <details open>
-          <summary>
-            <span class="acc-title">Mail Retour Fournisseurs</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <div class="acc-body">
-            <div class="mail-list" id="mailRetourList"></div>
-          </div>
-        </details>
-
-        <details open>
-          <summary>
-            <span class="acc-title">Contact Garantie</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <div class="acc-body">
-
-            <div class="tools-row">
-              <div class="search">
-                <input id="filterInput" type="text" placeholder="Rechercher un fournisseur / email / note…" autocomplete="off">
-              </div>
-              <div class="hint">Astuce : tape “BOSCH”, “@”, “hub”, etc.</div>
-            </div>
-
-            <div class="table-wrap" role="region" aria-label="Tableau contacts garantie" tabindex="0">
-              <table class="contacts" id="contactsTable">
-                <thead>
-                  <tr>
-                    <th>fournisseur</th>
-                    <th>contact suivie</th>
-                    <th>contact demande</th>
-                    <th>contact commercial</th>
-                    <th>notes</th>
-                  </tr>
-                </thead>
-                <tbody id="contactsTbody"></tbody>
-              </table>
-            </div>
-
-            <div id="vlErr" style="display:none;margin-top:10px;color:#b00020;font-weight:700;">
-              ❌ Impossible de charger les données.
-            </div>
-
-          </div>
-        </details>
-      </div>
-
-    </div>
+    <iframe class="embed-frame" src="https://mes-formulaires.onrender.com/vl/retour-fournisseur-garantie-vl.html"></iframe>
   </section>
 </main>
-
-<script>
-  let __VL_DATA__ = { mailsRetour: [], contactsGarantie: [] };
-
-  function mailtoLink(email){
-    if(!email) return "";
-    const a = document.createElement("a");
-    a.href = "mailto:" + email;
-    a.textContent = email;
-    return a.outerHTML;
-  }
-
-  function renderMails(){
-    const wrap = document.getElementById("mailRetourList");
-    wrap.innerHTML = "";
-    (__VL_DATA__.mailsRetour || []).forEach(m => {
-      const div = document.createElement("div");
-      div.className = "mail-line";
-      const label = (m.fournisseur || "").trim();
-      const email = (m.email || "").trim();
-      div.innerHTML = `<b>${label} :</b> ${mailtoLink(email)}`;
-      wrap.appendChild(div);
-    });
-  }
-
-  function renderTable(filter=""){
-    const q = (filter || "").toLowerCase().trim();
-    const tbody = document.getElementById("contactsTbody");
-    tbody.innerHTML = "";
-
-    const rows = (__VL_DATA__.contactsGarantie || []).filter(r => {
-      if(!q) return true;
-      const blob = [
-        r.fournisseur, r.contactSuivie, r.contactDemande, r.contactCommercial, r.notes
-      ].join(" ").toLowerCase();
-      return blob.includes(q);
-    });
-
-    rows.forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${(r.fournisseur||"").replace(/\n/g,"<br>")}</td>
-        <td>${r.contactSuivie ? mailtoLink(r.contactSuivie) : ""}</td>
-        <td>${r.contactDemande ? mailtoLink(r.contactDemande) : ""}</td>
-        <td>${r.contactCommercial ? mailtoLink(r.contactCommercial) : ""}</td>
-        <td class="notes">${(r.notes||"")}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  async function loadVL(){
-    try{
-      const r = await fetch("/api/vl/retour-garantie", { credentials: "include" });
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      __VL_DATA__ = await r.json();
-      renderMails();
-      renderTable("");
-    }catch(e){
-      document.getElementById("vlErr").style.display = "block";
-      console.error(e);
-    }
-  }
-
-  document.addEventListener("input", (e) => {
-    if(e.target && e.target.id === "filterInput"){
-      renderTable(e.target.value);
-    }
-  });
-
-  loadVL();
-</script>
 
 <script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
-
 </body>
 </html>

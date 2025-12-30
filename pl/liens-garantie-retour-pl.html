@@ -4,21 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Liens Garantie et Retour PL</title>
+
   <link rel="stylesheet" href="../assets/style.css" />
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#e9efff">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#e9efff">
 </head>
+
 <body>
 
 <header class="topbar">
   <div class="brand-left">
-  <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
-    <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png" alt="Documents Durand">
-	</a>
+    <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png" alt="Documents Durand">
+    </a>
   </div>
 
   <nav class="nav" aria-label="Menus">
@@ -42,7 +44,7 @@
       </div>
     </div>
 
-    <div class="menu" data-menu="util">
+    <div class="menu is-active" data-menu="util">
       <button class="menu-btn" type="button">UTILITAIRE</button>
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
         <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
@@ -54,6 +56,7 @@
         <a href="../utilitaire/reference-compliques.html" role="menuitem">REFERENCE COMPLIQUES</a>
       </div>
     </div>
+
     <div class="menu" data-menu="atelier">
       <button class="menu-btn" type="button">ATELIER</button>
       <div class="dropdown" role="menu" aria-label="Menu Atelier">
@@ -61,7 +64,8 @@
         <a href="../docatelier/documents-atelier.html" role="menuitem">DOCUMENTS ATELIER</a>
       </div>
     </div>
-	    <div class="menu" data-menu="garantie">
+
+    <div class="menu" data-menu="garantie">
       <a class="menu-btn menu-link" href="../gestion-garantie.html">GESTION GARANTIE</a>
     </div>
   </nav>
@@ -75,48 +79,13 @@
 
 <main class="wrap">
   <section class="card">
-    <div class="content">
-      <div class="h1">LIENS FORMULAIRE GARANTIE ET RETOUR PL</div>
-
-      <div class="list" id="linksList"></div>
-
-      <div id="linksErr" style="display:none;margin-top:10px;color:#b00020;font-weight:700;">
-        ❌ Impossible de charger les liens.
-      </div>
-    </div>
+    <iframe class="embed-frame" src="https://mes-formulaires.onrender.com/pl/liens-garantie-retour-pl.html"></iframe>
   </section>
 </main>
-
-<script>
-  async function loadLinks(){
-    try{
-      const r = await fetch("/api/pl/liens-garantie-retour", { credentials: "include" });
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      const data = await r.json();
-
-      const wrap = document.getElementById("linksList");
-      wrap.innerHTML = "";
-
-      (Array.isArray(data) ? data : []).forEach(item => {
-        const a = document.createElement("a");
-        a.href = item.url || "#";
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.textContent = item.label || item.url || "Lien";
-        wrap.appendChild(a);
-      });
-    }catch(e){
-      document.getElementById("linksErr").style.display = "block";
-      console.error(e);
-    }
-  }
-  loadLinks();
-</script>
 
 <script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
-
 </body>
 </html>
