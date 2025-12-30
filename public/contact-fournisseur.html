@@ -14,11 +14,13 @@
   
 <style>
 
+/* DSG: éviter double scroll dans iframe (la hauteur est gérée par le parent) */
 html, body { height: auto !important; overflow: hidden !important; }
 
 </style>
 </head>
 <body>
+<!-- DSG iframe auto-resize -->
 <script>
 (function () {
   function heightNow() {
