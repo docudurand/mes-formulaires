@@ -14,6 +14,9 @@
   <meta name="theme-color" content="#e9efff">
 
   <style>
+    .status { margin-top: 10px; font-size: 14px; opacity: .9; }
+    .status.ok { color: #0f5132; }
+    .status.err { color: #842029; }
     .list a{
       display:block; margin:8px 0; padding:12px 14px;
       border-radius:10px; background:rgba(255,255,255,.65);
@@ -21,13 +24,11 @@
       text-decoration:none; font-weight:800; line-height:1.25;
     }
     .list a:hover{ filter:brightness(0.98); }
-    .status { margin-top: 10px; font-size: 14px; opacity: .9; }
-    .status.ok { color: #0f5132; }
-    .status.err { color: #842029; }
   </style>
 </head>
 
 <body>
+
 <header class="topbar">
   <div class="brand-left">
     <a href="/index.html" class="brand-link" aria-label="Retour à l'accueil">
@@ -61,7 +62,7 @@
       <div class="dropdown" role="menu" aria-label="Menu Utilitaire">
         <a href="../utilitaire/pret-vehicule.html" role="menuitem">PRET VEHICULE</a>
         <a href="../utilitaire/demande-ramasse.html" role="menuitem">DEMANDE RAMASSE</a>
-        <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR</a>
+        <a href="../utilitaire/suivi-kilometrique-chauffeur.html" role="menuitem">SUIVI KILOMETRIQUE CHAUFFEUR TEST</a>
         <a href="../utilitaire/castrol.html" role="menuitem">CASTROL</a>
         <a href="../utilitaire/site-identification-oe.html" role="menuitem">SITE IDENTIFIANT OE</a>
         <a href="../utilitaire/contact-fournisseur.html" role="menuitem">CONTACTS FOURNISSEURS</a>
@@ -94,59 +95,102 @@
     <div class="content">
       <div class="h1">LIENS FORMULAIRE GARANTIE ET RETOUR PL</div>
 
-      <div class="status" id="status">Chargement…</div>
-      <div class="list" id="linksList"></div>
 
-      <div id="linksErr" style="display:none;margin-top:10px;color:#b00020;font-weight:700;">
-        ❌ Impossible de charger les liens.
-      </div>
+      <div id="status" class="status">Chargement…</div>
+      <div id="list" class="list" aria-label="Liste des liens"></div>
     </div>
   </section>
 </main>
-
-<script>
-  async function loadLinks(){
-    const status = document.getElementById("status");
-    const errBox = document.getElementById("linksErr");
-    const wrap = document.getElementById("linksList");
-
-    status.className = "status";
-    status.textContent = "Chargement…";
-    errBox.style.display = "none";
-    wrap.innerHTML = "";
-
-    try{
-      const r = await fetch("/api/pl/liens-garantie-retour", { cache: "no-store", credentials: "include" });
-      if(!r.ok) throw new Error("HTTP " + r.status);
-      const data = await r.json();
-
-      const arr = Array.isArray(data) ? data : [];
-      status.className = "status ok";
-      status.textContent = `${arr.length} lien(s).`;
-
-      arr.forEach(item => {
-        const a = document.createElement("a");
-        a.href = item.url || "#";
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.textContent = item.label || item.url || "Lien";
-        wrap.appendChild(a);
-      });
-
-    }catch(e){
-      status.className = "status err";
-      status.textContent = "Erreur de chargement.";
-      errBox.style.display = "block";
-      console.error(e);
-    }
-  }
-
-  loadLinks();
-</script>
 
 <script>window.__SITE_PREFIX__="../";</script>
 <script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="../assets/app.js"></script>
+
+<script>
+(function(){
+  const API_PATH = "/api/pl/liens-garantie-retour";
+  const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
+
+  const statusEl = document.getElementById("status");
+  const listEl   = document.getElementById("list");
+
+  let items = [];
+
+  function render(){
+    listEl.innerHTML = "";
+
+    if (!items.length){
+      statusEl.className = "status ok";
+      statusEl.textContent = "Aucun lien configuré (JSON vide).";
+      return;
+    }
+
+    statusEl.className = "status ok";
+    statusEl.textContent = items.length + " lien(s).";
+
+    items.forEach(it => {
+      const a = document.createElement("a");
+      a.href = it.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = it.label || it.url;
+      listEl.appendChild(a);
+    });
+  }
+
+  function adaptData(raw){
+    let arr = raw;
+
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      if (Array.isArray(raw.links)) arr = raw.links;
+      else if (Array.isArray(raw.data)) arr = raw.data;
+      else if (Array.isArray(raw.items)) arr = raw.items;
+    }
+
+    if (!Array.isArray(arr)) return [];
+
+    return arr.map(x => {
+      const label = (x?.label ?? x?.titre ?? x?.name ?? x?.title ?? "").toString().trim();
+      const url   = (x?.url   ?? x?.lien  ?? x?.link ?? x?.href  ?? "").toString().trim();
+      return { label, url };
+    }).filter(x => x.url);
+  }
+
+  async function fetchJSON(url){
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+
+  async function load(){
+    statusEl.className = "status";
+    statusEl.textContent = "Chargement…";
+
+    try {
+      const raw = await fetchJSON(location.origin + API_PATH);
+      items = adaptData(raw);
+      render();
+      return;
+    } catch (e1) {
+
+      const msg = String(e1?.message || e1);
+      if (!msg.includes("HTTP 404")) throw e1;
+    }
+
+    const raw2 = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
+    items = adaptData(raw2);
+    render();
+  }
+
+  load().catch(err => {
+    console.error(err);
+    statusEl.className = "status err";
+    statusEl.textContent = "Erreur chargement JSON : " + err.message;
+    listEl.innerHTML = "";
+  });
+})();
+</script>
+
 </body>
 </html>
