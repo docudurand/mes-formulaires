@@ -1,4 +1,4 @@
-const CACHE_NAME = "durand-commerce-v4";
+const CACHE_NAME = "durand-commerce-v5";
 const CORE_ASSETS = [
   "/commerce/commerce",
   "/commerce/style.css",

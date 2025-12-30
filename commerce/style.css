@@ -183,3 +183,17 @@ body{
   .welcome{ padding: 18px 14px 22px; }
   .homeTitle{ font-size: 28px; }
 }
+
+.homeBrand{
+  margin: 0;
+  display: grid;
+  place-items: center;
+}
+.homeBrand__logo{
+  width: min(640px, 92vw);
+  height: auto;
+  display: block;
+}
+@media (max-width: 520px){
+  .homeBrand__logo{ width: min(420px, 92vw); }
+}
