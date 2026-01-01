@@ -99,12 +99,15 @@ app.use(
     changeOrigin: true,
     followRedirects: true,
 
-    pathRewrite: (p, req) => {
-  const sub = p.replace(/^\/commerce\/garantie/, "") || "/";
+pathRewrite: (p) => {
+  const sub = (p.replace(/^\/commerce\/garantie/, "") || "/");
 
   if (sub === "/" || sub === "") return "/admin";
 
-  return sub;
+  const pass = ["/assets/", "/static/", "/_next/", "/favicon", "/icons/", "/images/"];
+  if (pass.some(pref => sub.startsWith(pref))) return sub;
+
+  return "/admin" + sub;
 },
 
     selfHandleResponse: true,
@@ -120,12 +123,12 @@ app.use(
 
 html = html.replace(
   /(href|src|action)=["']\/(?!\/)([^"']*)["']/gi,
-  (_m, attr, p) => `${attr}="/commerce/garantie/${p}"`
+  (_m, attr, path) => `${attr}="/commerce/garantie/${path}"`
 );
 
 html = html.replace(
   /content=["']\/(?!\/)([^"']*)["']/gi,
-  (_m, p) => `content="/commerce/garantie/${p}"`
+  (_m, path) => `content="/commerce/garantie/${path}"`
 );
 
       return html;

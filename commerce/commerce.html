@@ -18,8 +18,10 @@
   <link rel="manifest" href="./manifest.webmanifest?v=7">
 
 </head>
-<script src="/assets/auth.js"></script>
+<script>window.__SITE_PREFIX__ = "../";</script>
+<script src="../assets/auth.js"></script>
 <script>requireAuth();</script>
+
 <body>
   <header class="topbar">
     <button class="burger" id="btnBurger" type="button" aria-label="Ouvrir le menu" aria-controls="drawer" aria-expanded="false">
