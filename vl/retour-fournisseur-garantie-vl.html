@@ -52,31 +52,6 @@
     .mail-line a{ color:var(--link); text-decoration:none; }
     .mail-line a:hover{ text-decoration:underline; }
 
-    .tools-row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:space-between;
-      margin:0 0 12px;
-    }
-    .search{
-      flex:1;
-      min-width:260px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .search input{
-      width:100%;
-      padding:11px 12px;
-      border:1px solid rgba(0,0,0,.2);
-      border-radius:10px;
-      font-size:15px;
-      background:#fff;
-    }
-    .hint{ font-size:12px; color:#555; white-space:nowrap; }
-
     .table-wrap{
       width:100%;
       overflow:auto;
@@ -127,7 +102,6 @@
       .panel{ padding:12px 10px 18px; }
       .accordion summary{ padding:14px 14px; }
       .acc-body{ padding:14px 14px 16px; }
-      .hint{ display:none; }
     }
   
     /* --- Scroll uniquement dans le cadre (pas de scroll sur la page) --- */
@@ -251,11 +225,6 @@
           </summary>
 
           <div class="acc-body">
-
-            <div class="tools-row">
-              <div class="search">
-                <input id="filterInput" type="text" placeholder="Rechercher un fournisseur / email / note…" autocomplete="off">
-              </div>
               <div class="hint"></div>
             </div>
 
@@ -301,7 +270,6 @@
   const tableStatus = document.getElementById("tableStatus");
   const tbody       = document.getElementById("contactsTbody");
 
-  const filterInput = document.getElementById("filterInput");
 
   let contactTRs = [];
 
@@ -312,14 +280,6 @@
       .replaceAll(">","&gt;")
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
-  }
-
-  function normalize(s){
-    return (s || "")
-      .toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"");
   }
 
   function toMailLink(value){
@@ -424,14 +384,6 @@
     });
   }
 
-  function applyFilter(){
-    const q = normalize(filterInput.value.trim());
-    contactTRs.forEach(tr => {
-      const txt = normalize(tr.innerText);
-      tr.style.display = (!q || txt.includes(q)) ? "" : "none";
-    });
-  }
-
   async function fetchJSON(url){
     const r = await fetch(url, { cache:"no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -462,10 +414,8 @@
     renderMailRetour(Array.isArray(mails) ? mails : []);
     renderContacts(adaptContacts(Array.isArray(contacts) ? contacts : []));
 
-    applyFilter();
   }
 
-  filterInput.addEventListener("input", applyFilter);
 
   load().catch(err => {
     console.error(err);
