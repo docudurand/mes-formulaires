@@ -99,7 +99,13 @@ app.use(
     changeOrigin: true,
     followRedirects: true,
 
-    pathRewrite: (p) => p.replace(/^\/commerce\/garantie/, "/admin"),
+    pathRewrite: (p, req) => {
+  const sub = p.replace(/^\/commerce\/garantie/, "") || "/";
+
+  if (sub === "/" || sub === "") return "/admin";
+
+  return sub;
+},
 
     selfHandleResponse: true,
     onProxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
