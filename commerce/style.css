@@ -224,7 +224,6 @@ body{
 }
 .drawerTitle__durand{ color: var(--brandBlue) !important; }
 .drawerTitle__commerce{ color: var(--brandNavy) !important; }
-
 @media (max-width: 520px){
   .drawerTitle{ font-size: 18px; }
 }
