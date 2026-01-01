@@ -134,7 +134,7 @@ body{
   margin-top: 18px;
   display: grid;
   gap: 18px;
-  justify-items: start;
+  justify-items: stretch;
 }
 
 .navBtn{
@@ -208,13 +208,15 @@ body{
   width: 100%;
   display: grid;
   place-items: center;
-  margin: 6px 0 10px;
+  margin: 6px 0 12px;
+  overflow: hidden;          /* évite tout débordement */
 }
 
 .drawerBrand__logo{
+  max-width: 220px;          /* largeur max dans le menu */
   width: 100%;
-  max-width: 280px;
-  height: 64px;
+  max-height: 56px;          /* hauteur max */
+  height: auto;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 8px 18px rgba(0,0,0,.10));
