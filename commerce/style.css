@@ -203,3 +203,18 @@ body{
 @media (max-width: 520px){
   .homeBrand__logo{ width: min(260px, 86vw); }
 }
+
+
+/* Logo dans le menu (drawer) */
+.drawerBrand{
+  width: 100%;
+  display: grid;
+  place-items: center;
+  margin: 6px 0 4px;
+}
+.drawerBrand__logo{
+  width: min(240px, 78%);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.10));
+}
