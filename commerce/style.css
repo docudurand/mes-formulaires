@@ -136,7 +136,7 @@ body{
   margin-top: 18px;
   display: grid;
   gap: 18px;
-  justify-items: start;
+  justify-items: center;
 }
 
 .navBtn{
@@ -208,6 +208,10 @@ body{
 
 .drawerTitle{
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
   text-align: center;
   font-weight: 900;
   letter-spacing: .06em;
@@ -216,9 +220,10 @@ body{
   line-height: 1.05;
   margin: 6px 0 2px;
   padding: 6px 0 4px;
+  justify-self: center;
 }
-.drawerTitle__durand{ color: var(--brandBlue); }
-.drawerTitle__commerce{ color: var(--brandNavy); margin-left: 6px; }
+.drawerTitle__durand{ color: var(--brandBlue) !important; }
+.drawerTitle__commerce{ color: var(--brandNavy) !important; }
 
 @media (max-width: 520px){
   .drawerTitle{ font-size: 18px; }
