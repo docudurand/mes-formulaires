@@ -118,9 +118,15 @@ app.use(
         html = html.replace(/<head([^>]*)>/i, `<head$1>\n<base href="/commerce/garantie/">`);
       }
 
-      html = html
-        .replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="/commerce/garantie/`)
-        .replace(/content=["']\/(?!\/)/gi, `content="/commerce/garantie/`);
+html = html.replace(
+  /(href|src|action)=["']\/(?!\/)([^"']*)["']/gi,
+  (_m, attr, p) => `${attr}="/commerce/garantie/${p}"`
+);
+
+html = html.replace(
+  /content=["']\/(?!\/)([^"']*)["']/gi,
+  (_m, p) => `content="/commerce/garantie/${p}"`
+);
 
       return html;
     }),
