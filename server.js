@@ -92,44 +92,48 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
 
+const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
+
+app.get("/commerce/garantie-admin", (_req, res) => res.redirect(302, "/commerce/garantie-admin/"));
+
 app.use(
-  "/commerce/garantie",
+  "/commerce/garantie-admin",
   createProxyMiddleware({
     target: GARANTIE_TARGET,
     changeOrigin: true,
     followRedirects: true,
 
-pathRewrite: (p) => {
-  const sub = (p.replace(/^\/commerce\/garantie/, "") || "/");
+    pathRewrite: (p) => {
+      const sub = (p.replace(/^\/commerce\/garantie-admin/, "") || "/");
 
-  if (sub === "/" || sub === "") return "/admin";
+      if (sub === "/" || sub === "") return "/admin";
 
-  const pass = ["/assets/", "/static/", "/_next/", "/favicon", "/icons/", "/images/"];
-  if (pass.some(pref => sub.startsWith(pref))) return sub;
+      const pass = ["/assets/", "/static/", "/_next/", "/favicon", "/icons/", "/images/"];
+      if (pass.some(pref => sub.startsWith(pref))) return sub;
 
-  return "/admin" + sub;
-},
+      return "/admin" + sub;
+    },
 
     selfHandleResponse: true,
-    onProxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
+    onProxyRes: responseInterceptor(async (responseBuffer, proxyRes) => {
       const ct = String(proxyRes.headers["content-type"] || "");
       if (!ct.includes("text/html")) return responseBuffer;
 
       let html = responseBuffer.toString("utf8");
 
       if (!/<base\b/i.test(html)) {
-        html = html.replace(/<head([^>]*)>/i, `<head$1>\n<base href="/commerce/garantie/">`);
+        html = html.replace(/<head([^>]*)>/i, `<head$1>\n<base href="/commerce/garantie-admin/">`);
       }
 
-html = html.replace(
-  /(href|src|action)=["']\/(?!\/)([^"']*)["']/gi,
-  (_m, attr, path) => `${attr}="/commerce/garantie/${path}"`
-);
+      html = html.replace(
+        /(href|src|action)=["']\/(?!\/)([^"']*)["']/gi,
+        (_m, attr, path) => `${attr}="/commerce/garantie-admin/${path}"`
+      );
 
-html = html.replace(
-  /content=["']\/(?!\/)([^"']*)["']/gi,
-  (_m, path) => `content="/commerce/garantie/${path}"`
-);
+      html = html.replace(
+        /content=["']\/(?!\/)([^"']*)["']/gi,
+        (_m, path) => `content="/commerce/garantie-admin/${path}"`
+      );
 
       return html;
     }),
