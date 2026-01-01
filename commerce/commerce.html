@@ -71,7 +71,7 @@
         TELEVENTE LUB 2026
       </button>
 
-      <a class="navBtn navLink"
+      <a class="navBtn navLink" id="linkGarantie"
          href="https://durandservicesgarantie.onrender.com/admin"
          target="_blank"
          rel="noopener noreferrer">
@@ -85,6 +85,17 @@
   </aside>
 
   <script src="./script.js"></script>
+  <script>
+    (function(){
+      var a = document.getElementById('linkGarantie');
+      if(!a) return;
+      // Pass the Commerce home URL to the admin page so the iPad "Accueil" button can come back reliably
+      var homeUrl = location.origin + "/commerce/commerce";
+      var base = "https://durandservicesgarantie.onrender.com/admin";
+      a.href = base + "?home=" + encodeURIComponent(homeUrl);
+    })();
+  </script>
+
 
   <script>
     (function(){
