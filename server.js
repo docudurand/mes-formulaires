@@ -14,6 +14,7 @@ import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
+import { createProxyMiddleware, responseInterceptor } from "http-proxy-middleware";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -89,6 +90,36 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
+const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
+
+app.use(
+  "/commerce/garantie",
+  createProxyMiddleware({
+    target: GARANTIE_TARGET,
+    changeOrigin: true,
+    followRedirects: true,
+
+    pathRewrite: (p) => p.replace(/^\/commerce\/garantie/, "/admin"),
+
+    selfHandleResponse: true,
+    onProxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
+      const ct = String(proxyRes.headers["content-type"] || "");
+      if (!ct.includes("text/html")) return responseBuffer;
+
+      let html = responseBuffer.toString("utf8");
+
+      if (!/<base\b/i.test(html)) {
+        html = html.replace(/<head([^>]*)>/i, `<head$1>\n<base href="/commerce/garantie/">`);
+      }
+
+      html = html
+        .replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="/commerce/garantie/`)
+        .replace(/content=["']\/(?!\/)/gi, `content="/commerce/garantie/`);
+
+      return html;
+    }),
+  })
+);
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
