@@ -51,8 +51,7 @@
   </style>
 </head>
 
-<script>window.__SITE_PREFIX__ = "../";</script>
-<script src="../assets/auth.js"></script>
+<script src="/assets/auth.js"></script>
 <script>requireAuth();</script>
 
 <body>
@@ -81,7 +80,7 @@
 
   <script>
     (function(){
-      const GARANTIE_URL = "https://durandservicesgarantie.onrender.com/admin";
+      const GARANTIE_URL = "/commerce/garantie/";
       document.getElementById("btnHome").addEventListener("click", ()=>{
         location.href = "/commerce/commerce";
       });
