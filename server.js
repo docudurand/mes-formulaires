@@ -93,6 +93,7 @@ app.use(mailLogsRouter);
 const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
 
 app.get("/commerce/garantie-admin", (_req, res) => res.redirect(302, "/commerce/garantie-admin/"));
+app.get("/__whoami", (_req, res) => res.type("text").send("OK mes-formulaires server.js"));
 
 app.use(
   "/commerce/garantie-admin",
