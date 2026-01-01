@@ -14,7 +14,6 @@ import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
-import { createProxyMiddleware, responseInterceptor } from "http-proxy-middleware";
 
 import * as stats from "./stats.js";
 import formtelevente from "./formtelevente/index.js";
@@ -90,54 +89,6 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
-const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
-
-app.get("/commerce/garantie-admin", (_req, res) => res.redirect(302, "/commerce/garantie-admin/"));
-app.get("/__whoami", (_req, res) => res.type("text").send("OK mes-formulaires server.js"));
-
-app.use(
-  "/commerce/garantie-admin",
-  createProxyMiddleware({
-    target: GARANTIE_TARGET,
-    changeOrigin: true,
-    followRedirects: true,
-
-    pathRewrite: (p) => {
-      const sub = (p.replace(/^\/commerce\/garantie-admin/, "") || "/");
-
-      if (sub === "/" || sub === "") return "/admin";
-
-      const pass = ["/assets/", "/static/", "/_next/", "/favicon", "/icons/", "/images/"];
-      if (pass.some(pref => sub.startsWith(pref))) return sub;
-
-      return "/admin" + sub;
-    },
-
-    selfHandleResponse: true,
-    onProxyRes: responseInterceptor(async (responseBuffer, proxyRes) => {
-      const ct = String(proxyRes.headers["content-type"] || "");
-      if (!ct.includes("text/html")) return responseBuffer;
-
-      let html = responseBuffer.toString("utf8");
-
-      if (!/<base\b/i.test(html)) {
-        html = html.replace(/<head([^>]*)>/i, `<head$1>\n<base href="/commerce/garantie-admin/">`);
-      }
-
-      html = html.replace(
-        /(href|src|action)=["']\/(?!\/)([^"']*)["']/gi,
-        (_m, attr, path) => `${attr}="/commerce/garantie-admin/${path}"`
-      );
-
-      html = html.replace(
-        /content=["']\/(?!\/)([^"']*)["']/gi,
-        (_m, path) => `content="/commerce/garantie-admin/${path}"`
-      );
-
-      return html;
-    }),
-  })
-);
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
