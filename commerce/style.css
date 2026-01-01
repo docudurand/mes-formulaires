@@ -1,4 +1,6 @@
 :root{
+  --brandBlue: #1E8AFF;
+  --brandNavy: #071E57;
   --bg: #e9ecff;
   --pill: #1f2c56;
   --pillText: #ffffff;
@@ -191,90 +193,33 @@ body{
 }
 
 .homeBrand{
-  margin: 0 0 22px;
+  margin: 0 0 26px;
   display: grid;
   place-items: center;
 }
+.homeBrand__logo{
+  width: min(360px, 80vw);
+  height: auto;
+  display: block;
+}
+@media (max-width: 520px){
+  .homeBrand__logo{ width: min(260px, 86vw); }
+}
 
-
-.drawerBrand{
+.drawerTitle{
   width: 100%;
-  display: grid;
-  place-items: center;
-  margin: 6px 0 10px;
-}
-
-.brandText{
-  display: inline-flex;
-  align-items: baseline;
-  gap: 2px;
-  line-height: 1;
+  text-align: center;
   font-weight: 900;
-  letter-spacing: .02em;
-  user-select: none;
-  white-space: nowrap;
+  letter-spacing: .06em;
+  text-transform: none;
+  font-size: 20px;
+  line-height: 1.05;
+  margin: 6px 0 2px;
+  padding: 6px 0 4px;
 }
-
-.brandText__icon{
-  font-size: 48px;
-  font-weight: 900;
-  color: #0b2a6f;
-  text-shadow: 0 10px 24px rgba(0,0,0,.10);
-}
-
-.brandText__durand{
-  font-size: 46px;
-  color: #2b8cff;
-  text-shadow: 0 10px 24px rgba(0,0,0,.10);
-}
-
-.brandText__commerce{
-  font-size: 46px;
-  color: #2b8cff;
-  text-shadow: 0 10px 24px rgba(0,0,0,.10);
-}
-
-.brandText--drawer .brandText__icon{ font-size: 44px; }
-.brandText--drawer .brandText__durand,
-.brandText--drawer .brandText__commerce{ font-size: 42px; }
+.drawerTitle__durand{ color: var(--brandBlue); }
+.drawerTitle__commerce{ color: var(--brandNavy); margin-left: 6px; }
 
 @media (max-width: 520px){
-  .brandText__icon{ font-size: 40px; }
-  .brandText__durand,
-  .brandText__commerce{ font-size: 38px; }
-
-  .brandText--drawer .brandText__icon{ font-size: 38px; }
-  .brandText--drawer .brandText__durand,
-  .brandText--drawer .brandText__commerce{ font-size: 36px; }
+  .drawerTitle{ font-size: 18px; }
 }
-
-
-/* --- Brand "Durand Commerce" dans le menu : taille adaptée --- */
-.drawerBrand{
-  width: 100%;
-  display: grid;
-  justify-items: start;
-  margin: 0 0 10px;
-  padding: 0 6px;
-}
-
-.brandText--drawer{
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.brandText--drawer .brandText__icon{
-  font-size: 28px;
-}
-
-.brandText--drawer .brandText__durand,
-.brandText--drawer .brandText__commerce{
-  font-size: 26px;
-}
-
-@media (max-width: 520px){
-  .brandText--drawer .brandText__icon{ font-size: 26px; }
-  .brandText--drawer .brandText__durand,
-  .brandText--drawer .brandText__commerce{ font-size: 24px; }
-}
-
