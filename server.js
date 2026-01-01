@@ -1219,6 +1219,11 @@ app.get("/api/vl/retour-garantie", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
+app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
+  const data = parseEnvJSON(process.env.VL_LIENS_FORMULAIRE_GARANTIE_JSON, []);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(data);
+});
 app.use("/pl", express.static(path.join(__dirname, "pl"), {
   extensions: ["html", "htm"],
   index: false
