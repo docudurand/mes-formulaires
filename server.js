@@ -92,8 +92,6 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
 
-const GARANTIE_TARGET = "https://durandservicesgarantie.onrender.com";
-
 app.get("/commerce/garantie-admin", (_req, res) => res.redirect(302, "/commerce/garantie-admin/"));
 
 app.use(
