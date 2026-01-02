@@ -70,7 +70,11 @@ function fmtJJMMYYYYdash(v){
 function siteLabelForService(service = ""){
   if (service === "Arbre de Transmission") return "BOURGOIN";
   if (service === "Contrôle injection Essence") return "ST EGREVE";
-  if (service === "Rectification Culasse" || service === "Contrôle injection Diesel") return "ST EGREVE";
+  if (
+    service === "Rectification Culasse" ||
+    service === "Rectification Vilebrequin" ||
+    service === "Contrôle injection Diesel"
+  ) return "ST EGREVE";
   return "";
 }
 
@@ -154,6 +158,7 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
 
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
+  "Rectification Vilebrequin": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,
