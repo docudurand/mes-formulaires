@@ -26,6 +26,7 @@ import atelier from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
 import kilometrageRouter from "./routes/kilometrage.js";
+import "./mailInlineWorker.js";
 
 dotenv.config();
 
