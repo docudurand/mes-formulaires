@@ -1,12 +1,10 @@
-import express from "express";
-import multer from "multer";
-import cors from "cors";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
-import crypto from "crypto";
-import { fromEmail } from "../mailer.js";
-import { enqueueMailJob, getIdempotencyKey } from "../mailQueue.js";
+import express from 'express';
+import multer from 'multer';
+import cors from 'cors';
+import fs from 'fs';
+import dotenv from 'dotenv';
+import { transporter, fromEmail } from '../mailer.js';
+import { sendMailWithLog } from "../mailLog.js";
 
 dotenv.config();
 
@@ -14,57 +12,48 @@ const router = express.Router();
 
 router.use(cors());
 router.use(express.urlencoded({ extended: true }));
-router.use(express.json({ limit: "15mb" }));
+router.use(express.json({ limit: '15mb' }));
 
-router.get("/healthz", (_req, res) => res.sendStatus(200));
-router.get("/", (_req, res) => res.send("🛞 Formulaire Création Pneumatique VL – OK"));
+router.get('/healthz', (_req, res) => res.sendStatus(200));
+router.get('/', (_req, res) => res.send('🛞 Formulaire Création Pneumatique VL – OK'));
 
 const FIELD_LABELS = {
-  email: "Adresse e-mail",
+  email:       "Adresse e-mail",
   fournisseur: "Fournisseur de Réappro",
-  ean: "EAN",
-  cai: "CAI",
-  adherence: "Adhérence sol mouillé",
-  conso: "Consommation carburant",
-  sonore: "Niveau sonore",
-  classe: "Classe de performance",
+  ean:         "EAN",
+  cai:         "CAI",
+  adherence:   "Adhérence sol mouillé",
+  conso:       "Consommation carburant",
+  sonore:      "Niveau sonore",
+  classe:      "Classe de performance",
   designation: "Désignation Pneu",
-  prixBF: "Prix BF",
-  prixAchat: "Prix d'achat",
+  prixBF:      "Prix BF",
+  prixAchat:   "Prix d'achat"
 };
 
-const UPLOAD_DIR = (process.env.UPLOAD_DIR || path.resolve(process.cwd(), "uploads")).trim();
-try {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-} catch {}
-
 const upload = multer({
-  dest: UPLOAD_DIR,
+  dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const forbidden = /\.(exe|bat|sh|cmd|js)$/i;
     if (forbidden.test(file.originalname)) {
-      return cb(new Error("Type de fichier non autorisé."), false);
+      return cb(new Error('Type de fichier non autorisé.'), false);
     }
     cb(null, true);
-  },
+  }
 });
 
 function generateHtml(data) {
-  const rows = Object.entries(FIELD_LABELS)
-    .map(
-      ([key, label]) => `
+  const rows = Object.entries(FIELD_LABELS).map(([key, label]) => `
     <tr>
       <td style="padding:8px; border:1px solid #ccc; background:#f8f8f8; font-weight:bold;">
         ${label}
       </td>
       <td style="padding:8px; border:1px solid #ccc;">
-        ${data[key] || "<em>(non renseigné)</em>"}
+        ${data[key] || '<em>(non renseigné)</em>'}
       </td>
     </tr>
-  `
-    )
-    .join("");
+  `).join('');
 
   return `
     <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
@@ -77,47 +66,47 @@ function generateHtml(data) {
   `;
 }
 
-router.post("/submit-form", upload.array("fichiers[]"), async (req, res) => {
+router.post('/submit-form', upload.array('fichiers[]'), async (req, res) => {
   const formData = req.body;
 
   const files = Array.isArray(req.files) ? req.files : [];
-  const attachments = files.map((file) => ({
+  const attachments = files.map(file => ({
     filename: file.originalname,
-    path: file.path,
+    path: file.path
   }));
 
   try {
-    if (!process.env.DEST_EMAIL_FORMULAIRE_PNEU) {
-      console.error("[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing");
-      return res.status(500).send("Erreur: destinataire non configuré.");
+    if (!transporter) {
+      console.error('[formulaire-pneu] SMTP not configured');
+      return res.status(500).send("Erreur d'envoi: SMTP non configuré.");
     }
 
-    const requestId =
-      getIdempotencyKey(req) ||
-      (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex"));
+    if (!process.env.DEST_EMAIL_FORMULAIRE_PNEU) {
+      console.error('[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing');
+      return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
+    }
 
     const mailOptions = {
       from: `"Formulaire création Pneu VL" <${fromEmail}>`,
       to: process.env.DEST_EMAIL_FORMULAIRE_PNEU,
-      subject: "📨 Demande de création référence Pneumatique VL",
+      subject: '📨 Demande de création référence Pneumatique VL',
       replyTo: formData.email,
       html: generateHtml(formData),
-      attachments,
+      attachments
     };
 
-    enqueueMailJob({
-      idempotencyKey: `${requestId}:pneu:magasin`,
+    await sendMailWithLog(
+      transporter,
       mailOptions,
-      formType: "creation-pneu-vl",
-      meta: {
+      "creation-pneu-vl",
+      {
         kind: "magasin",
         demandeur: formData.email || "",
         fournisseur: (formData.fournisseur || "").slice(0, 80),
         ean: (formData.ean || "").slice(0, 40),
         designation: (formData.designation || "").slice(0, 120),
-      },
-      cleanupPaths: files.map((f) => f.path),
-    });
+      }
+    );
 
     if (formData.email) {
       const accuserecepOptions = {
@@ -132,37 +121,40 @@ router.post("/submit-form", upload.array("fichiers[]"), async (req, res) => {
             <p>Nous la traiterons dans les plus brefs délais.<br>
             <b>Résumé de votre demande :</b></p>
             <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-              ${Object.entries(FIELD_LABELS)
-                .map(
-                  ([key, label]) => `
+              ${Object.entries(FIELD_LABELS).map(([key, label]) => `
                 <tr>
                   <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">${label}</td>
-                  <td style="padding:6px; border:1px solid #eee;">${formData[key] || "<em>(non renseigné)</em>"}</td>
+                  <td style="padding:6px; border:1px solid #eee;">${formData[key] || '<em>(non renseigné)</em>'}</td>
                 </tr>
-              `
-                )
-                .join("")}
+              `).join('')}
             </table>
             <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
             <p>L’équipe Pneumatiques VL</p>
           </div>
         `,
-        attachments: [],
+        attachments: []
       };
 
-      enqueueMailJob({
-        idempotencyKey: `${requestId}:pneu:ack`,
-        mailOptions: accuserecepOptions,
-        formType: "creation-pneu-vl",
-        meta: { kind: "demandeur", demandeur: formData.email || "" },
-        cleanupPaths: [],
-      });
+      try {
+        await sendMailWithLog(
+          transporter,
+          accuserecepOptions,
+          "creation-pneu-vl",
+          { kind: "demandeur", demandeur: formData.email || "" }
+        );
+      } catch (err) {
+        console.error('[formulaire-pneu] Erreur envoi accusé réception :', err);
+      }
     }
 
-    return res.status(202).send("Formulaire enregistré. Envoi en cours…");
+    res.status(200).send('Formulaire envoyé !');
   } catch (err) {
-    console.error("[formulaire-pneu] Queue failed:", err);
-    return res.status(500).send("Erreur lors de l'enregistrement.");
+    console.error('[formulaire-pneu] Envoi mail échoué :', err);
+    res.status(500).send("Erreur lors de l'envoi.");
+  } finally {
+    files.forEach(file => {
+      fs.unlink(file.path, () => {});
+    });
   }
 });
 
