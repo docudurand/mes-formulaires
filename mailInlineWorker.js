@@ -1,11 +1,24 @@
 import fs from "fs";
+import path from "path";
 import { transporter } from "./mailer.js";
 import { sendMailWithLog } from "./mailLog.js";
-import { listReadyJobs, loadJob, saveJob, moveJob, DONE_DIR, FAIL_DIR } from "./mailQueue.js";
+import {
+  listReadyJobs,
+  loadJob,
+  saveJob,
+  moveJob,
+  DONE_DIR,
+  FAIL_DIR,
+} from "./mailQueue.js";
 
 const POLL_MS = Number(process.env.MAIL_QUEUE_POLL_MS || 1500);
 const MAX_ATTEMPTS = Number(process.env.MAIL_QUEUE_MAX_ATTEMPTS || 10);
 const BASE_DELAY_MS = Number(process.env.MAIL_QUEUE_BASE_DELAY_MS || 2000);
+
+const CLEANUP_EVERY_MS = Number(process.env.MAIL_QUEUE_CLEANUP_EVERY_MS || 6 * 60 * 60 * 1000); // 6h
+const RETENTION_DAYS_DONE = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_DONE || 30);
+const RETENTION_DAYS_FAILED = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_FAILED || 30);
+const RETENTION_DAYS_IDEM = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_IDEM || 60);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -43,9 +56,7 @@ async function processOne(jobFile) {
     return;
   }
 
-  if (job.nextAttemptAt && Date.now() < job.nextAttemptAt) {
-    return;
-  }
+  if (job.nextAttemptAt && Date.now() < job.nextAttemptAt) return;
 
   job.status = "sending";
   saveJob(jobFile, job);
@@ -109,16 +120,135 @@ async function processOne(jobFile) {
   }
 }
 
+function safeReadJson(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) return fallback;
+    return JSON.parse(fs.readFileSync(file, "utf8") || "null") ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJsonAtomic(file, obj) {
+  const tmp = file + "." + process.pid + "." + Date.now() + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf8");
+  fs.renameSync(tmp, file);
+}
+
+function listJsonFiles(dir) {
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => path.join(dir, f));
+  } catch {
+    return [];
+  }
+}
+
+function fileAgeMs(file) {
+  try {
+    const st = fs.statSync(file);
+    return Date.now() - st.mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+function deleteIfOlderThan(dir, retentionDays) {
+  const cutoffMs = retentionDays * 24 * 60 * 60 * 1000;
+  let removed = 0;
+
+  for (const f of listJsonFiles(dir)) {
+    if (fileAgeMs(f) > cutoffMs) {
+      try {
+        fs.unlinkSync(f);
+        removed++;
+      } catch {}
+    }
+  }
+  return removed;
+}
+
+function cleanupIdemIndex(queueDir) {
+  const file = path.join(queueDir, "idem-index.json");
+  const idx = safeReadJson(file, {});
+  if (!idx || typeof idx !== "object") return { kept: 0, removed: 0 };
+
+  const allJobIds = new Set();
+
+  const queueReady = path.join(queueDir, "ready");
+  const queueDone = path.join(queueDir, "done");
+  const queueFailed = path.join(queueDir, "failed");
+
+  for (const dir of [queueReady, queueDone, queueFailed]) {
+    for (const f of listJsonFiles(dir)) {
+      allJobIds.add(path.basename(f).replace(/\.json$/i, ""));
+    }
+  }
+
+  let removed = 0;
+  const out = {};
+  for (const [k, jobId] of Object.entries(idx)) {
+    if (typeof jobId === "string" && allJobIds.has(jobId)) {
+      out[k] = jobId;
+    } else {
+      removed++;
+    }
+  }
+
+  writeJsonAtomic(file, out);
+  return { kept: Object.keys(out).length, removed };
+}
+
+async function runCleanupOnce() {
+  const queueDir = path.resolve(DONE_DIR, "..");
+
+  const removedDone = deleteIfOlderThan(DONE_DIR, RETENTION_DAYS_DONE);
+  const removedFailed = deleteIfOlderThan(FAIL_DIR, RETENTION_DAYS_FAILED);
+
+  const idemFile = path.join(queueDir, "idem-index.json");
+  const idemTooOld =
+    fs.existsSync(idemFile) && fileAgeMs(idemFile) > RETENTION_DAYS_IDEM * 24 * 60 * 60 * 1000;
+
+  const idemResult = idemTooOld ? cleanupIdemIndex(queueDir) : cleanupIdemIndex(queueDir);
+
+  console.log(
+    "[INLINE_MAIL_WORKER][CLEANUP]",
+    "done_removed=",
+    removedDone,
+    "failed_removed=",
+    removedFailed,
+    "idem_kept=",
+    idemResult.kept,
+    "idem_removed=",
+    idemResult.removed
+  );
+}
+
+let nextCleanupAt = Date.now() + 15 * 1000;
+
 (async function loop() {
   console.log("[INLINE_MAIL_WORKER] started");
+
   while (true) {
     try {
       const jobs = listReadyJobs();
-
       for (const jf of jobs) await processOne(jf);
     } catch (e) {
       console.warn("[INLINE_MAIL_WORKER] loop error:", e?.message || e);
     }
+
+    // cleanup périodique
+    if (Date.now() >= nextCleanupAt) {
+      try {
+        await runCleanupOnce();
+      } catch (e) {
+        console.warn("[INLINE_MAIL_WORKER][CLEANUP] error:", e?.message || e);
+      }
+      nextCleanupAt = Date.now() + CLEANUP_EVERY_MS;
+    }
+
     await sleep(POLL_MS);
   }
 })();
