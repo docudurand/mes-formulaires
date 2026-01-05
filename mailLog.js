@@ -48,7 +48,9 @@ export async function getMailLogs({ limit = 200, q = "" } = {}) {
   return httpJson(u.toString(), { method: "GET" });
 }
 
-export async function sendMailWithLog(transporter, mailOptions, formType, meta = {}) {
+export async function sendMailWithLog(transporter, mailOptions, formType, meta = {}, opts = {}) {
+  const { logFailed = true } = opts || {};
+
   const toField = Array.isArray(mailOptions?.to) ? mailOptions.to.join(",") : (mailOptions?.to || "");
   const subject = String(mailOptions?.subject || "");
 
@@ -66,9 +68,11 @@ export async function sendMailWithLog(transporter, mailOptions, formType, meta =
     return info;
   } catch (err) {
     const msg = String(err?.message || err);
-    try {
-      await addMailLog({ ...base, status: "failed", error: msg });
-    } catch {}
+    if (logFailed) {
+      try {
+        await addMailLog({ ...base, status: "failed", error: msg });
+      } catch {}
+    }
     throw err;
   }
 }

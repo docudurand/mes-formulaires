@@ -65,7 +65,10 @@ async function processOne(jobFile) {
   const to = getTo(mailOptions);
   const subject = mailOptions?.subject || "";
   const formType = job?.payload?.formType || "unknown";
-  const attempts = job?.attempts || 0;
+
+  const prevAttempts = job?.attempts || 0;
+  const attemptNow = prevAttempts + 1;
+  const isFinalAttempt = attemptNow >= MAX_ATTEMPTS;
 
   console.log(
     "[INLINE_MAIL_WORKER] sending",
@@ -77,11 +80,25 @@ async function processOne(jobFile) {
     "| subject=",
     short(subject, 120),
     "| attempt=",
-    attempts + 1
+    attemptNow,
+    "/",
+    MAX_ATTEMPTS
   );
 
   try {
-    await sendMailWithLog(transporter, mailOptions, formType, job?.payload?.meta);
+    const metaWithAttempt = {
+      ...(job?.payload?.meta || {}),
+      attempt: attemptNow,
+      maxAttempts: MAX_ATTEMPTS,
+    };
+
+    await sendMailWithLog(
+      transporter,
+      mailOptions,
+      formType,
+      metaWithAttempt,
+      { logFailed: isFinalAttempt }
+    );
 
     (job?.payload?.cleanupPaths || []).forEach(safeUnlink);
 
@@ -94,19 +111,19 @@ async function processOne(jobFile) {
   } catch (e) {
     const msg = String(e?.message || e);
 
-    job.attempts = (job.attempts || 0) + 1;
+    job.attempts = attemptNow;
     job.lastError = msg;
 
     console.warn("[INLINE_MAIL_WORKER] error", job.jobId, "|", short(msg, 200));
 
-    if (job.attempts >= MAX_ATTEMPTS) {
+    if (attemptNow >= MAX_ATTEMPTS) {
       job.failedAt = new Date().toISOString();
       saveJob(jobFile, job);
       moveJob(jobFile, FAIL_DIR);
 
       console.warn("[INLINE_MAIL_WORKER] moved to failed", job.jobId);
     } else {
-      job.nextAttemptAt = Date.now() + nextDelay(job.attempts);
+      job.nextAttemptAt = Date.now() + nextDelay(attemptNow);
       saveJob(jobFile, job);
 
       console.log(
@@ -176,12 +193,11 @@ function cleanupIdemIndex(queueDir) {
   if (!idx || typeof idx !== "object") return { kept: 0, removed: 0 };
 
   const allJobIds = new Set();
-
-  const queueReady = path.join(queueDir, "ready");
-  const queueDone = path.join(queueDir, "done");
-  const queueFailed = path.join(queueDir, "failed");
-
-  for (const dir of [queueReady, queueDone, queueFailed]) {
+  for (const dir of [
+    path.join(queueDir, "ready"),
+    path.join(queueDir, "done"),
+    path.join(queueDir, "failed"),
+  ]) {
     for (const f of listJsonFiles(dir)) {
       allJobIds.add(path.basename(f).replace(/\.json$/i, ""));
     }
@@ -190,11 +206,8 @@ function cleanupIdemIndex(queueDir) {
   let removed = 0;
   const out = {};
   for (const [k, jobId] of Object.entries(idx)) {
-    if (typeof jobId === "string" && allJobIds.has(jobId)) {
-      out[k] = jobId;
-    } else {
-      removed++;
-    }
+    if (typeof jobId === "string" && allJobIds.has(jobId)) out[k] = jobId;
+    else removed++;
   }
 
   writeJsonAtomic(file, out);
@@ -207,11 +220,7 @@ async function runCleanupOnce() {
   const removedDone = deleteIfOlderThan(DONE_DIR, RETENTION_DAYS_DONE);
   const removedFailed = deleteIfOlderThan(FAIL_DIR, RETENTION_DAYS_FAILED);
 
-  const idemFile = path.join(queueDir, "idem-index.json");
-  const idemTooOld =
-    fs.existsSync(idemFile) && fileAgeMs(idemFile) > RETENTION_DAYS_IDEM * 24 * 60 * 60 * 1000;
-
-  const idemResult = idemTooOld ? cleanupIdemIndex(queueDir) : cleanupIdemIndex(queueDir);
+  const idemResult = cleanupIdemIndex(queueDir);
 
   console.log(
     "[INLINE_MAIL_WORKER][CLEANUP]",
@@ -239,7 +248,6 @@ let nextCleanupAt = Date.now() + 15 * 1000;
       console.warn("[INLINE_MAIL_WORKER] loop error:", e?.message || e);
     }
 
-    // cleanup périodique
     if (Date.now() >= nextCleanupAt) {
       try {
         await runCleanupOnce();
