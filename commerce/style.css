@@ -6,7 +6,7 @@
   --pillText: #ffffff;
   --shadow: 0 14px 30px rgba(0,0,0,.12);
   --radius: 18px;
-  --ipadW: 980px;
+  --ipadW: 1200px;
 }
 
 *{ box-sizing: border-box; }
