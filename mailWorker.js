@@ -1,0 +1,100 @@
+import fs from "fs";
+import { transporter } from "./mailer.js";
+import { sendMailWithLog } from "./mailLog.js";
+import { listReadyJobs, loadJob, saveJob, moveJob, DONE_DIR, FAIL_DIR } from "./mailQueue.js";
+
+const POLL_MS = Number(process.env.MAIL_QUEUE_POLL_MS || 1500);
+const MAX_ATTEMPTS = Number(process.env.MAIL_QUEUE_MAX_ATTEMPTS || 10);
+const BASE_DELAY_MS = Number(process.env.MAIL_QUEUE_BASE_DELAY_MS || 2000);
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function nextDelay(attempt) {
+  const d = BASE_DELAY_MS * Math.pow(2, Math.max(0, attempt - 1));
+  return Math.min(d, 5 * 60 * 1000);
+}
+
+function safeUnlink(p) {
+  try {
+    if (p && fs.existsSync(p)) fs.unlinkSync(p);
+  } catch {}
+}
+
+async function processOne(jobFile) {
+  const job = loadJob(jobFile);
+  if (!job) {
+    try {
+      moveJob(jobFile, FAIL_DIR);
+    } catch {}
+    return;
+  }
+
+  const now = Date.now();
+  if (job.nextAttemptAt && now < job.nextAttemptAt) return;
+
+  job.status = "sending";
+  saveJob(jobFile, job);
+
+  if (!transporter) {
+    job.status = "queued";
+    job.attempts = (job.attempts || 0) + 1;
+    job.lastError = "SMTP not configured";
+    job.nextAttemptAt = Date.now() + nextDelay(job.attempts);
+    saveJob(jobFile, job);
+
+    if (job.attempts >= MAX_ATTEMPTS) {
+      moveJob(jobFile, FAIL_DIR);
+    }
+    return;
+  }
+
+  const { mailOptions, formType, meta, cleanupPaths } = job.payload || {};
+
+  try {
+    await sendMailWithLog(transporter, mailOptions, formType, meta);
+
+    (cleanupPaths || []).forEach(safeUnlink);
+
+    job.status = "sent";
+    job.sentAt = new Date().toISOString();
+    saveJob(jobFile, job);
+    moveJob(jobFile, DONE_DIR);
+  } catch (e) {
+    const msg = String(e?.message || e);
+
+    job.status = "queued";
+    job.attempts = (job.attempts || 0) + 1;
+    job.lastError = msg;
+
+    if (job.attempts >= MAX_ATTEMPTS) {
+      job.failedAt = new Date().toISOString();
+      saveJob(jobFile, job);
+      moveJob(jobFile, FAIL_DIR);
+      return;
+    }
+
+    job.nextAttemptAt = Date.now() + nextDelay(job.attempts);
+    saveJob(jobFile, job);
+  }
+}
+
+async function main() {
+  console.log("[MAIL_WORKER] started");
+
+  while (true) {
+    try {
+      const jobs = listReadyJobs();
+      for (const jf of jobs) {
+        await processOne(jf);
+      }
+    } catch (e) {
+      console.warn("[MAIL_WORKER] loop error:", e?.message || e);
+    }
+
+    await sleep(POLL_MS);
+  }
+}
+
+main();
