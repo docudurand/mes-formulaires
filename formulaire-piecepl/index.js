@@ -153,7 +153,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
       mailOptions: {
         from: `"Formulaire création PL" <${fromEmail}>`,
         to,
-        subject: "🚚 Demande de création référence PL",
+        subject: "📨 Demande de création référence PL",
         replyTo: formData.email || undefined,
         html: generateHtml(formData),
         attachments,
@@ -174,7 +174,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         mailOptions: {
           from: `"Formulaire création PL" <${fromEmail}>`,
           to: formData.email,
-          subject: "✔️ Accusé de réception - Création Référence PL",
+          subject: "Votre demande de création de référence pièce a bien été reçue",
           html: accuseHtml(formData),
         },
         formType: "creation-reference-pl",

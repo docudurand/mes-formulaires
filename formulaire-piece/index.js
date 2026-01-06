@@ -156,7 +156,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
       mailOptions: {
         from: `"Formulaire création VL" <${fromEmail}>`,
         to,
-        subject: "🔧 Demande de création référence VL",
+        subject: "📨 Demande de création référence VL",
         replyTo: formData.email || undefined,
         html: generateHtml(formData),
         attachments,
@@ -178,7 +178,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         mailOptions: {
           from: `"Formulaire création VL" <${fromEmail}>`,
           to: formData.email,
-          subject: "✔️ Accusé de réception - Création Référence VL",
+          subject: "Votre demande de création de référence a bien été reçue",
           html: accuseHtml(formData),
         },
         formType: "creation-reference-vl",

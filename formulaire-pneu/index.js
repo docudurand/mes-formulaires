@@ -155,7 +155,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
       mailOptions: {
         from: `"Formulaire création Pneu VL" <${fromEmail}>`,
         to,
-        subject: "🛞 Demande de création référence Pneumatique VL",
+        subject: "📨 Demande de création référence Pneumatique VL",
         replyTo: formData.email || undefined,
         html: generateHtml(formData),
         attachments,
@@ -177,7 +177,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         mailOptions: {
           from: `"Service Pneumatiques VL" <${fromEmail}>`,
           to: formData.email,
-          subject: "✔️ Accusé de réception - Création Pneu VL",
+          subject: "Votre demande de création de référence pièce a bien été reçue",
           html: accuseHtml(formData),
         },
         formType: "creation-pneu-vl",
