@@ -5,7 +5,6 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 import crypto from "crypto";
-
 import { fromEmail } from "../mailer.js";
 import { enqueueMailJob, getIdempotencyKey } from "../mailQueue.js";
 
@@ -17,23 +16,10 @@ router.use(cors());
 router.use(express.urlencoded({ extended: true }));
 router.use(express.json({ limit: "15mb" }));
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "/var/data/uploads";
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+router.get("/healthz", (_req, res) => res.sendStatus(200));
+router.get("/", (_req, res) => res.send("🧩 Formulaire Création Référence Pièce PL – OK"));
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^\w.\-() ]+/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
-});
-
-const FORM_FIELDS = {
+const FIELD_LABELS = {
   email: "Adresse e-mail",
   magasin: "Magasin",
   fournisseur: "Fournisseur",
@@ -44,32 +30,33 @@ const FORM_FIELDS = {
   commentaire: "Commentaire",
 };
 
-function escapeHtml(s = "") {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+const UPLOAD_DIR = (process.env.UPLOAD_DIR || path.resolve(process.cwd(), "uploads")).trim();
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch {}
 
-function valueOrEmpty(data, key) {
-  const v = data?.[key];
-  return v !== undefined && v !== null && String(v).trim() !== ""
-    ? escapeHtml(String(v))
-    : "<em>(non renseigné)</em>";
-}
+const upload = multer({
+  dest: UPLOAD_DIR,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const forbidden = /\.(exe|bat|sh|cmd|js)$/i;
+    if (forbidden.test(file.originalname)) {
+      return cb(new Error("Type de fichier non autorisé."), false);
+    }
+    cb(null, true);
+  },
+});
 
-function buildHtml(data = {}) {
-  const rows = Object.entries(FORM_FIELDS)
+function generateHtml(data) {
+  const rows = Object.entries(FIELD_LABELS)
     .map(
       ([key, label]) => `
     <tr>
       <td style="padding:8px; border:1px solid #ccc; background:#f8f8f8; font-weight:bold;">
-        ${escapeHtml(label)}
+        ${label}
       </td>
       <td style="padding:8px; border:1px solid #ccc;">
-        ${valueOrEmpty(data, key)}
+        ${data[key] || "<em>(non renseigné)</em>"}
       </td>
     </tr>
   `
@@ -77,99 +64,93 @@ function buildHtml(data = {}) {
     .join("");
 
   return `
-    <div style="font-family:Arial; max-width:700px; margin:auto;">
-      <h2 style="text-align:center; color:#007bff;">🚚 Formulaire création référence Pièce PL</h2>
+    <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
+      <h2 style="color:#007bff; text-align:center;">🧩 Demande de création référence Pièce PL</h2>
       <table style="width:100%; border-collapse:collapse; margin-top:20px;">
         ${rows}
       </table>
-      <p style="margin-top:20px;">📎 Des fichiers sont joints à ce message si fournis.</p>
+      <p style="margin-top:20px;">📎 Fichiers joints inclus si fournis.</p>
     </div>
   `;
 }
 
-function buildAccuseHtml(data = {}) {
-  const rows = Object.entries(FORM_FIELDS)
-    .map(
-      ([key, label]) => `
-    <tr>
-      <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">
-        ${escapeHtml(label)}
-      </td>
-      <td style="padding:6px; border:1px solid #eee;">
-        ${valueOrEmpty(data, key)}
-      </td>
-    </tr>
-  `
-    )
-    .join("");
+router.post("/submit-form", upload.array("fichiers[]"), async (req, res) => {
+  const formData = req.body;
 
-  return `
-    <div style="font-family:Arial; max-width:700px; margin:auto;">
-      <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
-      <p>Votre demande de création de référence <b>Pièce PL</b> a bien été enregistrée.</p>
-      <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-        ${rows}
-      </table>
-      <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
-    </div>
-  `;
-}
-
-router.post("/submit-form", upload.array("files", 10), async (req, res) => {
-  const formData = req.body || {};
   const files = Array.isArray(req.files) ? req.files : [];
-
   const attachments = files.map((file) => ({
     filename: file.originalname,
     path: file.path,
   }));
 
   try {
-    const destEmail = process.env.DEST_EMAIL_FORMULAIRE_PIECEPL || "";
-    if (!destEmail) {
-      console.error("[creation-piece-pl] DEST_EMAIL_FORMULAIRE_PIECEPL missing");
+    if (!process.env.DEST_EMAIL_FORMULAIRE_PIECEPL) {
+      console.error("[formulaire-piecepl] DEST_EMAIL_FORMULAIRE_PIECEPL missing");
       return res.status(500).send("Erreur: destinataire non configuré.");
     }
 
     const requestId =
       getIdempotencyKey(req) ||
-      (crypto.randomUUID
-        ? crypto.randomUUID()
-        : crypto.randomBytes(16).toString("hex"));
+      (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex"));
 
     const mailOptions = {
-      from: fromEmail,
-      to: destEmail,
-      subject: "🧩 Demande de création référence Pièce PL",
-      html: buildHtml(formData),
+      from: `"Formulaire création Pièce PL" <${fromEmail}>`,
+      to: process.env.DEST_EMAIL_FORMULAIRE_PIECEPL,
+      subject: "📨 Demande de création référence Pièce PL",
+      replyTo: formData.email,
+      html: generateHtml(formData),
       attachments,
     };
 
-    await enqueueMailJob({
-      idempotencyKey: `${requestId}:creation-piece-pl:magasin`,
+    enqueueMailJob({
+      idempotencyKey: `${requestId}:piece-pl:magasin`,
       mailOptions,
       formType: "creation-piece-pl",
       meta: {
         kind: "magasin",
         demandeur: formData.email || "",
+        magasin: (formData.magasin || "").slice(0, 80),
         marque: (formData.marque || "").slice(0, 80),
-        fournisseur: (formData.fournisseur || "").slice(0, 80),
         reference: (formData.reference || "").slice(0, 80),
+        designation: (formData.designation || "").slice(0, 120),
       },
       cleanupPaths: files.map((f) => f.path),
     });
 
     if (formData.email) {
-      const accuseOptions = {
-        from: fromEmail,
+      const accuserecepOptions = {
+        from: `"Service Pièces PL" <${fromEmail}>`,
         to: formData.email,
-        subject: "✔️ Accusé de réception - Création référence Pièce PL",
-        html: buildAccuseHtml(formData),
+        subject: "Votre demande de création de référence pièce a bien été reçue",
+        html: `
+          <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
+            <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
+            <p>Bonjour,</p>
+            <p>Nous avons bien reçu votre demande de création de référence pièce (PL).</p>
+            <p>Nous la traiterons dans les plus brefs délais.</p>
+            <p><b>Résumé :</b></p>
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+              ${Object.entries(FIELD_LABELS)
+                .map(
+                  ([key, label]) => `
+                <tr>
+                  <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">${label}</td>
+                  <td style="padding:6px; border:1px solid #eee;">${formData[key] || "<em>(non renseigné)</em>"}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </table>
+            <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
+            <p>L’équipe Pièces PL</p>
+          </div>
+        `,
+        attachments: [],
       };
 
-      await enqueueMailJob({
-        idempotencyKey: `${requestId}:creation-piece-pl:demandeur`,
-        mailOptions: accuseOptions,
+      enqueueMailJob({
+        idempotencyKey: `${requestId}:piece-pl:ack`,
+        mailOptions: accuserecepOptions,
         formType: "creation-piece-pl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },
         cleanupPaths: [],
@@ -178,7 +159,7 @@ router.post("/submit-form", upload.array("files", 10), async (req, res) => {
 
     return res.status(202).send("Formulaire enregistré. Envoi en cours…");
   } catch (err) {
-    console.error("[creation-piece-pl] enqueue failed:", err);
+    console.error("[formulaire-piecepl] Queue failed:", err);
     return res.status(500).send("Erreur lors de l'enregistrement.");
   }
 });
