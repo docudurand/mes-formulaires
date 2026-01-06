@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Suivi kilométrique des tournées</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f3f4f6;
+    }
+    header {
+      background: #004080;
+      color: #f9fafb;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    header h1 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .filters{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .recap-separator-top td {
+      border-top: 3px solid #9ca3af !important;
+    }
+
+    .year-select{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:0.9rem;
+      color:#ffffff;
+      font-weight:600;
+    }
+
+    .year-select select {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 0.9rem;
+      background: #f9fafb;
+      color: #111827;
+    }
+
+    .create-tour-link{
+      color:#ffffff;
+      font-weight:500;
+      font-size:1.35rem;
+      text-decoration:none;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .create-tour-link:hover{
+      text-decoration:underline;
+    }
+
+    .agency-buttons-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 4px 0;
+    }
+
+    .agency-label {
+      font-size: 0.9rem;
+      color: #374151;
+      font-weight: 600;
+    }
+
+    .agency-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .agency-buttons button {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+    }
+
+    .agency-buttons button:hover {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    .agency-buttons button.active {
+      background: #004080;
+      color: #ffffff;
+      border-color: #004080;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+      transform: translateY(1px);
+    }
+
+    .replacement-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 10px 0;
+      font-size: 0.85rem;
+    }
+
+    .replacement-bar select,
+    .replacement-bar input[type="date"]{
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 0.85rem;
+    }
+
+    .replacement-bar button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #004080;
+      background: #004080;
+      color: #ffffff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      transition: background-color 0.15s ease, border-color 0.15s ease,
+                  box-shadow 0.15s ease, transform 0.05s ease;
+    }
+    .replacement-bar button:hover:not(:disabled) {
+      background: #0755b3;
+      border-color: #0755b3;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+      transform: translateY(1px);
+    }
+    .replacement-bar button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    main {
+      padding: 10px;
+    }
+    .info-line {
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: #4b5563;
+    }
+    .status {
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      color: #6b7280;
+    }
+    .status span {
+      font-weight: 600;
+    }
+    .loader {
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
+    .months-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .month-card {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      padding: 10px;
+      overflow-x: auto;
+    }
+    .month-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .month-title small {
+      font-weight: 400;
+      color: #6b7280;
+      font-size: 0.8rem;
+    }
+    .month-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .print-btn {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #e5e7eb;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .print-btn:hover {
+      background: #d1d5db;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.8rem;
+      min-width: 650px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 2px 4px;
+      text-align: center;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      white-space: nowrap;
+      min-width: 140px;
+      max-width: 200px;
+    }
+    th.total-col,
+    td.total-cell {
+      font-weight: 600;
+      background: #e5e7eb;
+    }
+    td.km {
+      background: #ecfdf3;
+    }
+    td.km-zero {
+      background: #ffffff;
+    }
+
+    .has-comment {
+      background: #fed7aa !important;
+      color: #000000 !important;
+    }
+
+    .weekend {
+      background: #000000 !important;
+      color: #ffffff !important;
+    }
+
+    .absent-cell{
+      background:#fee2e2 !important;
+      color:#991b1b !important;
+      font-weight:600;
+    }
+
+    .comments-legend {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #374151;
+      display: none;
+    }
+    .comments-legend .legend-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .comments-legend ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+    }
+    .comments-legend li {
+      margin-bottom: 2px;
+    }
+
+    .recap-container {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #fefce8;
+      font-size: 0.78rem;
+    }
+    .recap-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .recap-table th,
+    .recap-table td {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .recap-missing {
+      background: #fee2e2;
+    }
+    .recap-absent td{
+      background:#fee2e2;
+      color:#991b1b;
+      font-weight:600;
+    }
+
+    #printContainer {
+      display: none;
+    }
+    .print-page {
+      font-size: 0.9rem;
+    }
+    .print-header {
+      margin-bottom: 8px;
+    }
+    .print-header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: flex-start;
+    }
+    .print-logo {
+      height: 40px;
+      object-fit: contain;
+    }
+    .print-header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    .print-header .print-subtitle {
+      margin-top: 2px;
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
+    @media print {
+      @page {
+        size: landscape;
+        margin: 10mm;
+      }
+      body {
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      header,
+      main {
+        display: none !important;
+      }
+      #printContainer {
+        display: block;
+        padding: 0;
+      }
+      .print-btn {
+        display: none !important;
+      }
+      .comments-legend {
+        display: block;
+      }
+    }
+  
+
+html.dsg-in-iframe, html.dsg-in-iframe body {
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+</style>
+</head>
+<body>
+<script>
+(function () {
+  try {
+    if (window.self !== window.top) {
+      document.documentElement.classList.add("dsg-in-iframe");
+    }
+  } catch (e) {
+    document.documentElement.classList.add("dsg-in-iframe");
+  }
+
+  function heightNow() {
+    const b = document.body;
+    const d = document.documentElement;
+    return Math.max(
+      d ? d.scrollHeight : 0,
+      d ? d.offsetHeight : 0,
+      d ? d.clientHeight : 0,
+      b ? b.scrollHeight : 0,
+      b ? b.offsetHeight : 0,
+      b ? b.clientHeight : 0
+    );
+  }
+
+  function send() {
+    parent.postMessage({ type: "dsg-iframe-size", height: heightNow() + 24 }, "*");
+  }
+
+  window.addEventListener("load", send, { once: true });
+
+  try {
+    const ro = new ResizeObserver(() => send());
+    ro.observe(document.documentElement);
+  } catch (e) {}
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 20) clearInterval(it);
+  }, 300);
+})();
+</script>
+
+
+  <header>
+    <h1>Suivi kilométrique des tournées</h1>
+
+    <div class="filters">
+      <a
+        class="create-tour-link"
+        href="https://mes-formulaires.onrender.com/kilometrage-qrcodes.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Création Fiche Tournée
+      </a>
+
+      <div class="year-select">
+        <span>Année :</span>
+        <select id="yearSelect"></select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="agency-buttons-bar">
+      <span class="agency-label">Magasin :</span>
+      <div id="agencyButtons" class="agency-buttons"></div>
+    </div>
+
+    <div class="replacement-bar" id="replacementBar">
+      <span class="agency-label">Changement de chauffeur :</span>
+      <select id="tourneeSelect">
+        <option value="">— Choisir une tournée —</option>
+      </select>
+      <button id="btnNewDriver" type="button">Nouveau chauffeur</button>
+      <span id="newDriverMsg" class="status"></span>
+    </div>
+
+    <div class="replacement-bar" id="absenceBar">
+      <span class="agency-label">Absence :</span>
+      <select id="absenceTourneeSelect">
+        <option value="">— Choisir une tournée —</option>
+      </select>
+      <input id="absenceDate" type="date" />
+      <input id="absenceNote" type="text" placeholder="Motif (optionnel)" style="min-width:180px;border-radius:999px;border:1px solid #e5e7eb;padding:4px 8px;font-size:0.85rem;" />
+      <button id="btnAbsent" type="button">Absent</button>
+      <span id="absentMsg" class="status"></span>
+    </div>
+
+    <div class="info-line" id="infoLine"></div>
+    <div class="status" id="status"></div>
+    <div id="monthsContainer" class="months-grid"></div>
+  </main>
+
+  <div id="printContainer"></div>
+
+  <img
+    id="printLogoTemplate"
+    src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+    alt="Durand Services"
+    style="display:none"
+  />
+
+  <script>
+    const AGENCES = [
+      "GLEIZE",
+      "ST-JEAN-BONNEFONDS"
+    ];
+
+    const monthNames = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+
+    const yearSelect = document.getElementById("yearSelect");
+    const agencyButtons = document.getElementById("agencyButtons");
+    const infoLine = document.getElementById("infoLine");
+    const statusEl = document.getElementById("status");
+    const monthsContainer = document.getElementById("monthsContainer");
+    const printContainer = document.getElementById("printContainer");
+    const logoTemplate = document.getElementById("printLogoTemplate");
+
+    const tourneeSelect = document.getElementById("tourneeSelect");
+    const btnNewDriver = document.getElementById("btnNewDriver");
+    const newDriverMsg = document.getElementById("newDriverMsg");
+    const replacementBar = document.getElementById("replacementBar");
+
+    const absenceBar = document.getElementById("absenceBar");
+    const absenceTourneeSelect = document.getElementById("absenceTourneeSelect");
+    const absenceDate = document.getElementById("absenceDate");
+    const absenceNote = document.getElementById("absenceNote");
+    const btnAbsent = document.getElementById("btnAbsent");
+    const absentMsg = document.getElementById("absentMsg");
+
+    let currentAgence = "";
+    let currentYear = new Date().getFullYear();
+    let currentData = [];
+    let currentParams = [];
+
+    const YEARS = [2025, 2026];
+
+    function initYearSelect() {
+      yearSelect.innerHTML = "";
+      if (!YEARS.includes(currentYear)) {
+        currentYear = YEARS[0];
+      }
+      YEARS.forEach((y) => {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      });
+    }
+
+    function initAgencyButtons() {
+      agencyButtons.innerHTML = "";
+
+      const sorted = AGENCES.slice().sort((a, b) => a.localeCompare(b, "fr"));
+      sorted.forEach((ag) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = ag;
+        btn.addEventListener("click", () => {
+          currentAgence = ag;
+
+          Array.from(agencyButtons.querySelectorAll("button")).forEach((b) =>
+            b.classList.toggle("active", b === btn)
+          );
+
+          replacementBar.style.display = "flex";
+          absenceBar.style.display = "flex";
+
+          loadData();
+          loadParamsForCurrentAgence();
+        });
+
+        agencyButtons.appendChild(btn);
+      });
+
+      currentAgence = "";
+    }
+
+    function formatFRDateOnly(str) {
+      if (!str) return "";
+
+      const d = new Date(str);
+      if (!isNaN(d)) {
+        const jj = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const aa = d.getFullYear();
+        return `${jj}/${mm}/${aa}`;
+      }
+
+      const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) {
+        return `${m[3]}/${m[2]}/${m[1]}`;
+      }
+
+      return String(str);
+    }
+
+    async function loadParamsForCurrentAgence() {
+      tourneeSelect.innerHTML = '<option value="">— Choisir une tournée —</option>';
+      absenceTourneeSelect.innerHTML = '<option value="">— Choisir une tournée —</option>';
+      newDriverMsg.textContent = "";
+      absentMsg.textContent = "";
+      currentParams = [];
+
+      if (!currentAgence) return;
+
+      try {
+        const res = await fetch(
+          "/api/kilometrage/params?agence=" + encodeURIComponent(currentAgence)
+        );
+        const data = await res.json().catch(() => []);
+        if (!Array.isArray(data)) return;
+
+        currentParams = data;
+
+        data.forEach((p, index) => {
+          const labelTournee = p.tournee || p.codeTournee || "Tournée";
+          const labelChauffeur = p.transporteur || p.codeTransporteur || "Chauffeur";
+          const idInfo = p.id ? " – ID: " + p.id : "";
+          const lastFormatted = p.dernierRemplacement ? formatFRDateOnly(p.dernierRemplacement) : "";
+          const lastInfo = lastFormatted ? " – Dernier rempla.: " + lastFormatted : "";
+
+          const opt = document.createElement("option");
+          opt.value = String(index);
+          opt.textContent = labelTournee + " – " + labelChauffeur + idInfo + lastInfo;
+          tourneeSelect.appendChild(opt);
+
+          const opt2 = document.createElement("option");
+          opt2.value = String(index);
+          opt2.textContent = labelTournee + " – " + labelChauffeur;
+          absenceTourneeSelect.appendChild(opt2);
+        });
+      } catch (err) {
+        console.error("Erreur chargement PARAMS pour l'agence :", err);
+      }
+    }
+
+    btnNewDriver.addEventListener("click", async () => {
+      newDriverMsg.textContent = "";
+
+      if (!currentAgence) {
+        newDriverMsg.textContent = "Choisis d'abord un magasin.";
+        return;
+      }
+
+      const idx = parseInt(tourneeSelect.value, 10);
+      if (isNaN(idx) || !currentParams[idx]) {
+        newDriverMsg.textContent = "Choisis une tournée.";
+        return;
+      }
+
+      const p = currentParams[idx];
+      const codeTournee = p.codeTournee || "";
+      if (!codeTournee) {
+        newDriverMsg.textContent = "Code tournée manquant pour cette ligne PARAMS.";
+        return;
+      }
+
+      btnNewDriver.disabled = true;
+      try {
+        const res = await fetch("/api/kilometrage/newid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agence: currentAgence,
+            codeTournee: codeTournee,
+            action: "newId"
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || "Erreur serveur");
+        }
+
+        newDriverMsg.textContent =
+          "Nouveau chauffeur déclaré. Nouvel ID : " +
+          data.id +
+          ". Merci de créer un nouveau QR code pour le nouveau chauffeur.";
+
+        loadParamsForCurrentAgence();
+      } catch (err) {
+        console.error(err);
+        newDriverMsg.textContent =
+          "Erreur lors de la génération du nouvel ID.";
+      } finally {
+        btnNewDriver.disabled = false;
+      }
+    });
+
+    btnAbsent.addEventListener("click", async () => {
+      absentMsg.textContent = "";
+
+      if (!currentAgence) {
+        absentMsg.textContent = "Choisis d'abord un magasin.";
+        return;
+      }
+
+      const idx = parseInt(absenceTourneeSelect.value, 10);
+      if (isNaN(idx) || !currentParams[idx]) {
+        absentMsg.textContent = "Choisis une tournée.";
+        return;
+      }
+
+      const d = absenceDate.value;
+      if (!d) {
+        absentMsg.textContent = "Choisis une date.";
+        return;
+      }
+
+      const p = currentParams[idx];
+
+      btnAbsent.disabled = true;
+      try {
+        const res = await fetch("/api/kilometrage/absent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agence: currentAgence,
+            codeAgence: p.codeAgence || currentAgence,
+            tournee: p.tournee || "",
+            codeTournee: p.codeTournee || "",
+            chauffeur: p.transporteur || "",
+            codeChauffeur: p.codeTransporteur || "",
+            date: d,
+            note: (absenceNote.value || "").trim()
+          })
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.success === false) {
+          throw new Error(json.error || "Erreur serveur");
+        }
+
+        absentMsg.textContent = "Absence enregistrée.";
+        await loadData();
+      } catch (e) {
+        console.error(e);
+        absentMsg.textContent = "Erreur lors de l'enregistrement de l'absence.";
+      } finally {
+        btnAbsent.disabled = false;
+      }
+    });
+
+    async function loadData() {
+      if (!currentAgence) {
+        infoLine.textContent = "";
+        statusEl.textContent = "";
+        monthsContainer.innerHTML = "";
+        currentData = [];
+        replacementBar.style.display = "none";
+        absenceBar.style.display = "none";
+        return;
+      }
+
+      infoLine.textContent = "Agence : " + currentAgence + " – Année : " + currentYear;
+      statusEl.textContent = "";
+      monthsContainer.innerHTML = "";
+
+      const loader = document.createElement("div");
+      loader.className = "loader";
+      loader.textContent = "Chargement des données.";
+      monthsContainer.appendChild(loader);
+
+      try {
+        const res = await fetch(
+          "/api/kilometrage/data?agence=" +
+            encodeURIComponent(currentAgence) +
+            "&year=" +
+            encodeURIComponent(currentYear)
+        );
+
+        const data = await res.json().catch(() => []);
+        console.log("Données kilométrage reçues :", data);
+        currentData = Array.isArray(data) ? data : [];
+
+        monthsContainer.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          statusEl.innerHTML =
+            'Aucune donnée de kilométrage trouvée pour <span>' +
+            currentAgence +
+            "</span> en <span>" +
+            currentYear +
+            "</span>.";
+          buildMonthsTables({ });
+          return;
+        }
+
+        statusEl.innerHTML =
+          "Données récupérées : <span>" + data.length + "</span> enregistrements.";
+
+        const grouped = {};
+
+        data.forEach((row) => {
+          let d = null;
+
+          if (row.date) {
+            const d1 = new Date(row.date);
+            if (!isNaN(d1)) d = d1;
+          }
+          if (!d && row.timestamp) {
+            const d2 = new Date(row.timestamp);
+            if (!isNaN(d2)) d = d2;
+          }
+          if (!d) return;
+
+          const monthIndex = d.getMonth() + 1;
+          const day = d.getDate();
+
+          const tourneeKey = row.tournee || row.codeTournee || "Tournée inconnue";
+
+          const commentaire = (row.commentaire || "").trim();
+          const isAbsent = commentaire.startsWith("@ABSENT@");
+
+          const kmIsMissing = (row.km === "" || row.km === null || typeof row.km === "undefined");
+          const km = kmIsMissing ? null : Number(row.km);
+
+          if (km === null && !isAbsent) return;
+
+          if (!grouped[monthIndex]) grouped[monthIndex] = {};
+          if (!grouped[monthIndex][tourneeKey]) grouped[monthIndex][tourneeKey] = {};
+          if (!grouped[monthIndex][tourneeKey][day]) {
+            grouped[monthIndex][tourneeKey][day] = { km: 0, commentaires: [], absent: false, absenceInfo: "" };
+          }
+
+          if (isAbsent) {
+            grouped[monthIndex][tourneeKey][day].absent = true;
+            grouped[monthIndex][tourneeKey][day].absenceInfo =
+              commentaire.replace(/^@ABSENT@\s*/,"").trim();
+          } else {
+            grouped[monthIndex][tourneeKey][day].km += km;
+          }
+
+          if (commentaire && !isAbsent) {
+            grouped[monthIndex][tourneeKey][day].commentaires.push(commentaire);
+          }
+        });
+
+        buildMonthsTables(grouped);
+      } catch (err) {
+        console.error("Erreur lors du chargement des données kilométriques :", err);
+        statusEl.textContent =
+          "Erreur lors du chargement des données. Vérifie le serveur ou Apps Script.";
+        currentData = [];
+        buildMonthsTables({ });
+      }
+    }
+
+    function isWeekend(year, monthIndex, day) {
+      const d = new Date(year, monthIndex - 1, day);
+      const dow = d.getDay();
+      return dow === 0 || dow === 6;
+    }
+
+    function buildMonthsTables(grouped) {
+      monthsContainer.innerHTML = "";
+
+      for (let month = 1; month <= 12; month++) {
+        const monthData = grouped[month] || {};
+        const card = document.createElement("div");
+        card.className = "month-card";
+        card.dataset.month = String(month);
+
+        const title = document.createElement("div");
+        title.className = "month-title";
+
+        const leftTitle = document.createElement("span");
+        leftTitle.textContent = monthNames[month - 1];
+
+        const rightPart = document.createElement("div");
+        rightPart.className = "month-actions";
+        const smallInfo = document.createElement("small");
+        smallInfo.textContent = currentAgence + " – " + currentYear;
+
+        const printBtn = document.createElement("button");
+        printBtn.type = "button";
+        printBtn.className = "print-btn";
+        printBtn.textContent = "Imprimer";
+        printBtn.addEventListener("click", () => {
+          printMonth(month, card);
+        });
+
+        const recapBtn = document.createElement("button");
+        recapBtn.type = "button";
+        recapBtn.className = "print-btn";
+        recapBtn.textContent = "Récap";
+        recapBtn.addEventListener("click", () => {
+          toggleRecap(month, card, recapBtn);
+        });
+
+        rightPart.appendChild(smallInfo);
+        rightPart.appendChild(printBtn);
+        rightPart.appendChild(recapBtn);
+
+        title.appendChild(leftTitle);
+        title.appendChild(rightPart);
+        card.appendChild(title);
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        const firstTh = document.createElement("th");
+        firstTh.textContent = "Tournée / Jour";
+        headerRow.appendChild(firstTh);
+
+        const daysInMonth = new Date(currentYear, month, 0).getDate();
+        const weekendDays = [];
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const th = document.createElement("th");
+          th.textContent = day;
+
+          if (isWeekend(currentYear, month, day)) {
+            th.classList.add("weekend");
+            weekendDays.push(day);
+          }
+
+          headerRow.appendChild(th);
+        }
+
+        const totalTh = document.createElement("th");
+        totalTh.textContent = "Total";
+        totalTh.className = "total-col";
+        headerRow.appendChild(totalTh);
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        const tourneeNames = Object.keys(monthData).sort();
+
+        const legendItemsComments = [];
+        const legendItemsAbsences = [];
+
+        if (tourneeNames.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 2 + daysInMonth;
+          cell.textContent = "Aucun kilométrage saisi pour ce mois.";
+          cell.style.textAlign = "center";
+          row.appendChild(cell);
+          tbody.appendChild(row);
+        } else {
+          tourneeNames.forEach((tournee) => {
+            const row = document.createElement("tr");
+            const labelCell = document.createElement("td");
+            labelCell.textContent = tournee;
+            row.appendChild(labelCell);
+
+            const daysByDay = monthData[tournee] || {};
+            let total = 0;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+              const td = document.createElement("td");
+              const dayObj = daysByDay[day];
+
+              const isAbsent = dayObj && dayObj.absent === true;
+              const km = dayObj ? (dayObj.km || 0) : 0;
+              const commentaires = dayObj && dayObj.commentaires ? dayObj.commentaires : [];
+              const hasComment = commentaires.length > 0;
+
+              const hasDayEntry = !!dayObj;
+
+              if (isAbsent) {
+                td.textContent = "ABS";
+                td.className = "absent-cell";
+                const dateStr =
+                  String(day).padStart(2, "0") +
+                  "/" +
+                  String(month).padStart(2, "0") +
+                  "/" +
+                  currentYear;
+                const infoAbs = (dayObj.absenceInfo || "").trim();
+                legendItemsAbsences.push({
+                  date: dateStr,
+                  tournee,
+                  info: infoAbs
+                });
+                td.title = infoAbs ? ("ABSENT - " + infoAbs) : "ABSENT";
+              } else if (hasDayEntry) {
+                td.textContent = String(km);
+                td.className = km > 0 ? "km" : "km-zero";
+                total += km;
+              } else {
+                td.textContent = "";
+                td.className = "km-zero";
+              }
+
+              if (weekendDays.includes(day) && !isAbsent) {
+                td.classList.add("weekend");
+              }
+
+              if (hasComment && !isAbsent) {
+                td.classList.add("has-comment");
+                td.title = commentaires.join(" / ");
+                const dateStr =
+                  String(day).padStart(2, "0") +
+                  "/" +
+                  String(month).padStart(2, "0") +
+                  "/" +
+                  currentYear;
+                commentaires.forEach((c) => {
+                  legendItemsComments.push({
+                    date: dateStr,
+                    tournee,
+                    commentaire: c
+                  });
+                });
+              }
+
+              row.appendChild(td);
+            }
+
+            const hasAnyEntry = Object.keys(daysByDay).length > 0;
+
+            const totalTd = document.createElement("td");
+            totalTd.className = "total-cell";
+            totalTd.textContent = hasAnyEntry ? String(total) : "";
+            row.appendChild(totalTd);
+
+            tbody.appendChild(row);
+          });
+        }
+
+        table.appendChild(tbody);
+        card.appendChild(table);
+
+        if (legendItemsComments.length > 0) {
+          const legendDiv = document.createElement("div");
+          legendDiv.className = "comments-legend";
+
+          const legendTitle = document.createElement("div");
+          legendTitle.className = "legend-title";
+          legendTitle.textContent = "Commentaires du mois :";
+          legendDiv.appendChild(legendTitle);
+
+          const ul = document.createElement("ul");
+          legendItemsComments.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent =
+              item.date + " – " + item.tournee + " : " + item.commentaire;
+            ul.appendChild(li);
+          });
+
+          legendDiv.appendChild(ul);
+          card.appendChild(legendDiv);
+        }
+
+        if (legendItemsAbsences.length > 0) {
+          const legendDiv = document.createElement("div");
+          legendDiv.className = "comments-legend";
+
+          const legendTitle = document.createElement("div");
+          legendTitle.className = "legend-title";
+          legendTitle.textContent = "Absences du mois :";
+          legendDiv.appendChild(legendTitle);
+
+          const ul = document.createElement("ul");
+          legendItemsAbsences.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent =
+              item.date + " – " + item.tournee + " : ABSENT" + (item.info ? (" (" + item.info + ")") : "");
+            ul.appendChild(li);
+          });
+
+          legendDiv.appendChild(ul);
+          card.appendChild(legendDiv);
+        }
+
+        const recapDiv = document.createElement("div");
+        recapDiv.className = "recap-container";
+        recapDiv.style.display = "none";
+        card.appendChild(recapDiv);
+
+        monthsContainer.appendChild(card);
+      }
+    }
+
+    function printMonth(monthIndex, monthCard) {
+      printContainer.innerHTML = "";
+
+      const clone = monthCard.cloneNode(true);
+
+      clone.querySelectorAll(".print-btn").forEach((btn) => btn.remove());
+      clone.querySelectorAll(".recap-container").forEach((recap) => recap.remove());
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "print-page";
+
+      const header = document.createElement("div");
+      header.className = "print-header";
+
+      const top = document.createElement("div");
+      top.className = "print-header-top";
+
+      const logo = logoTemplate.cloneNode(true);
+      logo.style.display = "block";
+      logo.classList.add("print-logo");
+      logo.removeAttribute("id");
+
+      const textBox = document.createElement("div");
+      textBox.className = "print-header-text";
+
+      const title = document.createElement("h1");
+      title.textContent = "Suivi kilométrique – " + currentAgence;
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "print-subtitle";
+      subtitle.textContent = monthNames[monthIndex - 1] + " " + currentYear;
+
+      textBox.appendChild(title);
+      textBox.appendChild(subtitle);
+      top.appendChild(logo);
+      top.appendChild(textBox);
+      header.appendChild(top);
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(clone);
+      printContainer.appendChild(wrapper);
+
+      if (!logo.complete) {
+        logo.onload = () => window.print();
+      } else {
+        window.print();
+      }
+    }
+
+    function toggleRecap(monthIndex, monthCard, btn) {
+      const container = monthCard.querySelector(".recap-container");
+      if (!container) return;
+
+      const isVisible = container.style.display === "block";
+
+      if (!isVisible) {
+        buildRecapContent(monthIndex, container);
+        container.style.display = "block";
+        btn.textContent = "Fermer le récap";
+      } else {
+        container.style.display = "none";
+        btn.textContent = "Récap";
+      }
+    }
+
+    function buildRecapContent(monthIndex, container) {
+      container.innerHTML = "";
+
+      if (!currentData || !currentData.length) {
+        const p = document.createElement("p");
+        p.textContent = "Aucune donnée disponible pour ce mois.";
+        container.appendChild(p);
+        return;
+      }
+
+      const rows = [];
+
+      currentData.forEach((row) => {
+        let d = null;
+
+        if (row.date) {
+          const d1 = new Date(row.date);
+          if (!isNaN(d1)) d = d1;
+        }
+        if (!d && row.timestamp) {
+          const d2 = new Date(row.timestamp);
+          if (!isNaN(d2)) d = d2;
+        }
+        if (!d) return;
+
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        if (month !== monthIndex || year !== currentYear) return;
+
+        const day = d.getDate();
+        const dateStr =
+          String(day).padStart(2, "0") +
+          "/" +
+          String(monthIndex).padStart(2, "0") +
+          "/" +
+          currentYear;
+
+        const tournee = row.tournee || row.codeTournee || "Tournée inconnue";
+        const chauffeur = row.chauffeur || row.codeChauffeur || "Inconnu";
+
+        const commentaire = (row.commentaire || "").trim();
+        const isAbsent = commentaire.startsWith("@ABSENT@");
+        const absenceInfo = commentaire.replace(/^@ABSENT@\s*/,"").trim();
+
+        const km8h  = row.km8h;
+        const km12h = row.km12h;
+        const km14h = row.km14h;
+        const km18h = row.km18h;
+        const total = (row.km === 0 || row.km) ? row.km : "";
+
+        rows.push({
+          date: dateStr,
+          tournee,
+          chauffeur,
+          km8h,
+          km12h,
+          km14h,
+          km18h,
+          total,
+          absent: isAbsent,
+          info: absenceInfo
+        });
+      });
+
+      if (!rows.length) {
+        const p = document.createElement("p");
+        p.textContent = "Aucune ligne de saisie pour ce mois.";
+        container.appendChild(p);
+        return;
+      }
+
+      const title = document.createElement("div");
+      title.className = "recap-title";
+      title.textContent =
+        "Récapitulatif des saisies – " +
+        monthNames[monthIndex - 1] +
+        " " +
+        currentYear +
+        " :";
+      container.appendChild(title);
+
+      const table = document.createElement("table");
+      table.className = "recap-table";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      ["Date", "Tournée", "Chauffeur", "8H", "12H", "14H", "18H", "Total", "Info"].forEach(
+        (label) => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headerRow.appendChild(th);
+        }
+      );
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+
+      let previousDate = null;
+
+      rows
+        .sort((a, b) => {
+          if (a.date === b.date) {
+            if (a.tournee === b.tournee) {
+              return a.chauffeur.localeCompare(b.chauffeur, "fr");
+            }
+            return a.tournee.localeCompare(b.tournee, "fr");
+          }
+          const [da, ma, ya] = a.date.split("/").map(Number);
+          const [db, mb, yb] = b.date.split("/").map(Number);
+          return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+        })
+        .forEach((item) => {
+          const tr = document.createElement("tr");
+
+          if (item.absent) tr.classList.add("recap-absent");
+
+          if (previousDate !== null && previousDate !== item.date) {
+            tr.classList.add("recap-separator-top");
+          }
+          previousDate = item.date;
+
+          const tdDate = document.createElement("td");
+          tdDate.textContent = item.date;
+          tr.appendChild(tdDate);
+
+          const tdTournee = document.createElement("td");
+          tdTournee.textContent = item.tournee;
+          tr.appendChild(tdTournee);
+
+          const tdChauffeur = document.createElement("td");
+          tdChauffeur.textContent = item.chauffeur;
+          tr.appendChild(tdChauffeur);
+
+          function addKmCell(value) {
+            const td = document.createElement("td");
+            if (item.absent) {
+              td.textContent = "";
+              return td;
+            }
+            const empty =
+              value === null ||
+              value === "" ||
+              typeof value === "undefined";
+            if (empty) {
+              td.textContent = "";
+              td.classList.add("recap-missing");
+            } else {
+              td.textContent = value;
+            }
+            return td;
+          }
+
+          tr.appendChild(addKmCell(item.km8h));
+          tr.appendChild(addKmCell(item.km12h));
+          tr.appendChild(addKmCell(item.km14h));
+          tr.appendChild(addKmCell(item.km18h));
+
+          const tdTotal = document.createElement("td");
+          tdTotal.textContent = item.absent ? "ABSENT" : ((item.total === 0 || item.total) ? String(item.total) : "");
+          tr.appendChild(tdTotal);
+
+          const tdInfo = document.createElement("td");
+          tdInfo.textContent = item.absent ? (item.info || "") : "";
+          tr.appendChild(tdInfo);
+
+          tbody.appendChild(tr);
+        });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+
+    yearSelect.addEventListener("change", () => {
+      currentYear = parseInt(yearSelect.value, 10);
+      loadData();
+    });
+
+    initYearSelect();
+    initAgencyButtons();
+  </script>
+
+<script>
+(function () {
+  function send() {
+    const h = Math.max(
+      document.documentElement.scrollHeight || 0,
+      document.body ? document.body.scrollHeight : 0
+    );
+    parent.postMessage({ type: "dsg-iframe-size", height: h }, "*");
+  }
+
+  window.addEventListener("load", send);
+
+  const ro = new ResizeObserver(() => send());
+  ro.observe(document.documentElement);
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "dsg-iframe-request-size") send();
+  });
+
+  let n = 0;
+  const it = setInterval(() => {
+    send();
+    if (++n >= 12) clearInterval(it);
+  }, 400);
+})();
+</script>
+
+</body>
+</html>

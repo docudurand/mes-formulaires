@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Suivi des envois mails</title>
+  <style>
+    :root{
+      --bg:#f3f6fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --accent:#0f4c81;
+      --ok:#16a34a;
+      --ko:#dc2626;
+      --shadow: 0 10px 24px rgba(2,6,23,.06);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{
+      width:100%;
+      max-width:none;
+      margin:0;
+      padding:18px 22px 38px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size:22px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color:var(--accent);
+    }
+    .sub{
+      margin:2px 0 0 0;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .toolbar{
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .filters{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap:12px;
+      align-items:end;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+    }
+
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      outline:none;
+      font-size:14px;
+      background:#fff;
+    }
+    input:focus, select:focus{
+      border-color: rgba(37,99,235,.7);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    .remember{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      background:#fff;
+      height:42px;
+    }
+    .remember input{width:auto}
+    .remember span{
+      color:var(--muted);
+      font-size:13px;
+      font-weight:900;
+      line-height:1.1;
+    }
+
+    .row-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      min-width:150px;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:#334155; min-width:auto}
+    .btn.ghost{background:#eef2ff; color:#1e293b; border:1px solid var(--border); min-width:auto}
+
+    .tableWrap{
+      overflow:auto;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:1000px;
+    }
+    thead th{
+      text-align:left;
+      font-size:13px;
+      padding:12px 12px;
+      background:#eef5ff;
+      color:#0b3a66;
+      border-bottom:1px solid var(--border);
+      position:sticky;
+      top:0;
+      z-index:1;
+      white-space:nowrap;
+    }
+    tbody td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      font-size:14px;
+      vertical-align:top;
+    }
+    tbody tr:hover{background:#f8fbff}
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:950;
+      font-size:12px;
+      border:1px solid var(--border);
+      white-space:nowrap;
+    }
+    .pill.ok{background:rgba(22,163,74,.08); color:var(--ok); border-color:rgba(22,163,74,.25)}
+    .pill.ko{background:rgba(220,38,38,.08); color:var(--ko); border-color:rgba(220,38,38,.25)}
+
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
+    .muted{color:var(--muted); font-weight:900}
+    .err{white-space:normal; color:#991b1b; font-weight:900}
+
+    .c12{grid-column: span 12}
+    .c6{grid-column: span 6}
+    .c5{grid-column: span 5}
+    .c4{grid-column: span 4}
+    .c3{grid-column: span 3}
+    .c2{grid-column: span 2}
+
+    @media (max-width: 1100px){
+      .c6,.c5,.c4,.c3,.c2{grid-column: span 12;}
+      .btn{width:100%}
+      .remember{width:100%}
+      table{min-width:900px;}
+    }
+  </style>
+</head>
+
+<body>
+
+    <section class="card toolbar">
+      <div class="filters">
+        <div class="field c4">
+          <label>Token admin</label>
+          <input id="token" type="password" placeholder="ADMIN_TOKEN (Render)"/>
+        </div>
+
+        <div class="field c4">
+          <label>&nbsp;</label>
+          <div class="remember">
+            <input id="remember" type="checkbox"/>
+            <span>Mémoriser le token sur ce navigateur</span>
+          </div>
+        </div>
+
+        <div class="field c2">
+          <label>&nbsp;</label>
+          <button class="btn ghost" type="button" onclick="clearSavedToken()">Effacer token</button>
+        </div>
+
+        <div class="field c2">
+          <label>Statut</label>
+<select id="status">
+  <option value="">Tous</option>
+  <option value="sent">OK (envoyé)</option>
+  <option value="failed">Échecs (échoué)</option>
+</select>
+        </div>
+
+        <div class="field c3">
+          <label>Formulaire</label>
+          <select id="formType">
+            <option value="">Tous</option>
+          </select>
+        </div>
+
+        <div class="field c5">
+          <label>Objet contient (filtre en direct)</label>
+          <input id="subject" placeholder="ex: Demande de ramasse"/>
+        </div>
+
+        <div class="field c4">
+          <label>Recherche globale</label>
+          <input id="q" placeholder="email, objet, formulaire, statut, meta..."/>
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn" type="button" onclick="loadLogs()">Rafraîchir</button>
+
+        <button class="btn secondary" type="button" id="btnAuto" onclick="toggleAutoRefresh()">
+          ⏸ Pause auto
+        </button>
+
+        <span class="muted" id="autoInfo" style="font-size:13px;"></span>
+        <span class="muted" id="info" style="font-size:13px;"></span>
+      </div>
+    </section>
+
+    <section class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Destinataire</th>
+            <th>Objet</th>
+            <th>Formulaire</th>
+            <th>Statut</th>
+            <th>Erreur</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
+
+<script>
+  const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
+  const REMEMBER_KEY = "MAILLOG_REMEMBER";
+
+  const FIXED_LIMIT = 500;
+
+  const $ = (id) => document.getElementById(id);
+
+  let allLogs = [];
+  let isLoading = false;
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function saveTokenIfNeeded(){
+    const remember = $("remember").checked;
+    localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+    if (remember) localStorage.setItem(TOKEN_KEY, $("token").value || "");
+    else localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function restoreToken(){
+    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
+    $("remember").checked = remember;
+    if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";
+  }
+
+  function clearSavedToken(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(REMEMBER_KEY, "0");
+    $("remember").checked = false;
+    $("token").value = "";
+    allLogs = [];
+    render([]);
+    $("info").textContent = "";
+  }
+  window.clearSavedToken = clearSavedToken;
+
+  function fmtFR(iso){
+    if(!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("fr-FR", {
+      timeZone: "Europe/Paris",
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit"
+    }).replace(",", "");
+  }
+
+  function norm(s){ return String(s||"").toLowerCase(); }
+
+  async function apiListLogs(){
+    const token = ($("token").value || "").trim();
+    const q = encodeURIComponent(($("q").value || "").trim());
+    const limit = encodeURIComponent(String(FIXED_LIMIT));
+
+    const url = `/api/mail-logs?limit=${limit}&q=${q}`;
+
+    const res = await fetch(url, {
+      headers: token ? { "x-admin-token": token } : {}
+    });
+
+    const text = await res.text();
+
+    if(!res.ok){
+      throw new Error(text || ("HTTP " + res.status));
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Réponse JSON invalide (HTTP " + res.status + ") :: " + text.slice(0, 280));
+    }
+
+    const rows = Array.isArray(data) ? data : (data?.logs || data?.data?.logs || []);
+    if (!Array.isArray(rows)) {
+      throw new Error("Réponse JSON inattendue (HTTP " + res.status + ") :: " + text.slice(0, 280));
+    }
+
+    return rows;
+  }
+
+  function rebuildFormTypeOptions(logs){
+    const sel = $("formType");
+    const current = sel.value;
+    const set = new Set();
+
+    for (const x of logs) {
+      const v = String(x.formType || "").trim();
+      if (v) set.add(v);
+    }
+
+    const all = Array.from(set).sort();
+    sel.innerHTML =
+      `<option value="">Tous</option>` +
+      all.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+
+    if (all.includes(current)) sel.value = current;
+  }
+
+  function applyFilters(logs){
+    const fSub = norm($("subject").value);
+    const fForm = $("formType").value;
+    const fStatus = $("status").value;
+    const fQ = norm($("q").value);
+
+    return logs.filter(x=>{
+      const to = String(x.to||"");
+      const subject = String(x.subject||"");
+      const formType = String(x.formType||"");
+      const status = String(x.status||"");
+      const error = String(x.error||"");
+      const meta = String(x.meta||"");
+
+      if (fForm && formType !== fForm) return false;
+      if (fStatus && status !== fStatus) return false;
+
+      if (fSub && !norm(subject).includes(fSub)) return false;
+
+      if (fQ){
+        const hay = norm([x.ts, to, subject, formType, status, error, meta].join(" "));
+        if (!hay.includes(fQ)) return false;
+      }
+
+      return true;
+    });
+  }
+
+  function render(logs){
+    const tb = $("tbody");
+    if (!logs.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="muted">Aucune ligne à afficher.</td></tr>`;
+      return;
+    }
+
+    tb.innerHTML = logs.map(x=>{
+const status = String(x.status || "");
+const pillCls = status === "sent" ? "ok" : (status === "failed" ? "ko" : "");
+const pillTxt =
+  status === "sent" ? "envoyé" :
+  status === "failed" ? "échoué" :
+  (status || "—");
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(fmtFR(x.ts))}</td>
+          <td>${escapeHtml(x.to || "—")}</td>
+          <td>${escapeHtml(x.subject || "—")}</td>
+          <td>${escapeHtml(x.formType || "—")}</td>
+          <td><span class="pill ${pillCls}">${escapeHtml(pillTxt)}</span></td>
+          <td class="err">${escapeHtml(x.error || "")}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderFromCache(){
+    const filtered = applyFilters(allLogs);
+    render(filtered);
+    $("info").textContent =
+      `Dernière mise à jour : ${fmtFR(new Date().toISOString())} — ${filtered.length} ligne(s)`;
+  }
+
+  async function loadLogs(){
+    if (isLoading) return;
+    isLoading = true;
+
+    const info = $("info");
+    try{
+      saveTokenIfNeeded();
+      info.textContent = "Chargement...";
+
+      const logs = await apiListLogs();
+      allLogs = logs;
+
+      rebuildFormTypeOptions(allLogs);
+      renderFromCache();
+    }catch(e){
+      console.error(e);
+      $("tbody").innerHTML =
+        `<tr><td colspan="6" class="err">Erreur: ${escapeHtml(String(e?.message||e))}</td></tr>`;
+      info.textContent = "";
+    } finally {
+      isLoading = false;
+    }
+  }
+  window.loadLogs = loadLogs;
+
+  let tSubject = null;
+  $("subject").addEventListener("input", ()=>{
+    clearTimeout(tSubject);
+    tSubject = setTimeout(renderFromCache, 120);
+  });
+
+  let tQ = null;
+  $("q").addEventListener("input", ()=>{
+    clearTimeout(tQ);
+    tQ = setTimeout(renderFromCache, 120);
+  });
+
+  ["formType","status"].forEach(id=>{
+    $(id).addEventListener("change", renderFromCache);
+  });
+
+  $("remember").addEventListener("change", saveTokenIfNeeded);
+  $("token").addEventListener("input", ()=>{
+    if ($("remember").checked) saveTokenIfNeeded();
+  });
+
+  let autoTimer = null;
+  let autoEnabled = true;
+
+  function updateAutoUI(){
+    const btn = $("btnAuto");
+    const info = $("autoInfo");
+    if (autoEnabled) {
+      btn.textContent = "⏸ Pause auto";
+      info.textContent = "Actualisation automatique : toutes les 30 secondes";
+    } else {
+      btn.textContent = "▶ Reprendre auto";
+      info.textContent = "Actualisation automatique : en pause";
+    }
+  }
+
+  function startAutoRefresh(){
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = setInterval(() => {
+      if (!autoEnabled) return;
+      loadLogs();
+    }, 30000);
+  }
+
+  function toggleAutoRefresh(){
+    autoEnabled = !autoEnabled;
+    updateAutoUI();
+  }
+  window.toggleAutoRefresh = toggleAutoRefresh;
+
+  restoreToken();
+  updateAutoUI();
+  loadLogs();
+  startAutoRefresh();
+</script>
+</body>
+</html>

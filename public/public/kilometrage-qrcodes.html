@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Générateur de QR codes – Kilométrage tournées</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 0;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .logo img {
+      max-width: 160px;
+      height: auto;
+    }
+    h1 {
+      margin: 4px 0 16px;
+      font-size: 1.3rem;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    button {
+      border: none;
+      cursor: pointer;
+      background: #004080;
+      color: #fff;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    button.secondary {
+      background: #4b5563;
+    }
+    .muted {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    #qrcode {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 12px;
+      min-height: 260px;
+    }
+    #qrcode canvas, #qrcode img {
+      max-width: 100%;
+      height: auto;
+    }
+    .url-box {
+      margin-top: 8px;
+    }
+    .url-box input {
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="logo">
+        <img id="durandLogo"
+             src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png"
+             alt="Logo Durand Services" />
+      </div>
+      <h1>Générateur de QR codes – Kilométrage tournées</h1>
+
+      <div class="grid">
+        <div>
+          <div class="field">
+            <label for="baseUrl">URL de base</label>
+            <input id="baseUrl" type="text"
+                   value="https://mes-formulaires.onrender.com/kilometrage-saisie.html" />
+          </div>
+
+          <div class="field">
+            <label for="agence">Agence</label>
+            <select id="agence">
+              <option value="">— Sélectionne une agence —</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="tourneePreset">Tournée / Transporteur</label>
+            <select id="tourneePreset">
+              <option value="">— Choisir une tournée —</option>
+            </select>
+            <div class="muted">
+              Choisis une tournée pour pré-remplir les champs ci-dessous. Tu peux ensuite les modifier.
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="transporteur">Nom du transporteur / chauffeur</label>
+            <input id="transporteur" type="text" placeholder="Ex : C CHEZ VOUS ou WARNING" />
+          </div>
+
+          <div class="field">
+            <label for="codeTransporteur">Code chauffeur</label>
+            <input id="codeTransporteur" type="text" placeholder="Ex : C CHEZ VOUS ou WARNING" />
+          </div>
+
+          <div class="field">
+            <label for="tournee">Nom de la tournée</label>
+            <input id="tournee" type="text" placeholder="Ex : Tournée 1 C CHEZ VOUS" />
+          </div>
+
+          <div class="field">
+            <label for="codeTournee">Code tournée</label>
+            <input id="codeTournee" type="text" placeholder="Ex : T1" />
+          </div>
+
+          <button id="btnGenerate">Générer le QR code</button>
+
+          <div class="url-box">
+            <label for="finalUrl">URL générée</label>
+            <input id="finalUrl" type="text" readonly />
+          </div>
+        </div>
+
+        <div>
+          <div id="qrcode">Le QR code apparaîtra ici</div>
+          <button id="btnDownload" class="secondary" style="width:100%;margin-top:8px;" disabled>
+            Télécharger la fiche (PNG)
+          </button>
+          <div class="muted">
+            Le fichier téléchargé est la feuille kilométrique complète avec le QR code dans le cadre bleu.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+    const $agence = document.getElementById("agence");
+    const $tourneePreset = document.getElementById("tourneePreset");
+    const $transporteur = document.getElementById("transporteur");
+    const $codeTransporteur = document.getElementById("codeTransporteur");
+    const $tournee = document.getElementById("tournee");
+    const $codeTournee = document.getElementById("codeTournee");
+    const $baseUrl = document.getElementById("baseUrl");
+    const $finalUrl = document.getElementById("finalUrl");
+    const $btnGenerate = document.getElementById("btnGenerate");
+    const $btnDownload = document.getElementById("btnDownload");
+    const $qrcode = document.getElementById("qrcode");
+
+    let allParams = [];
+
+    const FRAME_URLS = {
+      CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
+      WARNING:   "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/warning.png"
+    };
+    const DEFAULT_FRAME_BRAND = "CCHEZVOUS";
+
+    function slugify(str) {
+      return (str || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Za-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .toUpperCase();
+    }
+
+    async function loadParams() {
+      try {
+        const res = await fetch("/api/kilometrage/params");
+        const data = await res.json().catch(() => []);
+        if (!Array.isArray(data)) {
+          console.error("PARAMS inattendus :", data);
+          return;
+        }
+        allParams = data;
+
+        const setAgences = new Set();
+        allParams.forEach(p => {
+          const ag = p.agence || p.codeAgence;
+          if (ag) setAgences.add(ag);
+        });
+
+        $agence.innerHTML = '<option value="">— Sélectionne une agence —</option>';
+        Array.from(setAgences).sort().forEach(ag => {
+          const opt = document.createElement("option");
+          opt.value = ag;
+          opt.textContent = ag;
+          $agence.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Erreur chargement PARAMS :", err);
+      }
+    }
+
+    function refreshTourneesForAgence() {
+      const ag = $agence.value;
+      $tourneePreset.innerHTML = '<option value="">— Choisir une tournée —</option>';
+
+      if (!ag) return;
+
+      const filtered = allParams.filter(p => {
+        const a = p.agence || p.codeAgence;
+        return a === ag;
+      });
+
+      filtered.forEach((p, index) => {
+        const opt = document.createElement("option");
+        opt.value = String(index);
+        const chauffeur = p.chauffeur || p.transporteur || p.codeChauffeur || p.codeTransporteur || "Transporteur";
+        opt.textContent = (p.tournee || "Tournée") + " – " + chauffeur;
+        opt.dataset.index = String(index);
+        $tourneePreset.appendChild(opt);
+      });
+    }
+
+    $agence.addEventListener("change", () => {
+      refreshTourneesForAgence();
+      $transporteur.value = "";
+      $codeTransporteur.value = "";
+      $tournee.value = "";
+      $codeTournee.value = "";
+    });
+
+    $tourneePreset.addEventListener("change", () => {
+      const ag = $agence.value;
+      if (!ag) return;
+
+      const filtered = allParams.filter(p => {
+        const a = p.agence || p.codeAgence;
+        return a === ag;
+      });
+
+      const idxStr = $tourneePreset.value;
+      const idx = parseInt(idxStr, 10);
+      if (isNaN(idx) || !filtered[idx]) return;
+
+      const p = filtered[idx];
+
+      const chauffeurName = p.chauffeur || p.transporteur || "";
+      const chauffeurCode = p.codeChauffeur || p.codeTransporteur || slugify(chauffeurName);
+
+      $transporteur.value = chauffeurName;
+      $codeTransporteur.value = chauffeurCode;
+      $tournee.value = p.tournee || "";
+      $codeTournee.value = p.codeTournee || "";
+    });
+
+    function buildUrl() {
+      const base = ($baseUrl.value || "").trim();
+      const agence = $agence.value.trim();
+      const transporteur = $transporteur.value.trim();
+      let codeTrans = $codeTransporteur.value.trim();
+      const tournee = $tournee.value.trim();
+      const codeTournee = $codeTournee.value.trim();
+
+      if (!base || !agence || !tournee || !codeTournee || !transporteur) {
+        alert("Merci de remplir au minimum : URL de base, agence, transporteur, tournée et code tournée.");
+        return null;
+      }
+
+      if (!codeTrans) {
+        codeTrans = slugify(transporteur);
+        $codeTransporteur.value = codeTrans;
+      }
+
+      let idQr = "";
+      const matching = allParams.find((p) => {
+        const a = p.agence || p.codeAgence;
+        const ct = p.codeTournee || "";
+        return a === agence && ct === codeTournee;
+      });
+
+      if (matching && matching.id) {
+        idQr = String(matching.id).trim();
+      }
+
+      if (!idQr) {
+        alert(
+          "Aucun ID n'est défini pour cette tournée.\n" +
+          "Va d'abord sur la page de suivi, sélectionne cette tournée et clique sur 'Nouveau chauffeur' " +
+          "pour générer un nouvel ID, puis reviens ici pour générer le QR code."
+        );
+        return null;
+      }
+
+      const url =
+        base +
+        "?agence=" + encodeURIComponent(agence) +
+        "&codeAgence=" + encodeURIComponent(agence) +
+        "&tournee=" + encodeURIComponent(tournee) +
+        "&codeTournee=" + encodeURIComponent(codeTournee) +
+        "&chauffeur=" + encodeURIComponent(transporteur) +
+        "&codeChauffeur=" + encodeURIComponent(codeTrans) +
+        "&id=" + encodeURIComponent(idQr);
+
+      return url;
+    }
+
+
+    $btnGenerate.addEventListener("click", () => {
+      const url = buildUrl();
+      if (!url) return;
+
+      $finalUrl.value = url;
+
+      $qrcode.innerHTML = "";
+      new QRCode($qrcode, {
+        text: url,
+        width: 256,
+        height: 256,
+        correctLevel: QRCode.CorrectLevel.L
+      });
+
+      setTimeout(() => {
+        const canvas = $qrcode.querySelector("canvas");
+        $btnDownload.disabled = !canvas;
+      }, 200);
+    });
+
+    function detectBrand() {
+      const code = ($codeTransporteur.value || "").trim().toUpperCase();
+      const name = ($transporteur.value || "").trim().toUpperCase();
+
+      if (code.includes("WARN") || name.includes("WARN")) {
+        return "WARNING";
+      }
+      if (code.includes("CHEZ") || code.includes("CCV") || name.includes("CHEZ")) {
+        return "CCHEZVOUS";
+      }
+      return DEFAULT_FRAME_BRAND;
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = url;
+      });
+    }
+
+    $btnDownload.addEventListener("click", async () => {
+      const qrCanvas = $qrcode.querySelector("canvas");
+      if (!qrCanvas) return;
+
+      const agence = $agence.value || "AGENCE";
+      const tourneeName = $tournee.value || "Tournée";
+      const tourneeCode = slugify(tourneeName);
+
+      const labelTop = agence;
+      const labelBottom = tourneeName;
+
+      const brand = detectBrand();
+      const frameUrl = FRAME_URLS[brand] || FRAME_URLS[DEFAULT_FRAME_BRAND];
+
+      try {
+        const frameImg = await loadImage(frameUrl);
+
+        const w = frameImg.width;
+        const h = frameImg.height;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(frameImg, 0, 0, w, h);
+
+        const qrSize = w * 0.2160;
+        const qrX = w * 0.01813;
+        const qrY = h * 0.08253;
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(qrX, qrY, qrSize, qrSize);
+
+        const innerPad = qrSize * 0.01;
+        const innerSize = qrSize - innerPad * 2;
+        ctx.drawImage(qrCanvas, qrX + innerPad, qrY + innerPad, innerSize, innerSize);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+
+        const textLeft   = w * 0.085;
+        const textCenterY = h * 0.0386;
+        const maxWidth   = w * 0.155;
+
+        let fontSize = Math.round(h * 0.031);
+        let width1, width2, maxW;
+        do {
+          ctx.font = "bold " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+          width1 = ctx.measureText(labelTop).width;
+          width2 = ctx.measureText(labelBottom).width;
+          maxW = Math.max(width1, width2);
+          fontSize--;
+        } while (maxW > maxWidth && fontSize > 10);
+
+        const lineGap = fontSize + 4;
+        const firstY = textCenterY - lineGap / 2;
+        const secondY = textCenterY + lineGap / 2;
+
+        ctx.fillText(labelTop,    textLeft, firstY);
+        ctx.fillText(labelBottom, textLeft, secondY);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `Feuille_kilometrique_${agence}_${tourneeCode}.png`;
+        a.click();
+      } catch (e) {
+        console.error("Erreur lors du chargement de l'image de fond :", e);
+        alert("Impossible de charger l'image de la feuille kilométrique.");
+      }
+    });
+
+    loadParams();
+  </script>
+</body>
+</html>

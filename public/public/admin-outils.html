@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin – Outils</title>
+  <style>
+    :root{
+      --primary:#004080;
+      --ink:#073763;
+      --bg:#f5f9fc;
+      --card:#ffffff;
+      --line:#e5e7eb;
+      --shadow:0 8px 26px rgba(0,0,0,0.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+    }
+    header{
+      background:var(--card);
+      box-shadow:var(--shadow);
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+    .wrap{width:100%;margin:0;padding:14px 16px}
+    .titleRow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    h1{margin:0;font-size:1.2rem;color:var(--primary)}
+    .sub{margin:4px 0 0;color:#47607a;font-size:.95rem}
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px 16px 14px;
+      border-top:1px solid var(--line);
+    }
+    .tab{
+      appearance:none;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .tab[aria-selected="true"]{
+      background:var(--primary);
+      border-color:var(--primary);
+      color:#fff;
+    }
+
+.panelWrap{
+  width:100%;
+  margin:0;
+  padding:14px 16px 18px;
+}
+    .panel{
+      display:none;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      overflow:hidden;
+      box-shadow:var(--shadow);
+    }
+    .panel.active{display:block}
+
+.frame{
+  width:100%;
+  height:calc(100vh - 140px);
+  border:0;
+  display:block;
+  background:#fff;
+}
+@media (max-width:600px){
+  .frame{
+    height:calc(100vh - 150px);
+    min-height:620px;
+  }
+}
+
+
+    .hint{
+      margin:0 0 10px;
+      color:#47607a;
+      font-size:.92rem;
+    }
+    .pill{
+      display:inline-block;
+      padding:2px 10px;
+      border-radius:999px;
+      background:#eaf6ff;
+      color:var(--primary);
+      font-weight:700;
+      font-size:.85rem;
+      margin-left:8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+
+  <div class="tabs" role="tablist" aria-label="Outils admin">
+    <button class="tab" role="tab" id="tab-parc"  aria-controls="panel-parc"  aria-selected="true"  data-target="parc">Parc & prêts</button>
+    <button class="tab" role="tab" id="tab-comp"  aria-controls="panel-comp"  aria-selected="false" data-target="comp">Compteurs</button>
+    <button class="tab" role="tab" id="tab-mails" aria-controls="panel-mails" aria-selected="false" data-target="mails">Suivi e-mails</button>
+  </div>
+</header>
+
+<div class="panelWrap">
+
+  <section class="panel active" id="panel-parc" role="tabpanel" aria-labelledby="tab-parc">
+    <iframe class="frame" title="Parc & prêts véhicules" data-src="/pret/admin"></iframe>
+  </section>
+
+  <section class="panel" id="panel-comp" role="tabpanel" aria-labelledby="tab-comp">
+    <iframe class="frame" title="Compteurs" data-src="/compteur.html"></iframe>
+  </section>
+
+  <section class="panel" id="panel-mails" role="tabpanel" aria-labelledby="tab-mails">
+    <iframe class="frame" title="Suivi e-mails" data-src="/suivi-mails.html"></iframe>
+  </section>
+</div>
+
+<script>
+  const tabs = Array.from(document.querySelectorAll(".tab"));
+  const panels = {
+    parc:  document.getElementById("panel-parc"),
+    comp:  document.getElementById("panel-comp"),
+    mails: document.getElementById("panel-mails"),
+  };
+
+  function ensureIframeLoaded(panel){
+    const iframe = panel.querySelector("iframe[data-src]");
+    if(!iframe) return;
+    if(!iframe.src){
+      iframe.src = iframe.dataset.src;
+    }
+  }
+
+  function setActive(key, pushHash=true){
+    tabs.forEach(t => {
+      const on = (t.dataset.target === key);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+
+    Object.entries(panels).forEach(([k, p]) => {
+      const on = (k === key);
+      p.classList.toggle("active", on);
+      if(on) ensureIframeLoaded(p);
+    });
+
+    if(pushHash){
+      location.hash = key;
+    }
+  }
+
+  document.querySelector(".tabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if(!btn) return;
+    setActive(btn.dataset.target, true);
+  });
+
+  const initial = (location.hash || "#parc").replace("#", "");
+  if(panels[initial]){
+    setActive(initial, false);
+  }else{
+    ensureIframeLoaded(panels.parc);
+  }
+</script>
+
+</body>
+</html>
