@@ -2,7 +2,6 @@ import express from "express";
 import multer from "multer";
 import cors from "cors";
 import fs from "fs";
-import path from "path";
 import dotenv from "dotenv";
 import crypto from "crypto";
 
@@ -20,18 +19,45 @@ router.use(express.json({ limit: "15mb" }));
 router.get("/healthz", (_req, res) => res.sendStatus(200));
 router.get("/", (_req, res) => res.send("🛞 Formulaire Création Pneumatique VL – OK"));
 
+const UPLOAD_DIR = (process.env.UPLOAD_DIR || "/var/data/uploads").trim();
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch {}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const safe = String(file.originalname || "file")
+      .replace(/[^\w.\-() ]+/g, "_")
+      .slice(0, 160);
+    cb(null, `${Date.now()}-${safe}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const forbidden = /\.(exe|bat|sh|cmd|js)$/i;
+    if (forbidden.test(file.originalname || "")) {
+      return cb(new Error("Type de fichier non autorisé."), false);
+    }
+    cb(null, true);
+  },
+});
+
 const FIELD_LABELS = {
-  email:       "Adresse e-mail",
+  email: "Adresse e-mail",
   fournisseur: "Fournisseur de Réappro",
-  ean:         "EAN",
-  cai:         "CAI",
-  adherence:   "Adhérence sol mouillé",
-  conso:       "Consommation carburant",
-  sonore:      "Niveau sonore",
-  classe:      "Classe de performance",
+  ean: "EAN",
+  cai: "CAI",
+  adherence: "Adhérence sol mouillé",
+  conso: "Consommation carburant",
+  sonore: "Niveau sonore",
+  classe: "Classe de performance",
   designation: "Désignation Pneu",
-  prixBF:      "Prix BF",
-  prixAchat:   "Prix d'achat"
+  prixBF: "Prix BF",
+  prixAchat: "Prix d'achat",
 };
 
 function escapeHtml(s = "") {
@@ -51,7 +77,8 @@ function valueOrEmpty(v) {
 
 function generateHtml(data = {}) {
   const rows = Object.entries(FIELD_LABELS)
-    .map(([key, label]) => `
+    .map(
+      ([key, label]) => `
       <tr>
         <td style="padding:8px; border:1px solid #ccc; background:#f8f8f8; font-weight:bold;">
           ${escapeHtml(label)}
@@ -60,7 +87,8 @@ function generateHtml(data = {}) {
           ${valueOrEmpty(data[key])}
         </td>
       </tr>
-    `)
+    `
+    )
     .join("");
 
   return `
@@ -69,93 +97,69 @@ function generateHtml(data = {}) {
       <table style="width:100%; border-collapse:collapse; margin-top:20px;">
         ${rows}
       </table>
-      <p style="margin-top:20px;">📎 Fichiers joints inclus si fournis.</p>
+      <p style="margin-top:20px;">📎 Des fichiers sont joints à ce message si fournis.</p>
     </div>
   `;
 }
 
 function accuseHtml(data = {}) {
+  const rows = Object.entries(FIELD_LABELS)
+    .map(
+      ([key, label]) => `
+      <tr>
+        <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">
+          ${escapeHtml(label)}
+        </td>
+        <td style="padding:6px; border:1px solid #eee;">
+          ${valueOrEmpty(data[key])}
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+
   return `
     <div style="font-family:Arial,sans-serif; max-width:700px; margin:auto;">
       <h2 style="text-align:center; color:#28a745;">✔️ Accusé de réception</h2>
-      <p>Bonjour,</p>
-      <p>Nous avons bien reçu votre demande de création de référence pneumatique VL.</p>
-      <p>Nous la traiterons dans les plus brefs délais.<br><b>Résumé de votre demande :</b></p>
-      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-        ${Object.entries(FIELD_LABELS).map(([key, label]) => `
-          <tr>
-            <td style="padding:6px; border:1px solid #eee; background:#f8f8f8; font-weight:bold;">
-              ${escapeHtml(label)}
-            </td>
-            <td style="padding:6px; border:1px solid #eee;">
-              ${valueOrEmpty(data[key])}
-            </td>
-          </tr>
-        `).join("")}
+      <p>Votre demande de création de référence pneumatique VL a bien été enregistrée.</p>
+      <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+        ${rows}
       </table>
       <p style="margin-top:20px;">Ceci est un accusé automatique, merci de ne pas répondre.</p>
-      <p>L’équipe Pneumatiques VL</p>
     </div>
   `;
 }
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "/var/data/uploads";
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^\w.\-() ]+/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const forbidden = /\.(exe|bat|sh|cmd|js)$/i;
-    if (forbidden.test(file.originalname)) {
-      return cb(new Error("Type de fichier non autorisé."), false);
-    }
-    cb(null, true);
-  }
-});
 
 router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => {
   const formData = req.body || {};
   const files = Array.isArray(req.files) ? req.files : [];
 
-  const attachments = files.map((file) => ({
-    filename: file.originalname,
-    path: file.path,
+  const attachments = files.map((f) => ({
+    filename: f.originalname,
+    path: f.path,
   }));
 
   try {
-    const to = process.env.DEST_EMAIL_FORMULAIRE_PNEU || "";
+    const to = (process.env.DEST_EMAIL_FORMULAIRE_PNEU || "").trim();
     if (!to) {
-      console.error("[formulaire-pneu] DEST_EMAIL_FORMULAIRE_PNEU missing");
-      return res.status(500).send("Erreur d'envoi: destinataire non configuré.");
+      console.error("[creation-pneu-vl] DEST_EMAIL_FORMULAIRE_PNEU missing");
+      return res.status(500).send("Erreur: destinataire non configuré.");
     }
 
     const requestId =
       getIdempotencyKey(req) ||
-      (crypto.randomUUID
-        ? crypto.randomUUID()
-        : crypto.randomBytes(16).toString("hex"));
-
-    const mailOptions = {
-      from: `"Formulaire création Pneu VL" <${fromEmail}>`,
-      to,
-      subject: "📨 Demande de création référence Pneumatique VL",
-      replyTo: formData.email || undefined,
-      html: generateHtml(formData),
-      attachments,
-    };
+      (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex"));
 
     await enqueueMailJob({
       idempotencyKey: `${requestId}:creation-pneu-vl:magasin`,
-      mailOptions,
+      mailOptions: {
+        from: `"Formulaire création Pneu VL" <${fromEmail}>`,
+        to,
+        subject: "🛞 Demande de création référence Pneumatique VL",
+        replyTo: formData.email || undefined,
+        html: generateHtml(formData),
+        attachments,
+      },
       formType: "creation-pneu-vl",
       meta: {
         kind: "magasin",
@@ -168,16 +172,14 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
     });
 
     if (formData.email) {
-      const accuseOptions = {
-        from: `"Service Pneumatiques VL" <${fromEmail}>`,
-        to: formData.email,
-        subject: "Votre demande de création de référence pneu a bien été reçue",
-        html: accuseHtml(formData),
-      };
-
       await enqueueMailJob({
         idempotencyKey: `${requestId}:creation-pneu-vl:demandeur`,
-        mailOptions: accuseOptions,
+        mailOptions: {
+          from: `"Service Pneumatiques VL" <${fromEmail}>`,
+          to: formData.email,
+          subject: "✔️ Accusé de réception - Création Pneu VL",
+          html: accuseHtml(formData),
+        },
         formType: "creation-pneu-vl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },
         cleanupPaths: [],
@@ -186,7 +188,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
 
     return res.status(202).send("Formulaire enregistré. Envoi en cours…");
   } catch (err) {
-    console.error("[formulaire-pneu] enqueue failed:", err);
+    console.error("[creation-pneu-vl] enqueue failed:", err);
     return res.status(500).send("Erreur lors de l'envoi.");
   }
 });
