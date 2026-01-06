@@ -119,7 +119,6 @@ router.post("/submit-form", upload.array("fichiers[]"), async (req, res) => {
       cleanupPaths: files.map((f) => f.path),
     });
 
-    // JOB 2: accusé réception (sans PJ)
     if (formData.email) {
       const accuserecepOptions = {
         from: `"Service Pneumatiques VL" <${fromEmail}>`,

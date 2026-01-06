@@ -20,6 +20,8 @@ const RETENTION_DAYS_DONE = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_DONE ||
 const RETENTION_DAYS_FAILED = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_FAILED || 30);
 const RETENTION_DAYS_IDEM = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_IDEM || 60);
 
+const FAILED_ALERT_TO = (process.env.MAIL_FAILED_ALERT_TO || "").trim();
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -44,6 +46,59 @@ function getTo(mailOptions) {
   const to = mailOptions?.to;
   if (Array.isArray(to)) return to.join(", ");
   return to || "";
+}
+
+function attachmentsThatExist(mailOptions) {
+  const atts = Array.isArray(mailOptions?.attachments) ? mailOptions.attachments : [];
+  return atts.filter((a) => a && a.path && fs.existsSync(a.path));
+}
+
+async function sendFailedAlert({ job, formType, msg }) {
+  if (!FAILED_ALERT_TO) return;
+  if (!transporter) return;
+
+  try {
+    const original = job?.payload?.mailOptions || {};
+    const originalTo = getTo(original);
+    const originalSubject = String(original?.subject || "");
+    const originalFrom = original?.from || process.env.FROM_EMAIL || process.env.SMTP_USER || "";
+
+    const originalHtml = String(original?.html || "");
+    const htmlCopy = `
+      <div style="font-family:Arial,sans-serif; max-width:900px; margin:auto;">
+        <h2 style="color:#c62828;">🚨 ALERTE – Mail FAILED</h2>
+        <p><b>Job ID :</b> ${job?.jobId || ""}</p>
+        <p><b>Formulaire :</b> ${formType}</p>
+        <p><b>Tentatives :</b> ${job?.attempts || 0} / ${MAX_ATTEMPTS}</p>
+        <p><b>Destinataire :</b> ${originalTo}</p>
+        <p><b>Sujet :</b> ${originalSubject}</p>
+        <p><b>Erreur :</b> ${String(msg || "")}</p>
+        <hr/>
+        <p>📎 Une copie du mail original est jointe en <code>mail-original.html</code>.</p>
+      </div>
+    `;
+
+    const alertAttachments = [
+      {
+        filename: "mail-original.html",
+        content: originalHtml || "<!-- (mail original vide) -->",
+        contentType: "text/html; charset=utf-8",
+      },
+      ...attachmentsThatExist(original),
+    ];
+
+    await transporter.sendMail({
+      from: originalFrom ? `"DSG Mailer" <${originalFrom}>` : undefined,
+      to: FAILED_ALERT_TO,
+      subject: `🚨 ALERTE – Mail FAILED (${formType})`,
+      html: htmlCopy,
+      attachments: alertAttachments,
+    });
+
+    console.log("[INLINE_MAIL_WORKER] failed-alert sent for", job?.jobId);
+  } catch (e) {
+    console.warn("[INLINE_MAIL_WORKER] failed-alert error:", e?.message || e);
+  }
 }
 
 async function processOne(jobFile) {
@@ -117,6 +172,8 @@ async function processOne(jobFile) {
     console.warn("[INLINE_MAIL_WORKER] error", job.jobId, "|", short(msg, 200));
 
     if (attemptNow >= MAX_ATTEMPTS) {
+      await sendFailedAlert({ job, formType, msg });
+
       job.failedAt = new Date().toISOString();
       saveJob(jobFile, job);
       moveJob(jobFile, FAIL_DIR);
@@ -220,6 +277,11 @@ async function runCleanupOnce() {
   const removedDone = deleteIfOlderThan(DONE_DIR, RETENTION_DAYS_DONE);
   const removedFailed = deleteIfOlderThan(FAIL_DIR, RETENTION_DAYS_FAILED);
 
+  const idemFile = path.join(queueDir, "idem-index.json");
+  const idemTooOld =
+    fs.existsSync(idemFile) &&
+    fileAgeMs(idemFile) > RETENTION_DAYS_IDEM * 24 * 60 * 60 * 1000;
+
   const idemResult = cleanupIdemIndex(queueDir);
 
   console.log(
@@ -228,6 +290,8 @@ async function runCleanupOnce() {
     removedDone,
     "failed_removed=",
     removedFailed,
+    "idemTooOld=",
+    idemTooOld,
     "idem_kept=",
     idemResult.kept,
     "idem_removed=",
