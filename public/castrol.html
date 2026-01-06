@@ -417,14 +417,30 @@
     }
   }
 
-  function filter1(q){
-    const query = String(q||"").trim().toLowerCase();
-    if(!query) return [];
-    return data1.filter(x =>
-      String(x.designation||"").toLowerCase().includes(query) ||
-      String(x.reference||"").toLowerCase().includes(query)
-    );
+  function normalize(str) {
+    return str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, " ");
   }
+
+  function filter1(q){
+    const words = normalize(q).split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+
+    return data1.filter(item => {
+      const text = normalize(
+        (item.designation || "") + " " + (item.reference || "")
+      );
+
+      return words.every(w => text.includes(w));
+    });
+  }
+
+  sb1.addEventListener('input', () =>
+    render1(filter1(sb1.value).slice(0, 200))
+  );
 
   sb1.addEventListener('input', () => render1(filter1(sb1.value).slice(0, 200)));
 
@@ -605,14 +621,21 @@
   }
 
   function filter2(q){
-    const query = String(q||"").trim().toLowerCase();
-    if(!query) return [];
-    return data2.filter(x => {
-      const a = String(x.shell || x.left || x.from || x.designation || "").toLowerCase();
-      const b = String(x.castrol || x.right || x.to || x.reference || "").toLowerCase();
-      return a.includes(query) || b.includes(query);
+    const words = normalize(q).split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+
+    return data2.filter(item => {
+      const text = normalize(
+        (item.designation || "") + " " + (item.reference || "")
+      );
+
+      return words.every(w => text.includes(w));
     });
   }
+
+  sb2.addEventListener('input', () =>
+    render2(filter2(sb2.value).slice(0, 200))
+  );
 
   sb2.addEventListener('input', () => render2(filter2(sb2.value).slice(0, 200)));
 </script>

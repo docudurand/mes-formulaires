@@ -1190,7 +1190,8 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
           km18h,
           total,
           absent: isAbsent,
-          info: absenceInfo
+          info: absenceInfo,
+		  commentaire: isAbsent ? "" : commentaire
         });
       });
 
@@ -1216,7 +1217,7 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
 
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
-      ["Date", "Tournée", "Chauffeur", "8H", "12H", "14H", "18H", "Total", "Info"].forEach(
+      ["Date", "Tournée", "Chauffeur", "8H", "12H", "14H", "18H", "Total", "Commentaire / Info"].forEach(
         (label) => {
           const th = document.createElement("th");
           th.textContent = label;
@@ -1293,7 +1294,7 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
           tr.appendChild(tdTotal);
 
           const tdInfo = document.createElement("td");
-          tdInfo.textContent = item.absent ? (item.info || "") : "";
+          tdInfo.textContent = item.absent ? (item.info || "") : (item.commentaire || "");
           tr.appendChild(tdInfo);
 
           tbody.appendChild(tr);
