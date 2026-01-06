@@ -6,7 +6,7 @@
   --pillText: #ffffff;
   --shadow: 0 14px 30px rgba(0,0,0,.12);
   --radius: 18px;
-  --ipadW: 1200px;
+  --ipadW: 1400px;
 }
 
 *{ box-sizing: border-box; }
@@ -50,13 +50,18 @@ body{
   justify-content: center;
 }
 .frame{
-  width: min(100%, var(--ipadW));
+  width: 100%;
+  max-width: var(--ipadW);
   background: rgba(255,255,255,.55);
   border-radius: 10px;
   box-shadow: var(--shadow);
   overflow: hidden;
   min-height: calc(100vh - 44px - 46px);
   position: relative;
+}
+@media (max-width: 1024px){
+  .stage{ padding-left: 6px; padding-right: 6px; }
+  :root{ --ipadW: 100%; }
 }
 
 .homeVideo{
