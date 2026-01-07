@@ -507,11 +507,6 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.json({ ok: true, dedup: true });
     }
 
-    const rid = (requestId || req.get('x-request-id') || '').toString().trim();
-    if (rid && isDuplicateRamasse(rid)) {
-      return res.json({ ok: true, dedup: true });
-    }
-
     if (!fournisseur || !email || !pieces) {
       return res.status(400).json({
         error: "Champs requis manquants (fournisseur, email, pièces).",
