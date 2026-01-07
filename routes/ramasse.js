@@ -36,6 +36,25 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
+const RECENT_POST_RAMASSE = new Map();
+const RAMASSE_DEDUP_WINDOW_MS = 120_000;
+
+function isDuplicateRamasse(requestId) {
+  const id = String(requestId || "").trim();
+  if (!id) return false;
+  const now = Date.now();
+
+  for (const [k, ts] of RECENT_POST_RAMASSE.entries()) {
+    if (now - ts > RAMASSE_DEDUP_WINDOW_MS) RECENT_POST_RAMASSE.delete(k);
+  }
+
+  const last = RECENT_POST_RAMASSE.get(id);
+  if (last && (now - last) < RAMASSE_DEDUP_WINDOW_MS) return true;
+
+  RECENT_POST_RAMASSE.set(id, now);
+  return false;
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TMP_DIR),
@@ -238,7 +257,8 @@ async function buildPdf({
   const labelOpts = { width: labelW, lineBreak: false };
   const valOpts   = { width: valW, lineBreak: false };
 
-  const { dateStr, timeStr } = formatParisNow();
+  const {
+dateStr, timeStr } = formatParisNow();
   doc
     .font("Helvetica-Bold")
     .fontSize(LABEL_FS)
@@ -477,8 +497,14 @@ router.post("/", upload.single("file"), async (req, res) => {
       pieces,
       commentaire,
       magasinDest,
-      demandeurNomPrenom,
-    } = req.body;
+      demandeurNomPrenom,,
+      requestId,
+     } = req.body;
+
+    const rid = (requestId || req.get('x-request-id') || '').toString().trim();
+    if (rid && isDuplicateRamasse(rid)) {
+      return res.json({ ok: true, dedup: true });
+    }
 
     if (!fournisseur || !email || !pieces) {
       return res.status(400).json({

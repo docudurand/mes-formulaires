@@ -1,0 +1,604 @@
+[
+{
+    "name": "ACCUS AJS",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville VIENNE :  Tournée 2"
+  },
+  {
+    "name": "AIR PN",
+    "magasin": "La Motte Servolex",
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	"cc": ["receptionlms@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MURS ET GELIGNIEUX Tournée AIN"
+  },
+  {
+    "name": "ALDER",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BEAUVALLON Tournée 6"
+  },
+  {
+    "name": "ALGI",
+    "magasin": "Annemasse",
+    "recipients": ["commandeannemasse@gmail.com,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SCIONZIER Tournée ROCHOIS"
+  },
+  {
+    "name": "AGRA",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
+  },
+    {
+    "name": "AUTOVER",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : PUSIGNAN Tournée 7"
+  },
+  {
+    "name": "BARRET",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VENISSIEU Tournée 6"
+  },
+  {
+    "name": "BATTERIE 69",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "BATTERIE CENTER",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SMH Tournée 6"
+  },
+  {
+    "name": "BG DIFF",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VENISSIEU Tournée 6"
+  },
+  {
+    "name": "BMW BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "BOSAL",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLEURBANNE Tournée 5"
+  },
+    {
+    "name": "CAPVI",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS"
+  },
+  {
+    "name": "CARGO BULL",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
+  {
+    "name": "CASSE BOUVIER",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CESSIEU Tournée 3"
+  },
+  {
+    "name": "CDAL",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 6"
+  },
+  {
+    "name": "CEMO",
+    "magasin": "Miribel",
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MONTANAY Tournée NORD"
+  },
+  {
+    "name": "CHARNOUD EQUIPIECE",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "CHAVRIER",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : RUY Tournée 3"
+  },
+  {
+    "name": "CLAS EQUIPPEMENT",
+    "magasin": "La Motte Servolex",
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	"cc": ["receptionlms@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
+  },
+  {
+    "name": "COMPTOIR FRANCE ESPAGNE",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "COFRISET",
+    "magasin": "ST EGREVE",
+    "recipients": ["froidste@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : EYBENS"
+  },
+  {
+    "name": "COVERGUARD",
+    "magasin": "Miribel",
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MIONNAY Tournée NORD"
+  },
+  {
+    "name": "DAF SAINT PRIEST",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "DASIR",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "DAUPHINE POIDS LOURD",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST EGREVE Tournée 1"
+  },
+  {
+    "name": "DENUZIERE",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "ESRA",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : GENAS"
+  },
+  {
+    "name": "ETS SESALY",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS"
+  },
+  {
+    "name": "FIREM",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "FORD FONTAINE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTAINE Tournée 3"
+  },
+    {
+    "name": "FORD GIVORS",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : GIVORS Tournée 6"
+  },
+    {
+    "name": "FREDERIC PIN",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST PRIEST"
+  },
+  {
+    "name": "GIVEDIS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "GM TRUCK",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT-PRIEST"
+  },
+  {
+    "name": "GMT GRENOBLE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SEYSSINS Tournée 1"
+  },
+  {
+    "name": "GROENEVELD",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VAULX MILIEU Tournée 2"
+  },
+  {
+    "name": "HPS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
+  },
+  {
+    "name": "IMAGINE CAR",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHAVANOZ"
+  },
+    {
+    "name": "ISUZU",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "IWATA",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
+  {
+    "name": "KONIG",
+    "magasin": "La Motte Servolex",
+    "recipients": ["magvl4lms@durandservices.fr,respmaglms@durandservices.fr"],
+	"cc": ["receptionlms@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHIGNIN Tournée CHAPARELLIAN"
+  },
+  {
+    "name": "LECI TRAILER",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SATOLAS Tournée 2"
+  },
+  {
+    "name": "LESCHLER",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VEUREY Tournée 1"
+  },
+  {
+    "name": "MAHLE",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DECINES Tournée 5"
+  },
+  {
+    "name": "MAN GENAS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : GENAS Tournée 8"
+  },
+  {
+    "name": "MAN VIALLE",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST DIDIER Tournée 3"
+  },
+    {
+    "name": "M.D.H",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST LAURENT DE MURE"
+  },
+  {
+    "name": "MERCEDES PL BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : NIVOLAS Tournée 1"
+  },
+  {
+    "name": "MERCEDES PL GENAS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : GENAS Tournée 3"
+  },
+  {
+    "name": "MERCEDES VL SAINT PRIEST",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "MICHAUD CHAILLI",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "MG ATTELAGE",
+    "magasin": "Miribel",
+    "recipients": ["magvlmiribel@durandservices.fr,magvl3miribel@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : DARDILLY Tournée OUEST"
+  },
+  {
+    "name": "MORREAU",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "MS MOTOR",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : GENAS Tournée 8+2"
+  },
+  {
+    "name": "NISSAN SAINT PRIEST",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "OPTYMHA",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLARD BONNOT Tournée 7"
+  },
+  {
+    "name": "PAP SUD",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "PILKINGTON",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST LAURENT Tournée 2"
+  },
+  {
+    "name": "PLANET LINE",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ESTRABLIN Tournée 3"
+  },
+  {
+    "name": "RAMS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHASSIEU Tournée 8"
+  },
+  {
+    "name": "RC SPORTS",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 4"
+  },
+  {
+    "name": "RCE NOVE",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SEYSSINET Tournée 1"
+  },
+  {
+    "name": "RENAULT TRUCKS FONTANIL",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTANIL Tournée 1"
+  },
+  {
+    "name": "RENAULT TRUCK VAULX MILIEU",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VAULX MILIEU Tournée 2"
+  },
+    {
+    "name": "REY FRERE",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : PONT-EVEQUE Tournée 3"
+  },
+  {
+    "name": "ROY",
+    "magasin": "Rives",
+    "recipients": ["receptionrives@durandservices.fr"],
+	"cc": ["magvl3rives@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : Rives"
+  },
+  {
+    "name": "SAINTHON",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBELIN Tournée 5"
+  },
+    {
+    "name": "SAMPA",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CORBAS Tournée 4"
+  },
+    {
+    "name": "SCANIA CHAPONNAY",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHAPONNAY Tournée 4"
+  },
+  {
+    "name": "SECTORIEL",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST QUENTIN Tournée 2"
+  },
+  {
+    "name": "SEDAIA",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST JEAN BOURNAY Tournée 1"
+  },
+  {
+    "name": "SILIM",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VENISSIEU Tournée 6"
+  },
+    {
+    "name": "SOPRA PNEUMATIQUE (SOCAFLUID)",
+    "magasin": "Gleize",
+    "recipients": ["magvl4gleize@durandservices.fr,magvl6gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
+  },
+  {
+    "name": "ST-FONS-PLAISANCE",
+    "magasin": "St Jean Bonnefonds",
+    "recipients": ["magvl5sjb@durandservices.fr"],
+	"cc": ["respmagsjb@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST PRIEST 42 Tournée ST ETIENNE OU MONTBRISON"
+  },
+  {
+    "name": "TEXA",
+    "magasin": "St Jean Bonnefonds",
+    "recipients": ["magvl5sjb@durandservices.fr"],
+	"cc": ["respmagsjb@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : LA TALUIDIERE Tournée ST ETIENNE OU MONTBRISON"
+  },
+  {
+    "name": "THERMO KING Froid & Services Rhône Alpes",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHASSE SUR RHONE"
+  },
+  {
+    "name": "TOYOTA ECHIROLLES",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ECHIROLLES Tournée 3"
+  },
+  {
+    "name": "TOYOTA MEYZIEU",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : MEYZIEU Tournée 3"
+  },
+  {
+    "name": "VERTAT",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLEURBANNE Tournée 1"
+  },
+  {
+    "name": "VOLKSWAGEN BOURGOIN",
+    "magasin": "Bourgoin",
+    "recipients": ["receptionbourgoin@durandservices.fr"],
+    "cc": ["magasin5bourgoin@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : BOURGOIN Tournée 1"
+  },
+  {
+    "name": "VOLSWAGEN/AUDI ST FONS",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : ST FONS Tournée 6"
+  },
+  {
+    "name": "VOLSWAGEN JEAN LAIN",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : FONTAINE Tournée 3"
+  },
+  {
+    "name": "VOLTEO SAINT PRIEST",
+    "magasin": "Chassieu",
+    "recipients": ["magvl8chassieu@durandservices.fr,receptionchassieu@durandservices.fr"],
+    "cc": ["respmagchassieu@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : SAINT PRIEST Tournée 8"
+  },
+  {
+    "name": "VOLTEO VILLEFRANCHE",
+    "magasin": "Gleize",
+    "recipients": ["magvl4gleize@durandservices.fr,magvl6gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VILLEFRANCHE Tournée 3"
+  },
+    {
+    "name": "VOLVO CHAPONNAY",
+    "magasin": "Chasse sur Rhone",
+    "recipients": ["receptionchasse@durandservices.fr"],
+	"cc": ["magvl5chasse@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : CHAPONNAY Tournée 4"
+  },
+  {
+    "name": "VOLVO TRUCKS VEUREY",
+    "magasin": "ST EGREVE",
+    "recipients": ["receptionste2@durandservices.fr"],
+    "cc": ["respmagst@durandservices.fr,magvlstegreve@durandservices.fr,magvl4gleize@durandservices.fr"],
+	 "infoLivreur": "Ville : VEUREY Tournée 1"
+  }
+]

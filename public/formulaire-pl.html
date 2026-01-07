@@ -114,8 +114,10 @@
 
     <div class="file-preview" id="filePreview"></div>
 
-    <button type="submit">Envoyer</button>
-    <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
+    <div class="actions">
+      <button type="submit">Envoyer</button>
+      <div id="message" class="message-inline"></div>
+    </div>
   </form>
 
   <script>
@@ -183,11 +185,25 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-    if (files.length === 0) {
+    
+
+const submitBtn = form.querySelector('button[type="submit"]');
+if (submitBtn && submitBtn.disabled) return;
+if (submitBtn) {
+  submitBtn.disabled = true;
+  submitBtn.dataset.oldLabel = submitBtn.textContent;
+  submitBtn.textContent = 'Envoi…';
+}
+const unlock = () => {
+  if (!submitBtn) return;
+  submitBtn.disabled = false;
+  submitBtn.textContent = submitBtn.dataset.oldLabel || 'Envoyer';
+};
+if (files.length === 0) {
     messageEl.textContent = "⚠️ Veuillez ajouter au moins une capture d’écran ou un fichier.";
     messageEl.style.color = "orange";
-    return;
-    }
+    unlock();
+    return;}
 
       messageEl.textContent = "⏳ Envoi en cours...";
       messageEl.style.color = "black";
@@ -213,6 +229,9 @@
       } catch (error) {
         messageEl.textContent = "❌ Erreur réseau ou serveur.";
         messageEl.style.color = "red";
+      }
+      finally {
+        unlock();
       }
     });
   </script>
