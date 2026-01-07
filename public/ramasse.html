@@ -36,6 +36,19 @@
       border: none; padding: 12px; border-radius: 4px; cursor: pointer;
     }
     .status { margin-top: 15px; font-weight: bold; }
+  .actions{
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.message-inline{
+  margin: 0 !important;
+  font-weight: bold;
+  min-height: 1.2em;
+}
+.actions button[type="submit"]{ margin-top: 0 !important; }
   </style>
 </head>
 <body>
@@ -82,8 +95,10 @@
 
       <div class="file-preview" id="filePreview"></div>
 
+      <div class="actions">
       <button type="submit">Envoyer</button>
-      <div id="status" class="status"></div>
+      <div id="status" class="status message-inline"></div>
+    </div>
     </form>
   </div>
 
@@ -229,7 +244,21 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      statusEl.textContent = '⏳ Envoi en cours...';
+      
+
+const submitBtn = form.querySelector('button[type="submit"]');
+if (submitBtn && submitBtn.disabled) return; // anti double-clic
+if (submitBtn) {
+  submitBtn.disabled = true;
+  submitBtn.dataset.oldLabel = submitBtn.textContent;
+  submitBtn.textContent = 'Envoi…';
+}
+const unlock = () => {
+  if (!submitBtn) return;
+  submitBtn.disabled = false;
+  submitBtn.textContent = submitBtn.dataset.oldLabel || 'Envoyer';
+};
+statusEl.textContent = '⏳ Envoi en cours...';
       statusEl.style.color = 'black';
 
       const mgVal = document.getElementById('magasin').value.trim();
@@ -238,6 +267,7 @@
         selF.reportValidity();
         statusEl.textContent = '❌ Veuillez choisir un fournisseur valide (magasin en charge manquant).';
         statusEl.style.color = 'red';
+        unlock();
         return;
       } else {
         selF.setCustomValidity('');
@@ -259,12 +289,18 @@
       if (!file) {
         statusEl.textContent = '❌ Veuillez joindre une pièce (fichier ou capture d’écran).';
         statusEl.style.color = 'red';
+        unlock();
         return;
       }
       fd.set('file', file, file.name);
 
-      try {
-        const res = await fetch(`${API_BASE}/api/ramasse`, { method: 'POST', body: fd });
+      
+
+// id unique (pour éviter les doublons côté serveur)
+const requestId = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random());
+fd.set("requestId", requestId);
+try {
+        const res = await fetch(`${API_BASE}/api/ramasse`, { method: 'POST', body: fd, headers: { 'x-request-id': requestId } });
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(out.error || 'Erreur inconnue');
 
@@ -281,6 +317,9 @@
       } catch (err) {
         statusEl.textContent = '❌ ' + err.message;
         statusEl.style.color = 'red';
+      }
+      finally {
+        unlock();
       }
     });
   </script>
