@@ -497,7 +497,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       pieces,
       commentaire,
       magasinDest,
-      demandeurNomPrenom,,
+      demandeurNomPrenom,
       requestId,
      } = req.body;
 
