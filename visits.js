@@ -36,8 +36,13 @@ async function writeLocal(obj) {
   await fs.writeFile(LOCAL_FILE, JSON.stringify(obj, null, 2), "utf8");
 }
 
+function ftpEnabled() {
+  return !!(process.env.FTP_HOST && process.env.FTP_USER && process.env.FTP_PASSWORD);
+}
+
 async function ftpClient() {
   const client = new ftp.Client(45_000);
+
   client.prepareTransfer = ftp.enterPassiveModeIPv4;
 
   await client.access({
@@ -45,14 +50,13 @@ async function ftpClient() {
     user: process.env.FTP_USER,
     password: process.env.FTP_PASSWORD,
     port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
-    secure: false,
+    secure: true,
+    secureOptions: {
+      rejectUnauthorized: false,
+    },
   });
 
   return client;
-}
-
-function ftpEnabled() {
-  return !!(process.env.FTP_HOST && process.env.FTP_USER && process.env.FTP_PASSWORD);
 }
 
 async function downloadRemote() {
@@ -64,6 +68,7 @@ async function downloadRemote() {
   try {
     const dir = path.posix.dirname(REMOTE_FILE);
     await client.ensureDir(dir);
+
     await client.downloadTo(tmp, REMOTE_FILE);
 
     const txt = await fs.readFile(tmp, "utf8");
@@ -117,6 +122,7 @@ export async function initVisits() {
 
   cache = normalize({ total: 0, byDate: {} });
   await writeLocal(cache);
+
   await uploadRemote(cache).catch(() => {});
   return cache;
 }
