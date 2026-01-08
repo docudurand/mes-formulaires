@@ -1239,14 +1239,12 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 
 app.get("/api/util/contacts-fournisseurs", (_req, res) => {
   try {
-    const data = parseEnvJSON(process.env.CONTACTS_FOURNISSEURS_JSON, []);
+    const raw = process.env.CONTACTS_FOURNISSEURS_JSON || "[]";
+    const data = JSON.parse(raw);
     res.setHeader("Cache-Control", "no-store");
     return res.json(data);
   } catch (e) {
-    return res.status(500).json({
-      error: "CONTACTS_FOURNISSEURS_JSON invalid",
-      details: String(e?.message || e),
-    });
+    return res.status(500).json({ error: "CONTACTS_FOURNISSEURS_JSON invalid", details: String(e?.message || e) });
   }
 });
 
