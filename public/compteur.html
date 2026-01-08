@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Compteurs de formulaires</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Chart.js (graphique) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
     :root {
       --primary: #004080;
@@ -66,6 +70,38 @@
       display: inline-block; padding: 4px 10px; border-radius: 999px; background: #eaf6ff; color: var(--primary);
       font-size: 0.85rem; margin-left: 8px;
     }
+
+    .chartCard {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .chartHeader {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .chartTitle {
+      margin:0;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+    .chartControls {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .smallLabel { color: var(--muted); font-size: 0.95rem; }
+    .chartBox {
+      position: relative;
+      width: 100%;
+      height: 340px;
+    }
   </style>
 </head>
 <body>
@@ -109,7 +145,47 @@
       </table>
     </div>
 
-    <h2 style="margin: 32px 0 10px;">Demandes de ramasse par magasin</h2>
+    <h2 style="margin: 32px 0 10px;">Visites du site</h2>
+
+    <div class="chartCard">
+      <div class="chartHeader">
+        <h3 class="chartTitle" id="visitsChartTitle">Nombre de visiteurs</h3>
+
+        <div class="chartControls">
+          <span class="smallLabel">Mois :</span>
+          <select id="visitsMonth"></select>
+
+          <span class="smallLabel">Année :</span>
+          <select id="visitsYear"></select>
+        </div>
+      </div>
+
+      <div class="chartBox">
+        <canvas id="visitsChart"></canvas>
+      </div>
+
+      <div class="hint" id="visitsHint" style="margin-top:10px;"></div>
+    </div>
+
+    <div style="overflow-x:auto; margin-top:14px;">
+      <table id="visitsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Visites</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td>Total cumulé</td>
+            <td id="visits_total">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+	
+	<h2 style="margin: 32px 0 10px;">Demandes de ramasse par magasin</h2>
     <p class="hint">.</p>
     <div style="overflow-x:auto;">
       <table id="ramasseTable">
@@ -133,32 +209,25 @@
       </table>
     </div>
 
-    <h2 style="margin: 32px 0 10px;">Visites du site (par jour)</h2>
-
-    <div style="overflow-x:auto;">
-      <table id="visitsTable">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Visites</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot>
-          <tr>
-            <td>Total cumulé</td>
-            <td id="visits_total">0</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-
   </main>
 
   <script>
     const API_COUNTERS = "/stats/counters";
     const API_RAMASSE  = "/api/ramasse/stats";
     const API_VISITS   = "/api/visits/stats";
+
+    let visitsChartInstance = null;
+
+    const MONTHS_FR = [
+      "Janvier","Février","Mars","Avril","Mai","Juin",
+      "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+    ];
+
+    function pad2(n){ return String(n).padStart(2,"0"); }
+
+    function daysInMonth(year, monthIndex0) {
+      return new Date(year, monthIndex0 + 1, 0).getDate();
+    }
 
     async function loadData() {
       const res = await fetch(API_COUNTERS, { cache: "no-store" });
@@ -286,7 +355,7 @@
       document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
-    function renderVisits(visitsData) {
+    function renderVisitsTable(visitsData) {
       const tbody = document.querySelector("#visitsTable tbody");
       tbody.innerHTML = "";
 
@@ -300,6 +369,112 @@
       });
 
       document.getElementById("visits_total").textContent = Number(visitsData?.total || 0);
+    }
+
+    function fillVisitsSelectors(visitsData) {
+      const monthSel = document.getElementById("visitsMonth");
+      const yearSel  = document.getElementById("visitsYear");
+
+      // mois
+      monthSel.innerHTML = "";
+      MONTHS_FR.forEach((m, idx) => {
+        const opt = document.createElement("option");
+        opt.value = String(idx + 1);
+        opt.textContent = m;
+        monthSel.appendChild(opt);
+      });
+
+      const byDate = visitsData?.byDate || {};
+      const years = new Set();
+      Object.keys(byDate).forEach(d => {
+        const y = d.slice(0, 4);
+        if (y) years.add(y);
+      });
+
+      const currentYear = String(new Date().getFullYear());
+      if (years.size === 0) years.add(currentYear);
+      years.add(currentYear);
+
+      const sortedYears = Array.from(years).sort();
+      yearSel.innerHTML = "";
+      sortedYears.forEach(y => {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        yearSel.appendChild(opt);
+      });
+
+      const now = new Date();
+      monthSel.value = String(now.getMonth() + 1);
+      yearSel.value  = String(now.getFullYear());
+    }
+
+    function buildSeriesForMonth(visitsData, yearStr, monthStr) {
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      const monthIndex0 = month - 1;
+
+      const dim = daysInMonth(year, monthIndex0);
+      const labels = [];
+      const values = [];
+
+      const byDate = visitsData?.byDate || {};
+
+      let monthTotal = 0;
+      for (let day = 1; day <= dim; day++) {
+        labels.push(pad2(day));
+        const key = `${yearStr}-${pad2(month)}-${pad2(day)}`;
+        const v = Number(byDate[key] || 0);
+        values.push(v);
+        monthTotal += v;
+      }
+
+      return { labels, values, monthTotal, dim };
+    }
+
+    function renderVisitsChart(visitsData, yearStr, monthStr) {
+      const { labels, values, monthTotal } = buildSeriesForMonth(visitsData, yearStr, monthStr);
+
+      const monthName = MONTHS_FR[Number(monthStr) - 1] || "";
+      document.getElementById("visitsChartTitle").textContent =
+        `Nombre de visiteurs pour ${monthName} ${yearStr}`;
+
+      document.getElementById("visitsHint").textContent =
+        `Total du mois : ${monthTotal} — Total cumulé : ${Number(visitsData?.total || 0)}`;
+
+      const ctx = document.getElementById("visitsChart");
+
+      if (visitsChartInstance) visitsChartInstance.destroy();
+
+      visitsChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Visiteurs",
+            data: values,
+            tension: 0.25,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                title: (items) => items?.[0]?.label ? `${items[0].label}` : ""
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
     }
 
     async function main() {
@@ -322,13 +497,24 @@
         renderTable(allYears, counters);
         renderRamasse(ramasseData, current);
 
-        renderVisits(visitsData);
+        renderVisitsTable(visitsData);
+        fillVisitsSelectors(visitsData);
+
+        const monthSel = document.getElementById("visitsMonth");
+        const yearSel  = document.getElementById("visitsYear");
+
+        const draw = () => renderVisitsChart(visitsData, yearSel.value, monthSel.value);
+        draw();
+
+        monthSel.addEventListener("change", draw);
+        yearSel.addEventListener("change", draw);
 
         document.getElementById("yearSelect").addEventListener("change", (e) => {
           const y = e.target.value;
           renderCards(counters, y);
           renderRamasse(ramasseData, y);
         });
+
       } catch (e) {
         alert("Impossible de charger les compteurs : " + e.message);
         console.error(e);
