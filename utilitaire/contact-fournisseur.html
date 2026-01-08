@@ -93,6 +93,19 @@ body {
       overflow-x: hidden !important;
       overflow-y: auto !important;
     }
+
+html, body { height: 100%; }
+body { overflow-y: auto; }
+
+main.wrap {
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
+main.wrap .card{
+  overflow-y: auto;
+}
+
   </style>
 </head>
 <body>
@@ -160,7 +173,7 @@ body {
 <div class="container">
     <h1>CONTACTS FOURNISSEURS</h1>
     <input type="text" id="searchInput" placeholder="🔍 Recherchez un nom, un téléphone, un email, un fournisseur.">
-    <div style="overflow-x:auto;">
+    <div style="overflow:auto; max-height:70vh;">
       <table id="contactsTable">
         <thead>
           <tr>
