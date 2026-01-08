@@ -45,7 +45,7 @@ async function ftpClient() {
     user: process.env.FTP_USER,
     password: process.env.FTP_PASSWORD,
     port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
-    secure: String(process.env.FTP_SECURE || "false") === "true",
+    secure: false,
   });
 
   return client;
