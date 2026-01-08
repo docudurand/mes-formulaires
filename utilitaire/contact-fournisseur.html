@@ -12,6 +12,88 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#e9efff">
   
+
+  <style>
+body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f8fafc;
+    }
+    .container {
+      max-width: 1700px;
+      width: 98%;
+      margin: 35px auto;
+      padding: 16px 8px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px #0001;
+    }
+    h1 {
+      text-align: center;
+      color: #0076a8;
+      margin-bottom: 18px;
+    }
+    #searchInput {
+      width: 100%;
+      font-size: 1.15rem;
+      padding: 9px 12px;
+      margin-bottom: 18px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      box-sizing: border-box;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      font-size: 1rem;
+      table-layout: auto;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 7px;
+      text-align: center;
+      white-space: normal;
+      word-break: break-word;
+    }
+    tr.hide { display: none; }
+    tr:hover { background: #f1f8ff; }
+    @media (max-width: 900px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      td {
+        border: none;
+        border-bottom: 1px solid #e5e7eb;
+        position: relative;
+        padding-left: 48%;
+        min-height: 38px;
+      }
+      td:before {
+        position: absolute;
+        top: 8px; left: 10px; width: 45%;
+        font-weight: bold;
+        color: #3b4551;
+        white-space: pre-wrap;
+        content: attr(data-label);
+      }
+    }
+    #contactsTable th:nth-child(1), #contactsTable td:nth-child(1) { width: 150px; }
+    #contactsTable th:nth-child(2), #contactsTable td:nth-child(2) { width: 120px; }
+    #contactsTable th:nth-child(3), #contactsTable td:nth-child(3) { width: 100px; }
+    #contactsTable th:nth-child(4), #contactsTable td:nth-child(4) { width: 270px; }
+    #contactsTable th:nth-child(5), #contactsTable td:nth-child(5) { width: 150px; }
+    #contactsTable th:nth-child(6), #contactsTable td:nth-child(6) { width: 110px; }
+    #contactsTable th:nth-child(7), #contactsTable td:nth-child(7) { width: 240px; }
+
+    html.dsg-in-iframe, html.dsg-in-iframe body {
+      height: auto !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+  </style>
 </head>
 <body>
   
@@ -75,7 +157,96 @@
 
   <main class="wrap">
     <section class="card">
-      <iframe class="embed-frame" src="https://mes-formulaires.onrender.com/contact-fournisseur"></iframe>
+<div class="container">
+    <h1>CONTACTS FOURNISSEURS</h1>
+    <input type="text" id="searchInput" placeholder="🔍 Recherchez un nom, un téléphone, un email, un fournisseur.">
+    <div style="overflow-x:auto;">
+      <table id="contactsTable">
+        <thead>
+          <tr>
+            <th>Fournisseur</th>
+            <th>ADV - Contact</th>
+            <th>ADV - Téléphone</th>
+            <th>ADV - Mail</th>
+            <th>Commerce - Contact</th>
+            <th>Commerce - Téléphone</th>
+            <th>Commerce - Mail</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+<script>
+  (function(){
+    const API_PATH = "/api/util/contacts-fournisseurs";
+    const FALLBACK_ORIGIN = "https://mes-formulaires.onrender.com";
+
+    const tbody = document.querySelector("#contactsTable tbody");
+    const search = document.getElementById("searchInput");
+
+    let contacts = [];
+
+    async function fetchJSON(url){
+      const r = await fetch(url, { cache:"no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }
+
+    function normalizePayload(payload){
+      // accepte: array direct, {contacts:[...]}, {data:[...]}, etc.
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.contacts)) return payload.contacts;
+      if (payload && Array.isArray(payload.data)) return payload.data;
+      if (payload && Array.isArray(payload.contactsFournisseurs)) return payload.contactsFournisseurs;
+      return [];
+    }
+
+    function renderRows(rows) {
+      tbody.innerHTML = "";
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        const cols = ["Fournisseur", "ADV - Contact", "ADV - Téléphone", "ADV - Mail", "Commerce - Contact", "Commerce - Téléphone", "Commerce - Mail"];
+        cols.forEach((col, idx) => {
+          const td = document.createElement("td");
+          td.setAttribute("data-label", col);
+          td.innerHTML = String(row[idx] || "").replace(/
+/g, "<br>");
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      }
+    }
+
+    function applyFilter(){
+      const value = (search.value || "").toLowerCase();
+      if (!value) return renderRows(contacts);
+      const filtered = contacts.filter(row => row.some(cell => String(cell||"").toLowerCase().includes(value)));
+      renderRows(filtered);
+    }
+
+    async function load(){
+      let payload;
+      try {
+        payload = await fetchJSON(location.origin + API_PATH);
+      } catch (e1) {
+        const msg = String(e1?.message || e1);
+        if (!msg.includes("HTTP 404")) throw e1;
+        payload = await fetchJSON(FALLBACK_ORIGIN + API_PATH);
+      }
+
+      contacts = normalizePayload(payload);
+      renderRows(contacts);
+      applyFilter();
+    }
+
+    search.addEventListener("input", applyFilter);
+
+    load().catch(err => {
+      console.error(err);
+      tbody.innerHTML = "<tr><td colspan='7' style='padding:14px;color:#842029;font-weight:bold;'>Erreur chargement contacts (JSON) : " + err.message + "</td></tr>";
+    });
+  })();
+  </script>
     </section>
   </main>
 
