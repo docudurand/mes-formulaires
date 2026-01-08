@@ -113,14 +113,17 @@
     if (localStorage.getItem(key)) return;
     localStorage.setItem(key, "1");
 
-    fetch("/api/visits/increment", {
+    const API_BASE = "https://mes-formulaires.onrender.com";
+    fetch(API_BASE + "/api/visits/increment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
       cache: "no-store",
       keepalive: true
-    }).catch(() => {});
-  } catch {}
+    }).catch(console.error);
+  } catch (e) {
+    console.error(e);
+  }
 })();
 </script>
 

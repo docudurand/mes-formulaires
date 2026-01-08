@@ -38,6 +38,25 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
 app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  const allowed = new Set([
+    "https://www.documentsdurand.fr",
+    "https://documentsdurand.fr",
+  ]);
+
+  if (origin && allowed.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+app.use((req, res, next) => {
 
 const ALLOWED_FRAME_ANCESTORS = [
   "'self'",
@@ -539,11 +558,11 @@ app.get("/admin/compteurs", async (_req, res) => {
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
 });
-app.post("/api/visits/increment", async (req, res) => {
+app.post("/api/visits/increment", async (_req, res) => {
   try {
     await visits.recordVisit();
     res.setHeader("Cache-Control", "no-store");
-    return res.json({ ok: true });
+    return res.status(200).json({ ok: true });
   } catch (e) {
     console.warn("[VISITS] increment failed:", e?.message || e);
     return res.status(500).json({ ok: false, error: "increment_failed" });
