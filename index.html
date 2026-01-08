@@ -12,13 +12,14 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#e9efff">
-  
 </head>
+
 <body>
 <header class="topbar">
 <div class="brand-left">
 <img alt="Documents Durand" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logo2.png"/>
 </div>
+
 <nav aria-label="Menus" class="nav">
 <div class="menu" data-menu="pl">
 <button class="menu-btn" type="button">MENU PL</button>
@@ -28,6 +29,7 @@
 <a href="pl/liens-garantie-retour-pl.html" role="menuitem">LIENS FORMULAIRE GARANTIE ET RETOUR PL</a>
 </div>
 </div>
+
 <div class="menu" data-menu="vl">
 <button class="menu-btn" type="button">MENU VL</button>
 <div aria-label="Menu VL" class="dropdown" role="menu">
@@ -38,6 +40,7 @@
 <a href="vl/liens-formulaire-garantie.html" role="menuitem">LIENS FORMULAIRE GARANTIE VL</a>
 </div>
 </div>
+
 <div class="menu" data-menu="util">
 <button class="menu-btn" type="button">UTILITAIRE</button>
 <div aria-label="Menu Utilitaire" class="dropdown" role="menu">
@@ -50,22 +53,27 @@
 <a href="utilitaire/reference-compliques.html" role="menuitem">REFERENCE COMPLIQUES</a>
 </div>
 </div>
-    <div class="menu" data-menu="atelier">
-      <button class="menu-btn" type="button">ATELIER</button>
-      <div class="dropdown" role="menu" aria-label="Menu Atelier">
-        <a href="docatelier/service-culasse-demande.html" role="menuitem">SERVICE CULASSE ET INJECTION</a>
-        <a href="docatelier/documents-atelier.html" role="menuitem">DOCUMENTS ATELIER</a>
-      </div>
-    </div>
-    <div class="menu" data-menu="garantie">
-      <a class="menu-btn menu-link" href="gestion-garantie.html">GESTION GARANTIE</a>
-    </div>
+
+<div class="menu" data-menu="atelier">
+  <button class="menu-btn" type="button">ATELIER</button>
+  <div class="dropdown" role="menu" aria-label="Menu Atelier">
+    <a href="docatelier/service-culasse-demande.html" role="menuitem">SERVICE CULASSE ET INJECTION</a>
+    <a href="docatelier/documents-atelier.html" role="menuitem">DOCUMENTS ATELIER</a>
+  </div>
+</div>
+
+<div class="menu" data-menu="garantie">
+  <a class="menu-btn menu-link" href="gestion-garantie.html">GESTION GARANTIE</a>
+</div>
 </nav>
+
 <div class="brand-right">
 <img alt="Durand Services" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/durand_services_logo.png"/>
 </div>
 </header>
+
 <div class="subbar"></div>
+
 <main class="wrap home">
 <section class="card">
 <div class="content home-content">
@@ -87,16 +95,35 @@
 </div>
 
   <div class="video">
-
 <iframe allow="autoplay; fullscreen; picture-in-picture" allowfullscreen="" loading="lazy" src="https://player.vimeo.com/video/1091317213?h=19c1ba4743&amp;autoplay=1&amp;muted=1&amp;controls=0&amp;title=0&amp;byline=0&amp;portrait=0&amp">
 </iframe>
 </div></div>
 </section>
 </main>
+
 <script>window.__SITE_PREFIX__="";</script>
 <script src="assets/auth.js"></script>
 <script>requireAuth();</script>
 <script src="assets/app.js"></script>
+
+<script>
+(function () {
+  try {
+    const key = "dsg_visit_" + new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+
+    fetch("/api/visits/increment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+      keepalive: true
+    }).catch(() => {});
+  } catch {}
+})();
+</script>
+
 <script>
 (function () {
   const track = document.querySelector(".ticker-track");
@@ -113,7 +140,6 @@
 
   function measure() {
     halfWidth = inner.scrollWidth / 2;
-
     x = track.clientWidth;
     inner.style.transform = `translateX(${x}px)`;
   }

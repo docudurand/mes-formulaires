@@ -82,8 +82,7 @@
       <select id="yearSelect"></select>
     </div>
 
-    <section class="grid" id="cards">
-    </section>
+    <section class="grid" id="cards"></section>
 
     <h2 style="margin: 26px 0 10px;">Récapitulatif par année (création de référence)</h2>
     <div style="overflow-x:auto;">
@@ -133,11 +132,33 @@
         </tfoot>
       </table>
     </div>
+
+    <h2 style="margin: 32px 0 10px;">Visites du site (par jour)</h2>
+
+    <div style="overflow-x:auto;">
+      <table id="visitsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Visites</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td>Total cumulé</td>
+            <td id="visits_total">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
   </main>
 
   <script>
     const API_COUNTERS = "/stats/counters";
     const API_RAMASSE  = "/api/ramasse/stats";
+    const API_VISITS   = "/api/visits/stats";
 
     async function loadData() {
       const res = await fetch(API_COUNTERS, { cache: "no-store" });
@@ -150,6 +171,13 @@
       const res = await fetch(API_RAMASSE, { cache: "no-store" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Erreur API /api/ramasse/stats");
+      return json.data;
+    }
+
+    async function loadVisits() {
+      const res = await fetch(API_VISITS, { cache: "no-store" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API /api/visits/stats");
       return json.data;
     }
 
@@ -258,12 +286,31 @@
       document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
+    function renderVisits(visitsData) {
+      const tbody = document.querySelector("#visitsTable tbody");
+      tbody.innerHTML = "";
+
+      const byDate = (visitsData && visitsData.byDate) ? visitsData.byDate : {};
+      const dates = Object.keys(byDate).sort().reverse(); // récent en haut
+
+      dates.forEach(d => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${d}</td><td>${Number(byDate[d] || 0)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("visits_total").textContent = Number(visitsData?.total || 0);
+    }
+
     async function main() {
       try {
-        const [{ years, counters }, ramasseData] = await Promise.all([
+        const [counterPayload, ramasseData, visitsData] = await Promise.all([
           loadData(),
           loadRamasse(),
+          loadVisits(),
         ]);
+
+        const { years, counters } = counterPayload;
 
         const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
         const allYears = Array.from(setYears).sort();
@@ -274,6 +321,8 @@
         renderCards(counters, current);
         renderTable(allYears, counters);
         renderRamasse(ramasseData, current);
+
+        renderVisits(visitsData);
 
         document.getElementById("yearSelect").addEventListener("change", (e) => {
           const y = e.target.value;

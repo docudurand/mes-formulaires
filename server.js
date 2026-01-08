@@ -16,6 +16,7 @@ import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
 
 import * as stats from "./stats.js";
+import * as visits from "./visits.js";
 import formtelevente from "./formtelevente/index.js";
 import formulairePiece from "./formulaire-piece/index.js";
 import formulairePiecePL from "./formulaire-piecepl/index.js";
@@ -537,6 +538,27 @@ app.get("/admin/compteurs", async (_req, res) => {
 });
 app.get("/compteur", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "compteur.html"));
+});
+app.post("/api/visits/increment", async (req, res) => {
+  try {
+    await visits.recordVisit();
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ ok: true });
+  } catch (e) {
+    console.warn("[VISITS] increment failed:", e?.message || e);
+    return res.status(500).json({ ok: false, error: "increment_failed" });
+  }
+});
+
+app.get("/api/visits/stats", async (_req, res) => {
+  try {
+    const data = await visits.getVisits();
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ ok: true, data });
+  } catch (e) {
+    console.warn("[VISITS] stats failed:", e?.message || e);
+    return res.status(500).json({ ok: false, error: "stats_failed" });
+  }
 });
 
 console.log("[BOOT] public/conges ?", fs.existsSync(path.join(__dirname, "public", "conges")));
@@ -1255,6 +1277,8 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   try { await stats.initCounters(); }
   catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
+    try { await visits.initVisits(); }
+  catch (e) { console.warn("[VISITS] initVisits souci:", e?.message || e); }
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
