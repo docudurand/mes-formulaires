@@ -193,7 +193,6 @@ body {
     }
 
     function normalizePayload(payload){
-      // accepte: array direct, {contacts:[...]}, {data:[...]}, etc.
       if (Array.isArray(payload)) return payload;
       if (payload && Array.isArray(payload.contacts)) return payload.contacts;
       if (payload && Array.isArray(payload.data)) return payload.data;
@@ -201,21 +200,21 @@ body {
       return [];
     }
 
-    function renderRows(rows) {
-      tbody.innerHTML = "";
-      for (const row of rows) {
-        const tr = document.createElement("tr");
-        const cols = ["Fournisseur", "ADV - Contact", "ADV - Téléphone", "ADV - Mail", "Commerce - Contact", "Commerce - Téléphone", "Commerce - Mail"];
-        cols.forEach((col, idx) => {
-          const td = document.createElement("td");
-          td.setAttribute("data-label", col);
-          td.innerHTML = String(row[idx] || "").replace(/
-/g, "<br>");
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      }
-    }
+function renderRows(rows) {
+  tbody.innerHTML = "";
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    const cols = ["Fournisseur", "ADV - Contact", "ADV - Téléphone", "ADV - Mail", "Commerce - Contact", "Commerce - Téléphone", "Commerce - Mail"];
+    cols.forEach((col, idx) => {
+      const td = document.createElement("td");
+      td.setAttribute("data-label", col);
+      td.innerHTML = String(row[idx] || "").replace(/\r?\n/g, "<br>");
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+}
+
 
     function applyFilter(){
       const value = (search.value || "").toLowerCase();
