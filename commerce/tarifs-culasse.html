@@ -163,9 +163,41 @@
     <p class="footerNote" id="footerNote"></p>
   </div>
 
-  <script src="/atelier/config.js"></script>
-  <script>
-    const APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
+    <script>
+    let APPSCRIPT_URL = "";
+
+    function loadScript(src){
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve(src);
+        s.onerror = () => reject(new Error("load_failed:" + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function ensureAtelierConfig(){
+      // On certaines URLs, /atelier/config.js peut ne pas exister (www vs non-www, hébergement différent).
+      const cands = [
+        "/atelier/config.js",
+        "../atelier/config.js",
+        (location.hostname.startsWith("www.") ? `https://${location.hostname.replace(/^www\./,'')}/atelier/config.js` : ""),
+        "https://durandservicesgarantie.onrender.com/atelier/config.js"
+      ].filter(Boolean);
+
+      for (const src of cands){
+        try{
+          await loadScript(src);
+          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
+            APPSCRIPT_URL = window.__ATELIER_CFG.GS_URL;
+            return { ok:true, src };
+          }
+        }catch(e){}
+      }
+      APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
+      return { ok: !!APPSCRIPT_URL, src: null };
+    }
     const $ = (id) => document.getElementById(id);
 
     let REGLES = [];
@@ -304,7 +336,10 @@
     }
 
     ['segment','cylindre','soupapes','carburant'].forEach(id => $(id).addEventListener('change', refresh));
-    window.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('DOMContentLoaded', async () => {
+      await ensureAtelierConfig();
+      init();
+    });
   </script>
 </body>
 </html>
