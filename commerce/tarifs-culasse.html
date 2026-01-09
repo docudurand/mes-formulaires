@@ -41,8 +41,7 @@
     .ok{color:#16a34a;font-weight:800}
     .topHelp{margin-top:10px;color:var(--muted);font-size:.92rem}
     .footerNote{margin:10px 0 0;color:var(--muted);font-size:.85rem}
-    .debug{margin-top:6px;font-size:.82rem;color:#64748b;line-height:1.25}
-    html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
   </style>
 </head>
 
@@ -72,9 +71,8 @@
   <div class="head">
     <div>
       <h1>Tarifs Culasse</h1>
-      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant : les références s’affichent pour <span class="pill">Épreuve</span> et <span class="pill">Surfaçage</span>.</p>
-      <div class="debug" id="debug"></div>
-    </div>
+      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant.</p>
+</div>
     <div class="topHelp" id="status">Chargement des tarifs…</div>
   </div>
 
@@ -135,17 +133,14 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const debugLines = [];
-  function dbg(s){ debugLines.push(s); const d=$("debug"); if(d) d.innerHTML = debugLines.slice(-6).join("<br>"); }
-
+  
   async function loadAtelierConfig(){
-    const candidates = [];
-
-    candidates.push("https://durandservicesgarantie.onrender.com/atelier/config.js");
-    candidates.push("https://mes-formulaires.onrender.com/atelier/config.js");
-
-    candidates.push("/atelier/config.js");
-    candidates.push("../atelier/config.js");
+    const candidates = [
+      "https://mes-formulaires.onrender.com/atelier/config.js",
+      "https://durandservicesgarantie.onrender.com/atelier/config.js",
+      "/atelier/config.js",
+      "../atelier/config.js",
+    ];
 
     const host = (location.host || "");
     if (host.startsWith("www.")) {
@@ -153,30 +148,39 @@
       candidates.push(location.protocol + "//" + bareHost + "/atelier/config.js");
     }
 
-    for (const baseUrl of candidates) {
-      dbg("Essai config: " + baseUrl);
-      try {
-        await new Promise((resolve, reject) => {
-          const sc = document.createElement("script");
-          sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-          sc.async = true;
-          sc.onload = () => resolve();
-          sc.onerror = () => reject(new Error("load_failed"));
-          document.head.appendChild(sc);
-        });
+    const loadScriptOnce = (baseUrl) => new Promise((resolve, reject) => {
+      const sc = document.createElement("script");
+      sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+      sc.async = true;
+      sc.onload = () => resolve(true);
+      sc.onerror = () => reject(new Error("load_failed"));
+      document.head.appendChild(sc);
+    });
 
-        if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-          dbg("OK config ✅ (" + baseUrl + ")");
-          return window.__ATELIER_CFG;
-        } else {
-          dbg("Chargé mais pas de GS_URL (" + baseUrl + ")");
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    for (const baseUrl of candidates) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await loadScriptOnce(baseUrl);
+          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
+            try { localStorage.setItem("dsg_atelier_gs_url", String(window.__ATELIER_CFG.GS_URL)); } catch(_){}
+            return window.__ATELIER_CFG;
+          }
+        } catch (e) {
+          if (attempt === 0) await sleep(350);
         }
-      } catch (e) {
-        dbg("Échec ❌ (" + baseUrl + ")");
       }
     }
-    return window.__ATELIER_CFG || null;
+
+    try {
+      const cached = localStorage.getItem("dsg_atelier_gs_url");
+      if (cached) return { GS_URL: cached };
+    } catch(_){}
+
+    return null;
   }
+
 
   let APPSCRIPT_URL = "";
   let REGLES = [];
@@ -279,7 +283,7 @@
   function refresh(){
     renderRefs("refs_epreuve", LINE_EP);
     renderRefs("refs_surfacage", LINE_SU);
-    $("footerNote").textContent = ready() ? "Tarifs issus des règles Atelier (Rectification Culasse)." : "";
+    $("footerNote").textContent = ready() ? "" : "";
   }
 
   ["segment","cylindre","soupapes","carburant"].forEach(id => $(id).addEventListener("change", refresh));
@@ -289,8 +293,6 @@
     try{
       const cfg = await loadAtelierConfig();
       APPSCRIPT_URL = (cfg && cfg.GS_URL) ? cfg.GS_URL : "";
-      dbg("GS_URL = " + (APPSCRIPT_URL ? "OK" : "VIDE"));
-
       if (!APPSCRIPT_URL){
         status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ✖</span>';
         refresh();
