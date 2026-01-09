@@ -41,7 +41,8 @@
     .ok{color:#16a34a;font-weight:800}
     .topHelp{margin-top:10px;color:var(--muted);font-size:.92rem}
     .footerNote{margin:10px 0 0;color:var(--muted);font-size:.85rem}
-html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+    .debug{margin-top:6px;font-size:.82rem;color:#64748b;line-height:1.25}
+    html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
   </style>
 </head>
 
@@ -71,8 +72,9 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
   <div class="head">
     <div>
       <h1>Tarifs Culasse</h1>
-      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant.</p>
-</div>
+      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant : les références s’affichent pour <span class="pill">Épreuve</span> et <span class="pill">Surfaçage</span>.</p>
+      <div class="debug" id="debug"></div>
+    </div>
     <div class="topHelp" id="status">Chargement des tarifs…</div>
   </div>
 
@@ -118,13 +120,11 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
     <div class="cards">
       <div class="card">
         <h2>Épreuve</h2>
-        <p class="hint">Références associées à ton choix.</p>
         <div class="refs" id="refs_epreuve"></div>
       </div>
 
       <div class="card">
         <h2>Surfaçage</h2>
-        <p class="hint">Références associées à ton choix.</p>
         <div class="refs" id="refs_surfacage"></div>
       </div>
     </div>
@@ -135,58 +135,48 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
 
 <script>
   const $ = (id) => document.getElementById(id);
-  
-  async function loadAtelierConfig(){
-    // Objectif: récupérer GS_URL (Apps Script) même si le serveur config est temporairement indisponible.
-    const candidates = [
-      "https://mes-formulaires.onrender.com/atelier/config.js",
-      "https://durandservicesgarantie.onrender.com/atelier/config.js",
-      "/atelier/config.js",
-      "../atelier/config.js",
-    ];
+  const debugLines = [];
+  function dbg(s){ debugLines.push(s); const d=$("debug"); if(d) d.innerHTML = debugLines.slice(-6).join("<br>"); }
 
-    // si la page est en www., on tente aussi le domaine nu (au cas où il y aurait un proxy)
+  async function loadAtelierConfig(){
+    const candidates = [];
+
+    candidates.push("https://durandservicesgarantie.onrender.com/atelier/config.js");
+    candidates.push("https://mes-formulaires.onrender.com/atelier/config.js");
+
+    candidates.push("/atelier/config.js");
+    candidates.push("../atelier/config.js");
+
     const host = (location.host || "");
     if (host.startsWith("www.")) {
       const bareHost = host.slice(4);
       candidates.push(location.protocol + "//" + bareHost + "/atelier/config.js");
     }
 
-    const loadScriptOnce = (baseUrl) => new Promise((resolve, reject) => {
-      const sc = document.createElement("script");
-      sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-      sc.async = true;
-      sc.onload = () => resolve(true);
-      sc.onerror = () => reject(new Error("load_failed"));
-      document.head.appendChild(sc);
-    });
-
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
     for (const baseUrl of candidates) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          await loadScriptOnce(baseUrl);
-          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-            try { localStorage.setItem("dsg_atelier_gs_url", String(window.__ATELIER_CFG.GS_URL)); } catch(_){}
-            return window.__ATELIER_CFG;
-          }
-        } catch (e) {
-          // petite pause puis retry (utile quand Render répond 502 temporairement)
-          if (attempt === 0) await sleep(350);
+      dbg("Essai config: " + baseUrl);
+      try {
+        await new Promise((resolve, reject) => {
+          const sc = document.createElement("script");
+          sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+          sc.async = true;
+          sc.onload = () => resolve();
+          sc.onerror = () => reject(new Error("load_failed"));
+          document.head.appendChild(sc);
+        });
+
+        if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
+          dbg("OK config ✅ (" + baseUrl + ")");
+          return window.__ATELIER_CFG;
+        } else {
+          dbg("Chargé mais pas de GS_URL (" + baseUrl + ")");
         }
+      } catch (e) {
+        dbg("Échec ❌ (" + baseUrl + ")");
       }
     }
-
-    // Fallback: si on a déjà chargé une fois dans le passé, on réutilise la dernière GS_URL connue
-    try {
-      const cached = localStorage.getItem("dsg_atelier_gs_url");
-      if (cached) return { GS_URL: cached };
-    } catch(_){}
-
-    return null;
+    return window.__ATELIER_CFG || null;
   }
-
 
   let APPSCRIPT_URL = "";
   let REGLES = [];
@@ -289,7 +279,7 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
   function refresh(){
     renderRefs("refs_epreuve", LINE_EP);
     renderRefs("refs_surfacage", LINE_SU);
-    $("footerNote").textContent = ready() ? "" : "";
+    $("footerNote").textContent = ready() ? "Tarifs issus des règles Atelier (Rectification Culasse)." : "";
   }
 
   ["segment","cylindre","soupapes","carburant"].forEach(id => $(id).addEventListener("change", refresh));
@@ -299,6 +289,8 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
     try{
       const cfg = await loadAtelierConfig();
       APPSCRIPT_URL = (cfg && cfg.GS_URL) ? cfg.GS_URL : "";
+      dbg("GS_URL = " + (APPSCRIPT_URL ? "OK" : "VIDE"));
+
       if (!APPSCRIPT_URL){
         status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ✖</span>';
         refresh();
