@@ -163,43 +163,56 @@
     <p class="footerNote" id="footerNote"></p>
   </div>
 
-    <script>
-    let APPSCRIPT_URL = "";
+  <script>
+  // Charge la config Atelier (window.__ATELIER_CFG) depuis le serveur Render si besoin.
+  (function(){
+    const candidates = [
+      "/atelier/config.js",
+      "../atelier/config.js",
+      "https://durandservicesgarantie.onrender.com/atelier/config.js"
+    ];
 
-    function loadScript(src){
+    // Si on est sur www., on tente aussi sans www.
+    try{
+      const host = location.host;
+      const proto = location.protocol;
+      if (host.startsWith("www.")) {
+        const noWww = host.replace(/^www\./, "");
+        candidates.splice(2, 0, `${proto}//${noWww}/atelier/config.js`);
+      }
+    }catch(e){}
+
+    function loadScript(url){
       return new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = src;
+        s.src = url;
         s.async = true;
-        s.onload = () => resolve(src);
-        s.onerror = () => reject(new Error("load_failed:" + src));
+        s.onload = () => resolve(url);
+        s.onerror = () => reject(new Error("load failed: " + url));
         document.head.appendChild(s);
       });
     }
 
-    async function ensureAtelierConfig(){
-      // On certaines URLs, /atelier/config.js peut ne pas exister (www vs non-www, hébergement différent).
-      const cands = [
-        "/atelier/config.js",
-        "../atelier/config.js",
-        (location.hostname.startsWith("www.") ? `https://${location.hostname.replace(/^www\./,'')}/atelier/config.js` : ""),
-        "https://durandservicesgarantie.onrender.com/atelier/config.js"
-      ].filter(Boolean);
-
-      for (const src of cands){
+    async function ensure(){
+      if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) return true;
+      for (const u of candidates){
         try{
-          await loadScript(src);
-          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-            APPSCRIPT_URL = window.__ATELIER_CFG.GS_URL;
-            return { ok:true, src };
-          }
+          await loadScript(u);
+          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) return true;
         }catch(e){}
       }
-      APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
-      return { ok: !!APPSCRIPT_URL, src: null };
+      return false;
     }
-    const $ = (id) => document.getElementById(id);
 
+    window.__ensureAtelierCfg = ensure;
+  })();
+  </script>
+
+<script>
+(async () => {
+  const ok = window.__ensureAtelierCfg ? await window.__ensureAtelierCfg() : false;
+  const APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
+  const $ = (id) => document.getElementById(id);
     let REGLES = [];
     let LINE_EP = null;
     let LINE_SU = null;
@@ -336,10 +349,8 @@
     }
 
     ['segment','cylindre','soupapes','carburant'].forEach(id => $(id).addEventListener('change', refresh));
-    window.addEventListener('DOMContentLoaded', async () => {
-      await ensureAtelierConfig();
-      init();
-    });
-  </script>
+    window.addEventListener('DOMContentLoaded', init);
+})();
+</script>
 </body>
 </html>
