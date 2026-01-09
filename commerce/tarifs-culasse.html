@@ -135,41 +135,58 @@ html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x
 
 <script>
   const $ = (id) => document.getElementById(id);
+  
   async function loadAtelierConfig(){
-    const candidates = [];
+    // Objectif: récupérer GS_URL (Apps Script) même si le serveur config est temporairement indisponible.
+    const candidates = [
+      "https://mes-formulaires.onrender.com/atelier/config.js",
+      "https://durandservicesgarantie.onrender.com/atelier/config.js",
+      "/atelier/config.js",
+      "../atelier/config.js",
+    ];
 
-    candidates.push("https://durandservicesgarantie.onrender.com/atelier/config.js");
-    candidates.push("https://mes-formulaires.onrender.com/atelier/config.js");
-
-    candidates.push("/atelier/config.js");
-    candidates.push("../atelier/config.js");
-
+    // si la page est en www., on tente aussi le domaine nu (au cas où il y aurait un proxy)
     const host = (location.host || "");
     if (host.startsWith("www.")) {
       const bareHost = host.slice(4);
       candidates.push(location.protocol + "//" + bareHost + "/atelier/config.js");
     }
 
-    for (const baseUrl of candidates) {
-      try {
-        await new Promise((resolve, reject) => {
-          const sc = document.createElement("script");
-          sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-          sc.async = true;
-          sc.onload = () => resolve();
-          sc.onerror = () => reject(new Error("load_failed"));
-          document.head.appendChild(sc);
-        });
+    const loadScriptOnce = (baseUrl) => new Promise((resolve, reject) => {
+      const sc = document.createElement("script");
+      sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+      sc.async = true;
+      sc.onload = () => resolve(true);
+      sc.onerror = () => reject(new Error("load_failed"));
+      document.head.appendChild(sc);
+    });
 
-        if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-          return window.__ATELIER_CFG;
-        } else {
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    for (const baseUrl of candidates) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await loadScriptOnce(baseUrl);
+          if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
+            try { localStorage.setItem("dsg_atelier_gs_url", String(window.__ATELIER_CFG.GS_URL)); } catch(_){}
+            return window.__ATELIER_CFG;
+          }
+        } catch (e) {
+          // petite pause puis retry (utile quand Render répond 502 temporairement)
+          if (attempt === 0) await sleep(350);
         }
-      } catch (e) {
       }
     }
-    return window.__ATELIER_CFG || null;
+
+    // Fallback: si on a déjà chargé une fois dans le passé, on réutilise la dernière GS_URL connue
+    try {
+      const cached = localStorage.getItem("dsg_atelier_gs_url");
+      if (cached) return { GS_URL: cached };
+    } catch(_){}
+
+    return null;
   }
+
 
   let APPSCRIPT_URL = "";
   let REGLES = [];
