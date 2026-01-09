@@ -41,8 +41,7 @@
     .ok{color:#16a34a;font-weight:800}
     .topHelp{margin-top:10px;color:var(--muted);font-size:.92rem}
     .footerNote{margin:10px 0 0;color:var(--muted);font-size:.85rem}
-    .debug{margin-top:6px;font-size:.82rem;color:#64748b;line-height:1.25}
-    html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
   </style>
 </head>
 
@@ -72,9 +71,8 @@
   <div class="head">
     <div>
       <h1>Tarifs Culasse</h1>
-      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant : les références s’affichent pour <span class="pill">Épreuve</span> et <span class="pill">Surfaçage</span>.</p>
-      <div class="debug" id="debug"></div>
-    </div>
+      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant.</p>
+</div>
     <div class="topHelp" id="status">Chargement des tarifs…</div>
   </div>
 
@@ -137,23 +135,15 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const debugLines = [];
-  function dbg(s){ debugLines.push(s); const d=$("debug"); if(d) d.innerHTML = debugLines.slice(-6).join("<br>"); }
-
-  // Charge config.js en <script> (pas de CORS), avec logs précis.
   async function loadAtelierConfig(){
     const candidates = [];
 
-    // Render (source de vérité)
     candidates.push("https://durandservicesgarantie.onrender.com/atelier/config.js");
-    // autres domaines possibles (si tu as plusieurs services)
     candidates.push("https://mes-formulaires.onrender.com/atelier/config.js");
 
-    // même origine (si proxy)
     candidates.push("/atelier/config.js");
     candidates.push("../atelier/config.js");
 
-    // www -> non-www
     const host = (location.host || "");
     if (host.startsWith("www.")) {
       const bareHost = host.slice(4);
@@ -161,7 +151,6 @@
     }
 
     for (const baseUrl of candidates) {
-      dbg("Essai config: " + baseUrl);
       try {
         await new Promise((resolve, reject) => {
           const sc = document.createElement("script");
@@ -173,13 +162,10 @@
         });
 
         if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-          dbg("OK config ✅ (" + baseUrl + ")");
           return window.__ATELIER_CFG;
         } else {
-          dbg("Chargé mais pas de GS_URL (" + baseUrl + ")");
         }
       } catch (e) {
-        dbg("Échec ❌ (" + baseUrl + ")");
       }
     }
     return window.__ATELIER_CFG || null;
@@ -286,7 +272,7 @@
   function refresh(){
     renderRefs("refs_epreuve", LINE_EP);
     renderRefs("refs_surfacage", LINE_SU);
-    $("footerNote").textContent = ready() ? "Tarifs issus des règles Atelier (Rectification Culasse)." : "";
+    $("footerNote").textContent = ready() ? "" : "";
   }
 
   ["segment","cylindre","soupapes","carburant"].forEach(id => $(id).addEventListener("change", refresh));
@@ -296,8 +282,6 @@
     try{
       const cfg = await loadAtelierConfig();
       APPSCRIPT_URL = (cfg && cfg.GS_URL) ? cfg.GS_URL : "";
-      dbg("GS_URL = " + (APPSCRIPT_URL ? "OK" : "VIDE"));
-
       if (!APPSCRIPT_URL){
         status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ✖</span>';
         refresh();
@@ -308,7 +292,6 @@
       const data = await r.json();
       REGLES = data.regles || [];
 
-      // IMPORTANT: dans ton Sheet tu as "SURFACE" (pas "SURFACAGE")
       LINE_EP = findBestLine(["EPREUVE","EPREUVE CULASSE","EPREUVE / CONTROLE","EPREUVE ETANCHEITE"]);
       LINE_SU = findBestLine(["SURFACE","SURFACAGE","SURFAÇAGE","SURFACAGE PLAN DE JOINT","SURFACE PLAN DE JOINT","SURFACE PJ","SURFACAGE PJ"]);
 
