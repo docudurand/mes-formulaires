@@ -479,23 +479,30 @@
 
     async function main() {
       try {
-        const [counterPayload, ramasseData, visitsData] = await Promise.all([
-          loadData(),
-          loadRamasse(),
-          loadVisits(),
-        ]);
+const [counterPayload, ramasseData, visitsData] = await Promise.all([
+  loadData(),
+  loadRamasse(),
+  loadVisits(),
+]);
 
-        const { years, counters } = counterPayload;
+const years = counterPayload?.years || [];
+const countersRaw = counterPayload?.counters || counterPayload?.forms || {};
 
-        const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
-        const allYears = Array.from(setYears).sort();
+const counters = {
+  piece:   countersRaw.piece   || { byYear: {}, total: 0 },
+  piecepl: countersRaw.piecepl || { byYear: {}, total: 0 },
+  pneu:    countersRaw.pneu    || { byYear: {}, total: 0 },
+};
 
-        fillYearSelect(allYears);
-        const current = document.getElementById("yearSelect").value;
+const setYears = new Set([...(years || []), ...(ramasseData.years || [])]);
+const allYears = Array.from(setYears).sort();
 
-        renderCards(counters, current);
-        renderTable(allYears, counters);
-        renderRamasse(ramasseData, current);
+fillYearSelect(allYears);
+const current = document.getElementById("yearSelect").value;
+
+renderCards(counters, current);
+renderTable(allYears, counters);
+renderRamasse(ramasseData, current);
 
         renderVisitsTable(visitsData);
         fillVisitsSelectors(visitsData);
