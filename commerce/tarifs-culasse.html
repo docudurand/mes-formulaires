@@ -7,325 +7,349 @@
   <style>
     :root{
       --primary:#071E57;
+      --accent:#1E8AFF;
       --ink:#0f172a;
       --muted:#6b7280;
+      --bg:#ffffff;
       --line:#e5e7eb;
       --card:#f8fafc;
       --radius:14px;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-    .wrap{max-width:980px;margin:18px auto;padding:14px}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#fff; color:var(--ink)}
+    .wrap{max-width:980px; margin:18px auto; padding:14px}
     .head{
-      display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;
-      background:linear-gradient(180deg,#f5f8ff,#ffffff);
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      border:1px solid var(--line); border-radius:var(--radius); padding:14px 14px 12px;
+      background:linear-gradient(180deg,#f5f8ff, #ffffff);
     }
-    h1{margin:0;font-size:1.25rem;letter-spacing:.02em;color:var(--primary)}
-    .sub{margin:6px 0 0;color:var(--muted);font-size:.92rem}
-    .grid{display:grid;gap:12px;margin-top:14px}
+    h1{margin:0; font-size:1.25rem; letter-spacing:.02em; color:var(--primary)}
+    .sub{margin:6px 0 0; color:var(--muted); font-size:.92rem}
+    .grid{display:grid; gap:12px; margin-top:14px}
     @media(min-width:760px){ .grid-2{grid-template-columns:1fr 1fr} }
-    label{display:block;font-weight:700;font-size:.92rem;margin:0 0 6px}
-    select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:1rem;background:#fff}
-    .section{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:hidden}
-    .sectionTitle{padding:12px 14px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;background:#f8fbff;border-bottom:1px solid var(--line);color:var(--primary);font-size:.85rem}
-    .cards{display:grid;gap:12px;padding:14px}
+    label{display:block; font-weight:700; font-size:.92rem; margin:0 0 6px}
+    select{
+      width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px; font-size:1rem; background:#fff;
+    }
+    .section{
+      margin-top:14px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; overflow:hidden;
+    }
+    .sectionTitle{
+      padding:12px 14px; font-weight:900; letter-spacing:.04em; text-transform:uppercase;
+      background:#f8fbff; border-bottom:1px solid var(--line); color:var(--primary); font-size:.85rem;
+    }
+    .cards{display:grid; gap:12px; padding:14px}
     @media(min-width:760px){ .cards{grid-template-columns:1fr 1fr} }
-    .card{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;background:var(--card)}
-    .card h2{margin:0 0 6px;font-size:1.02rem;color:var(--ink)}
-    .hint{margin:0 0 8px;color:var(--muted);font-size:.88rem}
-    .sectionHint{margin:8px 0 0;padding-left:14px;color:#000;font-weight:800}
-    .refs ul{margin:8px 0 0;padding-left:18px}
-    .refs li{margin:8px 0}
-    .refLine{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
-    .refLine strong{font-weight:900}
-    .priceLine{margin-top:4px;color:var(--muted);font-weight:800;font-size:.92rem}
-    .priceLine span{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;color:var(--ink)}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:var(--primary);font-weight:800;font-size:.78rem;letter-spacing:.02em}
-    .warn{color:#b91c1c;font-weight:800}
-    .ok{color:#16a34a;font-weight:800}
-    .topHelp{margin-top:10px;color:var(--muted);font-size:.92rem}
-    .footerNote{margin:10px 0 0;color:var(--muted);font-size:.85rem}
-html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+    .card{
+      border:1px solid var(--line); border-radius:12px; padding:12px 12px 10px;
+      background:var(--card);
+    }
+    .card h2{margin:0 0 6px; font-size:1.02rem; color:var(--ink)}
+    .hint{margin:0 0 8px; color:var(--muted); font-size:.88rem}
+    .hint.sectionHint{color:#000; font-weight:800; padding-left:14px}
+    .refs ul{margin:8px 0 0; padding-left:18px}
+    .refs li{margin:6px 0}
+    .pill{
+      display:inline-block; padding:2px 8px; border-radius:999px; background:#eef2ff; color:var(--primary);
+      font-weight:800; font-size:.78rem; letter-spacing:.02em;
+    }
+    .warn{color:#b91c1c; font-weight:800}
+    .ok{color:#16a34a; font-weight:800}
+    .topHelp{margin-top:10px; color:var(--muted); font-size:.92rem}
+    .footerNote{margin:10px 0 0; color:var(--muted); font-size:.85rem}
+    html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
   </style>
 </head>
-
-<script>window.__SITE_PREFIX__ = "../";</script>
-<script src="../assets/auth.js"></script>
-<script>try{ requireAuth(); }catch(e){}</script>
-
 <body>
 <script>
 (function () {
-  try { if (window.self !== window.top) document.documentElement.classList.add("dsg-in-iframe"); }
-  catch { document.documentElement.classList.add("dsg-in-iframe"); }
+  try {
+    if (window.self !== window.top) document.documentElement.classList.add("dsg-in-iframe");
+  } catch (e) {
+    document.documentElement.classList.add("dsg-in-iframe");
+  }
 
   function heightNow() {
-    const b=document.body, d=document.documentElement;
-    return Math.max(d?.scrollHeight||0,d?.offsetHeight||0,d?.clientHeight||0,b?.scrollHeight||0,b?.offsetHeight||0,b?.clientHeight||0);
+    const b = document.body;
+    const d = document.documentElement;
+    return Math.max(
+      d ? d.scrollHeight : 0,
+      d ? d.offsetHeight : 0,
+      d ? d.clientHeight : 0,
+      b ? b.scrollHeight : 0,
+      b ? b.offsetHeight : 0,
+      b ? b.clientHeight : 0
+    );
   }
-  function send(){ parent.postMessage({type:"dsg-iframe-size", height: heightNow()+24}, "*"); }
-  window.addEventListener("load", send, {once:true});
-  try{ const ro=new ResizeObserver(()=>send()); ro.observe(document.documentElement); }catch{}
-  window.addEventListener("message",(e)=>{ if(e.data&&e.data.type==="dsg-iframe-request-size") send(); });
-  let n=0; const it=setInterval(()=>{ send(); if(++n>=20) clearInterval(it); },300);
+  function send() { parent.postMessage({ type: "dsg-iframe-size", height: heightNow() + 24 }, "*"); }
+
+  window.addEventListener("load", send, { once: true });
+
+  try { const ro = new ResizeObserver(() => send()); ro.observe(document.documentElement); } catch (e) {}
+  window.addEventListener("message", (e) => { if (e.data && e.data.type === "dsg-iframe-request-size") send(); });
+
+  let n = 0;
+  const it = setInterval(() => { send(); if (++n >= 20) clearInterval(it); }, 300);
 })();
 </script>
 
-<div class="wrap">
-  <div class="head">
-    <div>
-      <h1>Tarifs Culasse</h1>
-      <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant.</p>
-</div>
-    <div class="topHelp" id="status">Chargement des tarifs…</div>
-  </div>
-
-  <div class="grid grid-2">
-    <div>
-      <label for="segment">VL / PL</label>
-      <select id="segment">
-        <option value="" selected>-- VL ou PL --</option>
-        <option>VL</option>
-        <option>PL</option>
-      </select>
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1>Tarifs Culasse</h1>
+        <p class="sub">Sélectionne VL/PL, cylindres, soupapes et carburant : les références s’affichent pour <span class="pill">Épreuve</span> et <span class="pill">Surfaçage</span>.</p>
+      </div>
+      <div class="topHelp" id="status">Chargement des tarifs…</div>
     </div>
 
-    <div>
-      <label for="cylindre">Cylindre</label>
-      <select id="cylindre">
-        <option value="" selected>-- Nb de cylindres --</option>
-        <option>1</option><option>2</option><option>3</option><option>4</option>
-        <option>5</option><option>6</option><option>7</option><option>8</option>
-      </select>
-    </div>
-
-    <div>
-      <label for="soupapes">Soupapes</label>
-      <select id="soupapes">
-        <option value="" selected>-- Nb de soupapes --</option>
-        <option>2</option><option>4</option><option>8</option><option>16</option><option>24</option>
-      </select>
-    </div>
-
-    <div>
-      <label for="carburant">Carburant</label>
-      <select id="carburant">
-        <option value="" selected>-- Type de carburant --</option>
-        <option>Essence</option>
-        <option>Diesel</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="section" aria-label="Tarifs">
-    <div class="sectionTitle">Tarifs selon sélection</div>
-	<p class="hint sectionHint">Remise 25 appliquée, il faut rajouter 6,37€ HT de retraitement des déchets.</p>
-    <div class="cards">
-      <div class="card">
-        <h2>Épreuve</h2>
-        <div class="refs" id="refs_epreuve"></div>
+    <div class="grid grid-2">
+      <div>
+        <label for="segment">VL / PL</label>
+        <select id="segment">
+          <option value="" selected>-- VL ou PL --</option>
+          <option>VL</option>
+          <option>PL</option>
+        </select>
       </div>
 
-      <div class="card">
-        <h2>Surfaçage</h2>
-        <div class="refs" id="refs_surfacage"></div>
+      <div>
+        <label for="cylindre">Cylindre</label>
+        <select id="cylindre">
+          <option value="" selected>-- Nb de cylindres --</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="soupapes">Soupapes</label>
+        <select id="soupapes">
+          <option value="" selected>-- Nb de soupapes --</option>
+          <option>2</option><option>4</option><option>8</option><option>16</option><option>24</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="carburant">Carburant</label>
+        <select id="carburant">
+          <option value="" selected>-- Type de carburant --</option>
+          <option>Essence</option>
+          <option>Diesel</option>
+        </select>
       </div>
     </div>
+
+    <div class="section" aria-label="Tarifs">
+      <div class="sectionTitle">Tarifs selon sélection</div>
+      <p class="hint sectionHint">Tarifs publics, remise de 25 appliquée en moyenne (non appliquée), il faut rajouter 6,37€ HT de retraitement des déchets.</p>
+      <div class="cards">
+        <div class="card">
+          <h2>Épreuve</h2>
+          <p class="hint">Références associées à ton choix.</p>
+          <div class="refs" id="refs_epreuve"></div>
+        </div>
+
+        <div class="card">
+          <h2>Surfaçage</h2>
+          <p class="hint">Références associées à ton choix.</p>
+          <div class="refs" id="refs_surfacage"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footerNote" id="footerNote"></p>
   </div>
 
-  <p class="footerNote" id="footerNote"></p>
-</div>
-
-<script>
-  const $ = (id) => document.getElementById(id);
   
-  async function loadAtelierConfig(){
-    const candidates = [
-      "https://mes-formulaires.onrender.com/atelier/config.js",
-      "https://durandservicesgarantie.onrender.com/atelier/config.js",
-      "/atelier/config.js",
-      "../atelier/config.js",
-    ];
+<script>
+  const CFG_URLS = [
+    "https://mes-formulaires.onrender.com/atelier/config.js",
+    "https://durandservicesgarantie.onrender.com/atelier/config.js"
+  ];
+  const LS_KEY_GS = "dsg_last_gs_url";
 
-    const host = (location.host || "");
-    if (host.startsWith("www.")) {
-      const bareHost = host.slice(4);
-      candidates.push(location.protocol + "//" + bareHost + "/atelier/config.js");
+  function loadScriptOnce(url) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+      s.async = true;
+      s.onload = () => resolve(true);
+      s.onerror = () => reject(new Error("script_load_failed: " + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function loadAtelierConfig() {
+    if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
+      try { localStorage.setItem(LS_KEY_GS, window.__ATELIER_CFG.GS_URL); } catch(_) {}
+      return window.__ATELIER_CFG;
     }
 
-    const loadScriptOnce = (baseUrl) => new Promise((resolve, reject) => {
-      const sc = document.createElement("script");
-      sc.src = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-      sc.async = true;
-      sc.onload = () => resolve(true);
-      sc.onerror = () => reject(new Error("load_failed"));
-      document.head.appendChild(sc);
-    });
-
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    for (const baseUrl of candidates) {
+    for (const url of CFG_URLS) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          await loadScriptOnce(baseUrl);
+          await loadScriptOnce(url);
           if (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) {
-            try { localStorage.setItem("dsg_atelier_gs_url", String(window.__ATELIER_CFG.GS_URL)); } catch(_){}
+            try { localStorage.setItem(LS_KEY_GS, window.__ATELIER_CFG.GS_URL); } catch(_) {}
             return window.__ATELIER_CFG;
           }
         } catch (e) {
-          if (attempt === 0) await sleep(350);
         }
       }
     }
 
     try {
-      const cached = localStorage.getItem("dsg_atelier_gs_url");
-      if (cached) return { GS_URL: cached };
-    } catch(_){}
+      const cached = localStorage.getItem(LS_KEY_GS);
+      if (cached) return { GS_URL: cached, _cached: true };
+    } catch (_) {}
 
-    return null;
+    throw new Error("config_introuvable");
   }
+</script>
 
+  <script>
+    let APPSCRIPT_URL = "";
+    const $ = (id) => document.getElementById(id);
 
-  let APPSCRIPT_URL = "";
-  let REGLES = [];
-  let LINE_EP = null;
-  let LINE_SU = null;
+    let REGLES = [];
+    let LINE_EP = null;
+    let LINE_SU = null;
 
-  function norm(s){
-    return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
-  }
+    function norm(s){
+      return String(s||"")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+        .toUpperCase()
+        .trim();
+    }
 
-  function ready(){
-    return $("segment").value && $("cylindre").value && $("soupapes").value && $("carburant").value;
-  }
-
-  function findBestLine(keys){
-    const cand = Array.from(new Set(
-      REGLES
+    function findBestLine(keys){
+      const cand = Array.from(new Set(REGLES
         .filter(r => String(r.service||"").toLowerCase() === "culasse")
         .map(r => r.ligne)
         .filter(Boolean)
         .map(String)
-    ));
-    const keysN = keys.map(norm);
+      ));
 
-    for (const l of cand){ if (keysN.includes(norm(l))) return l; }
-    for (const l of cand){
-      const ln = norm(l);
-      if (keysN.some(k => ln.includes(k))) return l;
-    }
-    return null;
-  }
-
-  function matchRegles(service, cyl, soup, carb, seg, ligne){
-    const cand = REGLES.filter(r =>
-      norm(r.ligne) === norm(ligne) &&
-      String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
-    );
-
-    const score = (r) => {
-      const vlpl = norm(r.vl_pl || r["vl/pl"] || r.vlpl || "");
-      const segU = norm(seg);
-      let s = 0;
-
-      s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === "*" ? 0 : -999);
-      s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === "*" ? 0 : -999);
-      s += (String(r.carburant||"").toLowerCase() === String(carb||"").toLowerCase()) ? 1 : (r.carburant === "*" ? 0 : -999);
-      s += (vlpl === "" || vlpl === "*" || vlpl === segU) ? 1 : -999;
-
-      return s;
-    };
-
-    return cand
-      .map(r => ({ r, s: score(r) }))
-      .filter(x => x.s >= 0)
-      .sort((a,b) => b.s - a.s)
-      .map(x => x.r);
-  }
-
-  function renderRefs(holderId, ligne){
-    const holder = $(holderId);
-    if (!holder) return;
-
-    if (!APPSCRIPT_URL){
-      holder.innerHTML = '<div class="warn">Impossible de charger les règles depuis Google Sheets.</div>';
-      return;
+      const keysN = keys.map(norm);
+      for (const l of cand){
+        const ln = norm(l);
+        if (keysN.some(k => ln === k)) return l;
+      }
+      for (const l of cand){
+        const ln = norm(l);
+        if (keysN.some(k => ln.includes(k))) return l;
+      }
+      return null;
     }
 
-    if (!ligne){
-      holder.innerHTML = '<div class="warn">Ligne introuvable dans les règles Sheets.</div>';
-      return;
+    function matchRegles(service, cyl, soup, carb, seg, ligne){
+      const cand = REGLES.filter(r =>
+        norm(r.ligne) === norm(ligne) &&
+        String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
+      );
+
+      const score = r => {
+        const vlpl = norm(r.vl_pl || r['vl/pl'] || r.vlpl || '');
+        const segU = norm(seg);
+        let s = 0;
+
+        s += (String(r.cylindres) === String(cyl)) ? 1 : (r.cylindres === '*' ? 0 : -999);
+
+        if (String(soup || '') !== '') {
+          s += (String(r.soupapes) === String(soup)) ? 1 : (r.soupapes === '*' ? 0 : -999);
+        }
+
+        s += (String(r.carburant||'').toLowerCase() === String(carb||'').toLowerCase()) ? 1 : (r.carburant === '*' ? 0 : -999);
+        s += (vlpl === '' || vlpl === '*' || vlpl === segU) ? 1 : -999;
+
+        return s;
+      };
+
+      return cand
+        .map(r => ({ r, s: score(r) }))
+        .filter(x => x.s >= 0)
+        .sort((a,b) => b.s - a.s)
+        .map(x => x.r);
     }
 
-    if (!ready()){
-      holder.innerHTML = '<div class="hint">Renseigne tous les sélecteurs pour afficher les références.</div>';
-      return;
+    function ready(){
+      return $('segment').value && $('cylindre').value && $('carburant').value;
     }
 
-    const seg = $("segment").value,
-          cyl = $("cylindre").value,
-          soup = $("soupapes").value,
-          carb = $("carburant").value;
+    function renderRefs(holderId, ligne){
+      const holder = $(holderId);
+      if (!holder) return;
 
-    const regles = matchRegles("culasse", cyl, soup, carb, seg, ligne);
-
-    if (!regles.length){
-      holder.innerHTML = '<div class="warn">Aucune référence trouvée pour cette combinaison.</div>';
-      return;
-    }
-
-    holder.innerHTML =
-      "<ul>" + regles.map(r => {
-        const ref = String(r.reference||"").trim();
-        const lib = String(r.libelleref||r.libelleRef||"").trim();
-        const prix = (r.prixht || r.prixht===0) ? String(r.prixht) : "";
-        const priceHtml = prix ? `<div class="priceLine"><span>${prix} € HT</span></div>` : "";
-        const libHtml = lib ? ` – ${lib}` : "";
-        return `<li><div class="refLine"><strong>${ref || "-"}</strong>${libHtml}</div>${priceHtml}</li>`;
-      }).join("") + "</ul>";
-  }
-
-  function refresh(){
-    renderRefs("refs_epreuve", LINE_EP);
-    renderRefs("refs_surfacage", LINE_SU);
-    $("footerNote").textContent = ready() ? "" : "";
-  }
-
-  ["segment","cylindre","soupapes","carburant"].forEach(id => $(id).addEventListener("change", refresh));
-
-  async function init(){
-    const status = $("status");
-    try{
-      const cfg = await loadAtelierConfig();
-      APPSCRIPT_URL = (cfg && cfg.GS_URL) ? cfg.GS_URL : "";
-      if (!APPSCRIPT_URL){
-        status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ✖</span>';
-        refresh();
+      if (!ligne){
+        holder.innerHTML = '<div class="warn">Ligne introuvable dans les règles Sheets.</div>';
         return;
       }
 
-      const r = await fetch(APPSCRIPT_URL, { cache: "no-store" });
-      const data = await r.json();
-      REGLES = data.regles || [];
-
-      LINE_EP = findBestLine(["EPREUVE","EPREUVE CULASSE","EPREUVE / CONTROLE","EPREUVE ETANCHEITE"]);
-      LINE_SU = findBestLine(["SURFACE","SURFACAGE","SURFAÇAGE","SURFACAGE PLAN DE JOINT","SURFACE PLAN DE JOINT","SURFACE PJ","SURFACAGE PJ"]);
-
-      status.innerHTML = '<span class="ok">Tarifs chargés ✅</span>';
-      if (!LINE_EP || !LINE_SU){
-        status.innerHTML = '<span class="warn">Tarifs chargés, mais une ligne est introuvable</span>';
+      if (!ready()){
+        holder.innerHTML = '<div class="hint">Renseigne VL/PL, cylindres et carburant (soupapes optionnel) pour afficher les références.</div>';
+        return;
       }
-      refresh();
-    }catch(e){
-      console.error(e);
-      status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ✖</span>';
-      refresh();
-    }
-  }
 
-  init();
-</script>
+      const seg = $('segment').value,
+            cyl = $('cylindre').value,
+            soup = $('soupapes').value,
+            carb = $('carburant').value;
+
+      const regles = matchRegles('culasse', cyl, soup, carb, seg, ligne);
+
+      if (!regles.length){
+        holder.innerHTML = '<div class="warn">Aucune référence trouvée pour cette combinaison.</div>';
+        return;
+      }
+
+      holder.innerHTML =
+        '<ul>' + regles.map(r => {
+          const ref = (r.reference||'').trim();
+          const lib = (r.libelleref||r.libelleRef||'').trim();
+          const prix = (r.prixht || r.prixht===0) ? String(r.prixht) : '';
+          const priceLine = (prix && prix !== '0' && prix !== '0.00' && prix !== '0,00') ? `<div style="margin-left:0; font-weight:800; color:#0f172a;">${prix} € HT</div>` : '';
+          return `<li><div><strong>${ref || '-'}</strong>${lib ? ' – ' + lib : ''}</div>${priceLine}</li>`;
+        }).join('') + '</ul>';
+    }
+
+    function refresh(){
+      renderRefs('refs_epreuve', LINE_EP);
+      renderRefs('refs_surfacage', LINE_SU);
+      const ok = ready();
+      $('footerNote').textContent = ok
+        ? "Tarifs issus des règles Atelier (Rectification Culasse)."
+        : "";
+    }
+
+    async function init(){
+      const status = $('status');
+      try{
+        const cfg = await loadAtelierConfig();
+        APPSCRIPT_URL = (cfg && cfg.GS_URL) ? cfg.GS_URL : "";
+        if (!APPSCRIPT_URL) throw new Error("GS_ATELIER_URL introuvable.");
+        const r = await fetch(APPSCRIPT_URL, { cache:"no-store" });
+        const data = await r.json();
+        REGLES = data.regles || [];
+
+        LINE_EP = findBestLine(["EPREUVE","EPREUVE CULASSE","EPREUVE / CONTROLE", "EPREUVE ETANCHEITE"]);
+        LINE_SU = findBestLine(["SURFACAGE","SURFACE","SURFAÇAGE","SURFACAGE CULASSE","SURFACAGE PLAN DE JOINT","SURFACAGE PJ"]);
+
+        status.innerHTML = '<span class="ok">Tarifs chargés ✅</span>';
+        if (!LINE_EP || !LINE_SU){
+          status.innerHTML = '<span class="warn">Tarifs chargés, mais une ligne est introuvable (Épreuve ou Surfaçage).</span>';
+        }
+
+        refresh();
+      }catch(e){
+        console.error(e);
+        status.innerHTML = '<span class="warn">Erreur de chargement des tarifs ❌</span>';
+        $('refs_epreuve').innerHTML = '<div class="warn">Impossible de charger les règles depuis Google Sheets.</div>';
+        $('refs_surfacage').innerHTML = '<div class="warn">Impossible de charger les règles depuis Google Sheets.</div>';
+      }
+    }
+
+    ['segment','cylindre','soupapes','carburant'].forEach(id => $(id).addEventListener('change', refresh));
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

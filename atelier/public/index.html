@@ -304,7 +304,7 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
   let LIGNES = [], REGLES = [];
   const el = id => document.getElementById(id);
   const allCulasseChosen = () =>
-    el('segment').value && el('cylindre').value && el('carburant').value;
+    el('segment').value && el('cylindre').value && el('soupapes').value && el('carburant').value;
 
   async function loadConfig(){
     try{
@@ -334,9 +334,20 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
     });
   }
 
-  function matchRegles(service, cyl, soup, carb, seg, ligne){
+  
+  function normalizeLigneName_(v){
+    return String(v||'').trim().toUpperCase()
+      .replace(/\s+/g,' ')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^A-Z0-9 ]/g,'')
+      .replace(/^SURFACE$/, 'SURFACAGE')
+      .replace(/^SURFACAGE$/, 'SURFACAGE')
+      .replace(/^SURFACAGE?$/, 'SURFACAGE');
+  }
+
+function matchRegles(service, cyl, soup, carb, seg, ligne){
     const cand = REGLES.filter(r =>
-      String(r.ligne).toUpperCase() === String(ligne).toUpperCase() &&
+      normalizeLigneName_(r.ligne) === normalizeLigneName_(ligne) &&
       String(r.service).toLowerCase() === String(service).toLowerCase()
     );
     const score = r => {
