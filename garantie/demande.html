@@ -248,7 +248,7 @@
       <input type="email" name="email" required />
     </div>
 
-        <div class="bloc">
+    <div class="bloc">
       <label>Magasin :</label>
       <select name="magasin" required>
         <option value="">-- Choisissez le magasin --</option>
@@ -371,7 +371,7 @@
 
     fileListUl.addEventListener("click", function (e) {
       if (e.target.classList.contains("file-remove")) {
-        const idx = parseInt(e.target.dataset.idx);
+        const idx = parseInt(e.target.dataset.idx, 10);
         filesArray.splice(idx, 1);
         renderFileList();
       }
@@ -387,30 +387,26 @@
       msgDiv.className = "en-cours";
       btnSubmit.disabled = true;
 
-      let formData = new FormData(demandeForm);
-
-      for (let f of filesArray) {
-        formData.append("document", f);
-      }
+      const formData = new FormData(demandeForm);
+      for (const f of filesArray) formData.append("document", f);
 
       try {
-        let resp = await fetch("https://durandservicesgarantie.onrender.com/api/demandes", {
-  method: "POST",
-  body: formData,
-});
+        const resp = await fetch("https://durandservicesgarantie.onrender.com/api/demandes", {
+          method: "POST",
+          body: formData,
+        });
 
-const ct = resp.headers.get("content-type") || "";
-const raw = await resp.text();
+        const ct = resp.headers.get("content-type") || "";
+        const raw = await resp.text();
 
-if (!resp.ok) {
-  throw new Error(`HTTP ${resp.status} - ${raw.slice(0, 200)}`);
-}
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status} - ${raw.slice(0, 200)}`);
+        }
 
-let json;
-if (ct.includes("application/json")) json = JSON.parse(raw);
-else throw new Error(`Réponse non-JSON: ${raw.slice(0, 200)}`);
+        let json;
+        if (ct.includes("application/json")) json = JSON.parse(raw);
+        else throw new Error(`Réponse non-JSON: ${raw.slice(0, 200)}`);
 
-        let json = await resp.json();
         if (json.success) {
           msgDiv.textContent = "✅ Demande envoyée avec succès !";
           msgDiv.className = "ok";
@@ -425,8 +421,9 @@ else throw new Error(`Réponse non-JSON: ${raw.slice(0, 200)}`);
       } catch (err) {
         msgDiv.textContent = "❌ Erreur réseau lors de l’envoi : " + err.message;
         msgDiv.className = "erreur";
+      } finally {
+        btnSubmit.disabled = false;
       }
-      btnSubmit.disabled = false;
     };
   </script>
 </body>
