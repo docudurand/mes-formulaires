@@ -395,9 +395,20 @@
 
       try {
         let resp = await fetch("https://durandservicesgarantie.onrender.com/api/demandes", {
-          method: "POST",
-          body: formData,
-        });
+  method: "POST",
+  body: formData,
+});
+
+const ct = resp.headers.get("content-type") || "";
+const raw = await resp.text();
+
+if (!resp.ok) {
+  throw new Error(`HTTP ${resp.status} - ${raw.slice(0, 200)}`);
+}
+
+let json;
+if (ct.includes("application/json")) json = JSON.parse(raw);
+else throw new Error(`Réponse non-JSON: ${raw.slice(0, 200)}`);
 
         let json = await resp.json();
         if (json.success) {
