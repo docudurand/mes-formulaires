@@ -45,8 +45,8 @@
       background:var(--card);
     }
     .card h2{margin:0 0 6px; font-size:1.02rem; color:var(--ink)}
+	.sectionHint{margin:8px 0 0;padding-left:14px;color:#000;font-weight:800}
     .hint{margin:0 0 8px; color:var(--muted); font-size:.88rem}
-    .hint.sectionHint{color:#000; font-weight:800; padding-left:14px}
     .refs ul{margin:8px 0 0; padding-left:18px}
     .refs li{margin:6px 0}
     .pill{
@@ -244,9 +244,9 @@
 
     function matchRegles(service, cyl, soup, carb, seg, ligne){
       const cand = REGLES.filter(r =>
-  normLine(r.ligne) === normLine(ligne) &&
-  String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
-);
+        norm(r.ligne) === norm(ligne) &&
+        String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
+      );
 
       const score = r => {
         const vlpl = norm(r.vl_pl || r['vl/pl'] || r.vlpl || '');
@@ -273,6 +273,7 @@
     }
 
     function ready(){
+
       return $('segment').value && $('cylindre').value && $('carburant').value;
     }
 
