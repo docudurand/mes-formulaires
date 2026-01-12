@@ -318,14 +318,12 @@
   </form>
 
   <script>
-    // =======================
-    // API BASE (comme l'admin)
-    // =======================
+
     function getApiBase() {
       const host = (location.hostname || "").toLowerCase();
-      // si la page est servie depuis le backend Render, on utilise la même base que l'admin : routes relatives
+
       if (host.includes("durandservicesgarantie.onrender.com")) return "";
-      // sinon (documentsdurand.fr, wix, etc.) on pointe sur le backend
+
       return "https://durandservicesgarantie.onrender.com";
     }
     const API_BASE = getApiBase();
@@ -375,7 +373,7 @@
 
     inputFiles.addEventListener("change", function () {
       for (const f of Array.from(this.files || [])) {
-        // évite doublons exacts
+
         if (!filesArray.some(existing => existing.name === f.name && existing.size === f.size)) {
           filesArray.push(f);
         }
@@ -409,7 +407,6 @@
       try {
         const formData = new FormData(demandeForm);
 
-        // le serveur attend upload.array("document")
         for (const f of filesArray) formData.append("document", f);
 
         const url = API_BASE + "/api/demandes";
@@ -430,7 +427,7 @@
         if (ct.includes("application/json")) {
           json = JSON.parse(raw);
         } else {
-          // parfois Express répond en texte si erreur
+
           throw new Error("Réponse non-JSON — " + raw.slice(0, 300));
         }
 
@@ -439,7 +436,7 @@
           if (json.mailClientOk === false || json.mailMagasinOk === false) {
             extra = "\n⚠️ Email non confirmé (client ou magasin).";
           }
-          setMsg("✅ Demande envoyée avec succès !" + extra + "\n(Si vous ne recevez pas d’email, le souci est côté serveur d’envoi.)", "ok");
+          setMsg("✅ Demande envoyée avec succès !" + extra, "ok");
           demandeForm.reset();
           filesArray = [];
           renderFileList();
