@@ -435,7 +435,11 @@
         }
 
         if (json && json.success) {
-          setMsg("✅ Demande envoyée avec succès !\n(Si vous ne recevez pas d’email, le souci est côté serveur d’envoi.)", "ok");
+          let extra = "";
+          if (json.mailClientOk === false || json.mailMagasinOk === false) {
+            extra = "\n⚠️ Email non confirmé (client ou magasin).";
+          }
+          setMsg("✅ Demande envoyée avec succès !" + extra + "\n(Si vous ne recevez pas d’email, le souci est côté serveur d’envoi.)", "ok");
           demandeForm.reset();
           filesArray = [];
           renderFileList();
