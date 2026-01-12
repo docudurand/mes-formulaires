@@ -5,7 +5,6 @@
   <title>Compteurs de formulaires</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Chart.js (graphique) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
@@ -165,24 +164,6 @@
       </div>
 
       <div class="hint" id="visitsHint" style="margin-top:10px;"></div>
-    </div>
-
-    <div style="overflow-x:auto; margin-top:14px;">
-      <table id="visitsTable">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Visites</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot>
-          <tr>
-            <td>Total cumulé</td>
-            <td id="visits_total">0</td>
-          </tr>
-        </tfoot>
-      </table>
     </div>
 	
 	<h2 style="margin: 32px 0 10px;">Demandes de ramasse par magasin</h2>
@@ -355,27 +336,10 @@
       document.getElementById("ram_t_total").textContent = sumTotal;
     }
 
-    function renderVisitsTable(visitsData) {
-      const tbody = document.querySelector("#visitsTable tbody");
-      tbody.innerHTML = "";
-
-      const byDate = (visitsData && visitsData.byDate) ? visitsData.byDate : {};
-      const dates = Object.keys(byDate).sort().reverse(); // récent en haut
-
-      dates.forEach(d => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${d}</td><td>${Number(byDate[d] || 0)}</td>`;
-        tbody.appendChild(tr);
-      });
-
-      document.getElementById("visits_total").textContent = Number(visitsData?.total || 0);
-    }
-
     function fillVisitsSelectors(visitsData) {
       const monthSel = document.getElementById("visitsMonth");
       const yearSel  = document.getElementById("visitsYear");
 
-      // mois
       monthSel.innerHTML = "";
       MONTHS_FR.forEach((m, idx) => {
         const opt = document.createElement("option");
@@ -504,7 +468,6 @@ renderCards(counters, current);
 renderTable(allYears, counters);
 renderRamasse(ramasseData, current);
 
-        renderVisitsTable(visitsData);
         fillVisitsSelectors(visitsData);
 
         const monthSel = document.getElementById("visitsMonth");
