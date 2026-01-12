@@ -141,7 +141,7 @@
 
     <div class="section" aria-label="Tarifs">
       <div class="sectionTitle">Tarifs selon sélection</div>
-      <p class="hint sectionHint">Tarifs publics, remise de 25 appliquée en moyenne (non appliquée), il faut rajouter 6,37€ HT de retraitement des déchets.</p>
+	  <p class="hint sectionHint">Tarifs publics, remise de 25 appliquée en moyenne (non appliquée), il faut rajouter 6,37€ HT de retraitement des déchets.</p>
       <div class="cards">
         <div class="card">
           <h2>Épreuve</h2>
@@ -244,9 +244,9 @@
 
     function matchRegles(service, cyl, soup, carb, seg, ligne){
       const cand = REGLES.filter(r =>
-        norm(r.ligne) === norm(ligne) &&
-        String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
-      );
+  normLine(r.ligne) === normLine(ligne) &&
+  String(r.service||"").toLowerCase() === String(service||"").toLowerCase()
+);
 
       const score = r => {
         const vlpl = norm(r.vl_pl || r['vl/pl'] || r.vlpl || '');

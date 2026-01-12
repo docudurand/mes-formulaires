@@ -303,8 +303,8 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
 
   let LIGNES = [], REGLES = [];
   const el = id => document.getElementById(id);
-  const allCulasseChosen = () =>
-    el('segment').value && el('cylindre').value && el('soupapes').value && el('carburant').value;
+const allCulasseChosen = () =>
+  el('segment').value && el('cylindre').value && el('carburant').value;
 
   async function loadConfig(){
     try{
