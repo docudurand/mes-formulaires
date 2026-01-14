@@ -38,7 +38,16 @@
   async function getCommerceLinks() {
     if (linksCache) return linksCache;
 
-    const r = await fetch("/api/commerce-links", { credentials: "include" });
+const r = await fetch("/api/commerce-links", {
+  credentials: "include",
+  headers: {
+    "X-Admin-Token":
+      localStorage.getItem("site_password") ||
+      localStorage.getItem("sitePassword") ||
+      localStorage.getItem("SITE_PASSWORD") ||
+      ""
+  }
+});
     if (!r.ok) throw new Error("Impossible de charger les liens commerce");
 
     linksCache = await r.json();

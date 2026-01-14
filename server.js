@@ -1266,9 +1266,15 @@ app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
-app.get("/api/commerce-links", (_req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  res.json({
+app.get("/api/commerce-links", (req, res) => {
+  const expected = String(process.env.SITE_PASSWORD || "");
+  const tok = String(req.get("X-Admin-Token") || "");
+
+  if (expected && tok !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  return res.json({
     bosch: process.env.COMMERCE_TELEVENTE_BOSCH_URL,
     lub: process.env.COMMERCE_TELEVENTE_LUB_URL,
   });
