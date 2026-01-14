@@ -1,4 +1,5 @@
 (function(){
+
   const btnBurger = document.getElementById('btnBurger');
   const btnClose  = document.getElementById('btnClose');
   const drawer    = document.getElementById('drawer');
@@ -44,13 +45,36 @@
   drawer.addEventListener('touchstart', (e)=>{
     startX = e.touches && e.touches[0] ? e.touches[0].clientX : null;
   }, {passive:true});
-
   drawer.addEventListener('touchend', (e)=>{
     if(startX == null) return;
     const endX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : startX;
     if(endX - startX < -60) closeDrawer();
     startX = null;
   }, {passive:true});
+
+  function initDynamicLinks() {
+
+    fetch('./links.json', { cache: 'no-store' }).then(res => res.json()).then(data => {
+      const bosch = String(data?.televenteBosch || '').trim();
+      const lub   = String(data?.televenteLub   || '').trim();
+      document.querySelectorAll('[data-id]').forEach((btn) => {
+        const id = btn.getAttribute('data-id');
+        let url = null;
+        if (id === 'televente-bosch') url = bosch;
+        else if (id === 'televente-lub') url = lub;
+        if (url) {
+          btn.addEventListener('click', () => openInFrame(url));
+        }
+      });
+    }).catch(() => {
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDynamicLinks);
+  } else {
+    initDynamicLinks();
+  }
 })();
 
 if ('serviceWorker' in navigator) {
