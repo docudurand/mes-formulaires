@@ -27,23 +27,44 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+
+  let url;
+  try { url = new URL(req.url); } catch { return; }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+
+  if (req.method !== "GET") {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  if (url.pathname.endsWith("/commerce/links.json")) {
+    event.respondWith(fetch(req, { cache: "no-store" }));
+    return;
+  }
+
   const isHtml = req.headers.get("accept")?.includes("text/html");
   if (isHtml) {
     event.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
         return res;
-      }).catch(() => caches.match(req).then((r) => r || caches.match("./commerce")))
+      }).catch(() =>
+        caches.match(req).then((r) => r || caches.match("./commerce"))
+      )
     );
     return;
   }
 
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-      return res;
-    }))
+    caches.match(req).then((cached) =>
+      cached ||
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        return res;
+      })
+    )
   );
 });
+
