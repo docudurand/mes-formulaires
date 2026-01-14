@@ -125,21 +125,6 @@ app.post("/api/site/login", (req, res) => {
     return res.sendStatus(500);
   }
 });
-app.get("/api/commerce-links", (req, res) => {
-  const token = String(req.get("X-Admin-Token") || "");
-  const expected = String(process.env.SITE_PASSWORD || "");
-
-  if (!expected || token !== expected) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  res.setHeader("Cache-Control", "no-store");
-  return res.json({
-    bosch: process.env.COMMERCE_TELEVENTE_BOSCH_URL,
-    lub: process.env.COMMERCE_TELEVENTE_LUB_URL,
-  });
-});
-
 
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";
@@ -1280,19 +1265,6 @@ app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   const data = parseEnvJSON(process.env.VL_LIENS_FORMULAIRE_GARANTIE_JSON, []);
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
-});
-app.get("/api/commerce-links", (req, res) => {
-  const expected = String(process.env.SITE_PASSWORD || "");
-  const tok = String(req.get("X-Admin-Token") || "");
-
-  if (expected && tok !== expected) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  return res.json({
-    bosch: process.env.COMMERCE_TELEVENTE_BOSCH_URL,
-    lub: process.env.COMMERCE_TELEVENTE_LUB_URL,
-  });
 });
 app.use("/pl", express.static(path.join(__dirname, "pl"), {
   extensions: ["html", "htm"],
