@@ -1289,18 +1289,6 @@ app.get("/api/util/contacts-fournisseurs", (_req, res) => {
   }
 });
 
-const COMMERCE_TELEVENTE_BOSCH_URL = (process.env.COMMERCE_TELEVENTE_BOSCH_URL || "").trim();
-const COMMERCE_TELEVENTE_LUB_URL   = (process.env.COMMERCE_TELEVENTE_LUB_URL   || "").trim();
-
-app.get("/commerce/links.json", (_req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  return res.json({
-    televenteBosch: COMMERCE_TELEVENTE_BOSCH_URL,
-    televenteLub: COMMERCE_TELEVENTE_LUB_URL,
-  });
-});
-
-
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
