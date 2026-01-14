@@ -1266,6 +1266,13 @@ app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
+app.get("/api/commerce-links", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    bosch: process.env.COMMERCE_TELEVENTE_BOSCH_URL,
+    lub: process.env.COMMERCE_TELEVENTE_LUB_URL,
+  });
+});
 app.use("/pl", express.static(path.join(__dirname, "pl"), {
   extensions: ["html", "htm"],
   index: false

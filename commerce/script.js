@@ -33,12 +33,26 @@
     }catch(e){}
   }
 
-  document.querySelectorAll('[data-src]').forEach((btn)=>{
-    btn.addEventListener('click', () => {
-      const url = btn.getAttribute('data-src');
-      if (url) openInFrame(url);
-    });
+  let linksCache = null;
+
+async function getCommerceLinks(){
+  if (linksCache) return linksCache;
+
+  const r = await fetch("/api/commerce-links", { credentials: "include" });
+  if (!r.ok) throw new Error("Impossible de charger les liens commerce");
+
+  linksCache = await r.json();
+  return linksCache;
+}
+
+document.querySelectorAll('[data-key]').forEach((btn)=>{
+  btn.addEventListener('click', async () => {
+    const key = btn.getAttribute('data-key');
+    const links = await getCommerceLinks();
+    const url = links && key ? links[key] : null;
+    if (url) openInFrame(url);
   });
+});
 
   let startX = null;
   drawer.addEventListener('touchstart', (e)=>{
