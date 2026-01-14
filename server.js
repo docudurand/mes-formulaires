@@ -125,6 +125,21 @@ app.post("/api/site/login", (req, res) => {
     return res.sendStatus(500);
   }
 });
+app.get("/api/commerce-links", (req, res) => {
+  const token = String(req.get("X-Admin-Token") || "");
+  const expected = String(process.env.SITE_PASSWORD || "");
+
+  if (!expected || token !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({
+    bosch: process.env.COMMERCE_TELEVENTE_BOSCH_URL,
+    lub: process.env.COMMERCE_TELEVENTE_LUB_URL,
+  });
+});
+
 
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";
