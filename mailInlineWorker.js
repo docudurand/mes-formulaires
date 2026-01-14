@@ -15,7 +15,7 @@ const POLL_MS = Number(process.env.MAIL_QUEUE_POLL_MS || 1500);
 const MAX_ATTEMPTS = Number(process.env.MAIL_QUEUE_MAX_ATTEMPTS || 10);
 const BASE_DELAY_MS = Number(process.env.MAIL_QUEUE_BASE_DELAY_MS || 2000);
 
-const CLEANUP_EVERY_MS = Number(process.env.MAIL_QUEUE_CLEANUP_EVERY_MS || 6 * 60 * 60 * 1000); // 6h
+const CLEANUP_EVERY_MS = Number(process.env.MAIL_QUEUE_CLEANUP_EVERY_MS || 6 * 60 * 60 * 1000);
 const RETENTION_DAYS_DONE = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_DONE || 30);
 const RETENTION_DAYS_FAILED = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_FAILED || 30);
 const RETENTION_DAYS_IDEM = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_IDEM || 60);
