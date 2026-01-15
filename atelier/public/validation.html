@@ -129,10 +129,7 @@
   </div>
 
   <script>
-  const API_BASE =
-    (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
-      ? "https://mes-formulaires.onrender.com"
-      : location.origin.replace(/\/$/, "");
+  const API_BASE = location.origin.replace(/\/$/, "");
 
   const $content = document.getElementById("content");
   function normalizeNo(v){
@@ -185,15 +182,20 @@
       '<span class="muted">Chargement du dossier ' + esc(no) + '…</span>';
 
     try{
-      const resp = await fetch(API_BASE + "/atelier/api/cases");
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const resp = await fetch(API_BASE + "/atelier/api/cases/" + encodeURIComponent(no));
+      if (!resp.ok) {
+        if (resp.status === 404) {
+          $content.innerHTML =
+            '<div class="msg err"><strong>Dossier introuvable.</strong><br/>' +
+            'Vérifiez que vous avez bien scanné le QR Code le plus récent.</div>';
+          return;
+        }
+        throw new Error("HTTP " + resp.status);
+      }
       const js = await resp.json();
-      const data = (js && js.data) || [];
-      const row = data.find(function(r){
-  return normalizeNo(r.no) === normalizeNo(no);
-});
+      const row = (js && js.data) || null;
 
-      if (!row){
+if (!row){
         $content.innerHTML =
           '<div class="msg err"><strong>Dossier introuvable.</strong><br/>' +
           'Vérifiez que vous avez bien scanné le QR Code le plus récent.</div>';

@@ -18,9 +18,25 @@ if (!GS_URL) {
 }
 
 const http = axios.create({
-  timeout: 20000,
+  timeout: 60000,
   headers: { "User-Agent": "atelier-api/1.1 (+render)" }
 });
+
+async function httpGetWithRetry(url, config = {}, tries = 2) {
+  let lastErr;
+  for (let i = 0; i <= tries; i++) {
+    try {
+      return await http.get(url, config);
+    } catch (e) {
+      lastErr = e;
+      const code = e && e.code;
+      if (!code || !["ECONNABORTED", "ETIMEDOUT", "ECONNRESET", "EAI_AGAIN"].includes(code)) break;
+      await new Promise(r => setTimeout(r, 400 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
@@ -34,7 +50,7 @@ router.get("/config.js", (_req, res) => {
 });
 
 const FRAME_ANCESTORS =
-  "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
+  "frame-ancestors 'self' https://documentsdurand.fr https://www.documentsdurand.fr https://mes-formulaires.onrender.com;";
 router.use((req, res, next) => {
   res.removeHeader("X-Frame-Options");
   res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
@@ -106,7 +122,9 @@ async function nextDossierNumber(){
 
   if (current === null && GS_URL) {
     try {
-      const r = await http.get(GS_URL, { params: { action: "list_cases", sheet: GS_SHEET } });
+      const r = await httpGetWithRetry(GS_URL, {
+    params: { action: "list_cases", sheet: GS_SHEET }
+  });
       const list = (r.data && r.data.data) || [];
       const maxNo = list.reduce((m, x) => {
         const n = parseInt(String(x.no||'').replace(/\D/g,''), 10);
@@ -126,7 +144,7 @@ async function nextDossierNumber(){
 
 async function gsListCases() {
   if (!GS_URL) return { ok: true, data: [] };
-  const r = await http.get(GS_URL, {
+  const r = await httpGetWithRetry(GS_URL, {
     params: { action: "list_cases", sheet: GS_SHEET }
   });
   const json = r.data;
@@ -135,6 +153,25 @@ async function gsListCases() {
 
   return { ok:true, data: [] };
 }
+
+let CASES_CACHE = { ts: 0, data: [] };
+const CASES_TTL_MS = Number(process.env.ATELIER_CASES_TTL_MS || 30000);
+
+function normalizeNo_(v) {
+  return String(v ?? "").trim().replace(/^0+/, "");
+}
+
+async function getCasesCached() {
+  const now = Date.now();
+  if (now - CASES_CACHE.ts < CASES_TTL_MS && Array.isArray(CASES_CACHE.data)) {
+    return { ok: true, data: CASES_CACHE.data, cached: true };
+  }
+  const r = await gsListCases();
+  const data = (r && Array.isArray(r.data)) ? r.data : [];
+  CASES_CACHE = { ts: now, data };
+  return { ok: true, data, cached: false };
+}
+
 async function gsAppendCase(entry) {
   if (!GS_URL) return { ok: false, error: "no_gs_url" };
   const r = await http.post(GS_URL, { action: "save_case", sheet: GS_SHEET, entry });
@@ -502,6 +539,24 @@ router.get("/api/cases", async (_req, res) => {
   } catch (e) {
     console.error("[ATELIER][CASES][GET] erreur:", e);
     res.status(500).json({ ok: false, data: [] });
+  }
+});
+
+router.get("/api/cases/:no", async (req, res) => {
+  try {
+    const { no } = req.params;
+    if (!no) return res.status(400).json({ ok:false, data: null, error: "bad_request" });
+
+    const r = await getCasesCached();
+    const data = (r && Array.isArray(r.data)) ? r.data : [];
+    const wanted = normalizeNo_(no);
+    const row = data.find(x => normalizeNo_(x?.no) === wanted) || null;
+
+    if (!row) return res.status(404).json({ ok:false, data: null, error: "not_found" });
+    return res.json({ ok:true, data: row, cached: !!r.cached });
+  } catch (e) {
+    console.error("[ATELIER][CASE][GET] erreur:", e);
+    res.status(500).json({ ok:false, data: null });
   }
 });
 
