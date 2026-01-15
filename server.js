@@ -60,13 +60,9 @@ app.use((req, res, next) => {
 
 const ALLOWED_FRAME_ANCESTORS = [
   "'self'",
-  "https://documentsdurand.wixsite.com",
-  "https://*.wixsite.com",
-  "https://*.wix.com",
-  "https://*.editorx.io",
-  "https://*.onrender.com",
-"https://documentsdurand.fr",
-"https://www.documentsdurand.fr",
+  "https://documentsdurand.fr",
+  "https://www.documentsdurand.fr",
+  "https://mes-formulaires.onrender.com",
 ];
 
 const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(" ");

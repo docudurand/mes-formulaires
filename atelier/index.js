@@ -34,7 +34,7 @@ router.get("/config.js", (_req, res) => {
 });
 
 const FRAME_ANCESTORS =
-  "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
+  "frame-ancestors 'self' https://documentsdurand.fr https://www.documentsdurand.fr https://mes-formulaires.onrender.com;";
 router.use((req, res, next) => {
   res.removeHeader("X-Frame-Options");
   res.setHeader("Content-Security-Policy", FRAME_ANCESTORS);
