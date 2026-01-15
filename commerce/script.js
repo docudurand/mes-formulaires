@@ -61,6 +61,15 @@
       'https://durandservicesgarantie.onrender.com/commerce/links.json'
     ];
 
+    const cleanUrl = (value) => {
+      const s = String(value || '').trim();
+      if (!s) return '';
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        return s.slice(1, -1).trim();
+      }
+      return s;
+    };
+
     const fetchFirstOk = async () => {
       for (const url of candidates) {
         try {
@@ -71,7 +80,10 @@
           });
           if (!r.ok) continue;
           const data = await r.json();
-          return data;
+          const bosch = cleanUrl(data?.televenteBosch);
+          const lub = cleanUrl(data?.televenteLub);
+          if (!bosch && !lub) continue;
+          return { televenteBosch: bosch, televenteLub: lub };
         } catch (_) {
         }
       }
@@ -80,8 +92,8 @@
 
     fetchFirstOk().then((data) => {
       if (!data) return;
-      const bosch = String(data?.televenteBosch || '').trim();
-      const lub   = String(data?.televenteLub   || '').trim();
+      const bosch = cleanUrl(data?.televenteBosch);
+      const lub   = cleanUrl(data?.televenteLub);
 
       document.querySelectorAll('[data-id]').forEach((btn) => {
         const id = btn.getAttribute('data-id');
