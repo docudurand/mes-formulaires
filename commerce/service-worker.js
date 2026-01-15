@@ -32,7 +32,15 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+      try {
+        const u = new URL(req.url);
+        const isHttp = u.protocol === "http:" || u.protocol === "https:";
+        const isDynamicLinks = u.pathname.endsWith("/commerce/links.json") || u.pathname.endsWith("/commerce/links.json/");
+        if (isHttp && !isDynamicLinks) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+      } catch {}
+
         return res;
       }).catch(() => caches.match(req).then((r) => r || caches.match("./commerce")))
     );
@@ -42,7 +50,15 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(req).then((cached) => cached || fetch(req).then((res) => {
       const copy = res.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+      try {
+        const u = new URL(req.url);
+        const isHttp = u.protocol === "http:" || u.protocol === "https:";
+        const isDynamicLinks = u.pathname.endsWith("/commerce/links.json") || u.pathname.endsWith("/commerce/links.json/");
+        if (isHttp && !isDynamicLinks) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+      } catch {}
+
       return res;
     }))
   );

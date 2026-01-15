@@ -1,4 +1,5 @@
 (function(){
+
   const btnBurger = document.getElementById('btnBurger');
   const btnClose  = document.getElementById('btnClose');
   const drawer    = document.getElementById('drawer');
@@ -44,13 +45,59 @@
   drawer.addEventListener('touchstart', (e)=>{
     startX = e.touches && e.touches[0] ? e.touches[0].clientX : null;
   }, {passive:true});
-
   drawer.addEventListener('touchend', (e)=>{
     if(startX == null) return;
     const endX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : startX;
     if(endX - startX < -60) closeDrawer();
     startX = null;
   }, {passive:true});
+
+  function initDynamicLinks() {
+
+    const candidates = [
+      new URL('./links.json', location.href).toString(),
+
+      'https://mes-formulaires.onrender.com/commerce/links.json',
+      'https://durandservicesgarantie.onrender.com/commerce/links.json'
+    ];
+
+    const fetchFirstOk = async () => {
+      for (const url of candidates) {
+        try {
+          const r = await fetch(url, {
+            cache: 'no-store',
+            credentials: 'omit',
+            headers: { 'Accept': 'application/json' },
+          });
+          if (!r.ok) continue;
+          const data = await r.json();
+          return data;
+        } catch (_) {
+        }
+      }
+      return null;
+    };
+
+    fetchFirstOk().then((data) => {
+      if (!data) return;
+      const bosch = String(data?.televenteBosch || '').trim();
+      const lub   = String(data?.televenteLub   || '').trim();
+
+      document.querySelectorAll('[data-id]').forEach((btn) => {
+        const id = btn.getAttribute('data-id');
+        let url = null;
+        if (id === 'televente-bosch') url = bosch;
+        else if (id === 'televente-lub') url = lub;
+        if (url) btn.addEventListener('click', () => openInFrame(url));
+      });
+    }).catch(() => {});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDynamicLinks);
+  } else {
+    initDynamicLinks();
+  }
 })();
 
 if ('serviceWorker' in navigator) {
