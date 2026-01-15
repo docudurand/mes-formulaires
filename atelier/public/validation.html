@@ -129,7 +129,10 @@
   </div>
 
   <script>
-  const API_BASE = location.origin.replace(/\/$/, "");
+  const API_BASE =
+    (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
+      ? "https://mes-formulaires.onrender.com"
+      : location.origin.replace(/\/$/, "");
 
   const $content = document.getElementById("content");
   function normalizeNo(v){

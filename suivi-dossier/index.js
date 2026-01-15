@@ -13,7 +13,7 @@ const SUIVI_PASS_BG      = process.env.ATELIER_SUIVI_PASS_BG      || "";
 const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
 
 const FRAME_ANCESTORS =
-  "frame-ancestors 'self' https://documentsdurand.fr https://www.documentsdurand.fr https://mes-formulaires.onrender.com;";
+  "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 
 router.use((_req, res, next) => {
   res.removeHeader("X-Frame-Options");

@@ -376,7 +376,10 @@ const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
 let LIMITED_VIEW = false;
 let VIEW_MODE    = "ALL";
 
-const API_BASE = location.origin.replace(/\/$/, "");
+const API_BASE =
+  (location.hostname.includes("wixsite.com") || location.hostname.endsWith(".wix.com"))
+    ? "https://mes-formulaires.onrender.com"
+    : location.origin.replace(/\/$/, "");
 
 const $tbody = document.querySelector("#tab tbody");
 const $filter = document.getElementById("filterMag");
