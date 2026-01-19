@@ -14,7 +14,6 @@ import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
-import { monitorAuth } from "./monitor/auth.js";\nimport monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
 import * as visits from "./visits.js";
@@ -111,23 +110,6 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
-
-function isMonitorRequest(req) {
-  const rawPath = req?.path || req?.url || "";
-  const pathOnly = String(rawPath).split("?")[0];
-
-  if (pathOnly === "/monitor" || pathOnly.startsWith("/monitor/")) return true;
-  if (/^\/monitor\.(html|js|css)$/.test(pathOnly)) return true;
-  if (/^\/public\/monitor\.(html|js|css)$/.test(pathOnly)) return true;
-  return false;
-}
-
-app.use((req, res, next) => {
-  if (!isMonitorRequest(req)) return next();
-  return monitorAuth(req, res, next);
-});
-
-app.use("/monitor", monitorRoutes);
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
@@ -1330,5 +1312,3 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
-
-
