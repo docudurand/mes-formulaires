@@ -7,15 +7,15 @@
   <link rel="stylesheet" href="/monitor.css" />
 </head>
 <body>
-  <main class="monitor">
-    <header class="monitor__header">
-      <div>
-        <h1>Monitor</h1>
-        <p>Flux temps reel actif.</p>
+  <header class="monitor-header">
+    <div class="wrap">
+      <div class="monitor-title">
+        <div>
+          <h1>Monitor <span class="chip">/monitor</span></h1>
+          <p class="sub">Flux temps reel actif.</p>
+        </div>
+        <div class="monitor__status monitor__status--ok" id="monitor-status">OK</div>
       </div>
-      <div class="monitor__status monitor__status--ok" id="monitor-status">OK</div>
-    </header>
-    <section class="monitor__logs">
       <div class="monitor__controls">
         <label for="monitor-filter">Filtre</label>
         <select id="monitor-filter" class="monitor__select">
@@ -29,10 +29,16 @@
         <button id="monitor-pause" class="monitor__button" type="button">Pause</button>
         <button id="monitor-export" class="monitor__button" type="button">Exporter</button>
       </div>
+    </div>
+  </header>
+
+  <main class="wrap monitor-main">
+    <section class="monitor-card">
       <h2>Logs</h2>
       <ul id="monitor-log-list" class="monitor__list"></ul>
     </section>
   </main>
+
   <script src="/monitor.js" defer></script>
 </body>
 </html>

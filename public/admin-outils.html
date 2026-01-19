@@ -112,6 +112,8 @@
     <button class="tab" role="tab" id="tab-comp"  aria-controls="panel-comp"  aria-selected="false" data-target="comp">Compteurs</button>
     <button class="tab" role="tab" id="tab-mails" aria-controls="panel-mails" aria-selected="false" data-target="mails">Suivi e-mails</button>
   </div>
+    <button class="tab" role="tab" id="tab-monitor" aria-controls="panel-monitor" aria-selected="false" data-target="monitor">Monitor</button>
+  </div>
 </header>
 
 <div class="panelWrap">
@@ -129,12 +131,18 @@
   </section>
 </div>
 
+  <section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor">
+    <iframe class="frame" title="Monitor" data-src="https://mes-formulaires.onrender.com/monitor?token=DsG_Monitor_2026!"></iframe>
+  </section>
+</div>
+
 <script>
   const tabs = Array.from(document.querySelectorAll(".tab"));
   const panels = {
     parc:  document.getElementById("panel-parc"),
     comp:  document.getElementById("panel-comp"),
     mails: document.getElementById("panel-mails"),
+    monitor: document.getElementById("panel-monitor"),
   };
 
   function ensureIframeLoaded(panel){
@@ -178,3 +186,4 @@
 
 </body>
 </html>
+

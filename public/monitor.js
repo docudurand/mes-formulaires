@@ -48,7 +48,11 @@ function matchesSearch(entry, term) {
   return buildSearchText(entry).includes(normalized);
 }
 
-function renderList(entries, listEl, filter, searchTerm) {
+function scrollToBottom(listEl) {
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
+function renderList(entries, listEl, filter, searchTerm, autoScroll = false) {
   listEl.textContent = "";
   const filtered = entries.filter(
     (entry) => matchesFilter(entry, filter) && matchesSearch(entry, searchTerm)
@@ -58,6 +62,9 @@ function renderList(entries, listEl, filter, searchTerm) {
       ? filtered.slice(filtered.length - MAX_VISIBLE_LOGS)
       : filtered;
   visible.forEach((entry) => appendLog(entry, listEl));
+  if (autoScroll) {
+    scrollToBottom(listEl);
+  }
 }
 
 function setStatus(statusEl, state, label) {
@@ -120,14 +127,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (filterEl) {
     filterEl.addEventListener("change", () => {
       currentFilter = filterEl.value || "all";
-      renderList(entries, listEl, currentFilter, searchTerm);
+      renderList(entries, listEl, currentFilter, searchTerm, !isPaused);
     });
   }
 
   if (searchEl) {
     searchEl.addEventListener("input", () => {
       searchTerm = searchEl.value || "";
-      renderList(entries, listEl, currentFilter, searchTerm);
+      renderList(entries, listEl, currentFilter, searchTerm, !isPaused);
     });
   }
 
@@ -137,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
       isPaused = !isPaused;
       setPausedState(pauseEl, isPaused);
       if (!isPaused) {
-        renderList(entries, listEl, currentFilter, searchTerm);
+        renderList(entries, listEl, currentFilter, searchTerm, true);
       }
     });
   }
@@ -171,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!isPaused && matchesFilter(entry, currentFilter) && matchesSearch(entry, searchTerm)) {
         appendLog(entry, listEl);
+        scrollToBottom(listEl);
       }
 
       if (normalizeLevel(entry) === "error") {
