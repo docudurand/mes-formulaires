@@ -1,0 +1,138 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-01-16T20:54:21.037Z",
+    "last_updated": "2026-01-16T21:01:30.938Z",
+    "completed": "2026-01-16T21:01:30.938Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "deep",
+  "project_root": "c:\\\\Users\\\\pichard\\\\Desktop\\\\backup\\\\github",
+  "output_folder": "c:\\\\Users\\\\pichard\\\\Desktop\\\\backup\\\\github\\\\docs",
+  "completed_steps": [
+    {
+      "summary": "Classified as monolith with 1 part",
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2026-01-16T20:56:09.035Z"
+    },
+    {
+      "summary": "Found 0 existing docs",
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2026-01-16T20:56:09.035Z"
+    },
+    {
+      "summary": "Tech stack: Node.js + Express (ESM)",
+      "timestamp": "2026-01-16T20:59:02.606Z",
+      "status": "completed",
+      "step": "step_3"
+    },
+    {
+      "status": "completed",
+      "step": "step_3",
+      "timestamp": "2026-01-16T20:59:13.681Z",
+      "summary": "Tech stack: Node.js + Express (ESM)"
+    },
+    {
+      "status": "completed",
+      "summary": "Conditional analysis complete, 3 files written",
+      "step": "step_4",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Source tree documented",
+      "step": "step_5",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Dev/deploy signals captured",
+      "step": "step_6",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Single-part project; no integration doc",
+      "step": "step_7",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Architecture docs written for 1 part",
+      "step": "step_8",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Supporting docs written",
+      "step": "step_9",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Master index generated",
+      "step": "step_10",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Validation and review complete",
+      "step": "step_11",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    },
+    {
+      "status": "completed",
+      "summary": "Workflow complete",
+      "step": "step_12",
+      "timestamp": "2026-01-16T21:01:30.938Z"
+    }
+  ],
+  "current_step": "completed",
+  "findings": {
+    "project_classification": "monolith; 1 part; project_type: web",
+    "project_types": [
+      {
+        "display_name": "Web App",
+        "part_id": "main",
+        "project_type_id": "web"
+      }
+    ],
+    "project_parts": [
+      {
+        "part_id": "main",
+        "project_type_id": "web",
+        "root_path": "c:\\\\Users\\\\pichard\\\\Desktop\\\\backup\\\\github"
+      }
+    ],
+    "existing_docs_count": 0,
+    "technology_stack": {
+      "key_libraries": [
+        "axios",
+        "multer",
+        "nodemailer",
+        "pdfkit",
+        "pdf-lib",
+        "basic-ftp",
+        "exceljs"
+      ],
+      "primary": "Node.js (>=20) + Express",
+      "language": "JavaScript (ESM)"
+    },
+    "architecture_pattern": "Express monolith with feature routers and static HTML"
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "project-overview.md",
+    "architecture.md",
+    "source-tree-analysis.md",
+    "component-inventory.md",
+    "development-guide.md",
+    "deployment-guide.md",
+    "api-contracts.md",
+    "data-models.md",
+    "index.md"
+  ],
+  "resume_instructions": "Workflow complete"
+}
