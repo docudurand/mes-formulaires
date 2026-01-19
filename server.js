@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import os from "os";
+import util from "node:util";
 import axios from "axios";
 import { transporter, fromEmail } from "./mailer.js";
 import crypto from "crypto";
@@ -15,6 +16,7 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
 import { monitorAuth } from "./monitor/auth.js";
+import { log as monitorLog } from "./monitor/monitor.js";
 import monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
@@ -32,6 +34,41 @@ import kilometrageRouter from "./routes/kilometrage.js";
 import "./mailInlineWorker.js";
 
 dotenv.config();
+
+function attachMonitorConsole() {
+  const enabled = String(process.env.MONITOR_ENABLED || "").toLowerCase() === "true";
+  if (!enabled) return;
+
+  const original = {
+    log: console.log.bind(console),
+    info: (console.info || console.log).bind(console),
+    warn: (console.warn || console.log).bind(console),
+    error: (console.error || console.log).bind(console),
+  };
+
+  const formatMessage = (args) => util.format(...args);
+
+  const wrap = (level, method) => (...args) => {
+    method(...args);
+    try {
+      const message = formatMessage(args);
+      const err = args.find((arg) => arg instanceof Error);
+      const context = err
+        ? { error: { name: err.name, message: err.message, stack: err.stack } }
+        : null;
+      monitorLog(level, message, context);
+    } catch {
+      // Ignore monitor logging failures.
+    }
+  };
+
+  console.log = wrap("info", original.log);
+  console.info = wrap("info", original.info);
+  console.warn = wrap("warn", original.warn);
+  console.error = wrap("error", original.error);
+}
+
+attachMonitorConsole();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -1331,5 +1368,7 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
+
+
 
 
