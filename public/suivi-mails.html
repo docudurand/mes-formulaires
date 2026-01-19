@@ -304,8 +304,12 @@
   function saveTokenIfNeeded(){
     const remember = $("remember").checked;
     localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
-    if (remember) localStorage.setItem(TOKEN_KEY, $("token").value || "");
-    else localStorage.removeItem(TOKEN_KEY);
+    if (!remember) {
+      localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
+    const value = (URL_TOKEN || $("token").value || "").trim();
+    if (value) localStorage.setItem(TOKEN_KEY, value);
   }
 
   function restoreToken(){
@@ -314,8 +318,9 @@
     if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";
     if (URL_TOKEN) {
       $("token").value = URL_TOKEN;
-      $("remember").checked = false;
+      if (remember) localStorage.setItem(TOKEN_KEY, URL_TOKEN);
     }
+  }
   }
   window.clearSavedToken = clearSavedToken;
 
