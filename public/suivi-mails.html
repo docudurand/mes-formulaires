@@ -284,7 +284,9 @@
   </main>
 
 <script>
-  const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";\n  const REMEMBER_KEY = "MAILLOG_REMEMBER";\n  const URL_TOKEN = new URLSearchParams(window.location.search).get("token") || "";
+  const TOKEN_KEY = "MAILLOG_ADMIN_TOKEN";
+  const REMEMBER_KEY = "MAILLOG_REMEMBER";
+  const URL_TOKEN = new URLSearchParams(window.location.search).get("token") || "";
 
   const FIXED_LIMIT = 500;
 
@@ -306,16 +308,14 @@
     else localStorage.removeItem(TOKEN_KEY);
   }
 
-  function restoreToken(){\n    const remember = localStorage.getItem(REMEMBER_KEY) === "1";\n    $("remember").checked = remember;\n    if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";\n    if (URL_TOKEN) {\n      $("token").value = URL_TOKEN;\n      $("remember").checked = false;\n    }\n  }
-
-  function clearSavedToken(){
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.setItem(REMEMBER_KEY, "0");
-    $("remember").checked = false;
-    $("token").value = "";
-    allLogs = [];
-    render([]);
-    $("info").textContent = "";
+  function restoreToken(){
+    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
+    $("remember").checked = remember;
+    if (remember) $("token").value = localStorage.getItem(TOKEN_KEY) || "";
+    if (URL_TOKEN) {
+      $("token").value = URL_TOKEN;
+      $("remember").checked = false;
+    }
   }
   window.clearSavedToken = clearSavedToken;
 
@@ -337,7 +337,9 @@
     const q = encodeURIComponent(($("q").value || "").trim());
     const limit = encodeURIComponent(String(FIXED_LIMIT));
 
-    const url = URL_TOKEN\n      ? `/api/mail-logs?limit=${limit}&q=${q}&token=${encodeURIComponent(URL_TOKEN)}`\n      : `/api/mail-logs?limit=${limit}&q=${q}`;
+    const url = URL_TOKEN
+      ? `/api/mail-logs?limit=${limit}&q=${q}&token=${encodeURIComponent(URL_TOKEN)}`
+      : `/api/mail-logs?limit=${limit}&q=${q}`;
 
     const res = await fetch(url, {
       headers: token ? { "x-admin-token": token } : {}
@@ -526,4 +528,5 @@ const pillTxt =
 </script>
 </body>
 </html>
+
 
