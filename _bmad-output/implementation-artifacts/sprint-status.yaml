@@ -55,11 +55,11 @@ development_status:
   3-2-expose-monitor-health-state: done
   3-3-show-status-badge-and-error-emphasis: done
   epic-3-retrospective: optional
-  epic-4: backlog
-  4-1-filter-logs-by-level: backlog
-  4-2-keyword-search-and-pause: backlog
-  4-3-export-recent-logs: backlog
-  4-4-configure-and-trigger-alerts: backlog
+  epic-4: in-progress
+  4-1-filter-logs-by-level: done
+  4-2-keyword-search-and-pause: done
+  4-3-export-recent-logs: done
+  4-4-configure-and-trigger-alerts: done
   epic-4-retrospective: optional
 
 

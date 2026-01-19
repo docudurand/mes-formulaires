@@ -22,6 +22,44 @@ function appendLog(entry, listEl) {
   }
 }
 
+function normalizeLevel(entry) {
+  return String(entry?.level || "info").toLowerCase();
+}
+
+function matchesFilter(entry, filter) {
+  if (!filter || filter === "all") return true;
+  return normalizeLevel(entry) === filter;
+}
+
+function buildSearchText(entry) {
+  const message = String(entry?.message || "");
+  let context = "";
+  try {
+    context = entry?.context ? JSON.stringify(entry.context) : "";
+  } catch {
+    context = "";
+  }
+  return `${message} ${context}`.toLowerCase();
+}
+
+function matchesSearch(entry, term) {
+  const normalized = String(term || "").trim().toLowerCase();
+  if (!normalized) return true;
+  return buildSearchText(entry).includes(normalized);
+}
+
+function renderList(entries, listEl, filter, searchTerm) {
+  listEl.textContent = "";
+  const filtered = entries.filter(
+    (entry) => matchesFilter(entry, filter) && matchesSearch(entry, searchTerm)
+  );
+  const visible =
+    filtered.length > MAX_VISIBLE_LOGS
+      ? filtered.slice(filtered.length - MAX_VISIBLE_LOGS)
+      : filtered;
+  visible.forEach((entry) => appendLog(entry, listEl));
+}
+
 function setStatus(statusEl, state, label) {
   if (!statusEl) return;
   const normalized = state === "error" ? "error" : "ok";
@@ -43,10 +81,82 @@ async function fetchHealthStatus(statusEl) {
   }
 }
 
+function setPausedState(buttonEl, isPaused) {
+  if (!buttonEl) return;
+  buttonEl.textContent = isPaused ? "Reprendre" : "Pause";
+  buttonEl.classList.toggle("monitor__button--paused", isPaused);
+}
+
+async function exportLogs() {
+  const res = await fetch("/monitor/logs", { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("export_failed");
+  const data = await res.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  link.href = url;
+  link.download = `monitor-logs-${ts}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const listEl = document.getElementById("monitor-log-list");
   const statusEl = document.getElementById("monitor-status");
+  const filterEl = document.getElementById("monitor-filter");
+  const searchEl = document.getElementById("monitor-search");
+  const pauseEl = document.getElementById("monitor-pause");
+  const exportEl = document.getElementById("monitor-export");
   if (!listEl) return;
+
+  const entries = [];
+  let currentFilter = filterEl?.value || "all";
+  let searchTerm = searchEl?.value || "";
+  let isPaused = false;
+
+  if (filterEl) {
+    filterEl.addEventListener("change", () => {
+      currentFilter = filterEl.value || "all";
+      renderList(entries, listEl, currentFilter, searchTerm);
+    });
+  }
+
+  if (searchEl) {
+    searchEl.addEventListener("input", () => {
+      searchTerm = searchEl.value || "";
+      renderList(entries, listEl, currentFilter, searchTerm);
+    });
+  }
+
+  if (pauseEl) {
+    setPausedState(pauseEl, isPaused);
+    pauseEl.addEventListener("click", () => {
+      isPaused = !isPaused;
+      setPausedState(pauseEl, isPaused);
+      if (!isPaused) {
+        renderList(entries, listEl, currentFilter, searchTerm);
+      }
+    });
+  }
+
+  if (exportEl) {
+    exportEl.addEventListener("click", async () => {
+      try {
+        exportEl.disabled = true;
+        await exportLogs();
+      } catch {
+        exportEl.textContent = "Export echoue";
+        setTimeout(() => {
+          exportEl.textContent = "Exporter";
+        }, 2000);
+      } finally {
+        exportEl.disabled = false;
+      }
+    });
+  }
 
   fetchHealthStatus(statusEl);
 
@@ -54,8 +164,16 @@ document.addEventListener("DOMContentLoaded", () => {
   source.addEventListener("log", (event) => {
     try {
       const entry = JSON.parse(event.data || "{}");
-      appendLog(entry, listEl);
-      if (String(entry.level || "").toLowerCase() === "error") {
+      entries.push(entry);
+      while (entries.length > MAX_VISIBLE_LOGS) {
+        entries.shift();
+      }
+
+      if (!isPaused && matchesFilter(entry, currentFilter) && matchesSearch(entry, searchTerm)) {
+        appendLog(entry, listEl);
+      }
+
+      if (normalizeLevel(entry) === "error") {
         setStatus(statusEl, "error");
       }
     } catch {

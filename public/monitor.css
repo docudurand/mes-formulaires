@@ -41,6 +41,59 @@ p {
   gap: 16px;
 }
 
+.monitor__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.monitor__controls label {
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #4b4b4b;
+}
+
+.monitor__select,
+.monitor__input {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d8cfbb;
+  background: #fffdf6;
+  font-size: 13px;
+}
+
+.monitor__input {
+  min-width: 160px;
+}
+
+.monitor__select:focus,
+.monitor__input:focus {
+  outline: 2px solid #c9e6cf;
+  outline-offset: 2px;
+}
+
+.monitor__button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d8cfbb;
+  background: #f4f2e9;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.monitor__button--paused {
+  background: #ffe4e6;
+  border-color: #f3b1b7;
+  color: #b00020;
+}
+
 .monitor__logs {
   margin-top: 20px;
 }

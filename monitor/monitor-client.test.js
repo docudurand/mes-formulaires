@@ -28,6 +28,22 @@ test("monitor.html starts with ok status badge", () => {
   assert.ok(html.includes("monitor__status--ok"));
 });
 
+test("monitor.html contains filter control", () => {
+  const html = read(htmlPath);
+  assert.ok(html.includes("monitor-filter"));
+});
+
+test("monitor.html contains search and pause controls", () => {
+  const html = read(htmlPath);
+  assert.ok(html.includes("monitor-search"));
+  assert.ok(html.includes("monitor-pause"));
+});
+
+test("monitor.html contains export control", () => {
+  const html = read(htmlPath);
+  assert.ok(html.includes("monitor-export"));
+});
+
 test("monitor.js uses EventSource", () => {
   const js = read(jsPath);
   assert.ok(js.includes("new EventSource"));
@@ -43,6 +59,25 @@ test("monitor.js toggles status classes", () => {
   const js = read(jsPath);
   assert.ok(js.includes("monitor__status--ok"));
   assert.ok(js.includes("monitor__status--error"));
+});
+
+test("monitor.js applies log filtering", () => {
+  const js = read(jsPath);
+  assert.ok(js.includes("monitor-filter"));
+  assert.ok(js.includes("matchesFilter"));
+});
+
+test("monitor.js applies keyword search and pause", () => {
+  const js = read(jsPath);
+  assert.ok(js.includes("matchesSearch"));
+  assert.ok(js.includes("monitor-search"));
+  assert.ok(js.includes("monitor-pause"));
+});
+
+test("monitor.js handles export", () => {
+  const js = read(jsPath);
+  assert.ok(js.includes("/monitor/logs"));
+  assert.ok(js.includes("monitor-export"));
 });
 
 test("monitor.js handles SSE errors", () => {

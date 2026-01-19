@@ -16,6 +16,10 @@ router.get("/health", (_req, res) => {
   return res.status(200).json(getHealthStatus());
 });
 
+router.get("/logs", (_req, res) => {
+  return res.status(200).json(getLastLogs());
+});
+
 router.get("/stream", (req, res) => {
   res.status(200);
   res.setHeader("Content-Type", "text/event-stream");

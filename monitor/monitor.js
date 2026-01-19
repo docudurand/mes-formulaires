@@ -1,10 +1,12 @@
 const logs = [];
+const errorTimestamps = [];
 const listeners = new Set();
 const allowedLevels = new Set(["info", "warn", "error"]);
 
 const MAX_LOGS = 500;
 const MAX_AGE_MS = 5 * 60 * 1000;
 let lastErrorAt = null;
+let alertTriggered = false;
 
 function normalizeLevel(level) {
   const value = String(level || "").toLowerCase().trim();
@@ -63,6 +65,18 @@ function prune(nowMs = Date.now()) {
   }
 }
 
+function pruneErrors(nowMs = Date.now()) {
+  while (errorTimestamps.length > 0) {
+    const parsed = Date.parse(errorTimestamps[0]);
+    if (!Number.isFinite(parsed)) {
+      errorTimestamps.shift();
+      continue;
+    }
+    if (nowMs - parsed <= MAX_AGE_MS) break;
+    errorTimestamps.shift();
+  }
+}
+
 function isRecentError(nowMs = Date.now()) {
   if (!lastErrorAt) return false;
   const parsed = Date.parse(lastErrorAt);
@@ -70,12 +84,67 @@ function isRecentError(nowMs = Date.now()) {
   return nowMs - parsed <= MAX_AGE_MS;
 }
 
+function getAlertThreshold() {
+  const raw = String(process.env.MONITOR_ALERT_THRESHOLD || "").trim();
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getAlertWebhookUrl() {
+  return String(process.env.MONITOR_ALERT_WEBHOOK_URL || "").trim();
+}
+
+function sendAlert(payload) {
+  const url = getAlertWebhookUrl();
+  if (!url) return false;
+  if (typeof fetch !== "function") return false;
+  try {
+    void fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Ignore notification errors.
+  }
+  return true;
+}
+
+function evaluateAlert(nowMs = Date.now()) {
+  const threshold = getAlertThreshold();
+  pruneErrors(nowMs);
+
+  if (!threshold) {
+    alertTriggered = false;
+    return;
+  }
+
+  if (errorTimestamps.length >= threshold) {
+    if (!alertTriggered) {
+      const payload = {
+        type: "monitor_error_threshold",
+        threshold,
+        count: errorTimestamps.length,
+        lastErrorAt,
+        windowMs: MAX_AGE_MS,
+        ts: new Date(nowMs).toISOString(),
+      };
+      alertTriggered = sendAlert(payload);
+    }
+    return;
+  }
+
+  alertTriggered = false;
+}
+
 export function log(level, message, context = null) {
+  const nowMs = Date.now();
   const entry = normalizeEntry(level, message, context);
 
   logs.push(entry);
   if (entry.level === "error") {
     lastErrorAt = entry.ts;
+    errorTimestamps.push(entry.ts);
   }
 
   listeners.forEach((listener) => {
@@ -86,7 +155,8 @@ export function log(level, message, context = null) {
     }
   });
 
-  prune();
+  evaluateAlert(nowMs);
+  prune(nowMs);
   return entry;
 }
 
@@ -112,6 +182,9 @@ export function getHealthStatus() {
 
 export function __resetForTests() {
   logs.length = 0;
+  errorTimestamps.length = 0;
   listeners.clear();
   lastErrorAt = null;
+  alertTriggered = false;
 }
+
