@@ -2,10 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Monitor</title>
+  <link rel="stylesheet" href="/monitor.css" />
 </head>
 <body>
-  <h1>Monitor OK</h1>
-  <p>Si tu vois ça, /monitor fonctionne.</p>
+  <main class="monitor">
+    <header class="monitor__header">
+      <div>
+        <h1>Monitor</h1>
+        <p>Flux temps reel actif.</p>
+      </div>
+      <div class="monitor__status monitor__status--ok" id="monitor-status">OK</div>
+    </header>
+    <section class="monitor__logs">
+      <h2>Logs</h2>
+      <ul id="monitor-log-list" class="monitor__list"></ul>
+    </section>
+  </main>
+  <script src="/monitor.js" defer></script>
 </body>
 </html>

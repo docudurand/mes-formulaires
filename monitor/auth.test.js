@@ -71,6 +71,7 @@ test("monitorAuth allows valid bearer token when enabled", () => {
 
   assert.equal(nextCalled, true);
   assert.equal(res.statusCode, 200);
+  assert.ok(String(res.getHeader("Set-Cookie") || "").includes("monitor_token="));
 
   process.env.MONITOR_ENABLED = oldEnabled;
   process.env.MONITOR_TOKEN = oldToken;
@@ -98,13 +99,34 @@ test("monitorAuth allows token from query string when enabled", () => {
   process.env.MONITOR_TOKEN = oldToken;
 });
 
-test("monitorAuth allows cookie token when enabled", () => {
+test("monitorAuth sets Secure cookie when request is https", () => {
   const oldEnabled = process.env.MONITOR_ENABLED;
   const oldToken = process.env.MONITOR_TOKEN;
   process.env.MONITOR_ENABLED = "true";
   process.env.MONITOR_TOKEN = "secret";
 
-  const req = { headers: { cookie: "monitor_token=secret" } };
+  const req = { query: { token: "secret" }, headers: { "x-forwarded-proto": "https" } };
+  const res = makeRes();
+  let nextCalled = false;
+
+  monitorAuth(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  assert.ok(String(res.getHeader("Set-Cookie") || "").includes("Secure"));
+
+  process.env.MONITOR_ENABLED = oldEnabled;
+  process.env.MONITOR_TOKEN = oldToken;
+});
+
+test("monitorAuth allows cookie token when enabled", () => {
+  const oldEnabled = process.env.MONITOR_ENABLED;
+  const oldToken = process.env.MONITOR_TOKEN;
+  process.env.MONITOR_ENABLED = "true";
+  process.env.MONITOR_TOKEN = "secret!";
+
+  const req = { headers: { cookie: "monitor_token=secret%21" } };
   const res = makeRes();
   let nextCalled = false;
 

@@ -22,6 +22,21 @@ function parseCookie(header) {
   return out;
 }
 
+function isSecureRequest(req) {
+  if (req?.secure === true) return true;
+  const proto = req?.headers?.["x-forwarded-proto"] || req?.headers?.["x-forwarded-protocol"];
+  if (!proto) return false;
+  return String(proto).split(",")[0].trim().toLowerCase() === "https";
+}
+
+function safeDecode(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function getBearerToken(req) {
   const header = req?.get ? req.get("Authorization") : req?.headers?.authorization;
   if (header) {
@@ -35,13 +50,14 @@ function getBearerToken(req) {
 
   const cookieHeader = req?.headers?.cookie;
   const cookies = parseCookie(cookieHeader);
-  if (cookies[COOKIE_NAME]) return String(cookies[COOKIE_NAME]).trim();
+  if (cookies[COOKIE_NAME]) return safeDecode(String(cookies[COOKIE_NAME]).trim());
 
   return "";
 }
 
-function setAuthCookie(res, token) {
-  const value = `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax`;
+function setAuthCookie(res, token, secure) {
+  const secureFlag = secure ? "; Secure" : "";
+  const value = `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${secureFlag}`;
   const existing = res.getHeader ? res.getHeader("Set-Cookie") : undefined;
   if (existing) {
     const list = Array.isArray(existing) ? existing : [existing];
@@ -68,6 +84,10 @@ export function monitorAuth(req, res, next) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  if (req?.query?.token) setAuthCookie(res, token);
+  const cookies = parseCookie(req?.headers?.cookie);
+  if (!cookies[COOKIE_NAME]) {
+    setAuthCookie(res, token, isSecureRequest(req));
+  }
+
   return next();
 }

@@ -42,18 +42,18 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-guard-monitor-routes-with-a-bearer-token: done
-  1-2-serve-the-monitor-ui-on-a-dedicated-route: backlog
-  1-3-mount-monitoring-routes-from-a-dedicated-module: backlog
+  1-2-serve-the-monitor-ui-on-a-dedicated-route: done
+  1-3-mount-monitoring-routes-from-a-dedicated-module: done
   epic-1-retrospective: optional
   epic-2: backlog
-  2-1-centralize-logs-with-levels-and-context: backlog
-  2-2-maintain-an-in-memory-fifo-buffer: backlog
-  2-3-stream-new-logs-via-sse: backlog
+  2-1-centralize-logs-with-levels-and-context: done
+  2-2-maintain-an-in-memory-fifo-buffer: review
+  2-3-stream-new-logs-via-sse: done
   epic-2-retrospective: optional
-  epic-3: backlog
-  3-1-display-live-logs-without-reload: backlog
-  3-2-expose-monitor-health-state: backlog
-  3-3-show-status-badge-and-error-emphasis: backlog
+  epic-3: in-progress
+  3-1-display-live-logs-without-reload: done
+  3-2-expose-monitor-health-state: done
+  3-3-show-status-badge-and-error-emphasis: done
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-filter-logs-by-level: backlog
@@ -61,3 +61,22 @@ development_status:
   4-3-export-recent-logs: backlog
   4-4-configure-and-trigger-alerts: backlog
   epic-4-retrospective: optional
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -14,7 +14,7 @@ import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
-import { monitorAuth } from "./monitor/auth.js";
+import { monitorAuth } from "./monitor/auth.js";\nimport monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
 import * as visits from "./visits.js";
@@ -127,13 +127,7 @@ app.use((req, res, next) => {
   return monitorAuth(req, res, next);
 });
 
-app.get("/monitor", (req, res) => {
-  return res.sendFile(path.join(__dirname, "public", "monitor.html"));
-});
-
-app.get("/monitor/health", (req, res) => {
-  return res.status(200).json({ ok: true, service: "monitor" });
-});
+app.use("/monitor", monitorRoutes);
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
@@ -1336,3 +1330,5 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
+
+
