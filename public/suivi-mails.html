@@ -321,7 +321,6 @@
       if (remember) localStorage.setItem(TOKEN_KEY, URL_TOKEN);
     }
   }
-  }
   window.clearSavedToken = clearSavedToken;
 
   function fmtFR(iso){
@@ -473,7 +472,6 @@ const pillTxt =
     } finally {
       isLoading = false;
     }
-  }
   window.loadLogs = loadLogs;
 
   let tSubject = null;
@@ -510,7 +508,6 @@ const pillTxt =
       btn.textContent = "▶ Reprendre auto";
       info.textContent = "Actualisation automatique : en pause";
     }
-  }
 
   function startAutoRefresh(){
     if (autoTimer) clearInterval(autoTimer);
