@@ -15,6 +15,7 @@ function makeRes() {
   return {
     statusCode: 200,
     body: null,
+    headers: {},
     status(code) {
       this.statusCode = code;
       return this;
@@ -22,6 +23,13 @@ function makeRes() {
     json(payload) {
       this.body = payload;
       return this;
+    },
+    setHeader(name, value) {
+      this.headers[String(name).toLowerCase()] = value;
+      return this;
+    },
+    getHeader(name) {
+      return this.headers[String(name).toLowerCase()];
     },
   };
 }
@@ -68,6 +76,49 @@ test("monitorAuth allows valid bearer token when enabled", () => {
   process.env.MONITOR_TOKEN = oldToken;
 });
 
+test("monitorAuth allows token from query string when enabled", () => {
+  const oldEnabled = process.env.MONITOR_ENABLED;
+  const oldToken = process.env.MONITOR_TOKEN;
+  process.env.MONITOR_ENABLED = "true";
+  process.env.MONITOR_TOKEN = "secret";
+
+  const req = { query: { token: "secret" } };
+  const res = makeRes();
+  let nextCalled = false;
+
+  monitorAuth(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  assert.equal(res.statusCode, 200);
+  assert.ok(String(res.getHeader("Set-Cookie") || "").includes("monitor_token="));
+
+  process.env.MONITOR_ENABLED = oldEnabled;
+  process.env.MONITOR_TOKEN = oldToken;
+});
+
+test("monitorAuth allows cookie token when enabled", () => {
+  const oldEnabled = process.env.MONITOR_ENABLED;
+  const oldToken = process.env.MONITOR_TOKEN;
+  process.env.MONITOR_ENABLED = "true";
+  process.env.MONITOR_TOKEN = "secret";
+
+  const req = { headers: { cookie: "monitor_token=secret" } };
+  const res = makeRes();
+  let nextCalled = false;
+
+  monitorAuth(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  assert.equal(res.statusCode, 200);
+
+  process.env.MONITOR_ENABLED = oldEnabled;
+  process.env.MONITOR_TOKEN = oldToken;
+});
+
 test("monitorAuth rejects when token is not configured", () => {
   const oldEnabled = process.env.MONITOR_ENABLED;
   const oldToken = process.env.MONITOR_TOKEN;
@@ -89,7 +140,7 @@ test("monitorAuth rejects when token is not configured", () => {
   process.env.MONITOR_TOKEN = oldToken;
 });
 
-test("monitorAuth bypasses when monitoring disabled", () => {
+test("monitorAuth returns 404 when monitoring disabled", () => {
   const oldEnabled = process.env.MONITOR_ENABLED;
   const oldToken = process.env.MONITOR_TOKEN;
   process.env.MONITOR_ENABLED = "false";
@@ -103,8 +154,8 @@ test("monitorAuth bypasses when monitoring disabled", () => {
     nextCalled = true;
   });
 
-  assert.equal(nextCalled, true);
-  assert.equal(res.statusCode, 200);
+  assert.equal(nextCalled, false);
+  assert.equal(res.statusCode, 404);
 
   process.env.MONITOR_ENABLED = oldEnabled;
   process.env.MONITOR_TOKEN = oldToken;
