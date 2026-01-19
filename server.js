@@ -127,6 +127,14 @@ app.use((req, res, next) => {
   return monitorAuth(req, res, next);
 });
 
+app.get("/monitor", (req, res) => {
+  return res.sendFile(path.join(__dirname, "public", "monitor.html"));
+});
+
+app.get("/monitor/health", (req, res) => {
+  return res.status(200).json({ ok: true, service: "monitor" });
+});
+
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
 app.post("/api/site/login", (req, res) => {
