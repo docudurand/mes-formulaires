@@ -21,6 +21,17 @@ router.use(express.urlencoded({ extended: true }));
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
+function parseCsv(value) {
+  if (!value) return [];
+  return String(value)
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+const UPLOAD_ALLOWED_MIME = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_MIME);
+const UPLOAD_ALLOWED_EXT = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_EXT);
+
 const RAMASSE_SECRET =
   process.env.RAMASSE_SECRET ||
   process.env.PRESENCES_LEAVES_PASSWORD ||
@@ -66,6 +77,20 @@ const upload = multer({
       cb(null, `${Date.now()}_${base}${ext}`);
     },
   }),
+  fileFilter: (req, file, cb) => {
+    if (!UPLOAD_ALLOWED_MIME.length && !UPLOAD_ALLOWED_EXT.length) {
+      return cb(null, true);
+    }
+    const mimeType = String(file.mimetype || "").toLowerCase();
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    const okMime = !UPLOAD_ALLOWED_MIME.length || UPLOAD_ALLOWED_MIME.includes(mimeType);
+    const okExt = !UPLOAD_ALLOWED_EXT.length || (ext && UPLOAD_ALLOWED_EXT.includes(ext));
+    if (!okMime || !okExt) {
+      req.fileValidationError = "file_type_not_allowed";
+      return cb(null, false);
+    }
+    return cb(null, true);
+  },
   limits: { fileSize: 24 * 1024 * 1024 },
 });
 
@@ -490,6 +515,9 @@ router.get("/stats", (_req, res) => {
 
 router.post("/", upload.single("file"), async (req, res) => {
   try {
+    if (req.fileValidationError) {
+      return res.status(400).json({ error: "file_type_not_allowed" });
+    }
     const {
       fournisseur,
       magasin,

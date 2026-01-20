@@ -1,6 +1,15 @@
 const ENABLED_VALUE = "true";
 const COOKIE_NAME = "monitor_token";
 
+function parseBool(value, fallback = false) {
+  if (value == null) return fallback;
+  const v = String(value).trim().toLowerCase();
+  if (v === "") return fallback;
+  return v === "1" || v === "true" || v === "yes";
+}
+
+const MONITOR_TOKEN_ALLOW_QUERY = parseBool(process.env.MONITOR_TOKEN_ALLOW_QUERY, true);
+
 function isMonitorEnabled() {
   return String(process.env.MONITOR_ENABLED || "").toLowerCase() === ENABLED_VALUE;
 }
@@ -41,18 +50,22 @@ function getBearerToken(req) {
   const header = req?.get ? req.get("Authorization") : req?.headers?.authorization;
   if (header) {
     const value = String(header).trim();
-    if (value.toLowerCase().startsWith("bearer ")) return value.slice(7).trim();
+    if (value.toLowerCase().startsWith("bearer ")) return { token: value.slice(7).trim(), source: "bearer" };
   }
 
   const queryToken = req?.query?.token;
-  if (Array.isArray(queryToken)) return String(queryToken[0] || "").trim();
-  if (queryToken != null) return String(queryToken).trim();
+  if (MONITOR_TOKEN_ALLOW_QUERY) {
+    if (Array.isArray(queryToken)) return { token: String(queryToken[0] || "").trim(), source: "query" };
+    if (queryToken != null) return { token: String(queryToken).trim(), source: "query" };
+  }
 
   const cookieHeader = req?.headers?.cookie;
   const cookies = parseCookie(cookieHeader);
-  if (cookies[COOKIE_NAME]) return safeDecode(String(cookies[COOKIE_NAME]).trim());
+  if (cookies[COOKIE_NAME]) {
+    return { token: safeDecode(String(cookies[COOKIE_NAME]).trim()), source: "cookie" };
+  }
 
-  return "";
+  return { token: "", source: "none" };
 }
 
 function setAuthCookie(res, token, secure) {
@@ -79,9 +92,12 @@ export function monitorAuth(req, res, next) {
     return res.status(500).json({ error: "monitor_token_missing" });
   }
 
-  const token = getBearerToken(req);
+  const { token, source } = getBearerToken(req);
   if (!token || token !== expected) {
     return res.status(401).json({ error: "unauthorized" });
+  }
+  if (source === "query") {
+    console.warn("[MONITOR] token via query string (consider disabling MONITOR_TOKEN_ALLOW_QUERY).");
   }
 
   const cookies = parseCookie(req?.headers?.cookie);

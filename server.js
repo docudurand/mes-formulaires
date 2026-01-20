@@ -16,7 +16,7 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
 import { monitorAuth } from "./monitor/auth.js";
-import { log as monitorLog } from "./monitor/monitor.js";
+import { log as monitorLog, getHealthStatus } from "./monitor/monitor.js";
 import monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
@@ -70,12 +70,26 @@ function attachMonitorConsole() {
 
 attachMonitorConsole();
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] unhandledRejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] uncaughtException:", err);
+});
+
+function parseBool(value, fallback = false) {
+  if (value == null) return fallback;
+  const v = String(value).trim().toLowerCase();
+  if (v === "") return fallback;
+  return v === "1" || v === "true" || v === "yes";
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-app.use(cors());
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
@@ -93,6 +107,17 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    if (res.statusCode < 500) return;
+    const elapsedMs = Number(process.hrtime.bigint() - start) / 1e6;
+    const url = req.originalUrl || req.url || "";
+    console.error(`[HTTP] ${req.method} ${url} -> ${res.statusCode} ${elapsedMs.toFixed(1)}ms`);
+  });
   next();
 });
 app.use((req, res, next) => {
@@ -167,11 +192,37 @@ app.use((req, res, next) => {
 
 app.use("/monitor", monitorRoutes);
 
+const ADMIN_TOKEN_ALLOW_QUERY = parseBool(process.env.ADMIN_TOKEN_ALLOW_QUERY, true);
+
+function extractAdminToken(req) {
+  const headerToken = req.headers["x-admin-token"];
+  if (headerToken) return { token: String(headerToken).trim(), source: "header" };
+
+  const auth = req.headers.authorization;
+  if (auth) {
+    const value = String(auth).trim();
+    if (value.toLowerCase().startsWith("bearer ")) {
+      return { token: value.slice(7).trim(), source: "bearer" };
+    }
+  }
+
+  const queryToken = req.query?.token;
+  if (ADMIN_TOKEN_ALLOW_QUERY) {
+    if (Array.isArray(queryToken)) return { token: String(queryToken[0] || "").trim(), source: "query" };
+    if (queryToken != null) return { token: String(queryToken).trim(), source: "query" };
+  }
+
+  return { token: "", source: "none" };
+}
+
 app.get("/admin/monitor-pub", (req, res) => {
   const adminToken = String(process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "").trim();
-  const token = String(req.query.token || "").trim() || String(req.headers["x-admin-token"] || "").trim();
+  const { token, source } = extractAdminToken(req);
   if (!adminToken || token !== adminToken) {
     return res.status(401).send("Unauthorized");
+  }
+  if (source === "query") {
+    console.warn("[ADMIN] token via query string (consider disabling ADMIN_TOKEN_ALLOW_QUERY).");
   }
 
   const monitorToken = String(process.env.MONITOR_TOKEN || "").trim();
@@ -1299,6 +1350,15 @@ if (bothSigned && !arr[i].finalMailSent) {
 });
 
 app.get("/healthz", (_req, res) => res.sendStatus(200));
+app.get("/healthz/details", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({
+    status: "ok",
+    uptimeSec: Math.floor(process.uptime()),
+    monitor: getHealthStatus(),
+    ts: new Date().toISOString(),
+  });
+});
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
 app.use("/formtelevente", formtelevente);
@@ -1374,6 +1434,17 @@ app.get("/commerce/links.json", (_req, res) => {
     televenteBosch: COMMERCE_TELEVENTE_BOSCH_URL,
     televenteLub:   COMMERCE_TELEVENTE_LUB_URL,
   });
+});
+
+app.use((err, req, res, next) => {
+  const url = req?.originalUrl || req?.url || "";
+  console.error("[HTTP] unhandled_error", {
+    method: req?.method,
+    url,
+    message: err?.message,
+    stack: err?.stack,
+  });
+  next(err);
 });
 
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));

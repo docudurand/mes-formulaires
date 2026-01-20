@@ -2,7 +2,7 @@
 FROM node:20-alpine
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 COPY . .
 EXPOSE 3000
 CMD ["node","server.js"]

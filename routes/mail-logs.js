@@ -5,27 +5,43 @@ const router = express.Router();
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "";
 
+function parseBool(value, fallback = false) {
+  if (value == null) return fallback;
+  const v = String(value).trim().toLowerCase();
+  if (v === "") return fallback;
+  return v === "1" || v === "true" || v === "yes";
+}
+
+const ADMIN_TOKEN_ALLOW_QUERY = parseBool(process.env.ADMIN_TOKEN_ALLOW_QUERY, true);
+
 function extractAdminToken(req) {
   const headerToken = req.headers["x-admin-token"];
-  if (headerToken) return String(headerToken).trim();
+  if (headerToken) return { token: String(headerToken).trim(), source: "header" };
 
   const auth = req.headers.authorization;
   if (auth) {
     const value = String(auth).trim();
-    if (value.toLowerCase().startsWith("bearer ")) return value.slice(7).trim();
+    if (value.toLowerCase().startsWith("bearer ")) {
+      return { token: value.slice(7).trim(), source: "bearer" };
+    }
   }
 
   const queryToken = req.query?.token;
-  if (Array.isArray(queryToken)) return String(queryToken[0] || "").trim();
-  if (queryToken != null) return String(queryToken).trim();
+  if (ADMIN_TOKEN_ALLOW_QUERY) {
+    if (Array.isArray(queryToken)) return { token: String(queryToken[0] || "").trim(), source: "query" };
+    if (queryToken != null) return { token: String(queryToken).trim(), source: "query" };
+  }
 
-  return "";
+  return { token: "", source: "none" };
 }
 
 function requireAdmin(req, res, next) {
-  const token = extractAdminToken(req);
+  const { token, source } = extractAdminToken(req);
   if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
     return res.status(401).json({ error: "unauthorized" });
+  }
+  if (source === "query") {
+    console.warn("[ADMIN] token via query string (consider disabling ADMIN_TOKEN_ALLOW_QUERY).");
   }
   next();
 }
