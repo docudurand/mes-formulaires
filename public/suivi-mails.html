@@ -526,11 +526,13 @@ const pillTxt =
   window.toggleAutoRefresh = toggleAutoRefresh;
 
   restoreToken();
+  if ($("remember").checked && $("token").value) saveTokenIfNeeded();
   updateAutoUI();
   loadLogs();
   startAutoRefresh();
 </script>
 </body>
 </html>
+
 
 
