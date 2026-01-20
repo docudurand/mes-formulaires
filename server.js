@@ -167,6 +167,26 @@ app.use((req, res, next) => {
 
 app.use("/monitor", monitorRoutes);
 
+app.get("/admin/monitor-pub", (req, res) => {
+  const adminToken = String(process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "").trim();
+  const token = String(req.query.token || "").trim() || String(req.headers["x-admin-token"] || "").trim();
+  if (!adminToken || token !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const monitorToken = String(process.env.MONITOR_TOKEN || "").trim();
+  if (!monitorToken) {
+    return res.status(500).send("Monitor token missing");
+  }
+
+  const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  const secure = req.secure === true || proto === "https";
+  const cookie = `monitor_token=${encodeURIComponent(monitorToken)}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
+  res.setHeader("Set-Cookie", cookie);
+
+  return res.sendFile(path.join(__dirname, "public", "admin-monitor-pub.html"));
+});
+
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
 app.post("/api/site/login", (req, res) => {
@@ -1368,6 +1388,7 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
+
 
 
 
