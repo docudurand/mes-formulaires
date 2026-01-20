@@ -180,35 +180,42 @@
   ];
 
   const track = document.getElementById("pub-track");
-  images.forEach((src) => {
-    const slide = document.createElement("div");
-    slide.className = "pubSlide";
-    slide.style.backgroundImage = `url('${src}')`;
-    track.appendChild(slide);
-  });
+
+  function preloadImages(urls){
+    return Promise.all(urls.map((src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(src);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    }))).then((results) => results.filter(Boolean));
+  }
+
+  function buildSlides(urls){
+    track.innerHTML = "";
+    urls.forEach((src) => {
+      const slide = document.createElement("div");
+      slide.className = "pubSlide";
+      slide.style.backgroundImage = `url('${src}')`;
+      track.appendChild(slide);
+    });
+  }
 
   let index = 0;
-  function advance(){
-    if (!track || images.length === 0) return;
-    index = (index + 1) % images.length;
+  function advance(total){
+    if (!track || total <= 1) return;
+    index = (index + 1) % total;
     track.style.transform = `translateX(-${index * 100}%)`;
   }
 
-  if (images.length > 1) {
-    setInterval(advance, 30000);
-  }
-
-  function getMonitorToken(){
-    const frame = document.querySelector("#panel-monitor iframe");
-    if (!frame) return "";
-    const src = frame.dataset.src || frame.src || "";
-    try {
-      const url = new URL(src, window.location.origin);
-      return url.searchParams.get("token") || "";
-    } catch {
-      return "";
+  preloadImages(images).then((available) => {
+    if (!available.length) return;
+    buildSlides(available);
+    if (available.length > 1) {
+      setInterval(() => advance(available.length), 30000);
+    } else {
+      track.style.transform = "translateX(0%)";
     }
-  }
+  });
 
   function startMonitorAlertWatcher(){
     const streamUrl = "/monitor/stream";
@@ -233,11 +240,6 @@
 
   startMonitorAlertWatcher();
 </script>
+
 </body>
 </html>
-
-
-
-
-
-
