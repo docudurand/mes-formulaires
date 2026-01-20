@@ -39,11 +39,6 @@ test("monitor.html contains search and pause controls", () => {
   assert.ok(html.includes("monitor-pause"));
 });
 
-test("monitor.html contains export control", () => {
-  const html = read(htmlPath);
-  assert.ok(html.includes("monitor-export"));
-});
-
 test("monitor.js uses EventSource", () => {
   const js = read(jsPath);
   assert.ok(js.includes("new EventSource"));
@@ -72,12 +67,6 @@ test("monitor.js applies keyword search and pause", () => {
   assert.ok(js.includes("matchesSearch"));
   assert.ok(js.includes("monitor-search"));
   assert.ok(js.includes("monitor-pause"));
-});
-
-test("monitor.js handles export", () => {
-  const js = read(jsPath);
-  assert.ok(js.includes("/monitor/logs"));
-  assert.ok(js.includes("monitor-export"));
 });
 
 test("monitor.js handles SSE errors", () => {

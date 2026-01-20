@@ -94,29 +94,12 @@ function setPausedState(buttonEl, isPaused) {
   buttonEl.classList.toggle("monitor__button--paused", isPaused);
 }
 
-async function exportLogs() {
-  const res = await fetch("/monitor/logs", { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error("export_failed");
-  const data = await res.json();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  link.href = url;
-  link.download = `monitor-logs-${ts}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   const listEl = document.getElementById("monitor-log-list");
   const statusEl = document.getElementById("monitor-status");
   const filterEl = document.getElementById("monitor-filter");
   const searchEl = document.getElementById("monitor-search");
   const pauseEl = document.getElementById("monitor-pause");
-  const exportEl = document.getElementById("monitor-export");
   if (!listEl) return;
 
   const entries = [];
@@ -145,22 +128,6 @@ document.addEventListener("DOMContentLoaded", () => {
       setPausedState(pauseEl, isPaused);
       if (!isPaused) {
         renderList(entries, listEl, currentFilter, searchTerm, true);
-      }
-    });
-  }
-
-  if (exportEl) {
-    exportEl.addEventListener("click", async () => {
-      try {
-        exportEl.disabled = true;
-        await exportLogs();
-      } catch {
-        exportEl.textContent = "Export echoue";
-        setTimeout(() => {
-          exportEl.textContent = "Exporter";
-        }, 2000);
-      } finally {
-        exportEl.disabled = false;
       }
     });
   }
