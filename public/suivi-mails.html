@@ -303,11 +303,18 @@
 
   function saveTokenIfNeeded(){
     const remember = $("remember").checked;
-    localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
-    if (!remember) {
-      localStorage.removeItem(TOKEN_KEY);
-      return;
+    try {
+      localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+      if (!remember) {
+        localStorage.removeItem(TOKEN_KEY);
+        return;
+      }
+      const value = ($("token").value || "").trim();
+      localStorage.setItem(TOKEN_KEY, value);
+    } catch {
+      // Ignore storage errors (private mode / blocked storage).
     }
+  }
     const value = (URL_TOKEN || $("token").value || "").trim();
     if (value) localStorage.setItem(TOKEN_KEY, value);
   }
