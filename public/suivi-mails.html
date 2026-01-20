@@ -301,7 +301,7 @@
     }[c]));
   }
 
-  function saveTokenIfNeeded(){
+    function saveTokenIfNeeded(){
     const remember = $("remember").checked;
     try {
       localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
@@ -309,16 +309,12 @@
         localStorage.removeItem(TOKEN_KEY);
         return;
       }
-      const value = ($("token").value || "").trim();
+      const value = (URL_TOKEN || $("token").value || "").trim();
       localStorage.setItem(TOKEN_KEY, value);
     } catch {
       // Ignore storage errors (private mode / blocked storage).
     }
   }
-    const value = (URL_TOKEN || $("token").value || "").trim();
-    if (value) localStorage.setItem(TOKEN_KEY, value);
-  }
-
   function restoreToken(){
     const remember = localStorage.getItem(REMEMBER_KEY) === "1";
     $("remember").checked = remember;
@@ -540,6 +536,7 @@ const pillTxt =
 </script>
 </body>
 </html>
+
 
 
 
