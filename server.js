@@ -175,6 +175,104 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 
+// ==============================
+// NAVETTE / COLIS (Apps Script proxy)
+// Env requis (Render):
+// - NAVETTE_GAS_URL : URL du WebApp Apps Script (....../exec)
+// - NAVETTE_API_KEY : clé partagée avec Apps Script (Script Properties)
+// ==============================
+function mustEnv(name) {
+  const v = String(process.env[name] || "").trim();
+  if (!v) throw new Error(`Missing env ${name}`);
+  return v;
+}
+
+async function callNavetteGAS(action, params = {}) {
+  const url = mustEnv("NAVETTE_GAS_URL");
+  const key = mustEnv("NAVETTE_API_KEY");
+
+  const payload = new URLSearchParams({ action, key, ...params });
+
+  const { data } = await axios.post(url, payload.toString(), {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    timeout: 30000,
+  });
+
+  return data;
+}
+
+// 1) Import liste (QR feuille)
+app.post("/api/navette/import", async (req, res) => {
+  try {
+    const { magasin, bons, tourneeId } = req.body || {};
+    const data = await callNavetteGAS("importList", {
+      magasin: String(magasin || ""),
+      bons: String(bons || ""),
+      tourneeId: String(tourneeId || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+// 2) Scan colis -> VALIDE (chargement camion)
+app.post("/api/navette/valider", async (req, res) => {
+  try {
+    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const data = await callNavetteGAS("scanValider", {
+      tourneeId: String(tourneeId || ""),
+      magasin: String(magasin || ""),
+      livreurId: String(livreurId || ""),
+      bon: String(bon || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+// 3) Scan colis -> LIVRE (chez client)
+app.post("/api/navette/livrer", async (req, res) => {
+  try {
+    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const data = await callNavetteGAS("scanLivrer", {
+      tourneeId: String(tourneeId || ""),
+      magasin: String(magasin || ""),
+      livreurId: String(livreurId || ""),
+      bon: String(bon || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+// Dashboard magasin (lecture)
+app.get("/api/navette/dashboard", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callNavetteGAS("getDashboard", { magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+// Vue livreur (restants + liste)
+app.get("/api/navette/livreur", async (req, res) => {
+  try {
+    const tourneeId = String(req.query.tourneeId || "");
+    const livreurId = String(req.query.livreurId || "");
+    const data = await callNavetteGAS("getLivreur", { tourneeId, livreurId });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+
+
 function isMonitorRequest(req) {
   const rawPath = req?.path || req?.url || "";
   const pathOnly = String(rawPath).split("?")[0];

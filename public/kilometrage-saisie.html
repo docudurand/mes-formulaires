@@ -9,7 +9,6 @@
   <meta name="apple-mobile-web-app-title" content="Km tournée" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-
   <meta name="theme-color" content="#003c8f">
 
   <style>
@@ -31,25 +30,12 @@
       max-width: 460px;
       width: 100%;
     }
-    .logo {
-      text-align: center;
-      margin-bottom: 12px;
-    }
-    .logo img {
-      max-width: 160px;
-      height: auto;
-    }
-    h1 {
-      font-size: 1.3rem;
-      margin: 0 0 4px 0;
-      text-align: center;
-    }
-    .sub {
-      font-size: 0.9rem;
-      color: #666;
-      text-align: center;
-      margin-bottom: 12px;
-    }
+    .logo { text-align: center; margin-bottom: 12px; }
+    .logo img { max-width: 160px; height: auto; }
+
+    h1 { font-size: 1.3rem; margin: 0 0 4px 0; text-align: center; }
+    .sub { font-size: 0.9rem; color: #666; text-align: center; margin-bottom: 12px; }
+
     .info {
       font-size: 0.9rem;
       margin-bottom: 12px;
@@ -57,17 +43,32 @@
       border-radius: 8px;
       background: #f0f4ff;
     }
-    label {
-      display: block;
-      font-size: 0.9rem;
-      margin-top: 10px;
-      margin-bottom: 4px;
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0 14px 0;
+    }
+    .tabBtn {
+      flex: 1;
+      border: 1px solid #c7d2fe;
+      background: #fff;
+      color: #1e3a8a;
+      border-radius: 999px;
+      padding: 10px 0;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .tabBtn.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
     }
 
-    input[type="date"],
-    input[type="number"],
-    textarea,
-    select {
+    label { display: block; font-size: 0.9rem; margin-top: 10px; margin-bottom: 4px; }
+    input[type="date"], input[type="number"], textarea, select {
       width: 100%;
       box-sizing: border-box;
       padding: 8px 10px;
@@ -79,20 +80,10 @@
       -webkit-appearance: none;
       appearance: none;
     }
+    input[type="date"], input[type="number"], select { height: 44px; line-height: 1.2; }
+    textarea { resize: vertical; min-height: 60px; }
 
-    input[type="date"],
-    input[type="number"],
-    select {
-      height: 44px;
-      line-height: 1.2;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    button {
+    button.primary {
       margin-top: 16px;
       width: 100%;
       padding: 10px 0;
@@ -104,21 +95,11 @@
       background: #2563eb;
       color: #fff;
     }
-    button:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-    .msg {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      text-align: center;
-    }
-    .msg.ok {
-      color: #15803d;
-    }
-    .msg.err {
-      color: #b91c1c;
-    }
+    button.primary:disabled { opacity: 0.6; cursor: default; }
+
+    .msg { margin-top: 10px; font-size: 0.9rem; text-align: center; }
+    .msg.ok { color: #15803d; }
+    .msg.err { color: #b91c1c; }
 
     .resume {
       margin-top: 10px;
@@ -127,24 +108,10 @@
       background: #ecfeff;
       font-size: 0.9rem;
     }
-    .resume-title {
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .resume-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 10px;
-    }
-    .resume-item {
-      padding: 4px 6px;
-      border-radius: 6px;
-      background: #e5f3ff;
-    }
-    .resume-item strong {
-      display: inline-block;
-      min-width: 2.5em;
-    }
+    .resume-title { font-weight: 600; margin-bottom: 6px; }
+    .resume-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+    .resume-item { padding: 4px 6px; border-radius: 6px; background: #e5f3ff; }
+    .resume-item strong { display: inline-block; min-width: 2.5em; }
 
     .resume-loader {
       display: none;
@@ -162,17 +129,21 @@
       border-top-color: #2563eb;
       animation: resume-spin 0.7s linear infinite;
     }
-    @keyframes resume-spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes resume-spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 480px) {
-      .card {
-        margin: 12px;
-        padding: 16px 18px;
-      }
+      .card { margin: 12px; padding: 16px 18px; }
     }
+
+    /* ===== NAVETTE / COLIS ===== */
+    .btnRow { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .btnRow button { width:auto; flex:1; min-width: 210px; margin-top: 0; border-radius: 999px; border: none; padding: 10px 0; font-weight: 700; cursor:pointer; }
+    .btnSecondary { background:#0f172a; color:#fff; }
+    .btnScan { background:#2563eb; color:#fff; }
+    .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
   </style>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
 </head>
 <body>
   <div class="card">
@@ -180,57 +151,153 @@
       <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand Services" />
     </div>
 
-    <h1>Kilométrage de la journée</h1>
-    <div class="sub">
-      Choisir l'horaire (8h, 12h, 14h ou 18h) et saisir le relevé compteur.<br />
-      Tu peux revenir plus tard pour compléter les autres horaires.
+    <h1>Kilométrage / Scan colis</h1>
+    <div class="sub">Choisis un onglet. La page reste optimisée téléphone.</div>
+
+    <div id="infoBloc" class="info">Chargement des informations de tournée...</div>
+
+    <div class="tabs">
+      <button type="button" class="tabBtn active" id="tabKmBtn">Kilométrage</button>
+      <button type="button" class="tabBtn" id="tabScanBtn">Scan</button>
     </div>
 
-    <div id="infoBloc" class="info">
-      Chargement des informations de tournée...
+    <!-- ===== TAB KM ===== -->
+    <div id="tabKm">
+      <form id="kmForm">
+        <label for="date">Date de la journée</label>
+        <input type="date" id="date" name="date" required />
+
+        <label for="horaire">Horaire du relevé</label>
+        <select id="horaire" name="horaire">
+          <option value="8H">8H</option>
+          <option value="12H">12H</option>
+          <option value="14H">14H</option>
+          <option value="18H">18H</option>
+        </select>
+
+        <label for="km">Relevé compteur à cette heure</label>
+        <input type="number" id="km" name="km" min="0" step="0.1" required />
+
+        <label for="commentaire">Commentaire (optionnel)</label>
+        <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
+
+        <div id="resumeLoader" class="resume-loader">
+          <div class="resume-loader-spinner"></div>
+          <span>Chargement des relevés...</span>
+        </div>
+
+        <div id="resumeBloc" class="resume">
+          <div class="resume-title">Résumé des relevés de la journée</div>
+          <div class="resume-grid">
+            <div class="resume-item"><strong>8H :</strong> <span id="resume8h">-</span></div>
+            <div class="resume-item"><strong>12H :</strong> <span id="resume12h">-</span></div>
+            <div class="resume-item"><strong>14H :</strong> <span id="resume14h">-</span></div>
+            <div class="resume-item"><strong>18H :</strong> <span id="resume18h">-</span></div>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="primary">Valider</button>
+      </form>
+
+      <div id="message" class="msg"></div>
     </div>
 
-    <form id="kmForm">
-      <label for="date">Date de la journée</label>
-      <input type="date" id="date" name="date" required />
-
-      <label for="horaire">Horaire du relevé</label>
-      <select id="horaire" name="horaire">
-        <option value="8H">8H</option>
-        <option value="12H">12H</option>
-        <option value="14H">14H</option>
-        <option value="18H">18H</option>
-      </select>
-
-      <label for="km">Relevé compteur à cette heure</label>
-      <input type="number" id="km" name="km" min="0" step="0.1" required />
-
-      <label for="commentaire">Commentaire (optionnel)</label>
-      <textarea id="commentaire" name="commentaire" placeholder="Ex : détour, chargement supplémentaire, etc."></textarea>
-
-      <div id="resumeLoader" class="resume-loader">
-        <div class="resume-loader-spinner"></div>
-        <span>Chargement des relevés...</span>
+    <!-- ===== TAB SCAN ===== -->
+    <div id="tabScan" style="display:none">
+      <div class="sub" style="margin:0 0 12px 0;text-align:left">
+        1) Scanner la <b>feuille d’émargement</b> (QR = liste des bons)<br>
+        2) Scanner les <b>colis</b> : <span class="pill">JE CHARGE</span> ou <span class="pill">JE LIVRE</span>
       </div>
 
-      <div id="resumeBloc" class="resume">
-        <div class="resume-title">Résumé des relevés de la journée</div>
-        <div class="resume-grid">
-          <div class="resume-item"><strong>8H :</strong> <span id="resume8h">-</span></div>
-          <div class="resume-item"><strong>12H :</strong> <span id="resume12h">-</span></div>
-          <div class="resume-item"><strong>14H :</strong> <span id="resume14h">-</span></div>
-          <div class="resume-item"><strong>18H :</strong> <span id="resume18h">-</span></div>
+      <div class="info" id="colisInfo" style="margin-bottom:10px">
+        Tournée: <b id="tourneeNavetteTxt">—</b> • Livreur: <b id="livreurTxt">—</b> • Magasin: <b id="magasinTxt">—</b>
+      </div>
+
+      <div class="btnRow">
+        <button type="button" id="btnScanFeuille" class="btnSecondary">📄 Scanner feuille</button>
+        <button type="button" id="btnScanColis" class="btnScan">📦 Scanner colis</button>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <label style="display:flex;gap:6px;align-items:center;margin:0">
+          <input type="radio" name="scanMode" value="VALIDE" checked> JE CHARGE
+        </label>
+        <label style="display:flex;gap:6px;align-items:center;margin:0">
+          <input type="radio" name="scanMode" value="LIVRE"> JE LIVRE
+        </label>
+      </div>
+
+      <div id="colisMsg" class="msg" style="display:none;margin:10px 0 0 0;text-align:left"></div>
+
+      <div class="info" style="margin-top:10px">
+        Restant à livrer : <b id="restants">0</b>
+      </div>
+      <div id="listeColis" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Modal scanner -->
+    <div id="scanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;padding:14px">
+      <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#111;color:#fff">
+          <b id="scanTitle">Scan</b>
+          <button type="button" id="btnCloseScan" style="background:#fff;border:0;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer">Fermer</button>
+        </div>
+        <div style="padding:10px">
+          <div id="qr-reader" style="width:100%"></div>
+          <div style="font-size:12px;color:#555;margin-top:8px">
+            Autorise la caméra. Utilise la caméra arrière si possible.
+          </div>
         </div>
       </div>
+    </div>
 
-      <button type="submit" id="submitBtn">Valider</button>
-    </form>
-
-    <div id="message" class="msg"></div>
   </div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(window.location.search);
+// ==== VERROU NAVETTE (SCAN) ====
+const NAVETTE_ENABLED = params.get("navette") === "1";
+
+// cache l'onglet Scan si pas activé
+if (!NAVETTE_ENABLED) {
+  const tabScanBtn = document.getElementById("tabScanBtn");
+  const tabScan = document.getElementById("tabScan");
+  if (tabScanBtn) tabScanBtn.style.display = "none";
+  if (tabScan) tabScan.style.display = "none";
+
+  // force l'onglet km
+  try { localStorage.setItem("kmActiveTab", "km"); } catch(e){}
+}
+
+    const tabKmBtn = document.getElementById("tabKmBtn");
+    const tabScanBtn = document.getElementById("tabScanBtn");
+    const tabKm = document.getElementById("tabKm");
+    const tabScan = document.getElementById("tabScan");
+
+    function setTab(name) {
+      if (name === "scan") {
+        tabKmBtn.classList.remove("active");
+        tabScanBtn.classList.add("active");
+        tabKm.style.display = "none";
+        tabScan.style.display = "block";
+      } else {
+        tabScanBtn.classList.remove("active");
+        tabKmBtn.classList.add("active");
+        tabScan.style.display = "none";
+        tabKm.style.display = "block";
+      }
+      try { localStorage.setItem("kmActiveTab", name); } catch(e){}
+    }
+
+    tabKmBtn.addEventListener("click", () => setTab("km"));
+    tabScanBtn.addEventListener("click", () => setTab("scan"));
+
+    // init tab (param ?tab=scan ou mémoire)
+    const wantedTab = (params.get("tab") || "").toLowerCase();
+    let savedTab = "";
+    try { savedTab = localStorage.getItem("kmActiveTab") || ""; } catch(e){}
+    setTab(wantedTab === "scan" ? "scan" : (savedTab === "scan" ? "scan" : "km"));
+
 
     let agence        = params.get("agence")        || "";
     let codeAgence    = params.get("codeAgence")    || agence;
@@ -547,6 +614,230 @@ function normalizeRowDate(row) {
       }
     });
 
+
+    // ==============================
+    // NAVETTE / COLIS (scan côté livreur)
+    // ==============================
+    // - scan feuille (QR = liste de bons) -> /api/navette/import
+    // - scan colis en mode JE CHARGE -> /api/navette/valider
+    // - scan colis en mode JE LIVRE  -> /api/navette/livrer
+    // Le dashboard n'a pas besoin de scanner.
+    const magasinNavette = (params.get("magasin") || codeAgence || agence || "").toString().trim().toUpperCase();
+    const livreurId = (params.get("livreurId") || codeChauffeur || chauffeur || "").toString().trim();
+    let tourneeNavette = (params.get("tourneeNavette") || params.get("tourneeId") || "").toString().trim();
+
+    const tourneeNavetteTxt = document.getElementById("tourneeNavetteTxt");
+    const livreurTxt = document.getElementById("livreurTxt");
+    const magasinTxt = document.getElementById("magasinTxt");
+    const colisMsg = document.getElementById("colisMsg");
+    const restantsEl = document.getElementById("restants");
+    const listeColisEl = document.getElementById("listeColis");
+
+    // restore tournée si pas dans l'URL
+    if (!tourneeNavette && magasinNavette) {
+      try {
+        tourneeNavette = localStorage.getItem("NAVETTE_TOURNEE_" + magasinNavette) || "";
+      } catch(e){}
+    }
+
+    function setColisMsg(t, isErr=false) {
+      if (!colisMsg) return;
+      colisMsg.textContent = t || "";
+      colisMsg.style.display = t ? "block" : "none";
+      colisMsg.className = "msg " + (isErr ? "err" : "ok");
+    }
+
+    function getScanMode() {
+      const el = document.querySelector('input[name="scanMode"]:checked');
+      return el ? el.value : "VALIDE";
+    }
+
+    function normalizeBon(v) {
+      return (v || "").toString().trim().replace(/[^\d]/g, "");
+    }
+
+    function parseBonsFromFeuille(text) {
+      // accepte: lignes, virgules, espaces
+      const parts = String(text || "")
+        .split(/[\n,; \t\r]+/g)
+        .map(s => normalizeBon(s))
+        .filter(Boolean);
+
+      // dédoublonne
+      const seen = new Set();
+      const out = [];
+      for (const b of parts) {
+        if (b.length < 6) continue;
+        if (!seen.has(b)) { seen.add(b); out.push(b); }
+      }
+      return out;
+    }
+
+    function refreshColisHeader() {
+      if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
+      if (livreurTxt) livreurTxt.textContent = livreurId || "—";
+      if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
+    }
+    refreshColisHeader();
+
+    async function apiPost(url, body) {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+      return j;
+    }
+
+    async function apiGet(url) {
+      const r = await fetch(url);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+      return j;
+    }
+
+    function renderList(list) {
+      if (!listeColisEl) return;
+      if (!Array.isArray(list) || list.length === 0) {
+        listeColisEl.innerHTML = "";
+        return;
+      }
+      listeColisEl.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${list.slice(0, 250).map(it => `
+            <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #eee;border-radius:10px">
+              <b>${it.bon || ""}</b>
+              <span>${it.statut || ""}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    async function refreshLivreurList() {
+      if (!restantsEl) return;
+      if (!tourneeNavette || !livreurId) {
+        restantsEl.textContent = "0";
+        renderList([]);
+        return;
+      }
+      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
+      const list = j.colis || [];
+      restantsEl.textContent = String(j.restants || 0);
+
+      // quand tout est livré, la liste disparait côté livreur
+      if (Number(j.restants || 0) <= 0) {
+        renderList([]);
+        setColisMsg("✅ Tout est livré (liste masquée)", false);
+        return;
+      }
+
+      renderList(list);
+    }
+
+    // ===== Scanner (caméra) =====
+    const scanModal = document.getElementById("scanModal");
+    const scanTitle = document.getElementById("scanTitle");
+    const btnCloseScan = document.getElementById("btnCloseScan");
+    const btnScanFeuille = document.getElementById("btnScanFeuille");
+    const btnScanColis = document.getElementById("btnScanColis");
+
+    let html5Qr = null;
+    let onScanResult = null;
+
+    async function openScanner(title, cb) {
+      onScanResult = cb;
+      if (scanTitle) scanTitle.textContent = title;
+      if (scanModal) scanModal.style.display = "block";
+
+      if (!html5Qr) html5Qr = new Html5Qrcode("qr-reader");
+
+      await html5Qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          closeScanner().finally(() => {
+            if (onScanResult) onScanResult(decodedText);
+          });
+        },
+        () => {}
+      );
+    }
+
+    async function closeScanner() {
+      try { if (html5Qr) await html5Qr.stop(); } catch(e){}
+      if (scanModal) scanModal.style.display = "none";
+    }
+    if (btnCloseScan) btnCloseScan.addEventListener("click", closeScanner);
+
+    if (btnScanFeuille) {
+      btnScanFeuille.addEventListener("click", async () => {
+        try {
+          if (!magasinNavette) { setColisMsg("❌ Magasin manquant (URL: ?magasin=...)", true); return; }
+
+          await openScanner("Scanner feuille d’émargement", async (txt) => {
+            try {
+              const bons = parseBonsFromFeuille(txt);
+              if (!bons.length) { setColisMsg("❌ QR feuille : aucune liste de bons détectée", true); return; }
+
+              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt });
+
+              tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
+              try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+              refreshColisHeader();
+
+              setColisMsg(`✅ Feuille importée • tournée ${tourneeNavette} • +${j.added || 0} ajoutés`, false);
+              await refreshLivreurList();
+            } catch (e) {
+              setColisMsg("❌ " + e.message, true);
+            }
+          });
+        } catch (e) {
+          setColisMsg("❌ " + e.message, true);
+        }
+      });
+    }
+
+    if (btnScanColis) {
+      btnScanColis.addEventListener("click", async () => {
+        try {
+          if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
+          if (!tourneeNavette) { setColisMsg("❌ D’abord scanner la feuille (tournée inconnue)", true); return; }
+          if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+
+          const mode = getScanMode();
+          await openScanner(mode === "VALIDE" ? "Scanner colis (JE CHARGE)" : "Scanner colis (JE LIVRE)", async (txt) => {
+            try {
+              const bon = normalizeBon(txt);
+              if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
+
+              if (mode === "VALIDE") {
+                await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+                setColisMsg(`✅ Colis ${bon} validé`, false);
+              } else {
+                await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+                setColisMsg(`✅ Colis ${bon} livré`, false);
+              }
+
+              await refreshLivreurList();
+            } catch (e) {
+              setColisMsg("❌ " + e.message, true);
+            }
+          });
+        } catch (e) {
+          setColisMsg("❌ " + e.message, true);
+        }
+      });
+    }
+
+    // refresh automatique (restants)
+    setInterval(() => {
+      refreshLivreurList().catch(() => {});
+    }, 4000);
+
+    refreshLivreurList().catch(() => {});
   </script>
 </body>
 </html>

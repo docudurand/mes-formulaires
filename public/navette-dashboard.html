@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Navette – Tableau de bord</title>
+  <meta name="theme-color" content="#003c8f">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f6f7fb}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px}
+    .card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    h1{font-size:18px;margin:0}
+    .muted{color:#666;font-size:13px}
+    .pill{padding:6px 10px;border-radius:999px;font-size:13px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+    .p-att{background:#fff7ed;color:#9a3412}
+    .p-val{background:#ecfeff;color:#155e75}
+    .p-liv{background:#ecfdf5;color:#166534}
+    .p-cls{background:#f3f4f6;color:#111827}
+    .btn{border:0;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .btn-primary{background:#2563eb;color:#fff}
+    .btn-ghost{background:#fff;border:1px solid #dbeafe;color:#1d4ed8}
+    input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:12px;padding:10px;font-size:14px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid #dbeafe;background:#fff;cursor:pointer;font-weight:800}
+    .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .sep{height:10px}
+    .list{display:flex;flex-direction:column;gap:8px;max-height:440px;overflow:auto}
+    .item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #eef2ff}
+    .item.active{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+    .small{font-size:12px;color:#6b7280}
+    .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:900px){.cols{grid-template-columns:1fr}}
+    .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff}
+    .box h2{margin:0 0 8px;font-size:15px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <h1>Navette – Tableau de bord magasin</h1>
+          <div class="muted" id="sub">Renseigne un magasin puis rafraîchis.</div>
+        </div>
+        <div class="row" style="align-items:center">
+          <input id="magasin" placeholder="Magasin (ex: PAVI)" style="min-width:180px;max-width:220px"/>
+          <button class="btn btn-primary" id="btnRefresh">Rafraîchir</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-view="encours">En cours</button>
+        <button class="tab" data-view="classes">Classés</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row" id="globalCounters"></div>
+
+      <div class="sep"></div>
+
+      <div id="encoursView">
+        <div class="row" style="align-items:flex-start">
+          <div class="card" style="flex:1;min-width:260px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <h2 style="margin:0;font-size:15px">Tournées en cours</h2>
+              <button class="btn btn-ghost" id="btnClear">Tout afficher</button>
+            </div>
+            <div class="muted">Clique une tournée pour voir le détail.</div>
+            <div class="sep"></div>
+            <div id="tourneesActives" class="list"></div>
+          </div>
+
+          <div class="card" style="flex:2;min-width:280px">
+            <h2 style="margin:0 0 6px 0;font-size:15px">Détail tournée</h2>
+            <div class="muted" id="detailTitle">Aucune tournée sélectionnée (affichage global).</div>
+            <div class="sep"></div>
+
+            <div class="cols">
+              <div class="box">
+                <h2><span class="pill p-att">En attente</span></h2>
+                <div class="list" id="listAtt"></div>
+              </div>
+              <div class="box">
+                <h2><span class="pill p-val">Validés</span></h2>
+                <div class="list" id="listVal"></div>
+              </div>
+              <div class="box">
+                <h2><span class="pill p-liv">Livrés</span></h2>
+                <div class="list" id="listLiv"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="classesView" style="display:none">
+        <div class="card">
+          <h2 style="margin:0 0 6px 0;font-size:15px">Tournées classées</h2>
+          <div class="muted">Une tournée passe ici automatiquement quand tous les colis sont <b>LIVRÉS</b>.</div>
+          <div class="sep"></div>
+          <div id="tourneesClassees" class="list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const qs = new URLSearchParams(location.search);
+  const magasinInput = document.getElementById("magasin");
+  const btnRefresh = document.getElementById("btnRefresh");
+  const btnClear = document.getElementById("btnClear");
+
+  const subEl = document.getElementById("sub");
+  const globalCounters = document.getElementById("globalCounters");
+
+  const tourneesActivesEl = document.getElementById("tourneesActives");
+  const tourneesClasseesEl = document.getElementById("tourneesClassees");
+
+  const detailTitle = document.getElementById("detailTitle");
+  const listAtt = document.getElementById("listAtt");
+  const listVal = document.getElementById("listVal");
+  const listLiv = document.getElementById("listLiv");
+
+  let magasin = (qs.get("magasin") || "").toUpperCase();
+  if (magasin) magasinInput.value = magasin;
+
+  let state = { tournees: [], colis: [] };
+  let selectedTourneeId = "";
+
+  function mkMiniItem(text, right) {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `<div><div style="font-weight:900">${text}</div></div><div class="small">${right||""}</div>`;
+    return div;
+  }
+
+  function setGlobalCounters(stats) {
+    globalCounters.innerHTML = `
+      <span class="pill p-att">En attente: <b>${stats.enAttente}</b></span>
+      <span class="pill p-val">Validés: <b>${stats.valides}</b></span>
+      <span class="pill p-liv">Livrés: <b>${stats.livres}</b></span>
+    `;
+  }
+
+  function computeStatsFor(filterFn) {
+    const list = state.colis.filter(filterFn);
+    let enAttente=0, valides=0, livres=0;
+    for (const c of list) {
+      const st = String(c.statut||"").toUpperCase();
+      if (st==="EN_ATTENTE") enAttente++;
+      else if (st==="VALIDE") valides++;
+      else if (st==="LIVRE") livres++;
+    }
+    return { enAttente, valides, livres };
+  }
+
+  function renderTournees() {
+    // Actives
+    tourneesActivesEl.innerHTML = "";
+    const actives = state.tournees.filter(t => String(t.statut||"").toUpperCase() !== "CLASSEE");
+
+    if (!actives.length) {
+      tourneesActivesEl.appendChild(mkMiniItem("Aucune tournée en cours", ""));
+    } else {
+      actives.slice(0, 80).forEach(t => {
+        const div = document.createElement("div");
+        div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:900">${t.tourneeId}</div>
+            <div class="small">Total ${t.total} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+          </div>
+          <div class="small">
+            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${t.enAttente}</span>
+            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${t.valides}</span>
+            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${t.livres}</span>
+          </div>
+        `;
+        div.addEventListener("click", () => {
+          selectedTourneeId = (selectedTourneeId === t.tourneeId) ? "" : t.tourneeId;
+          renderDetail();
+          renderTournees(); // refresh active highlight
+        });
+        tourneesActivesEl.appendChild(div);
+      });
+    }
+
+    // Classées
+    tourneesClasseesEl.innerHTML = "";
+    const classes = state.tournees.filter(t => String(t.statut||"").toUpperCase() === "CLASSEE");
+    if (!classes.length) {
+      tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
+    } else {
+      classes.slice(0, 120).forEach(t => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:900">${t.tourneeId}</div>
+            <div class="small">Total ${t.total} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+          </div>
+          <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
+        `;
+        tourneesClasseesEl.appendChild(div);
+      });
+    }
+  }
+
+  function renderDetail() {
+    const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
+
+    const stats = computeStatsFor(filter);
+    setGlobalCounters(stats);
+
+    detailTitle.textContent = selectedTourneeId
+      ? ("Tournée: " + selectedTourneeId)
+      : "Aucune tournée sélectionnée (affichage global).";
+
+    const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
+    const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
+    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE");
+
+    listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
+
+    const add = (parent, c) => {
+      const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
+      parent.appendChild(mkMiniItem(c.bon, right));
+    };
+
+    att.slice(0, 500).forEach(c => add(listAtt, c));
+    val.slice(0, 500).forEach(c => add(listVal, c));
+    liv.slice(0, 500).forEach(c => add(listLiv, c));
+  }
+
+  async function refresh() {
+    magasin = String(magasinInput.value || "").trim().toUpperCase();
+    if (!magasin) { subEl.textContent = "Saisis un magasin."; return; }
+
+    subEl.textContent = "Chargement…";
+    const res = await fetch(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
+    const data = await res.json().catch(()=>null);
+    if (!data || data.success === false) {
+      subEl.textContent = "Erreur de chargement.";
+      return;
+    }
+
+    state.tournees = data.tournees || [];
+    state.colis = data.colis || [];
+
+    subEl.textContent = `Magasin: ${magasin} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length}`;
+    renderTournees();
+    renderDetail();
+  }
+
+  btnRefresh.addEventListener("click", refresh);
+  btnClear.addEventListener("click", () => {
+    selectedTourneeId = "";
+    renderTournees();
+    renderDetail();
+  });
+
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      const view = b.dataset.view;
+      document.getElementById("encoursView").style.display = (view==="encours") ? "" : "none";
+      document.getElementById("classesView").style.display = (view==="classes") ? "" : "none";
+    });
+  });
+
+  refresh();
+  setInterval(refresh, 4000);
+</script>
+</body>
+</html>
