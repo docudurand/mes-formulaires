@@ -133,9 +133,10 @@
   const listVal = document.getElementById("listVal");
   const listLiv = document.getElementById("listLiv");
 
-  let magasin = (qs.get("magasin") || localStorage.getItem("NAVETTE_DASH_MAGASIN") || "").toUpperCase();
+  let magasin = "";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
+  let expandedClassees = new Set();
   let refreshTimer = null;
 
   function escapeHtml(s){
@@ -152,6 +153,15 @@
     const hh = pad2(d.getHours());
     const mn = pad2(d.getMinutes());
     return `${jj}/${mm}/${aa} ${hh}:${mn}`;
+  }
+
+  function ymdLocal(d){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+  function sameLocalDay(iso, ymd){
+    const d = new Date(iso);
+    if (isNaN(d)) return false;
+    return ymdLocal(d) === ymd;
   }
 
   async function apiPost(url, body) {
@@ -233,22 +243,65 @@
       });
     }
 
-    // Classées
+    // Classées (dépliable)
     tourneesClasseesEl.innerHTML = "";
     const classes = state.tournees.filter(t => String(t.statut||"").toUpperCase() === "CLASSEE");
     if (!classes.length) {
       tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
     } else {
       classes.slice(0, 200).forEach(t => {
+        const tid = String(t.tourneeId);
+        const isOpen = expandedClassees.has(tid);
+
         const div = document.createElement("div");
         div.className = "item";
-        div.innerHTML = `
+        div.style.flexDirection = "column";
+        div.style.alignItems = "stretch";
+
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "space-between";
+        header.style.alignItems = "center";
+        header.style.gap = "10px";
+        header.style.cursor = "pointer";
+
+        header.innerHTML = `
           <div>
             <div style="font-weight:900">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
-          <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
+            <div class="badge" style="background:#eef2ff">${isOpen ? "▲" : "▼"}</div>
+          </div>
         `;
+
+        const body = document.createElement("div");
+        body.style.display = isOpen ? "" : "none";
+        body.style.marginTop = "10px";
+
+        // liste des BL livrés pour cette tournée
+        const liv = state.colis.filter(c => String(c.tourneeId)===tid && String(c.statut).toUpperCase()==="LIVRE");
+        if (!liv.length) {
+          body.appendChild(mkMiniItem("Aucun colis", ""));
+        } else {
+          const list = document.createElement("div");
+          list.className = "list";
+          liv.slice(0, 800).forEach(c => {
+            const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
+            list.appendChild(mkMiniItem(c.bon, right, ""));
+          });
+          body.appendChild(list);
+        }
+
+        header.addEventListener("click", () => {
+          const open = expandedClassees.has(tid);
+          if (open) expandedClassees.delete(tid); else expandedClassees.add(tid);
+          renderTournees();
+        });
+
+        div.appendChild(header);
+        div.appendChild(body);
         tourneesClasseesEl.appendChild(div);
       });
     }
@@ -344,15 +397,9 @@
     const list = (data.magasins || []).map(x => String(x||"").trim().toUpperCase()).filter(Boolean);
     magasinSelect.innerHTML = `<option value="">— Choisir un magasin —</option>` +
       list.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-
-    if (magasin && list.includes(magasin)) {
-      magasinSelect.value = magasin;
-      await refresh();
-    } else {
-      magasin = "";
-      magasinSelect.value = "";
-      setNeutral();
-    }
+    magasin = "";
+    magasinSelect.value = "";
+    setNeutral();
   }
 
   async function refresh() {
@@ -369,8 +416,19 @@
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
 
+    // ✅ Filtre "jour courant" : on n'affiche que les tournées du jour (et leurs colis)
+    const todayYmd = ymdLocal(new Date());
+    const tourneeById = new Map();
+    state.tournees.forEach(t => tourneeById.set(String(t.tourneeId), t));
+    const toursDuJour = state.tournees.filter(t => sameLocalDay(t.dateCreation, todayYmd));
+    const setToursDuJour = new Set(toursDuJour.map(t => String(t.tourneeId)));
+    const colisDuJour = state.colis.filter(c => setToursDuJour.has(String(c.tourneeId)));
+
+    state.tournees = toursDuJour;
+    state.colis = colisDuJour;
+
     const ts = new Date().toLocaleTimeString("fr-FR");
-    subEl.textContent = `Magasin: ${magasin} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
+    subEl.textContent = `Magasin: ${magasin} • Jour: ${new Date().toLocaleDateString("fr-FR")} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
 
     renderTournees();
     renderDetail();
@@ -388,14 +446,13 @@
   }
 
   magasinSelect.addEventListener("change", async () => {
-    magasin = String(magasinSelect.value || "").trim().toUpperCase();
-    localStorage.setItem("NAVETTE_DASH_MAGASIN", magasin);
-    selectedTourneeId = "";
+    magasin = String(magasinSelect.value || "").trim().toUpperCase();    selectedTourneeId = "";
     await refresh();
   });
 
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
+    expandedClassees = new Set();
     renderTournees();
     renderDetail();
   });
