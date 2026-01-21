@@ -271,6 +271,17 @@ app.get("/api/navette/livreur", async (req, res) => {
   }
 });
 
+// Liste des magasins (pour la liste déroulante dashboard)
+app.get("/api/navette/magasins", async (req, res) => {
+  try {
+    const data = await callNavetteGAS("getMagasins", {});
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+
 
 
 function isMonitorRequest(req) {
