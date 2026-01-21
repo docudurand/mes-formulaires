@@ -34,6 +34,11 @@
     .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff}
     .box h2{margin:0 0 8px;font-size:15px}
     .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;background:#f3f4f6;color:#111827}
+
+    .iconBtn{border:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;cursor:pointer;font-size:16px;line-height:1}
+    .iconBtn:active{transform:scale(.98)}
+    .iconBtn.ok{border-color:#bbf7d0}
+    .iconBtn.box{border-color:#bfdbfe}
   </style>
 </head>
 <body>
@@ -137,10 +142,43 @@
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  function mkMiniItem(text, right) {
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function formatTourneeTitle(iso){
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const jj = pad2(d.getDate());
+    const mm = pad2(d.getMonth()+1);
+    const aa = String(d.getFullYear()).slice(-2);
+    const hh = pad2(d.getHours());
+    const mn = pad2(d.getMinutes());
+    return `${jj}/${mm}/${aa} ${hh}:${mn}`;
+  }
+
+  async function apiPost(url, body) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    });
+    const j = await r.json().catch(()=> ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+    return j;
+  }
+
+  function mkMiniItem(text, right, actionsHtml) {
     const div = document.createElement("div");
     div.className = "item";
-    div.innerHTML = `<div><div style="font-weight:900">${escapeHtml(text)}</div></div><div class="small">${escapeHtml(right||"")}</div>`;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div style="min-width:0">
+          <div style="font-weight:900;word-break:break-word">${escapeHtml(text)}</div>
+          ${right ? `<div class="small">${escapeHtml(right||"")}</div>` : ``}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
+        ${actionsHtml || ``}
+      </div>
+    `;
     return div;
   }
 
@@ -177,8 +215,8 @@
         div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
         div.innerHTML = `
           <div>
-            <div style="font-weight:900">${escapeHtml(t.tourneeId)}</div>
-            <div class="small">Total ${Number(t.total||0)} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+            <div style="font-weight:900">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(t.enAttente||0)}</span>
@@ -206,8 +244,8 @@
         div.className = "item";
         div.innerHTML = `
           <div>
-            <div style="font-weight:900">${escapeHtml(t.tourneeId)}</div>
-            <div class="small">Total ${Number(t.total||0)} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+            <div style="font-weight:900">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
         `;
@@ -221,9 +259,7 @@
     const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
-    detailTitle.textContent = selectedTourneeId
-      ? ("Tournée: " + selectedTourneeId)
-      : "Aucune tournée sélectionnée (affichage global).";
+    detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
@@ -232,13 +268,62 @@
     listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
 
     const add = (parent, c) => {
+      const st = String(c.statut||"").toUpperCase();
       const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
-      parent.appendChild(mkMiniItem(c.bon, right));
+      let actionsHtml = "";
+      // ✅ En attente : bouton valider + livrer
+      if (st === "EN_ATTENTE") {
+        actionsHtml = `
+          <button class="iconBtn ok" title="Valider" data-act="valider" data-bon="${escapeHtml(c.bon)}">✅</button>
+          <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
+        `;
+      }
+      // ✅ Validés : bouton livrer seulement
+      if (st === "VALIDE") {
+        actionsHtml = `
+          <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
+        `;
+      }
+      parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
     };
 
     att.slice(0, 700).forEach(c => add(listAtt, c));
     val.slice(0, 700).forEach(c => add(listVal, c));
     liv.slice(0, 700).forEach(c => add(listLiv, c));
+    // actions (valider/livrer) via délégation de clic
+    const handleActionClick = async (ev) => {
+      const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
+      if (!btn) return;
+      const act = btn.getAttribute("data-act");
+      const bon = btn.getAttribute("data-bon");
+      if (!act || !bon) return;
+
+      if (!selectedTourneeId) {
+        alert("Sélectionne d'abord une tournée à gauche.");
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        if (act === "valider") {
+          await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
+        } else if (act === "livrer") {
+          await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
+        }
+        await refresh();
+      } catch (e) {
+        alert("Erreur: " + (e && e.message ? e.message : e));
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    // attache une seule fois
+    [listAtt, listVal].forEach(el => {
+      if (!el) return;
+      el.onclick = handleActionClick;
+    });
+
   }
 
   function setNeutral() {
