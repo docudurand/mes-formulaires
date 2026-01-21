@@ -202,6 +202,7 @@
     const $qrcode = document.getElementById("qrcode");
 
     let allParams = [];
+	let nomTourneeScan = "";
 
     const FRAME_URLS = {
       CCHEZVOUS: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/cchezvous.png",
@@ -289,6 +290,7 @@
       if (isNaN(idx) || !filtered[idx]) return;
 
       const p = filtered[idx];
+	  nomTourneeScan = (p.nomTourneeScan || p.NomTourneeScan || "").toString().trim();
 
       const chauffeurName = p.chauffeur || p.transporteur || "";
       const chauffeurCode = p.codeChauffeur || p.codeTransporteur || slugify(chauffeurName);
@@ -306,6 +308,7 @@
       let codeTrans = $codeTransporteur.value.trim();
       const tournee = $tournee.value.trim();
       const codeTournee = $codeTournee.value.trim();
+	  const nomScan = (nomTourneeScan || "").trim();
 
       if (!base || !agence || !tournee || !codeTournee || !transporteur) {
         alert("Merci de remplir au minimum : URL de base, agence, transporteur, tournée et code tournée.");
@@ -346,6 +349,9 @@
         "&chauffeur=" + encodeURIComponent(transporteur) +
         "&codeChauffeur=" + encodeURIComponent(codeTrans) +
         "&id=" + encodeURIComponent(idQr);
+		if (nomScan) {
+  url += "&nomTourneeScan=" + encodeURIComponent(nomScan);
+}
 
       if ($enableScan && $enableScan.checked) {
         url += "&navette=1";

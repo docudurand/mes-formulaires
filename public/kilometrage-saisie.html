@@ -321,6 +321,8 @@ let agence        = params.get("agence")        || "";
     let chauffeur     = params.get("chauffeur")     || "";
     let codeChauffeur = params.get("codeChauffeur") || "";
 	let idQr          = params.get("id")            || "";
+	let nomTourneeScan = (params.get("nomTourneeScan") || "").toString().trim();
+
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -354,6 +356,7 @@ let agence        = params.get("agence")        || "";
         codeTournee,
         chauffeur,
         codeChauffeur,
+		nomTourneeScan,
 		id: idQr
       };
       try {
@@ -376,6 +379,7 @@ let agence        = params.get("agence")        || "";
         chauffeur     = cfg.chauffeur     || "";
         codeChauffeur = cfg.codeChauffeur || "";
 		idQr          = cfg.id           || "";
+		nomTourneeScan = cfg.nomTourneeScan || "";
 
         const newQs = new URLSearchParams({
           agence: agence,
@@ -384,6 +388,7 @@ let agence        = params.get("agence")        || "";
           codeTournee: codeTournee,
           chauffeur: chauffeur,
           codeChauffeur: codeChauffeur,
+		  nomTourneeScan: nomTourneeScan,
 		  id: idQr
         });
         const newUrl = window.location.pathname + "?" + newQs.toString();
@@ -691,7 +696,8 @@ function normalizeRowDate(row) {
     }
 
     function refreshColisHeader() {
-      if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
+const tourneeAff = (nomTourneeScan || tourneeNavette || "").trim();
+if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
       if (livreurTxt) livreurTxt.textContent = livreurId || "—";
       if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
     }
