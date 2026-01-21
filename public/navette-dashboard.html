@@ -19,9 +19,8 @@
     .p-liv{background:#ecfdf5;color:#166534}
     .p-cls{background:#f3f4f6;color:#111827}
     .btn{border:0;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
-    .btn-primary{background:#2563eb;color:#fff}
     .btn-ghost{background:#fff;border:1px solid #dbeafe;color:#1d4ed8}
-    input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:12px;padding:10px;font-size:14px}
+    select{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:12px;padding:10px;font-size:14px;background:#fff}
     .tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tab{padding:8px 12px;border-radius:999px;border:1px solid #dbeafe;background:#fff;cursor:pointer;font-weight:800}
     .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
@@ -34,6 +33,7 @@
     @media(max-width:900px){.cols{grid-template-columns:1fr}}
     .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff}
     .box h2{margin:0 0 8px;font-size:15px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;background:#f3f4f6;color:#111827}
   </style>
 </head>
 <body>
@@ -42,11 +42,13 @@
       <div class="top">
         <div>
           <h1>Navette – Tableau de bord magasin</h1>
-          <div class="muted" id="sub">Renseigne un magasin puis rafraîchis.</div>
+          <div class="muted" id="sub">Choisis un magasin.</div>
         </div>
         <div class="row" style="align-items:center">
-          <input id="magasin" placeholder="Magasin (ex: PAVI)" style="min-width:180px;max-width:220px"/>
-          <button class="btn btn-primary" id="btnRefresh">Rafraîchir</button>
+          <select id="magasinSelect" style="min-width:220px;max-width:320px">
+            <option value="">— Choisir un magasin —</option>
+          </select>
+          <button class="btn btn-ghost" id="btnClear">Tout afficher</button>
         </div>
       </div>
 
@@ -68,7 +70,7 @@
           <div class="card" style="flex:1;min-width:260px">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
               <h2 style="margin:0;font-size:15px">Tournées en cours</h2>
-              <button class="btn btn-ghost" id="btnClear">Tout afficher</button>
+              <span class="badge" id="autoInfo">Auto: 30s</span>
             </div>
             <div class="muted">Clique une tournée pour voir le détail.</div>
             <div class="sep"></div>
@@ -111,8 +113,8 @@
 
 <script>
   const qs = new URLSearchParams(location.search);
-  const magasinInput = document.getElementById("magasin");
-  const btnRefresh = document.getElementById("btnRefresh");
+
+  const magasinSelect = document.getElementById("magasinSelect");
   const btnClear = document.getElementById("btnClear");
 
   const subEl = document.getElementById("sub");
@@ -126,16 +128,19 @@
   const listVal = document.getElementById("listVal");
   const listLiv = document.getElementById("listLiv");
 
-  let magasin = (qs.get("magasin") || "").toUpperCase();
-  if (magasin) magasinInput.value = magasin;
-
+  let magasin = (qs.get("magasin") || localStorage.getItem("NAVETTE_DASH_MAGASIN") || "").toUpperCase();
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
+  let refreshTimer = null;
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 
   function mkMiniItem(text, right) {
     const div = document.createElement("div");
     div.className = "item";
-    div.innerHTML = `<div><div style="font-weight:900">${text}</div></div><div class="small">${right||""}</div>`;
+    div.innerHTML = `<div><div style="font-weight:900">${escapeHtml(text)}</div></div><div class="small">${escapeHtml(right||"")}</div>`;
     return div;
   }
 
@@ -167,24 +172,24 @@
     if (!actives.length) {
       tourneesActivesEl.appendChild(mkMiniItem("Aucune tournée en cours", ""));
     } else {
-      actives.slice(0, 80).forEach(t => {
+      actives.slice(0, 120).forEach(t => {
         const div = document.createElement("div");
         div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
         div.innerHTML = `
           <div>
-            <div style="font-weight:900">${t.tourneeId}</div>
-            <div class="small">Total ${t.total} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+            <div style="font-weight:900">${escapeHtml(t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
           </div>
-          <div class="small">
-            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${t.enAttente}</span>
-            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${t.valides}</span>
-            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${t.livres}</span>
+          <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(t.enAttente||0)}</span>
+            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(t.valides||0)}</span>
+            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(t.livres||0)}</span>
           </div>
         `;
         div.addEventListener("click", () => {
           selectedTourneeId = (selectedTourneeId === t.tourneeId) ? "" : t.tourneeId;
           renderDetail();
-          renderTournees(); // refresh active highlight
+          renderTournees();
         });
         tourneesActivesEl.appendChild(div);
       });
@@ -196,13 +201,13 @@
     if (!classes.length) {
       tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
     } else {
-      classes.slice(0, 120).forEach(t => {
+      classes.slice(0, 200).forEach(t => {
         const div = document.createElement("div");
         div.className = "item";
         div.innerHTML = `
           <div>
-            <div style="font-weight:900">${t.tourneeId}</div>
-            <div class="small">Total ${t.total} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
+            <div style="font-weight:900">${escapeHtml(t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)} • ${new Date(t.dateCreation).toLocaleString("fr-FR")}</div>
           </div>
           <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
         `;
@@ -213,7 +218,6 @@
 
   function renderDetail() {
     const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
-
     const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
@@ -232,14 +236,42 @@
       parent.appendChild(mkMiniItem(c.bon, right));
     };
 
-    att.slice(0, 500).forEach(c => add(listAtt, c));
-    val.slice(0, 500).forEach(c => add(listVal, c));
-    liv.slice(0, 500).forEach(c => add(listLiv, c));
+    att.slice(0, 700).forEach(c => add(listAtt, c));
+    val.slice(0, 700).forEach(c => add(listVal, c));
+    liv.slice(0, 700).forEach(c => add(listLiv, c));
+  }
+
+  function setNeutral() {
+    subEl.textContent = "Choisis un magasin.";
+    setGlobalCounters({enAttente:0, valides:0, livres:0});
+    state = { tournees: [], colis: [] };
+    selectedTourneeId = "";
+    renderTournees();
+    renderDetail();
+  }
+
+  async function loadMagasins() {
+    // Endpoint attendu côté serveur: GET /api/navette/magasins  -> { success:true, magasins:[...] }
+    const res = await fetch("/api/navette/magasins");
+    const data = await res.json().catch(()=>null);
+    if (!data || data.success === false) throw new Error((data && data.error) ? data.error : "Impossible de charger les magasins");
+
+    const list = (data.magasins || []).map(x => String(x||"").trim().toUpperCase()).filter(Boolean);
+    magasinSelect.innerHTML = `<option value="">— Choisir un magasin —</option>` +
+      list.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
+
+    if (magasin && list.includes(magasin)) {
+      magasinSelect.value = magasin;
+      await refresh();
+    } else {
+      magasin = "";
+      magasinSelect.value = "";
+      setNeutral();
+    }
   }
 
   async function refresh() {
-    magasin = String(magasinInput.value || "").trim().toUpperCase();
-    if (!magasin) { subEl.textContent = "Saisis un magasin."; return; }
+    if (!magasin) { setNeutral(); return; }
 
     subEl.textContent = "Chargement…";
     const res = await fetch(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
@@ -252,12 +284,31 @@
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
 
-    subEl.textContent = `Magasin: ${magasin} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length}`;
+    const ts = new Date().toLocaleTimeString("fr-FR");
+    subEl.textContent = `Magasin: ${magasin} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
+
     renderTournees();
     renderDetail();
+
+    const u = new URL(location.href);
+    u.searchParams.set("magasin", magasin);
+    history.replaceState(null, "", u.toString());
   }
 
-  btnRefresh.addEventListener("click", refresh);
+  function startAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      if (magasin) refresh();
+    }, 30000);
+  }
+
+  magasinSelect.addEventListener("change", async () => {
+    magasin = String(magasinSelect.value || "").trim().toUpperCase();
+    localStorage.setItem("NAVETTE_DASH_MAGASIN", magasin);
+    selectedTourneeId = "";
+    await refresh();
+  });
+
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     renderTournees();
@@ -274,8 +325,12 @@
     });
   });
 
-  refresh();
-  setInterval(refresh, 4000);
+  // init
+  setNeutral();
+  startAutoRefresh();
+  loadMagasins().catch(err => {
+    subEl.textContent = "Erreur: " + err.message;
+  });
 </script>
 </body>
 </html>

@@ -23,7 +23,6 @@ async function callGAS(action, params) {
   return data;
 }
 
-// 1) Import liste (QR feuille)
 router.post("/import", async (req, res) => {
   try {
     const { magasin, bons, tourneeId } = req.body || {};
@@ -38,7 +37,6 @@ router.post("/import", async (req, res) => {
   }
 });
 
-// 2) Scan colis -> VALIDE
 router.post("/valider", async (req, res) => {
   try {
     const { tourneeId, magasin, livreurId, bon } = req.body || {};
@@ -54,7 +52,6 @@ router.post("/valider", async (req, res) => {
   }
 });
 
-// 3) Scan colis -> LIVRE
 router.post("/livrer", async (req, res) => {
   try {
     const { tourneeId, magasin, livreurId, bon } = req.body || {};
@@ -70,7 +67,15 @@ router.post("/livrer", async (req, res) => {
   }
 });
 
-// Dashboard (lecture)
+router.get("/magasins", async (req, res) => {
+  try {
+    const data = await callGAS("getMagasins", {});
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success:false, error: String(e.message || e) });
+  }
+});
+
 router.get("/dashboard", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");
@@ -81,7 +86,6 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-// Infos livreur (restants + liste)
 router.get("/livreur", async (req, res) => {
   try {
     const { tourneeId, livreurId } = req.query || {};
