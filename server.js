@@ -58,7 +58,6 @@ function attachMonitorConsole() {
         : null;
       monitorLog(level, message, context);
     } catch {
-      // Ignore monitor logging failures.
     }
   };
 
@@ -175,12 +174,6 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 
-// ==============================
-// NAVETTE / COLIS (Apps Script proxy)
-// Env requis (Render):
-// - NAVETTE_GAS_URL : URL du WebApp Apps Script (....../exec)
-// - NAVETTE_API_KEY : clé partagée avec Apps Script (Script Properties)
-// ==============================
 function mustEnv(name) {
   const v = String(process.env[name] || "").trim();
   if (!v) throw new Error(`Missing env ${name}`);
@@ -201,7 +194,6 @@ async function callNavetteGAS(action, params = {}) {
   return data;
 }
 
-// 1) Import liste (QR feuille)
 app.post("/api/navette/import", async (req, res) => {
   try {
     const { magasin, bons, tourneeId } = req.body || {};
@@ -216,7 +208,6 @@ app.post("/api/navette/import", async (req, res) => {
   }
 });
 
-// 2) Scan colis -> VALIDE (chargement camion)
 app.post("/api/navette/valider", async (req, res) => {
   try {
     const { tourneeId, magasin, livreurId, bon } = req.body || {};
@@ -232,7 +223,6 @@ app.post("/api/navette/valider", async (req, res) => {
   }
 });
 
-// 3) Scan colis -> LIVRE (chez client)
 app.post("/api/navette/livrer", async (req, res) => {
   try {
     const { tourneeId, magasin, livreurId, bon } = req.body || {};
@@ -248,7 +238,6 @@ app.post("/api/navette/livrer", async (req, res) => {
   }
 });
 
-// Dashboard magasin (lecture)
 app.get("/api/navette/dashboard", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");
@@ -259,7 +248,6 @@ app.get("/api/navette/dashboard", async (req, res) => {
   }
 });
 
-// Vue livreur (restants + liste)
 app.get("/api/navette/livreur", async (req, res) => {
   try {
     const tourneeId = String(req.query.tourneeId || "");
@@ -271,7 +259,6 @@ app.get("/api/navette/livreur", async (req, res) => {
   }
 });
 
-// Liste des magasins (pour la liste déroulante dashboard)
 app.get("/api/navette/magasins", async (req, res) => {
   try {
     const data = await callNavetteGAS("getMagasins", {});

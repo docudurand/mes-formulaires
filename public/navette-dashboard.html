@@ -213,7 +213,6 @@
   }
 
   function renderTournees() {
-    // Actives
     tourneesActivesEl.innerHTML = "";
     const actives = state.tournees.filter(t => String(t.statut||"").toUpperCase() !== "CLASSEE");
 
@@ -243,7 +242,6 @@
       });
     }
 
-    // Classées (dépliable)
     tourneesClasseesEl.innerHTML = "";
     const classes = state.tournees.filter(t => String(t.statut||"").toUpperCase() === "CLASSEE");
     if (!classes.length) {
@@ -280,7 +278,6 @@
         body.style.display = isOpen ? "" : "none";
         body.style.marginTop = "10px";
 
-        // liste des BL livrés pour cette tournée
         const liv = state.colis.filter(c => String(c.tourneeId)===tid && String(c.statut).toUpperCase()==="LIVRE");
         if (!liv.length) {
           body.appendChild(mkMiniItem("Aucun colis", ""));
@@ -324,14 +321,14 @@
       const st = String(c.statut||"").toUpperCase();
       const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
       let actionsHtml = "";
-      // ✅ En attente : bouton valider + livrer
+
       if (st === "EN_ATTENTE") {
         actionsHtml = `
           <button class="iconBtn ok" title="Valider" data-act="valider" data-bon="${escapeHtml(c.bon)}">✅</button>
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
         `;
       }
-      // ✅ Validés : bouton livrer seulement
+
       if (st === "VALIDE") {
         actionsHtml = `
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
@@ -343,7 +340,7 @@
     att.slice(0, 700).forEach(c => add(listAtt, c));
     val.slice(0, 700).forEach(c => add(listVal, c));
     liv.slice(0, 700).forEach(c => add(listLiv, c));
-    // actions (valider/livrer) via délégation de clic
+
     const handleActionClick = async (ev) => {
       const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
       if (!btn) return;
@@ -371,7 +368,6 @@
       }
     };
 
-    // attache une seule fois
     [listAtt, listVal].forEach(el => {
       if (!el) return;
       el.onclick = handleActionClick;
@@ -389,7 +385,7 @@
   }
 
   async function loadMagasins() {
-    // Endpoint attendu côté serveur: GET /api/navette/magasins  -> { success:true, magasins:[...] }
+
     const res = await fetch("/api/navette/magasins");
     const data = await res.json().catch(()=>null);
     if (!data || data.success === false) throw new Error((data && data.error) ? data.error : "Impossible de charger les magasins");
@@ -416,7 +412,6 @@
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
 
-    // ✅ Filtre "jour courant" : on n'affiche que les tournées du jour (et leurs colis)
     const todayYmd = ymdLocal(new Date());
     const tourneeById = new Map();
     state.tournees.forEach(t => tourneeById.set(String(t.tourneeId), t));
@@ -467,7 +462,6 @@
     });
   });
 
-  // init
   setNeutral();
   startAutoRefresh();
   loadMagasins().catch(err => {

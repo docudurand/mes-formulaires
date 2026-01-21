@@ -347,7 +347,6 @@
         "&codeChauffeur=" + encodeURIComponent(codeTrans) +
         "&id=" + encodeURIComponent(idQr);
 
-      // Option “Scan colis” : on ajoute juste navette=1 (on reste sur l’onglet Kilométrage par défaut)
       if ($enableScan && $enableScan.checked) {
         url += "&navette=1";
       }

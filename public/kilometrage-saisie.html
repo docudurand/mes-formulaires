@@ -44,7 +44,6 @@
       background: #f0f4ff;
     }
 
-    /* Tabs */
     .tabs {
       display: flex;
       gap: 10px;
@@ -131,11 +130,24 @@
     }
     @keyframes resume-spin { to { transform: rotate(360deg); } }
 
+    .scan-loader{
+      display:none;
+      align-items:center;
+      gap:8px;
+      font-size:0.9rem;
+      color:#2563eb;
+      margin-top:10px;
+    }
+    .scan-loader-spinner{
+      width:18px;height:18px;border-radius:50%;
+      border:2px solid #bfdbfe;border-top-color:#2563eb;
+      animation: resume-spin 0.7s linear infinite;
+    }
+
     @media (max-width: 480px) {
       .card { margin: 12px; padding: 16px 18px; }
     }
 
-    /* ===== NAVETTE / COLIS ===== */
     .btnRow { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
     .btnRow button { width:auto; flex:1; min-width: 140px; margin-top: 0; border-radius: 999px; border: none; padding: 10px 0; font-weight: 700; cursor:pointer; }
     .btnSecondary { background:#0f172a; color:#fff; }
@@ -151,8 +163,7 @@
       <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand Services" />
     </div>
 
-    <h1>Kilométrage / Scan colis</h1>
-    <div class="sub">Choisis un onglet. La page reste optimisée téléphone.</div>
+    <h1>Kilométrage</h1>
 
     <div id="infoBloc" class="info">Chargement des informations de tournée...</div>
 
@@ -161,7 +172,6 @@
       <button type="button" class="tabBtn" id="tabScanBtn">Scan</button>
     </div>
 
-    <!-- ===== TAB KM ===== -->
     <div id="tabKm">
       <form id="kmForm">
         <label for="date">Date de la journée</label>
@@ -202,7 +212,6 @@
       <div id="message" class="msg"></div>
     </div>
 
-    <!-- ===== TAB SCAN ===== -->
     <div id="tabScan" style="display:none">
       <div class="sub" style="margin:0 0 12px 0;text-align:left">
         1) Scanner la <b>feuille d’émargement</b> (QR = liste des bons)<br>
@@ -221,6 +230,12 @@
         <button type="button" id="btnScanLivrer" class="btnScan">🚚 Scanner colis livrer</button>
       </div>
 
+      
+      <div id="scanLoader" class="scan-loader">
+        <div class="scan-loader-spinner"></div>
+        <span id="scanLoaderTxt">Traitement...</span>
+      </div>
+
       <div id="colisMsg" class="msg" style="display:none;margin:10px 0 0 0;text-align:left"></div>
 
       <div class="info" style="margin-top:10px">
@@ -229,7 +244,6 @@
       <div id="listeColis" style="margin-top:10px"></div>
     </div>
 
-    <!-- Modal scanner -->
     <div id="scanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;padding:14px">
       <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#111;color:#fff">
@@ -249,17 +263,14 @@
 
   <script>
 const params = new URLSearchParams(window.location.search);
-// ==== VERROU NAVETTE (SCAN) ====
 const NAVETTE_ENABLED = params.get("navette") === "1";
 
-// cache l'onglet Scan si pas activé
 if (!NAVETTE_ENABLED) {
   const tabScanBtn = document.getElementById("tabScanBtn");
   const tabScan = document.getElementById("tabScan");
   if (tabScanBtn) tabScanBtn.style.display = "none";
   if (tabScan) tabScan.style.display = "none";
 
-  // force l'onglet km
   try { localStorage.setItem("kmActiveTab", "km"); } catch(e){}
 }
 
@@ -286,9 +297,6 @@ if (!NAVETTE_ENABLED) {
     tabKmBtn.addEventListener("click", () => setTab("km"));
     tabScanBtn.addEventListener("click", () => setTab("scan"));
 
-    // init tab
-    // Par défaut, même si la tournée a accès au Scan, on affiche d'abord "Kilométrage".
-    // On n'ouvre "Scan" au chargement que si l'URL contient explicitement ?tab=scan.
     const wantedTab = (params.get("tab") || "").toLowerCase();
 
     if (NAVETTE_ENABLED && wantedTab === "scan") {
@@ -612,14 +620,6 @@ function normalizeRowDate(row) {
       }
     });
 
-
-    // ==============================
-    // NAVETTE / COLIS (scan côté livreur)
-    // ==============================
-    // - scan feuille (QR = liste de bons) -> /api/navette/import
-    // - scan colis en mode JE CHARGE -> /api/navette/valider
-    // - scan colis en mode JE LIVRE  -> /api/navette/livrer
-    // Le dashboard n'a pas besoin de scanner.
     const magasinNavette = (params.get("magasin") || codeAgence || agence || "").toString().trim().toUpperCase();
     const livreurId = (params.get("livreurId") || codeChauffeur || chauffeur || "").toString().trim();
     let tourneeNavette = (params.get("tourneeNavette") || params.get("tourneeId") || "").toString().trim();
@@ -628,10 +628,12 @@ function normalizeRowDate(row) {
     const livreurTxt = document.getElementById("livreurTxt");
     const magasinTxt = document.getElementById("magasinTxt");
     const colisMsg = document.getElementById("colisMsg");
+    const scanLoader = document.getElementById("scanLoader");
+    const scanLoaderTxt = document.getElementById("scanLoaderTxt");
+
     const restantsEl = document.getElementById("restants");
     const listeColisEl = document.getElementById("listeColis");
 
-    // restore tournée si pas dans l'URL
     if (!tourneeNavette && magasinNavette) {
       try {
         tourneeNavette = localStorage.getItem("NAVETTE_TOURNEE_" + magasinNavette) || "";
@@ -645,18 +647,31 @@ function normalizeRowDate(row) {
       colisMsg.className = "msg " + (isErr ? "err" : "ok");
     }
 
+    function setScanLoading(isLoading, text) {
+      if (!scanLoader) return;
+      scanLoader.style.display = isLoading ? "flex" : "none";
+      if (scanLoaderTxt && text) scanLoaderTxt.textContent = text;
+    }
+
+    function setScanButtonsDisabled(disabled) {
+      [btnScanFeuille, btnScanCharger, btnScanLivrer].forEach(b => {
+        if (!b) return;
+        b.disabled = !!disabled;
+        b.style.opacity = disabled ? "0.65" : "1";
+        b.style.cursor = disabled ? "default" : "pointer";
+      });
+    }
+
     function normalizeBon(v) {
       return (v || "").toString().trim().replace(/[^\d]/g, "");
     }
 
     function parseBonsFromFeuille(text) {
-      // accepte: lignes, virgules, espaces
       const parts = String(text || "")
         .split(/[\n,; \t\r]+/g)
         .map(s => normalizeBon(s))
         .filter(Boolean);
 
-      // dédoublonne
       const seen = new Set();
       const out = [];
       for (const b of parts) {
@@ -720,14 +735,12 @@ function normalizeRowDate(row) {
       const list = j.colis || [];
       restantsEl.textContent = String(j.restants || 0);
 
-      // ✅ Si aucun colis n'est encore affecté à ce livreur, on n'affiche pas "tout livré"
       if (list.length === 0) {
         renderList([]);
         setColisMsg("ℹ️ Feuille importée. Scanne les colis avec « Scanner colis à charger » pour les affecter au livreur.", false);
         return;
       }
 
-      // ✅ "Tout livré" seulement si une liste existe et qu'il ne reste rien
       if (Number(j.restants || 0) <= 0) {
         renderList([]);
         setColisMsg("✅ Tout est livré (liste masquée)", false);
@@ -737,7 +750,6 @@ function normalizeRowDate(row) {
       renderList(list);
     }
 
-    // ===== Scanner (caméra) ===== (caméra) =====
     const scanModal = document.getElementById("scanModal");
     const scanTitle = document.getElementById("scanTitle");
     const btnCloseScan = document.getElementById("btnCloseScan");
@@ -750,6 +762,8 @@ function normalizeRowDate(row) {
 
     async function openScanner(title, cb) {
       onScanResult = cb;
+      setScanLoading(false);
+      setColisMsg("", false);
       if (scanTitle) scanTitle.textContent = title;
       if (scanModal) scanModal.style.display = "block";
 
@@ -783,26 +797,34 @@ function normalizeRowDate(row) {
               const bons = parseBonsFromFeuille(txt);
               if (!bons.length) { setColisMsg("❌ QR feuille : aucune liste de bons détectée", true); return; }
 
+              setScanLoading(true, "Import de la feuille en cours...");
+              setScanButtonsDisabled(true);
               const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt });
 
               tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
               try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
               refreshColisHeader();
 
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Feuille importée • tournée ${tourneeNavette} • +${j.added || 0} ajoutés`, false);
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
     }
 
-
-    // === Scanner colis À CHARGER (passe en VALIDE, crée si absent) ===
     if (btnScanCharger) {
       btnScanCharger.addEventListener("click", async () => {
         try {
@@ -815,24 +837,28 @@ function normalizeRowDate(row) {
               const bon = normalizeBon(txt);
               if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
 
-              // VALIDE : si le bon n'est pas dans la feuille, il est ajouté automatiquement (hors liste)
+              setScanLoading(true, `Validation colis ${bon}...`);
+              setScanButtonsDisabled(true);
               await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} validé (chargé)`, false);
 
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
     }
 
-    // === Scanner colis LIVRER (passe en LIVRE, quel que soit l'état précédent) ===
-    // Règle demandée : si un colis est VALIDE => il passe LIVRE.
-    // (Et si jamais il était EN_ATTENTE, il passe aussi LIVRE pour éviter les blocages.)
     if (btnScanLivrer) {
       btnScanLivrer.addEventListener("click", async () => {
         try {
@@ -845,21 +871,28 @@ function normalizeRowDate(row) {
               const bon = normalizeBon(txt);
               if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
 
+              setScanLoading(true, `Livraison colis ${bon}...`);
+              setScanButtonsDisabled(true);
               await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} livré`, false);
 
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
     }
 
-    // refresh automatique (restants)
     setInterval(() => {
       refreshLivreurList().catch(() => {});
     }, 4000);
