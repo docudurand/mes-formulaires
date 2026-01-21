@@ -143,7 +143,7 @@
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
   </style>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+  <script src="/js/html5-qrcode.min.js"></script>
 </head>
 <body>
   <div class="card">
@@ -292,14 +292,18 @@ if (!NAVETTE_ENABLED) {
     tabKmBtn.addEventListener("click", () => setTab("km"));
     tabScanBtn.addEventListener("click", () => setTab("scan"));
 
-    // init tab (param ?tab=scan ou mémoire)
+    // init tab
+    // Par défaut, même si la tournée a accès au Scan, on affiche d'abord "Kilométrage".
+    // On n'ouvre "Scan" au chargement que si l'URL contient explicitement ?tab=scan.
     const wantedTab = (params.get("tab") || "").toLowerCase();
-    let savedTab = "";
-    try { savedTab = localStorage.getItem("kmActiveTab") || ""; } catch(e){}
-    setTab(wantedTab === "scan" ? "scan" : (savedTab === "scan" ? "scan" : "km"));
 
+    if (NAVETTE_ENABLED && wantedTab === "scan") {
+      setTab("scan");
+    } else {
+      setTab("km");
+    }
 
-    let agence        = params.get("agence")        || "";
+let agence        = params.get("agence")        || "";
     let codeAgence    = params.get("codeAgence")    || agence;
     let tournee       = params.get("tournee")       || "";
     let codeTournee   = params.get("codeTournee")   || "";

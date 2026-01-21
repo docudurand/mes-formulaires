@@ -156,7 +156,15 @@
             <input id="codeTournee" type="text" placeholder="Ex : T1" />
           </div>
 
-          <button id="btnGenerate">Générer le QR code</button>
+          
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+              <input id="enableScan" type="checkbox" style="width:auto;transform:scale(1.15)" />
+              Activer l’accès au <b>Scan colis</b> (ajoute <code>&amp;navette=1</code>)
+            </label>
+            <div class="muted">À cocher uniquement pour les tournées de test (sinon la page reste “Kilométrage” uniquement).</div>
+          </div>
+<button id="btnGenerate">Générer le QR code</button>
 
           <div class="url-box">
             <label for="finalUrl">URL générée</label>
@@ -186,6 +194,7 @@
     const $codeTransporteur = document.getElementById("codeTransporteur");
     const $tournee = document.getElementById("tournee");
     const $codeTournee = document.getElementById("codeTournee");
+    const $enableScan = document.getElementById("enableScan");
     const $baseUrl = document.getElementById("baseUrl");
     const $finalUrl = document.getElementById("finalUrl");
     const $btnGenerate = document.getElementById("btnGenerate");
@@ -328,7 +337,7 @@
         return null;
       }
 
-      const url =
+      let url =
         base +
         "?agence=" + encodeURIComponent(agence) +
         "&codeAgence=" + encodeURIComponent(agence) +
@@ -337,6 +346,11 @@
         "&chauffeur=" + encodeURIComponent(transporteur) +
         "&codeChauffeur=" + encodeURIComponent(codeTrans) +
         "&id=" + encodeURIComponent(idQr);
+
+      // Option “Scan colis” : on ajoute juste navette=1 (on reste sur l’onglet Kilométrage par défaut)
+      if ($enableScan && $enableScan.checked) {
+        url += "&navette=1";
+      }
 
       return url;
     }
