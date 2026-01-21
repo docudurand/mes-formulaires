@@ -130,12 +130,43 @@
     }
     @keyframes resume-spin { to { transform: rotate(360deg); } }
 
+    .scan-loader{
+      display:none;
+      align-items:center;
+      gap:8px;
+      font-size:0.9rem;
+      color:#2563eb;
+      margin-top:10px;
+    }
+    .scan-loader-spinner{
+      width:18px;height:18px;border-radius:50%;
+      border:2px solid #bfdbfe;border-top-color:#2563eb;
+      animation: resume-spin 0.7s linear infinite;
+    }
+
     @media (max-width: 480px) {
       .card { margin: 12px; padding: 16px 18px; }
     }
 
     .btnRow { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
-    .btnRow button { width:auto; flex:1; min-width: 140px; margin-top: 0; border-radius: 999px; border: none; padding: 10px 0; font-weight: 700; cursor:pointer; }
+    .btnRow button { 
+      width:auto; 
+      flex:1; 
+      min-width: 140px; 
+      margin-top: 0; 
+      border-radius: 999px; 
+      border: none; 
+      padding: 14px 12px; 
+      min-height: 56px; 
+      font-weight: 700; 
+      cursor:pointer; 
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      line-height:1.15;
+      white-space: normal;
+    }
     .btnSecondary { background:#0f172a; color:#fff; }
     .btnScan { background:#2563eb; color:#fff; }
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
@@ -149,8 +180,7 @@
       <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand Services" />
     </div>
 
-    <h1>Kilométrage / Scan colis</h1>
-    <div class="sub">Choisis un onglet. La page reste optimisée téléphone.</div>
+    <h1>Kilométrage</h1>
 
     <div id="infoBloc" class="info">Chargement des informations de tournée...</div>
 
@@ -199,15 +229,7 @@
       <div id="message" class="msg"></div>
     </div>
 
-    <div id="tabScan" style="display:none">
-      <div class="sub" style="margin:0 0 12px 0;text-align:left">
-        1) Scanner la <b>feuille d’émargement</b> (QR = liste des bons)<br>
-        2) Scanner les <b>colis</b> :
-        <span class="pill">À CHARGER</span> / <span class="pill">LIVRER</span><br>
-        3) Colis <b>hors feuille</b> : utiliser <b>Scanner colis à charger</b> (ajout direct en <b>VALIDE</b>)
-      </div>
-
-      <div class="info" id="colisInfo" style="margin-bottom:10px">
+    <div id="tabScan" style="display:none"><div class="info" id="colisInfo" style="margin-bottom:10px">
         Tournée: <b id="tourneeNavetteTxt">—</b> • Livreur: <b id="livreurTxt">—</b> • Magasin: <b id="magasinTxt">—</b>
       </div>
 
@@ -215,6 +237,12 @@
         <button type="button" id="btnScanFeuille" class="btnSecondary">📄 Scanner feuille émargement</button>
         <button type="button" id="btnScanCharger" class="btnScan">📦 Scanner colis à charger</button>
         <button type="button" id="btnScanLivrer" class="btnScan">🚚 Scanner colis livrer</button>
+      </div>
+
+      
+      <div id="scanLoader" class="scan-loader">
+        <div class="scan-loader-spinner"></div>
+        <span id="scanLoaderTxt">Traitement...</span>
       </div>
 
       <div id="colisMsg" class="msg" style="display:none;margin:10px 0 0 0;text-align:left"></div>
@@ -244,8 +272,6 @@
 
   <script>
 const params = new URLSearchParams(window.location.search);
-    const tourneeNomScan = params.get('tourneeNom') || params.get('tournee') || '';
-
 const NAVETTE_ENABLED = params.get("navette") === "1";
 
 if (!NAVETTE_ENABLED) {
@@ -611,6 +637,9 @@ function normalizeRowDate(row) {
     const livreurTxt = document.getElementById("livreurTxt");
     const magasinTxt = document.getElementById("magasinTxt");
     const colisMsg = document.getElementById("colisMsg");
+    const scanLoader = document.getElementById("scanLoader");
+    const scanLoaderTxt = document.getElementById("scanLoaderTxt");
+
     const restantsEl = document.getElementById("restants");
     const listeColisEl = document.getElementById("listeColis");
 
@@ -627,12 +656,26 @@ function normalizeRowDate(row) {
       colisMsg.className = "msg " + (isErr ? "err" : "ok");
     }
 
+    function setScanLoading(isLoading, text) {
+      if (!scanLoader) return;
+      scanLoader.style.display = isLoading ? "flex" : "none";
+      if (scanLoaderTxt && text) scanLoaderTxt.textContent = text;
+    }
+
+    function setScanButtonsDisabled(disabled) {
+      [btnScanFeuille, btnScanCharger, btnScanLivrer].forEach(b => {
+        if (!b) return;
+        b.disabled = !!disabled;
+        b.style.opacity = disabled ? "0.65" : "1";
+        b.style.cursor = disabled ? "default" : "pointer";
+      });
+    }
+
     function normalizeBon(v) {
       return (v || "").toString().trim().replace(/[^\d]/g, "");
     }
 
     function parseBonsFromFeuille(text) {
-
       const parts = String(text || "")
         .split(/[\n,; \t\r]+/g)
         .map(s => normalizeBon(s))
@@ -728,6 +771,8 @@ function normalizeRowDate(row) {
 
     async function openScanner(title, cb) {
       onScanResult = cb;
+      setScanLoading(false);
+      setColisMsg("", false);
       if (scanTitle) scanTitle.textContent = title;
       if (scanModal) scanModal.style.display = "block";
 
@@ -761,20 +806,30 @@ function normalizeRowDate(row) {
               const bons = parseBonsFromFeuille(txt);
               if (!bons.length) { setColisMsg("❌ QR feuille : aucune liste de bons détectée", true); return; }
 
+              setScanLoading(true, "Import de la feuille en cours...");
+              setScanButtonsDisabled(true);
               const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt });
 
               tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
               try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
               refreshColisHeader();
 
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Feuille importée • tournée ${tourneeNavette} • +${j.added || 0} ajoutés`, false);
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
     }
@@ -791,16 +846,24 @@ function normalizeRowDate(row) {
               const bon = normalizeBon(txt);
               if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
 
+              setScanLoading(true, `Validation colis ${bon}...`);
+              setScanButtonsDisabled(true);
               await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} validé (chargé)`, false);
 
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
     }
@@ -817,20 +880,26 @@ function normalizeRowDate(row) {
               const bon = normalizeBon(txt);
               if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
 
+              setScanLoading(true, `Livraison colis ${bon}...`);
+              setScanButtonsDisabled(true);
               await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} livré`, false);
 
               await refreshLivreurList();
             } catch (e) {
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
               setColisMsg("❌ " + e.message, true);
             }
           });
         } catch (e) {
-          setColisMsg("❌ " + e.message, true);
+          setScanLoading(false);
+              setScanButtonsDisabled(false);
+              setColisMsg("❌ " + e.message, true);
         }
       });
-    }
-
     }
 
     setInterval(() => {

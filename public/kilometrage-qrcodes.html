@@ -152,17 +152,19 @@
           </div>
 
           <div class="field">
-            <label for="tourneeNom">Nom de la tournée (affichage Scan)</label>
-            <input id="tourneeNom" type="text" placeholder="Ex : Tournée 1 C CHEZ VOUS" />
-            <div class="muted">Si vide, on utilisera “Nom de la tournée”.</div>
-          </div>
-
-          <div class="field">
             <label for="codeTournee">Code tournée</label>
             <input id="codeTournee" type="text" placeholder="Ex : T1" />
           </div>
 
-          <button id="btnGenerate">Générer le QR code</button>
+          
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+              <input id="enableScan" type="checkbox" style="width:auto;transform:scale(1.15)" />
+              Activer l’accès au <b>Scan colis</b> (ajoute <code>&amp;navette=1</code>)
+            </label>
+            <div class="muted">À cocher uniquement pour les tournées de test (sinon la page reste “Kilométrage” uniquement).</div>
+          </div>
+<button id="btnGenerate">Générer le QR code</button>
 
           <div class="url-box">
             <label for="finalUrl">URL générée</label>
@@ -191,8 +193,8 @@
     const $transporteur = document.getElementById("transporteur");
     const $codeTransporteur = document.getElementById("codeTransporteur");
     const $tournee = document.getElementById("tournee");
-    const $tourneeNom = document.getElementById("tourneeNom");
     const $codeTournee = document.getElementById("codeTournee");
+    const $enableScan = document.getElementById("enableScan");
     const $baseUrl = document.getElementById("baseUrl");
     const $finalUrl = document.getElementById("finalUrl");
     const $btnGenerate = document.getElementById("btnGenerate");
@@ -270,7 +272,6 @@
       $transporteur.value = "";
       $codeTransporteur.value = "";
       $tournee.value = "";
-      if ($tourneeNom) $tourneeNom.value = "";
       $codeTournee.value = "";
     });
 
@@ -295,7 +296,6 @@
       $transporteur.value = chauffeurName;
       $codeTransporteur.value = chauffeurCode;
       $tournee.value = p.tournee || "";
-      if ($tourneeNom) $tourneeNom.value = (p.nomTourneeScan || p.tourneeNom || p.tournee || "");
       $codeTournee.value = p.codeTournee || "";
     });
 
@@ -305,7 +305,6 @@
       const transporteur = $transporteur.value.trim();
       let codeTrans = $codeTransporteur.value.trim();
       const tournee = $tournee.value.trim();
-      const tourneeNom = ($tourneeNom && $tourneeNom.value ? $tourneeNom.value.trim() : "");
       const codeTournee = $codeTournee.value.trim();
 
       if (!base || !agence || !tournee || !codeTournee || !transporteur) {
@@ -338,7 +337,7 @@
         return null;
       }
 
-      const url =
+      let url =
         base +
         "?agence=" + encodeURIComponent(agence) +
         "&codeAgence=" + encodeURIComponent(agence) +
@@ -347,6 +346,10 @@
         "&chauffeur=" + encodeURIComponent(transporteur) +
         "&codeChauffeur=" + encodeURIComponent(codeTrans) +
         "&id=" + encodeURIComponent(idQr);
+
+      if ($enableScan && $enableScan.checked) {
+        url += "&navette=1";
+      }
 
       return url;
     }
