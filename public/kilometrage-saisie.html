@@ -712,7 +712,7 @@ function refreshColisHeader() {
 }
     refreshColisHeader();
 
-    async     function withApiBase_(url) {
+    function withApiBase_(url) {
       if (!url) return url;
       // si déjà absolue (http/https), on ne touche pas
       if (/^https?:\/\//i.test(url)) return url;
