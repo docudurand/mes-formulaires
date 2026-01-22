@@ -119,23 +119,6 @@
 <script>
   const qs = new URLSearchParams(location.search);
 
-  const API_BASE = (location.hostname.includes("onrender.com") ? "" : "https://mes-formulaires.onrender.com");
-
-  function withApiBase_(url){
-    if (!url) return url;
-    if (/^https?:\/\//i.test(url)) return url;
-    if (url.startsWith("/")) return API_BASE + url;
-    return url;
-  }
-
-  async function apiGet(url){
-    const r = await fetch(withApiBase_(url));
-    const j = await r.json().catch(()=> ({}));
-    if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
-    return j;
-  }
-
-
   const magasinSelect = document.getElementById("magasinSelect");
   const btnClear = document.getElementById("btnClear");
 
@@ -233,7 +216,7 @@
   }
 
   async function apiPost(url, body) {
-    const r = await fetch(withApiBase_(url), {
+    const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {})
@@ -489,16 +472,6 @@
 
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
-
-    const todayYmd = ymdLocal(new Date());
-    const tourneeById = new Map();
-    state.tournees.forEach(t => tourneeById.set(String(t.tourneeId), t));
-    const toursDuJour = state.tournees.filter(t => sameLocalDay(t.dateCreation, todayYmd));
-    const setToursDuJour = new Set(toursDuJour.map(t => String(t.tourneeId)));
-    const colisDuJour = state.colis.filter(c => setToursDuJour.has(String(c.tourneeId)));
-
-    state.tournees = toursDuJour;
-    state.colis = colisDuJour;
 
     const ts = new Date().toLocaleTimeString("fr-FR");
     subEl.textContent = `Agence: ${magasin} • Jour: ${new Date().toLocaleDateString("fr-FR")} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
