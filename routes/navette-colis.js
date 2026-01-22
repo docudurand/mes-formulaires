@@ -102,11 +102,13 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
+
 router.get("/livreur", async (req, res) => {
   try {
-    const { tourneeId, livreurId } = req.query || {};
+    const { tourneeId, magasin, livreurId } = req.query || {};
     const data = await callGAS("getLivreur", {
       tourneeId: String(tourneeId || ""),
+      magasin: String(magasin || ""),
       livreurId: String(livreurId || "")
     });
     res.json(data);

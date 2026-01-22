@@ -473,16 +473,6 @@
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
 
-    const todayYmd = ymdLocal(new Date());
-    const tourneeById = new Map();
-    state.tournees.forEach(t => tourneeById.set(String(t.tourneeId), t));
-    const toursDuJour = state.tournees.filter(t => sameLocalDay(t.dateCreation, todayYmd));
-    const setToursDuJour = new Set(toursDuJour.map(t => String(t.tourneeId)));
-    const colisDuJour = state.colis.filter(c => setToursDuJour.has(String(c.tourneeId)));
-
-    state.tournees = toursDuJour;
-    state.colis = colisDuJour;
-
     const ts = new Date().toLocaleTimeString("fr-FR");
     subEl.textContent = `Agence: ${magasin} • Jour: ${new Date().toLocaleDateString("fr-FR")} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
 

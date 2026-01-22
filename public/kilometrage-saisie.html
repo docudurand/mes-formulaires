@@ -315,12 +315,13 @@ if (!NAVETTE_ENABLED) {
     }
 
 let agence        = params.get("agence")        || "";
-    let codeAgence    = params.get("codeAgence")    || agence;
-    let tournee       = params.get("tournee")       || "";
-    let codeTournee   = params.get("codeTournee")   || "";
-    let chauffeur     = params.get("chauffeur")     || "";
-    let codeChauffeur = params.get("codeChauffeur") || "";
-	let idQr          = params.get("id")            || "";
+let codeAgence    = params.get("codeAgence")    || agence;
+let tournee       = params.get("tournee")       || "";
+let codeTournee   = params.get("codeTournee")   || "";
+let chauffeur     = params.get("chauffeur")     || "";
+let codeChauffeur = params.get("codeChauffeur") || "";
+let idQr          = params.get("id")            || "";
+
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -649,6 +650,18 @@ function normalizeRowDate(row) {
       } catch(e){}
     }
 
+    // Toujours synchroniser sur la tournée active (partagée entre profils/appareils)
+    (async () => {
+      try {
+        const active = await getActiveTourneeId();
+        if (active) {
+          tourneeNavette = active;
+          try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+          refreshColisHeader();
+        }
+      } catch(e){}
+    })();
+
     function setColisMsg(t, isErr=false) {
       if (!colisMsg) return;
       colisMsg.textContent = t || "";
@@ -690,11 +703,12 @@ function normalizeRowDate(row) {
       return out;
     }
 
-    function refreshColisHeader() {
-      if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
-      if (livreurTxt) livreurTxt.textContent = livreurId || "—";
-      if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
-    }
+function refreshColisHeader() {
+  // Affiche l’ID technique de tournée (partagé entre tous les profils) pour éviter toute confusion
+  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
+  if (livreurTxt) livreurTxt.textContent = livreurId || "—";
+  if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
+}
     refreshColisHeader();
 
     async function apiPost(url, body) {
@@ -713,6 +727,12 @@ function normalizeRowDate(row) {
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
       return j;
+    }
+
+    async function getActiveTourneeId() {
+      if (!magasinNavette) return "";
+      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+      return String((j && j.tourneeId) || "");
     }
 
     function renderList(list) {
@@ -735,12 +755,18 @@ function normalizeRowDate(row) {
 
     async function refreshLivreurList() {
       if (!restantsEl) return;
-      if (!tourneeNavette || !livreurId) {
+      if (!livreurId) {
         restantsEl.textContent = "0";
         renderList([]);
         return;
       }
-      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
+
+      // Toujours se recaler sur la tournée active du magasin (partagée entre profils/appareils)
+      try {
+        tourneeNavette = tourneeNavette || (await getActiveTourneeId());
+      } catch(e){}
+
+      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
       const list = j.colis || [];
       restantsEl.textContent = String(j.restants || 0);
 
@@ -808,7 +834,7 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, "Import de la feuille en cours...");
               setScanButtonsDisabled(true);
-              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt });
+              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
 
               tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
               try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
@@ -838,8 +864,7 @@ function normalizeRowDate(row) {
       btnScanCharger.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-          if (!tourneeNavette) { setColisMsg("❌ D’abord scanner la feuille (tournée inconnue)", true); return; }
-          if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
           await openScanner("Scanner colis à charger", async (txt) => {
             try {
@@ -848,7 +873,17 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, `Validation colis ${bon}...`);
               setScanButtonsDisabled(true);
-              await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
+              // on demande la tournée active du magasin
+              if (!tourneeNavette) {
+                try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
+              }
+              const j = await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
+              if (j && (j.tourneeId || j.tournee)) {
+                tourneeNavette = j.tourneeId || j.tournee;
+                try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                refreshColisHeader();
+              }
               setScanLoading(false);
               setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} validé (chargé)`, false);
@@ -872,8 +907,7 @@ function normalizeRowDate(row) {
       btnScanLivrer.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-          if (!tourneeNavette) { setColisMsg("❌ D’abord scanner la feuille (tournée inconnue)", true); return; }
-          if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
           await openScanner("Scanner colis livrer", async (txt) => {
             try {
@@ -882,7 +916,17 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, `Livraison colis ${bon}...`);
               setScanButtonsDisabled(true);
-              await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
+              // on demande la tournée active du magasin
+              if (!tourneeNavette) {
+                try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
+              }
+              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
+              if (j && (j.tourneeId || j.tournee)) {
+                tourneeNavette = j.tourneeId || j.tournee;
+                try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                refreshColisHeader();
+              }
               setScanLoading(false);
               setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} livré`, false);
