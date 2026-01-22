@@ -293,7 +293,7 @@
 	  nomTourneeScan = (p.nomTourneeScan || p.NomTourneeScan || "").toString().trim();
 
       const chauffeurName = p.chauffeur || p.transporteur || "";
-      const chauffeurCode = p.codeChauffeur || p.codeTransporteur || slugify(chauffeurName);
+      const chauffeurCode = (p.tournee || "").toString().trim() || p.codeChauffeur || p.codeTransporteur || slugify(chauffeurName);
 
       $transporteur.value = chauffeurName;
       $codeTransporteur.value = chauffeurCode;
@@ -347,7 +347,7 @@
         "&tournee=" + encodeURIComponent(tournee) +
         "&codeTournee=" + encodeURIComponent(codeTournee) +
         "&chauffeur=" + encodeURIComponent(transporteur) +
-        "&codeChauffeur=" + encodeURIComponent(codeTrans) +
+        "&codeChauffeur=" + encodeURIComponent(tournee) +
         "&id=" + encodeURIComponent(idQr);
 		if (nomScan) {
   url += "&nomTourneeScan=" + encodeURIComponent(nomScan);
