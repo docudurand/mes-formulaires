@@ -28,10 +28,6 @@
       top:0;
       z-index:50;
     }
-    .wrap{width:100%;margin:0;padding:14px 16px}
-    .titleRow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    h1{margin:0;font-size:1.2rem;color:var(--primary)}
-    .sub{margin:4px 0 0;color:#47607a;font-size:.95rem}
 
     .tabs{
       display:flex;
@@ -56,11 +52,11 @@
       color:#fff;
     }
 
-.panelWrap{
-  width:100%;
-  margin:0;
-  padding:14px 16px 18px;
-}
+    .panelWrap{
+      width:100%;
+      margin:0;
+      padding:14px 16px 18px;
+    }
     .panel{
       display:none;
       background:#fff;
@@ -71,35 +67,18 @@
     }
     .panel.active{display:block}
 
-.frame{
-  width:100%;
-  height:calc(100vh - 140px);
-  border:0;
-  display:block;
-  background:#fff;
-}
-@media (max-width:600px){
-  .frame{
-    height:calc(100vh - 150px);
-    min-height:620px;
-  }
-}
-
-
-    .hint{
-      margin:0 0 10px;
-      color:#47607a;
-      font-size:.92rem;
+    .frame{
+      width:100%;
+      height:calc(100vh - 140px);
+      border:0;
+      display:block;
+      background:#fff;
     }
-    .pill{
-      display:inline-block;
-      padding:2px 10px;
-      border-radius:999px;
-      background:#eaf6ff;
-      color:var(--primary);
-      font-weight:700;
-      font-size:.85rem;
-      margin-left:8px;
+    @media (max-width:600px){
+      .frame{
+        height:calc(100vh - 150px);
+        min-height:620px;
+      }
     }
   </style>
 </head>
@@ -107,15 +86,16 @@
 
 <header>
   <div class="tabs" role="tablist" aria-label="Outils admin">
-    <button class="tab" role="tab" id="tab-parc"  aria-controls="panel-parc"  aria-selected="true"  data-target="parc">Parc & prets</button>
-    <button class="tab" role="tab" id="tab-comp"  aria-controls="panel-comp"  aria-selected="false" data-target="comp">Compteurs</button>
-    <button class="tab" role="tab" id="tab-mails" aria-controls="panel-mails" aria-selected="false" data-target="mails">Suivi e-mails</button>
+    <button class="tab" role="tab" id="tab-parc"    aria-controls="panel-parc"    aria-selected="true"  data-target="parc">Parc & prets</button>
+    <button class="tab" role="tab" id="tab-comp"    aria-controls="panel-comp"    aria-selected="false" data-target="comp">Compteurs</button>
+    <button class="tab" role="tab" id="tab-mails"   aria-controls="panel-mails"   aria-selected="false" data-target="mails">Suivi e-mails</button>
+    <button class="tab" role="tab" id="tab-monitor" aria-controls="panel-monitor" aria-selected="false" data-target="monitor">Monitor</button>
   </div>
 </header>
 
 <div class="panelWrap">
   <section class="panel active" id="panel-parc" role="tabpanel" aria-labelledby="tab-parc">
-    <iframe class="frame" title="Parc & prets v‚hicules" data-src="/pret/admin"></iframe>
+    <iframe class="frame" title="Parc & prets véhicules" data-src="/pret/admin"></iframe>
   </section>
 
   <section class="panel" id="panel-comp" role="tabpanel" aria-labelledby="tab-comp">
@@ -126,14 +106,18 @@
     <iframe class="frame" title="Suivi e-mails" data-src="/suivi-mails.html"></iframe>
   </section>
 
+  <section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor">
+    <iframe class="frame" title="Monitor" data-src="/monitor"></iframe>
+  </section>
 </div>
 
 <script>
   const tabs = Array.from(document.querySelectorAll(".tab"));
   const panels = {
-    parc:  document.getElementById("panel-parc"),
-    comp:  document.getElementById("panel-comp"),
-    mails: document.getElementById("panel-mails"),
+    parc:    document.getElementById("panel-parc"),
+    comp:    document.getElementById("panel-comp"),
+    mails:   document.getElementById("panel-mails"),
+    monitor: document.getElementById("panel-monitor"),
   };
 
   function ensureIframeLoaded(panel){
@@ -173,8 +157,31 @@
   }else{
     ensureIframeLoaded(panels.parc);
   }
+
+  // Si le stream du monitor remonte un WARN/ERROR, on bascule automatiquement sur l'onglet Monitor.
+  function startMonitorAlertWatcher(){
+    const streamUrl = "/monitor/stream";
+    const source = new EventSource(streamUrl);
+
+    source.addEventListener("log", (event) => {
+      try {
+        const entry = JSON.parse(event.data || "{}");
+        const level = String(entry.level || "").toLowerCase();
+        if (level === "warn" || level === "error") {
+          setActive("monitor", true);
+        }
+      } catch {
+        // Ignore malformed entries.
+      }
+    });
+
+    source.addEventListener("error", () => {
+      // Ignore stream errors; l'onglet Monitor reste accessible.
+    });
+  }
+
+  startMonitorAlertWatcher();
 </script>
 
 </body>
 </html>
-
