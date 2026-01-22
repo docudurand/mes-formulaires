@@ -25,11 +25,13 @@ async function callGAS(action, params) {
 
 router.post("/import", async (req, res) => {
   try {
-    const { magasin, bons, tourneeId } = req.body || {};
+    const { magasin, bons, tourneeId, tournee, codeTournee } = req.body || {};
     const data = await callGAS("importList", {
       magasin: String(magasin || ""),
       bons: String(bons || ""),
-      tourneeId: String(tourneeId || "")
+      tourneeId: String(tourneeId || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {
@@ -39,12 +41,14 @@ router.post("/import", async (req, res) => {
 
 router.post("/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
     const data = await callGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
-      bon: String(bon || "")
+      bon: String(bon || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {
@@ -54,13 +58,25 @@ router.post("/valider", async (req, res) => {
 
 router.post("/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
     const data = await callGAS("scanLivrer", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
-      bon: String(bon || "")
+      bon: String(bon || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || "")
     });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success:false, error: String(e.message || e) });
+  }
+});
+
+router.get("/active", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callGAS("getActiveTournee", { magasin });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success:false, error: String(e.message || e) });
@@ -88,19 +104,11 @@ router.get("/dashboard", async (req, res) => {
 
 router.get("/livreur", async (req, res) => {
   try {
-    const magasin = String((req.query && req.query.magasin) || "").trim().toUpperCase();
-    const tourneeId = String((req.query && req.query.tourneeId) || "").trim();
-    const livreurId = String((req.query && req.query.livreurId) || "").trim();
-
-    if (!magasin || !livreurId) {
-      return res.status(400).json({ success:false, error: "magasin/livreurId manquant" });
-    }
-
-    // tourneeId optionnel : si absent, GAS choisit la tournée active (fenêtre 45 min)
-    const payload = { magasin, livreurId };
-    if (tourneeId) payload.tourneeId = tourneeId;
-
-    const data = await callGAS("getLivreur", payload);
+    const { tourneeId, livreurId } = req.query || {};
+    const data = await callGAS("getLivreur", {
+      tourneeId: String(tourneeId || ""),
+      livreurId: String(livreurId || "")
+    });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success:false, error: String(e.message || e) });
