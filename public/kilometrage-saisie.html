@@ -704,8 +704,8 @@ function normalizeRowDate(row) {
     }
 
 function refreshColisHeader() {
-  // Affiche l’ID technique de tournée (partagé entre tous les profils) pour éviter toute confusion
-  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
+  // Affiche le libellé de tournée (depuis le Google Sheet config / QR), pas l'ID technique
+  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = (tournee || codeTournee || "—");
   if (livreurTxt) livreurTxt.textContent = livreurId || "—";
   if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
 }
