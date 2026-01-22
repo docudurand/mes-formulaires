@@ -159,7 +159,7 @@
       const ag = String(r.agence || "").trim().toUpperCase();
       if (codeAg !== magKey && ag !== magKey) return;
 
-      const nom = String(r.nomTourneeScan || r.tournee || r.codeTournee || "").trim();
+      const nom = String(r.tournee || r.tournee || r.codeTournee || "").trim();
       if (!nom) return;
 
       const k1 = String(r.codeTransporteur || "").trim().toUpperCase();
@@ -169,9 +169,9 @@
     });
   }
 
-  function formatLivreurTournee(livreurId, nomTourneeScan, codeTournee){
+  function formatLivreurTournee(livreurId, tournee, codeTournee) {
     const liv = String(livreurId || "").trim();
-    const nomColis = String(nomTourneeScan || "").trim();
+    const nomColis = String(tournee || "").trim();
     const code = String(codeTournee || "").trim();
 
     if (liv && (nomColis || code)) {
@@ -336,7 +336,7 @@
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.nomTourneeScan, c.codeTournee) : "";
+            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
             list.appendChild(mkMiniItem(c.bon, right, ""));
           });
           body.appendChild(list);
@@ -370,7 +370,7 @@
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.nomTourneeScan, c.codeTournee) : "";
+      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {

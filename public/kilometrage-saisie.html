@@ -318,7 +318,7 @@ let agence        = params.get("agence")        || "";
     let codeAgence    = params.get("codeAgence")    || agence;
     let tournee       = params.get("tournee")       || "";
     let codeTournee   = params.get("codeTournee")   || "";
-    let nomTourneeScan = params.get("nomTourneeScan") || params.get("NomTourneeScan") || "";
+    let tournee = params.get("tournee") || params.get("NomTourneeScan") || "";
     let chauffeur     = params.get("chauffeur")     || "";
     let codeChauffeur = params.get("codeChauffeur") || "";
 	let idQr          = params.get("id")            || "";
@@ -809,7 +809,7 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, "Import de la feuille en cours...");
               setScanButtonsDisabled(true);
-              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
+              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
 
               tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
               try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
@@ -848,7 +848,7 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, `Validation colis ${bon}...`);
               setScanButtonsDisabled(true);
-              const j = await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
+              const j = await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
               if (j && (j.tourneeId || j.tournee)) {
                 tourneeNavette = j.tourneeId || j.tournee;
                 try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
@@ -886,7 +886,7 @@ function normalizeRowDate(row) {
 
               setScanLoading(true, `Livraison colis ${bon}...`);
               setScanButtonsDisabled(true);
-              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
+              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
               if (j && (j.tourneeId || j.tournee)) {
                 tourneeNavette = j.tourneeId || j.tournee;
                 try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
