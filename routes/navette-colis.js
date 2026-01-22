@@ -76,7 +76,8 @@ router.post("/livrer", async (req, res) => {
 router.get("/active", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");
-    const data = await callGAS("getActiveTournee", { magasin });
+    const codeTournee = String(req.query.codeTournee || "");
+    const data = await callGAS("getActiveTournee", { magasin, codeTournee });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success:false, error: String(e.message || e) });
@@ -87,7 +88,8 @@ router.get("/active", async (req, res) => {
 router.get("/activeTournee", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");
-    const data = await callGAS("getActiveTournee", { magasin });
+    const codeTournee = String(req.query.codeTournee || "");
+    const data = await callGAS("getActiveTournee", { magasin, codeTournee });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success:false, error: String(e.message || e) });
@@ -115,11 +117,12 @@ router.get("/dashboard", async (req, res) => {
 
 router.get("/livreur", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId } = req.query || {};
+    const { tourneeId, magasin, livreurId, codeTournee } = req.query || {};
     const data = await callGAS("getLivreur", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
-      livreurId: String(livreurId || "")
+      livreurId: String(livreurId || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {

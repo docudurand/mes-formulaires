@@ -119,6 +119,23 @@
 <script>
   const qs = new URLSearchParams(location.search);
 
+  const API_BASE = (location.hostname.includes("onrender.com") ? "" : "https://mes-formulaires.onrender.com");
+
+  function withApiBase_(url){
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith("/")) return API_BASE + url;
+    return url;
+  }
+
+  async function apiGet(url){
+    const r = await fetch(withApiBase_(url));
+    const j = await r.json().catch(()=> ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+    return j;
+  }
+
+
   const magasinSelect = document.getElementById("magasinSelect");
   const btnClear = document.getElementById("btnClear");
 
@@ -140,7 +157,6 @@
   let refreshTimer = null;
   let paramsCache = [];
   let livreurTourneeMap = new Map();
-  let tourneeCodeMap = new Map();
 
 
   function escapeHtml(s){
@@ -149,11 +165,7 @@
 
 
   function buildLivreurTourneeMap(){
-    // Maps depuis /api/kilometrage/params (sheet PARAMS)
-    // - tourneeCodeMap : CodeTournee (T1/T2/...) => libellé complet
-    // - livreurTourneeMap : transporteur => libellé (fallback)
     livreurTourneeMap = new Map();
-    tourneeCodeMap = new Map();
     if (!magasin || !Array.isArray(paramsCache)) return;
 
     const magKey = String(magasin||"").trim().toUpperCase();
@@ -164,34 +176,40 @@
       const ag = String(r.agence || "").trim().toUpperCase();
       if (codeAg !== magKey && ag !== magKey) return;
 
-      const label = String(r.tournee || "").trim();
-      const cTour = String(r.codeTournee || "").trim().toUpperCase();
-      if (label && cTour) tourneeCodeMap.set(cTour, label);
+      const nom = String(r.tournee || r.tournee || r.codeTournee || "").trim();
+      if (!nom) return;
 
       const k1 = String(r.codeTransporteur || "").trim().toUpperCase();
       const k2 = String(r.transporteur || "").trim().toUpperCase();
-      if (label && k1 && !livreurTourneeMap.has(k1)) livreurTourneeMap.set(k1, label);
-      if (label && k2 && !livreurTourneeMap.has(k2)) livreurTourneeMap.set(k2, label);
+      if (k1) livreurTourneeMap.set(k1, nom);
+      if (k2) livreurTourneeMap.set(k2, nom);
     });
   }
-
 
   function formatLivreurTournee(livreurId, tournee, codeTournee) {
     const liv = String(livreurId || "").trim();
     const nomColis = String(tournee || "").trim();
-    const code = String(codeTournee || "").trim().toUpperCase();
+    const code = String(codeTournee || "").trim();
 
-    const resolved = code ? (tourneeCodeMap.get(code) || "") : "";
-    const label = (resolved || nomColis || "").trim();
-    const tInfo = [label, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+    if (liv && (nomColis || code)) {
+      const t = (nomColis || "").trim();
+      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
+    }
+    if (!liv) {
+      const t = (nomColis || "").trim();
+      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return tInfo ? `Tournée: ${tInfo}` : "";
+    }
 
-    if (liv && tInfo) return `Livreur: ${liv} • Tournée: ${tInfo}`;
-    if (liv) return `Livreur: ${liv}`;
-    if (tInfo) return `Tournée: ${tInfo}`;
-    return "";
+    const key = liv.toUpperCase();
+    const nom = livreurTourneeMap.get(key) || "";
+    if (nom) {
+      const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return `Livreur: ${liv} • Tournée: ${tInfo}`;
+    }
+    return `Livreur: ${liv}`;
   }
-
-  
 
   function pad2(n){ return String(n).padStart(2,"0"); }
   function formatTourneeTitle(iso){
@@ -215,7 +233,7 @@
   }
 
   async function apiPost(url, body) {
-    const r = await fetch(url, {
+    const r = await fetch(withApiBase_(url), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {})
@@ -275,7 +293,6 @@
         div.innerHTML = `
           <div>
             <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
-            <div class="small">${escapeHtml((t.nomTournee || (t.codeTournee ? (tourneeCodeMap.get(String(t.codeTournee).toUpperCase())||"") : "")) || "")}</div>
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
@@ -317,7 +334,6 @@
         header.innerHTML = `
           <div>
             <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
-            <div class="small">${escapeHtml((t.nomTournee || (t.codeTournee ? (tourneeCodeMap.get(String(t.codeTournee).toUpperCase())||"") : "")) || "")}</div>
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -361,14 +377,7 @@
     const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
-    detailTitle.textContent = (() => {
-      if (!selectedTourneeId) return "Aucune tournée sélectionnée (affichage global).";
-      const t = (state.tournees.find(x=>String(x.tourneeId)===String(selectedTourneeId)) || {});
-      const code = String(t.codeTournee || "").trim().toUpperCase();
-      const label = String(t.nomTournee || "").trim() || (code ? (tourneeCodeMap.get(code) || "") : "");
-      const when = formatTourneeTitle(t.dateCreation) || selectedTourneeId;
-      return label ? `Tournée: ${when} • ${label}${code ? ` (N° ${code})` : ""}` : `Tournée: ${when}`;
-    })();
+    detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
@@ -471,7 +480,7 @@
     if (!magasin) { setNeutral(); return; }
 
     subEl.textContent = "Chargement…";
-    const res = await fetch(`${API_BASE}/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
+    const res = await fetch(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
     const data = await res.json().catch(()=>null);
     if (!data || data.success === false) {
       subEl.textContent = "Erreur de chargement.";
@@ -480,6 +489,16 @@
 
     state.tournees = data.tournees || [];
     state.colis = data.colis || [];
+
+    const todayYmd = ymdLocal(new Date());
+    const tourneeById = new Map();
+    state.tournees.forEach(t => tourneeById.set(String(t.tourneeId), t));
+    const toursDuJour = state.tournees.filter(t => sameLocalDay(t.dateCreation, todayYmd));
+    const setToursDuJour = new Set(toursDuJour.map(t => String(t.tourneeId)));
+    const colisDuJour = state.colis.filter(c => setToursDuJour.has(String(c.tourneeId)));
+
+    state.tournees = toursDuJour;
+    state.colis = colisDuJour;
 
     const ts = new Date().toLocaleTimeString("fr-FR");
     subEl.textContent = `Agence: ${magasin} • Jour: ${new Date().toLocaleDateString("fr-FR")} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;

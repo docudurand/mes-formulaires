@@ -172,7 +172,7 @@
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
   </style>
 
-  <script src="/js/html5-qrcode.min.js"></script>
+  <script src="https://mes-formulaires.onrender.com/js/html5-qrcode.min.js"></script>
 </head>
 <body>
   <div class="card">
@@ -712,8 +712,17 @@ function refreshColisHeader() {
 }
     refreshColisHeader();
 
+    async     function withApiBase_(url) {
+      if (!url) return url;
+      // si déjà absolue (http/https), on ne touche pas
+      if (/^https?:\/\//i.test(url)) return url;
+      // si commence par / => on préfixe par API_BASE (Render) si défini
+      if (url.startsWith("/")) return (API_BASE || "") + url;
+      return url;
+    }
+
     async function apiPost(url, body) {
-      const r = await fetch(url, {
+      const r = await fetch(withApiBase_(url), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body || {})
@@ -724,7 +733,7 @@ function refreshColisHeader() {
     }
 
     async function apiGet(url) {
-      const r = await fetch(url);
+      const r = await fetch(withApiBase_(url));
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
       return j;
@@ -732,7 +741,7 @@ function refreshColisHeader() {
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
-      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}&codeTournee=${encodeURIComponent(codeTournee||"")}`);
       return String((j && j.tourneeId) || "");
     }
 
