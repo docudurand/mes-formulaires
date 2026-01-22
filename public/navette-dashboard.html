@@ -138,9 +138,43 @@
   let selectedTourneeId = "";
   let expandedClassees = new Set();
   let refreshTimer = null;
+  let paramsCache = [];
+  let livreurTourneeMap = new Map();
+
 
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+
+  function buildLivreurTourneeMap(){
+    livreurTourneeMap = new Map();
+    if (!magasin || !Array.isArray(paramsCache)) return;
+
+    const magKey = String(magasin||"").trim().toUpperCase();
+
+    paramsCache.forEach(r => {
+      if (!r) return;
+      const codeAg = String(r.codeAgence || "").trim().toUpperCase();
+      const ag = String(r.agence || "").trim().toUpperCase();
+      if (codeAg !== magKey && ag !== magKey) return;
+
+      const nom = String(r.nomTourneeScan || r.tournee || r.codeTournee || "").trim();
+      if (!nom) return;
+
+      const k1 = String(r.codeTransporteur || "").trim().toUpperCase();
+      const k2 = String(r.transporteur || "").trim().toUpperCase();
+      if (k1) livreurTourneeMap.set(k1, nom);
+      if (k2) livreurTourneeMap.set(k2, nom);
+    });
+  }
+
+  function formatLivreurTournee(livreurId){
+    const liv = String(livreurId || "").trim();
+    if (!liv) return "";
+    const key = liv.toUpperCase();
+    const nom = livreurTourneeMap.get(key) || "";
+    return nom ? `Livreur: ${liv} • Tournée: ${nom}` : `Livreur: ${liv}`;
   }
 
   function pad2(n){ return String(n).padStart(2,"0"); }
@@ -285,7 +319,7 @@
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
+            const right = c.livreurId ? formatLivreurTournee(c.livreurId) : "";
             list.appendChild(mkMiniItem(c.bon, right, ""));
           });
           body.appendChild(list);
@@ -319,7 +353,7 @@
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const right = c.livreurId ? ("Livreur: "+c.livreurId) : "";
+      const right = c.livreurId ? formatLivreurTournee(c.livreurId) : "";
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {
@@ -393,6 +427,8 @@
       throw new Error("Impossible de charger les agences (PARAMS)");
     }
 
+    paramsCache = data;
+
     const list = Array.from(new Set(
       data.map(r => String((r && r.codeAgence) || "").trim().toUpperCase()).filter(Boolean)
     )).sort((a,b)=>a.localeCompare(b,"fr"));
@@ -402,6 +438,7 @@
 
     magasin = "";
     magasinSelect.value = "";
+    livreurTourneeMap = new Map();
     setNeutral();
   }
 
@@ -448,7 +485,9 @@
   }
 
   magasinSelect.addEventListener("change", async () => {
-    magasin = String(magasinSelect.value || "").trim().toUpperCase();    selectedTourneeId = "";
+    magasin = String(magasinSelect.value || "").trim().toUpperCase();
+    selectedTourneeId = "";
+    buildLivreurTourneeMap();
     await refresh();
   });
 
