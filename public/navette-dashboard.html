@@ -169,12 +169,29 @@
     });
   }
 
-  function formatLivreurTournee(livreurId){
+  function formatLivreurTournee(livreurId, nomTourneeScan, codeTournee){
     const liv = String(livreurId || "").trim();
-    if (!liv) return "";
+    const nomColis = String(nomTourneeScan || "").trim();
+    const code = String(codeTournee || "").trim();
+
+    if (liv && (nomColis || code)) {
+      const t = (nomColis || "").trim();
+      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
+    }
+    if (!liv) {
+      const t = (nomColis || "").trim();
+      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return tInfo ? `Tournée: ${tInfo}` : "";
+    }
+
     const key = liv.toUpperCase();
     const nom = livreurTourneeMap.get(key) || "";
-    return nom ? `Livreur: ${liv} • Tournée: ${nom}` : `Livreur: ${liv}`;
+    if (nom) {
+      const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return `Livreur: ${liv} • Tournée: ${tInfo}`;
+    }
+    return `Livreur: ${liv}`;
   }
 
   function pad2(n){ return String(n).padStart(2,"0"); }
@@ -319,7 +336,7 @@
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const right = c.livreurId ? formatLivreurTournee(c.livreurId) : "";
+            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.nomTourneeScan, c.codeTournee) : "";
             list.appendChild(mkMiniItem(c.bon, right, ""));
           });
           body.appendChild(list);
@@ -353,7 +370,7 @@
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const right = c.livreurId ? formatLivreurTournee(c.livreurId) : "";
+      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.nomTourneeScan, c.codeTournee) : "";
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {

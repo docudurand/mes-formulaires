@@ -318,11 +318,10 @@ let agence        = params.get("agence")        || "";
     let codeAgence    = params.get("codeAgence")    || agence;
     let tournee       = params.get("tournee")       || "";
     let codeTournee   = params.get("codeTournee")   || "";
+    let nomTourneeScan = params.get("nomTourneeScan") || params.get("NomTourneeScan") || "";
     let chauffeur     = params.get("chauffeur")     || "";
     let codeChauffeur = params.get("codeChauffeur") || "";
 	let idQr          = params.get("id")            || "";
-	let nomTourneeScan = (params.get("nomTourneeScan") || "").toString().trim();
-
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -356,7 +355,6 @@ let agence        = params.get("agence")        || "";
         codeTournee,
         chauffeur,
         codeChauffeur,
-		nomTourneeScan,
 		id: idQr
       };
       try {
@@ -379,7 +377,6 @@ let agence        = params.get("agence")        || "";
         chauffeur     = cfg.chauffeur     || "";
         codeChauffeur = cfg.codeChauffeur || "";
 		idQr          = cfg.id           || "";
-		nomTourneeScan = cfg.nomTourneeScan || "";
 
         const newQs = new URLSearchParams({
           agence: agence,
@@ -388,7 +385,6 @@ let agence        = params.get("agence")        || "";
           codeTournee: codeTournee,
           chauffeur: chauffeur,
           codeChauffeur: codeChauffeur,
-		  nomTourneeScan: nomTourneeScan,
 		  id: idQr
         });
         const newUrl = window.location.pathname + "?" + newQs.toString();
@@ -696,8 +692,7 @@ function normalizeRowDate(row) {
     }
 
     function refreshColisHeader() {
-const tourneeAff = (nomTourneeScan || tourneeNavette || "").trim();
-if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
+      if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
       if (livreurTxt) livreurTxt.textContent = livreurId || "—";
       if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
     }
@@ -814,7 +809,7 @@ if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
 
               setScanLoading(true, "Import de la feuille en cours...");
               setScanButtonsDisabled(true);
-              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt });
+              const j = await apiPost("/api/navette/import", { magasin: magasinNavette, bons: txt, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
 
               tourneeNavette = j.tourneeId || j.tournee || tourneeNavette;
               try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
@@ -844,8 +839,7 @@ if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
       btnScanCharger.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-          if (!tourneeNavette) { setColisMsg("❌ D’abord scanner la feuille (tournée inconnue)", true); return; }
-          if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
           await openScanner("Scanner colis à charger", async (txt) => {
             try {
@@ -854,7 +848,12 @@ if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
 
               setScanLoading(true, `Validation colis ${bon}...`);
               setScanButtonsDisabled(true);
-              await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              const j = await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
+              if (j && (j.tourneeId || j.tournee)) {
+                tourneeNavette = j.tourneeId || j.tournee;
+                try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                refreshColisHeader();
+              }
               setScanLoading(false);
               setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} validé (chargé)`, false);
@@ -878,8 +877,7 @@ if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
       btnScanLivrer.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-          if (!tourneeNavette) { setColisMsg("❌ D’abord scanner la feuille (tournée inconnue)", true); return; }
-          if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
           await openScanner("Scanner colis livrer", async (txt) => {
             try {
@@ -888,7 +886,12 @@ if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeAff || "—";
 
               setScanLoading(true, `Livraison colis ${bon}...`);
               setScanButtonsDisabled(true);
-              await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon });
+              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, nomTourneeScan: (nomTourneeScan||"") || (tournee||""), codeTournee: codeTournee||"" });
+              if (j && (j.tourneeId || j.tournee)) {
+                tourneeNavette = j.tourneeId || j.tournee;
+                try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                refreshColisHeader();
+              }
               setScanLoading(false);
               setScanButtonsDisabled(false);
               setColisMsg(`✅ Colis ${bon} livré`, false);

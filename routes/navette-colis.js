@@ -25,11 +25,13 @@ async function callGAS(action, params) {
 
 router.post("/import", async (req, res) => {
   try {
-    const { magasin, bons, tourneeId } = req.body || {};
+    const { magasin, bons, tourneeId, nomTourneeScan, codeTournee } = req.body || {};
     const data = await callGAS("importList", {
       magasin: String(magasin || ""),
       bons: String(bons || ""),
-      tourneeId: String(tourneeId || "")
+      tourneeId: String(tourneeId || ""),
+      nomTourneeScan: String(nomTourneeScan || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {
@@ -39,12 +41,14 @@ router.post("/import", async (req, res) => {
 
 router.post("/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, nomTourneeScan, codeTournee } = req.body || {};
     const data = await callGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
-      bon: String(bon || "")
+      bon: String(bon || ""),
+      nomTourneeScan: String(nomTourneeScan || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {
@@ -54,12 +58,14 @@ router.post("/valider", async (req, res) => {
 
 router.post("/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, nomTourneeScan, codeTournee } = req.body || {};
     const data = await callGAS("scanLivrer", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
-      bon: String(bon || "")
+      bon: String(bon || ""),
+      nomTourneeScan: String(nomTourneeScan || ""),
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {
