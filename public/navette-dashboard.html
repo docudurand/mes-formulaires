@@ -173,8 +173,8 @@
       if (label && k1 && !livreurTourneeMap.has(k1)) livreurTourneeMap.set(k1, label);
       if (label && k2 && !livreurTourneeMap.has(k2)) livreurTourneeMap.set(k2, label);
     });
-  });
   }
+
 
   function formatLivreurTournee(livreurId, tournee, codeTournee) {
     const liv = String(livreurId || "").trim();
@@ -190,20 +190,8 @@
     if (tInfo) return `Tournée: ${tInfo}`;
     return "";
   }
-    if (!liv) {
-      const t = (nomColis || "").trim();
-      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return tInfo ? `Tournée: ${tInfo}` : "";
-    }
 
-    const key = liv.toUpperCase();
-    const nom = livreurTourneeMap.get(key) || "";
-    if (nom) {
-      const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return `Livreur: ${liv} • Tournée: ${tInfo}`;
-    }
-    return `Livreur: ${liv}`;
-  }
+  
 
   function pad2(n){ return String(n).padStart(2,"0"); }
   function formatTourneeTitle(iso){
@@ -483,7 +471,7 @@
     if (!magasin) { setNeutral(); return; }
 
     subEl.textContent = "Chargement…";
-    const res = await fetch(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
+    const res = await fetch(`${API_BASE}/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
     const data = await res.json().catch(()=>null);
     if (!data || data.success === false) {
       subEl.textContent = "Erreur de chargement.";

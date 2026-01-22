@@ -271,6 +271,7 @@
   </div>
 
   <script>
+const API_BASE = (location.hostname.includes('onrender.com') ? '' : 'https://mes-formulaires.onrender.com');
 const params = new URLSearchParams(window.location.search);
 const NAVETTE_ENABLED = params.get("navette") === "1";
 
@@ -704,8 +705,8 @@ function normalizeRowDate(row) {
     }
 
 function refreshColisHeader() {
-  // Affiche le libellé de tournée (depuis le Google Sheet config / QR), pas l'ID technique
-  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = (tournee || codeTournee || "—");
+  // Affiche l’ID technique de tournée (partagé entre tous les profils) pour éviter toute confusion
+  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
   if (livreurTxt) livreurTxt.textContent = livreurId || "—";
   if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
 }
@@ -731,18 +732,8 @@ function refreshColisHeader() {
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
-      try {
-        const r = await fetch(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}&codeTournee=${encodeURIComponent(codeTournee||'')}`);
-        if (!r.ok) {
-          // si la route n'existe pas (404) ou autre, on ne bloque pas le scan
-          return "";
-        }
-        const j = await r.json().catch(() => ({}));
-        if (j && j.success === false) return "";
-        return String((j && j.tourneeId) || "");
-      } catch (e) {
-        return "";
-      }
+      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+      return String((j && j.tourneeId) || "");
     }
 
     function renderList(list) {
@@ -776,7 +767,7 @@ function refreshColisHeader() {
         tourneeNavette = tourneeNavette || (await getActiveTourneeId());
       } catch(e){}
 
-      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&codeTournee=${encodeURIComponent(codeTournee||'')}&livreurId=${encodeURIComponent(livreurId)}`);
+      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
       const list = j.colis || [];
       restantsEl.textContent = String(j.restants || 0);
 
