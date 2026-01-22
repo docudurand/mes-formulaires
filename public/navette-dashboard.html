@@ -75,7 +75,7 @@
           <div class="card" style="flex:1;min-width:260px">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
               <h2 style="margin:0;font-size:15px">Tournées en cours</h2>
-              <span class="badge" id="autoInfo">Auto: 30s</span>
+              <span class="badge" id="autoInfo"></span>
             </div>
             <div class="muted">Clique une tournée pour voir le détail.</div>
             <div class="sep"></div>
@@ -108,7 +108,7 @@
       <div id="classesView" style="display:none">
         <div class="card">
           <h2 style="margin:0 0 6px 0;font-size:15px">Tournées classées</h2>
-          <div class="muted">Une tournée passe ici automatiquement quand tous les colis sont <b>LIVRÉS</b>.</div>
+          <div class="muted"></div>
           <div class="sep"></div>
           <div id="tourneesClassees" class="list"></div>
         </div>
@@ -488,7 +488,7 @@
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(() => {
       if (magasin) refresh();
-    }, 30000);
+    }, 10000);
   }
 
   magasinSelect.addEventListener("change", async () => {
