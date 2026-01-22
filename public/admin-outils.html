@@ -28,7 +28,6 @@
       top:0;
       z-index:50;
     }
-
     .tabs{
       display:flex;
       gap:8px;
@@ -41,54 +40,66 @@
       border:1px solid var(--line);
       background:#fff;
       color:var(--ink);
-      padding:8px 12px;
+      padding:8px 14px;
       border-radius:999px;
-      font-weight:700;
       cursor:pointer;
+      font-weight:700;
+      font-size:.95rem;
     }
     .tab[aria-selected="true"]{
       background:var(--primary);
       border-color:var(--primary);
       color:#fff;
     }
-
     .panelWrap{
-      width:100%;
-      margin:0;
       padding:14px 16px 18px;
     }
     .panel{
       display:none;
-      background:#fff;
+      background:var(--card);
       border:1px solid var(--line);
       border-radius:var(--radius);
       overflow:hidden;
       box-shadow:var(--shadow);
     }
     .panel.active{display:block}
-
     .frame{
       width:100%;
-      height:calc(100vh - 140px);
+      height:calc(100vh - 92px);
       border:0;
-      display:block;
       background:#fff;
     }
-    @media (max-width:600px){
-      .frame{
-        height:calc(100vh - 150px);
-        min-height:620px;
-      }
+    .note{
+      padding:10px 14px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      background:#fbfdff;
     }
+    .note small{color:#47607a}
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+      color:var(--ink);
+    }
+    .btn:hover{border-color:#bfc7d1}
   </style>
 </head>
 <body>
 
 <header>
   <div class="tabs" role="tablist" aria-label="Outils admin">
-    <button class="tab" role="tab" id="tab-parc"    aria-controls="panel-parc"    aria-selected="true"  data-target="parc">Parc & prets</button>
-    <button class="tab" role="tab" id="tab-comp"    aria-controls="panel-comp"    aria-selected="false" data-target="comp">Compteurs</button>
-    <button class="tab" role="tab" id="tab-mails"   aria-controls="panel-mails"   aria-selected="false" data-target="mails">Suivi e-mails</button>
+    <button class="tab" role="tab" id="tab-parc"  aria-controls="panel-parc"  aria-selected="true"  data-target="parc">Parc & prets</button>
+    <button class="tab" role="tab" id="tab-comp"  aria-controls="panel-comp"  aria-selected="false" data-target="comp">Compteurs</button>
+    <button class="tab" role="tab" id="tab-mails" aria-controls="panel-mails" aria-selected="false" data-target="mails">Suivi e-mails</button>
     <button class="tab" role="tab" id="tab-monitor" aria-controls="panel-monitor" aria-selected="false" data-target="monitor">Monitor</button>
   </div>
 </header>
@@ -107,7 +118,11 @@
   </section>
 
   <section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor">
-    <iframe class="frame" title="Monitor" data-src="/monitor"></iframe>
+    <div class="note">
+      <small>Si le monitor affiche “unauthorized”, clique sur “Débloquer Monitor” et colle le token.</small>
+      <button class="btn" id="btn-unlock-monitor" type="button">Débloquer Monitor</button>
+    </div>
+    <iframe class="frame" title="Monitor" data-src="/monitor/"></iframe>
   </section>
 </div>
 
@@ -120,9 +135,23 @@
     monitor: document.getElementById("panel-monitor"),
   };
 
+  const MONITOR_TOKEN_STORAGE_KEY = "dsg_monitor_token";
+
   function ensureIframeLoaded(panel){
     const iframe = panel.querySelector("iframe[data-src]");
     if(!iframe) return;
+
+    // Monitor: on s'assure que le cookie d'auth est posé avant de charger l'iframe,
+    // sinon le backend renvoie 401 (unauthorized) sur /monitor/stream, /monitor/logs, etc.
+    if(panel.id === "panel-monitor"){
+      ensureMonitorAuth().then((ok) => {
+        if(ok && !iframe.src){
+          iframe.src = iframe.dataset.src;
+        }
+      });
+      return;
+    }
+
     if(!iframe.src){
       iframe.src = iframe.dataset.src;
     }
@@ -151,36 +180,61 @@
     setActive(btn.dataset.target, true);
   });
 
+  async function ensureMonitorAuth(forcePrompt=false){
+    let token = localStorage.getItem(MONITOR_TOKEN_STORAGE_KEY) || "";
+
+    if(forcePrompt || !token){
+      token = prompt("Token Monitor :") || "";
+      token = token.trim();
+      if(!token) return false;
+      localStorage.setItem(MONITOR_TOKEN_STORAGE_KEY, token);
+    }
+
+    try{
+      // IMPORTANT: le cookie HttpOnly monitor_token est posé côté serveur
+      // uniquement si une requête authentifiée passe (Authorization: Bearer ...).
+      const res = await fetch("/monitor/health", {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + token },
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+
+      if(res.ok){
+        return true;
+      }
+
+      // mauvais token -> on efface
+      if(res.status === 401){
+        localStorage.removeItem(MONITOR_TOKEN_STORAGE_KEY);
+        alert("Token Monitor incorrect (401).");
+        return false;
+      }
+
+      alert("Erreur Monitor (" + res.status + ").");
+      return false;
+    }catch(err){
+      alert("Impossible de contacter le Monitor: " + (err && err.message ? err.message : err));
+      return false;
+    }
+  }
+
+  document.getElementById("btn-unlock-monitor").addEventListener("click", async () => {
+    const ok = await ensureMonitorAuth(true);
+    if(!ok) return;
+    const iframe = document.querySelector("#panel-monitor iframe[data-src]");
+    if(iframe){
+      iframe.src = iframe.dataset.src + (iframe.dataset.src.includes("?") ? "&" : "?") + "t=" + Date.now();
+    }
+  });
+
+  // init
   const initial = (location.hash || "#parc").replace("#", "");
   if(panels[initial]){
     setActive(initial, false);
   }else{
     ensureIframeLoaded(panels.parc);
   }
-
-  // Si le stream du monitor remonte un WARN/ERROR, on bascule automatiquement sur l'onglet Monitor.
-  function startMonitorAlertWatcher(){
-    const streamUrl = "/monitor/stream";
-    const source = new EventSource(streamUrl);
-
-    source.addEventListener("log", (event) => {
-      try {
-        const entry = JSON.parse(event.data || "{}");
-        const level = String(entry.level || "").toLowerCase();
-        if (level === "warn" || level === "error") {
-          setActive("monitor", true);
-        }
-      } catch {
-        // Ignore malformed entries.
-      }
-    });
-
-    source.addEventListener("error", () => {
-      // Ignore stream errors; l'onglet Monitor reste accessible.
-    });
-  }
-
-  startMonitorAlertWatcher();
 </script>
 
 </body>
