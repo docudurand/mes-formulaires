@@ -83,6 +83,16 @@ router.get("/active", async (req, res) => {
   }
 });
 
+
+router.get("/activeTournee", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callGAS("getActiveTournee", { magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success:false, error: String(e.message || e) });
+  }
+});
 router.get("/magasins", async (req, res) => {
   try {
     const data = await callGAS("getMagasins", {});

@@ -731,7 +731,20 @@ function refreshColisHeader() {
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
-      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+      try {
+        const r = await fetch(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+        if (!r.ok) {
+          // si la route n'existe pas (404) ou autre, on ne bloque pas le scan
+          return "";
+        }
+        const j = await r.json().catch(() => ({}));
+        if (j && j.success === false) return "";
+        return String((j && j.tourneeId) || "");
+      } catch (e) {
+        return "";
+      }
+    }
+`);
       return String((j && j.tourneeId) || "");
     }
 
