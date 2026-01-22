@@ -140,6 +140,7 @@
   let refreshTimer = null;
   let paramsCache = [];
   let livreurTourneeMap = new Map();
+  let tourneeCodeMap = new Map();
 
 
   function escapeHtml(s){
@@ -148,7 +149,11 @@
 
 
   function buildLivreurTourneeMap(){
+    // Maps depuis /api/kilometrage/params (sheet PARAMS)
+    // - tourneeCodeMap : CodeTournee (T1/T2/...) => libellé complet
+    // - livreurTourneeMap : transporteur => libellé (fallback)
     livreurTourneeMap = new Map();
+    tourneeCodeMap = new Map();
     if (!magasin || !Array.isArray(paramsCache)) return;
 
     const magKey = String(magasin||"").trim().toUpperCase();
@@ -159,26 +164,32 @@
       const ag = String(r.agence || "").trim().toUpperCase();
       if (codeAg !== magKey && ag !== magKey) return;
 
-      const nom = String(r.tournee || r.tournee || r.codeTournee || "").trim();
-      if (!nom) return;
+      const label = String(r.tournee || "").trim();
+      const cTour = String(r.codeTournee || "").trim().toUpperCase();
+      if (label && cTour) tourneeCodeMap.set(cTour, label);
 
       const k1 = String(r.codeTransporteur || "").trim().toUpperCase();
       const k2 = String(r.transporteur || "").trim().toUpperCase();
-      if (k1) livreurTourneeMap.set(k1, nom);
-      if (k2) livreurTourneeMap.set(k2, nom);
+      if (label && k1 && !livreurTourneeMap.has(k1)) livreurTourneeMap.set(k1, label);
+      if (label && k2 && !livreurTourneeMap.has(k2)) livreurTourneeMap.set(k2, label);
     });
+  });
   }
 
   function formatLivreurTournee(livreurId, tournee, codeTournee) {
     const liv = String(livreurId || "").trim();
     const nomColis = String(tournee || "").trim();
-    const code = String(codeTournee || "").trim();
+    const code = String(codeTournee || "").trim().toUpperCase();
 
-    if (liv && (nomColis || code)) {
-      const t = (nomColis || "").trim();
-      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
-    }
+    const resolved = code ? (tourneeCodeMap.get(code) || "") : "";
+    const label = (resolved || nomColis || "").trim();
+    const tInfo = [label, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+
+    if (liv && tInfo) return `Livreur: ${liv} • Tournée: ${tInfo}`;
+    if (liv) return `Livreur: ${liv}`;
+    if (tInfo) return `Tournée: ${tInfo}`;
+    return "";
+  }
     if (!liv) {
       const t = (nomColis || "").trim();
       const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
@@ -276,6 +287,7 @@
         div.innerHTML = `
           <div>
             <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">${escapeHtml((t.nomTournee || (t.codeTournee ? (tourneeCodeMap.get(String(t.codeTournee).toUpperCase())||"") : "")) || "")}</div>
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
@@ -317,6 +329,7 @@
         header.innerHTML = `
           <div>
             <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">${escapeHtml((t.nomTournee || (t.codeTournee ? (tourneeCodeMap.get(String(t.codeTournee).toUpperCase())||"") : "")) || "")}</div>
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -360,7 +373,14 @@
     const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
-    detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
+    detailTitle.textContent = (() => {
+      if (!selectedTourneeId) return "Aucune tournée sélectionnée (affichage global).";
+      const t = (state.tournees.find(x=>String(x.tourneeId)===String(selectedTourneeId)) || {});
+      const code = String(t.codeTournee || "").trim().toUpperCase();
+      const label = String(t.nomTournee || "").trim() || (code ? (tourneeCodeMap.get(code) || "") : "");
+      const when = formatTourneeTitle(t.dateCreation) || selectedTourneeId;
+      return label ? `Tournée: ${when} • ${label}${code ? ` (N° ${code})` : ""}` : `Tournée: ${when}`;
+    })();
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");

@@ -732,7 +732,7 @@ function refreshColisHeader() {
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
       try {
-        const r = await fetch(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+        const r = await fetch(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}&codeTournee=${encodeURIComponent(codeTournee||'')}`);
         if (!r.ok) {
           // si la route n'existe pas (404) ou autre, on ne bloque pas le scan
           return "";
@@ -776,7 +776,7 @@ function refreshColisHeader() {
         tourneeNavette = tourneeNavette || (await getActiveTourneeId());
       } catch(e){}
 
-      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
+      const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&codeTournee=${encodeURIComponent(codeTournee||'')}&livreurId=${encodeURIComponent(livreurId)}`);
       const list = j.colis || [];
       restantsEl.textContent = String(j.restants || 0);
 
