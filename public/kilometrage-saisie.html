@@ -315,13 +315,13 @@ if (!NAVETTE_ENABLED) {
     }
 
 let agence        = params.get("agence")        || "";
-    let codeAgence    = params.get("codeAgence")    || agence;
-    let tournee       = params.get("tournee")       || "";
-    let codeTournee   = params.get("codeTournee")   || "";
-    let tournee = params.get("tournee") || params.get("NomTourneeScan") || "";
-    let chauffeur     = params.get("chauffeur")     || "";
-    let codeChauffeur = params.get("codeChauffeur") || "";
-	let idQr          = params.get("id")            || "";
+let codeAgence    = params.get("codeAgence")    || agence;
+let tournee       = params.get("tournee")       || "";
+let codeTournee   = params.get("codeTournee")   || "";
+let chauffeur     = params.get("chauffeur")     || "";
+let codeChauffeur = params.get("codeChauffeur") || "";
+let idQr          = params.get("id")            || "";
+
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -691,11 +691,11 @@ function normalizeRowDate(row) {
       return out;
     }
 
-    function refreshColisHeader() {
-      if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
-      if (livreurTxt) livreurTxt.textContent = livreurId || "—";
-      if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
-    }
+function refreshColisHeader() {
+  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tournee || tourneeNavette || "—";
+  if (livreurTxt) livreurTxt.textContent = livreurId || "—";
+  if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
+}
     refreshColisHeader();
 
     async function apiPost(url, body) {
