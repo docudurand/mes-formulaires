@@ -704,11 +704,13 @@ function normalizeRowDate(row) {
     }
 
 function refreshColisHeader() {
-  // Affiche l’ID technique de tournée (partagé entre tous les profils) pour éviter toute confusion
-  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = tourneeNavette || "—";
+  // Affiche le libellé de tournée (même valeur que celle affichée en haut de la page)
+  // pour que l'utilisateur voie toujours la même info, quel que soit le tourneeId technique.
+  if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = (tournee || codeTournee || tourneeNavette || "—");
   if (livreurTxt) livreurTxt.textContent = livreurId || "—";
   if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
 }
+
     refreshColisHeader();
 
     async function apiPost(url, body) {
