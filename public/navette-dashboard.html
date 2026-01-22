@@ -136,7 +136,8 @@
   let magasin = "";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
-  let expandedClassees = new Set();
+  let currentView = "encours"; // 'encours' ou 'classes'
+let expandedClassees = new Set();
   let refreshTimer = null;
   let paramsCache = [];
   let livreurTourneeMap = new Map();
@@ -215,7 +216,11 @@
     return ymdLocal(d) === ymd;
   }
 
-  async function apiPost(url, body) {
+  
+  function isTodayLocal(iso){
+    return sameLocalDay(iso, ymdLocal(new Date()));
+  }
+async function apiPost(url, body) {
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -258,7 +263,7 @@
       const st = String(c.statut||"").toUpperCase();
       if (st==="EN_ATTENTE") enAttente++;
       else if (st==="VALIDE") valides++;
-      else if (st==="LIVRE") livres++;
+      else if (st === "LIVRE") { if (currentView !== "encours" || isTodayLocal(c.dateMaj || c.dateAjout)) livres++; }
     }
     return { enAttente, valides, livres };
   }
