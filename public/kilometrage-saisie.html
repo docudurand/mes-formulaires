@@ -753,7 +753,9 @@ function refreshColisHeader() {
 
     refreshColisHeader();
 
-    async async function apiPost(url, body) {
+    async function apiPost(url, body) {
+      url = apiUrl(url);
+
       url = apiUrl(url);
 
       const r = await fetch(url, {
@@ -766,12 +768,9 @@ function refreshColisHeader() {
       return j;
     }
 
-    async async function apiGet(url){
+    async function apiGet(url){
       url = apiUrl(url);
-
-      url = apiUrl(url);
-
-      const r = await fetch(url);
+const r = await fetch(url);
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
       return j;
