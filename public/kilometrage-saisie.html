@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <script>
-const API_BASE = "https://mes-formulaires.onrender.com";
-function apiUrl(p){
-  if(!p) return p;
-  if(/^https?:\/\//i.test(p)) return p;
-  if(p.startsWith('/api/')) return API_BASE + p;
-  return p;
-}
+  // Base API (Docker Render)
+  const API_BASE = "https://mes-formulaires.onrender.com";
+  function apiUrl(p){
+    if(!p) return p;
+    if(/^https?:\/\//i.test(p)) return p;
+    if(p.startsWith("/api/")) return API_BASE + p;
+    return p;
+  }
 </script>
 
   <meta charset="UTF-8" />
@@ -182,8 +184,7 @@ function apiUrl(p){
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
   </style>
 
-  <script src="/js/html5-qrcode.min.js">
-</script>
+  <script src="/js/html5-qrcode.min.js"></script>
 </head>
 <body>
   <div class="card">
@@ -719,17 +720,11 @@ function normalizeRowDate(row) {
     function getGpsOnce(opts) {
       return new Promise((resolve) => {
         try {
-          logi('getGpsOnce()');
-          if (!navigator.geolocation) { logi('❌ navigator.geolocation absent'); return resolve(null); }
-
           if (!navigator.geolocation) return resolve(null);
           const options = Object.assign({ enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }, (opts||{}));
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               const c = pos && pos.coords;
-              logi('✅ GPS OK');
-              try { logi('lat=' + c.latitude + ' lng=' + c.longitude + ' acc=' + c.accuracy); } catch(e) {}
-
               if (!c) return resolve(null);
               resolve({
                 gpsLat: c.latitude,
@@ -738,10 +733,7 @@ function normalizeRowDate(row) {
                 gpsTs: pos.timestamp || Date.now()
               });
             },
-            (err) => {
-              logi('❌ GPS erreur ' + (err && err.code) + ' ' + (err && err.message));
-              resolve(null);
-            },
+            () => resolve(null),
             options
           );
         } catch(e) {
@@ -761,8 +753,8 @@ function refreshColisHeader() {
 
     refreshColisHeader();
 
-    async function apiPost(url, body) {
-  url = apiUrl(url);
+    async async function apiPost(url, body) {
+      url = apiUrl(url);
 
       const r = await fetch(url, {
         method: "POST",
@@ -774,7 +766,11 @@ function refreshColisHeader() {
       return j;
     }
 
-    async async async function apiGet(url){ url = apiUrl(url);
+    async async function apiGet(url){
+      url = apiUrl(url);
+
+      url = apiUrl(url);
+
       const r = await fetch(url);
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
@@ -783,7 +779,7 @@ function refreshColisHeader() {
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
-      const j = await apiGet("/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}");
+      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
       return String((j && j.tourneeId) || "");
     }
 
@@ -1039,54 +1035,5 @@ function refreshColisHeader() {
 
     refreshLivreurList().catch(() => {});
   </script>
-
-<!-- DEBUG GPS (temporaire) -->
-<script>
-  function logi(msg){
-    const el = document.getElementById("debugGps");
-    if (el) el.textContent += msg + "\n";
-  }
-</script>
-
-<pre id="debugGps" style="
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  min-height:140px;
-  max-height:40vh;
-  overflow:auto;
-  background:#000;
-  color:#0f0;
-  font-size:11px;
-  padding:8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
-  z-index:999999;
-  white-space:pre-wrap;
-"></pre>
-<!-- /DEBUG GPS -->
-
-<script>
-  (function(){
-    const pre = document.getElementById('debugGps');
-    if (!pre) return;
-    pre.style.display = 'none';
-    const btn = document.createElement('button');
-    btn.id = 'toggleDebugGps';
-    btn.textContent = 'DEBUG GPS';
-    btn.style.position='fixed';
-    btn.style.right='10px';
-    btn.style.bottom='10px';
-    btn.style.zIndex='1000000';
-    btn.style.padding='8px 10px';
-    btn.style.borderRadius='10px';
-    btn.style.border='1px solid rgba(0,0,0,.2)';
-    btn.style.background='#fff';
-    btn.style.fontSize='12px';
-    btn.onclick = () => { pre.style.display = (pre.style.display==='none'?'block':'none'); };
-    document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(btn));
-  })();
-</script>
-
-
 </body>
 </html>
