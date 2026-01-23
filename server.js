@@ -130,21 +130,43 @@ function isAllowedOrigin(origin) {
 }
 
 const corsOptions = {
-  origin: (origin, cb) => {
-    if (isAllowedOrigin(origin)) return cb(null, true);
+  origin: function (origin, callback) {
+    // Autorise les appels serveur-to-serveur (origin undefined)
+    if (!origin) return callback(null, true);
 
-    // Do NOT throw (it would generate a 500 and break same-origin POSTs if a browser sends Origin).
-    console.warn("[CORS] blocked origin:", origin);
-    return cb(null, false);
+    const allowed = [
+      "https://documentsdurand.fr",
+      "https://www.documentsdurand.fr",
+      "https://documentsdurand.wixsite.com",
+      "https://mes-formulaires.onrender.com"
+    ];
+
+    // Autorise aussi tous les sous-domaines Wix
+    if (
+      allowed.includes(origin) ||
+      origin.endsWith(".wixsite.com") ||
+      origin.endsWith(".wix.com") ||
+      origin.endsWith(".editorx.io")
+    ) {
+      return callback(null, true);
+    }
+
+    console.error("[CORS BLOCKED]", origin);
+    return callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With", "X-Request-Id"],
-  optionsSuccessStatus: 204,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Admin-Token",
+    "X-Requested-With",
+    "X-Request-Id"
+  ],
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
-
 
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
@@ -262,13 +284,42 @@ app.post("/api/navette/valider", async (req, res) => {
 
 app.post("/api/navette/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
-    const data = await callNavetteGAS("scanLivrer", {
+    // GPS + infos de tournée (optionnels) : on transmet tout à Apps Script pour remplir gpsLat/gpsLng/gpsAcc/gpsTs
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs, gps } = req.body || {};
+    const g = (gps && typeof gps === "object") ? gps : {};
+
+    const payload = {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
+
+      // affichage côté Sheets (NomTourneeScan / CodeTournee)
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || ""),
+
+      // GPS (supporte soit champs directs, soit objet gps)
+      gpsLat: String(gpsLat ?? g.gpsLat ?? g.lat ?? g.latitude ?? ""),
+      gpsLng: String(gpsLng ?? g.gpsLng ?? g.lng ?? g.longitude ?? ""),
+      gpsAcc: String(gpsAcc ?? g.gpsAcc ?? g.acc ?? g.accuracy ?? ""),
+      gpsTs:  String(gpsTs  ?? g.gpsTs  ?? g.ts  ?? g.timestamp ?? ""),
+    };
+
+    // log léger pour debug Render
+    console.log("[NAVETTE][/livrer] ", {
+      tourneeId: payload.tourneeId,
+      magasin: payload.magasin,
+      livreurId: payload.livreurId,
+      bon: payload.bon,
+      tournee: payload.tournee,
+      codeTournee: payload.codeTournee,
+      gpsLat: payload.gpsLat,
+      gpsLng: payload.gpsLng,
+      gpsAcc: payload.gpsAcc,
+      gpsTs: payload.gpsTs
     });
+
+    const data = await callNavetteGAS("scanLivrer", payload);
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });

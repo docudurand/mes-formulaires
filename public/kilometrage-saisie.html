@@ -603,11 +603,11 @@ function normalizeRowDate(row) {
       submitBtn.textContent = "Enregistrement...";
 
       try {
-        const res = await fetch(apiUrl("/api/kilometrage/save"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+const res = await fetch(apiUrl("/api/kilometrage/save"), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload)
+});
 
         const data = await res.json().catch(() => ({}));
 
