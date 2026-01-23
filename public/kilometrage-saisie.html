@@ -508,7 +508,7 @@ function normalizeRowDate(row) {
 }
 
       try {
-        const res = await fetch(apiUrl("/api/kilometrage/data?" + qs.toString()));
+        const res = await fetch(apiUrl("/api/kilometrage/data?" + qs.toString());
         const data = await res.json().catch(() => null);
 
         console.log("Données reçues pour résumé :", data);
@@ -603,11 +603,11 @@ function normalizeRowDate(row) {
       submitBtn.textContent = "Enregistrement...";
 
       try {
-const res = await fetch(apiUrl("/api/kilometrage/save"), {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload)
-});
+        const res = await fetch(apiUrl("/api/kilometrage/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
         const data = await res.json().catch(() => ({}));
 
