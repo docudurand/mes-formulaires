@@ -41,18 +41,18 @@ router.post("/import", async (req, res) => {
 
 router.post("/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs } = req.body || {};
+    const { tourneeId, magasin, livreurId, livreur, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs, gps } = req.body || {};
     const data = await callGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
-      livreurId: String(livreurId || ""),
+      livreurId: String((livreurId || livreur || "")).trim(),
       bon: String(bon || ""),
       tournee: String(tournee || ""),
       codeTournee: String(codeTournee || ""),
-      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
-      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
-      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
-      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
+      gpsLat: (gpsLat !== undefined ? String(gpsLat) : (gps && gps.gpsLat !== undefined ? String(gps.gpsLat) : "")),
+      gpsLng: (gpsLng !== undefined ? String(gpsLng) : (gps && gps.gpsLng !== undefined ? String(gps.gpsLng) : "")),
+      gpsAcc: (gpsAcc !== undefined ? String(gpsAcc) : (gps && gps.gpsAcc !== undefined ? String(gps.gpsAcc) : "")),
+      gpsTs:  (gpsTs  !== undefined ? String(gpsTs)  : (gps && gps.gpsTs  !== undefined ? String(gps.gpsTs)  : ""))
     });
     res.json(data);
   } catch (e) {
@@ -62,11 +62,11 @@ router.post("/valider", async (req, res) => {
 
 router.post("/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs } = req.body || {};
+    const { tourneeId, magasin, livreurId, livreur, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs, gps } = req.body || {};
     const data = await callGAS("scanLivrer", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
-      livreurId: String(livreurId || ""),
+      livreurId: String((livreurId || livreur || "")).trim(),
       bon: String(bon || ""),
       tournee: String(tournee || ""),
       codeTournee: String(codeTournee || ""),
