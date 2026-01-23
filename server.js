@@ -89,25 +89,30 @@ const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+// --- CORS (unique source of truth) ---
+const ALLOWED_ORIGINS = new Set([
+  "https://www.documentsdurand.fr",
+  "https://documentsdurand.fr",
+  "https://mes-formulaires.onrender.com",
+  // Netlify (preview / legacy embed)
+  "https://imaginatevie-hamster-040331.netlify.app",
+]);
 
-  const allowed = new Set([
-    "https://www.documentsdurand.fr",
-    "https://documentsdurand.fr",
-  ]);
+const corsOptions = {
+  origin: (origin, cb) => {
+    // Same-origin calls / server-to-server (no Origin header)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.has(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS: " + origin));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Request-Id"],
+  credentials: false,
+};
 
-  if (origin && allowed.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  }
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Request-Id");
-
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
 
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
