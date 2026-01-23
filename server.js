@@ -16,7 +16,7 @@ import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
 import { monitorAuth } from "./monitor/auth.js";
-import { log as monitorLog } from "./monitor/monitor.js";
+import { log as monitorLog, getHealthStatus } from "./monitor/monitor.js";
 import monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
@@ -58,7 +58,6 @@ function attachMonitorConsole() {
         : null;
       monitorLog(level, message, context);
     } catch {
-      // Ignore monitor logging failures.
     }
   };
 
@@ -70,29 +69,91 @@ function attachMonitorConsole() {
 
 attachMonitorConsole();
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] unhandledRejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] uncaughtException:", err);
+});
+
+function parseBool(value, fallback = false) {
+  if (value == null) return fallback;
+  const v = String(value).trim().toLowerCase();
+  if (v === "") return fallback;
+  return v === "1" || v === "true" || v === "yes";
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-app.use(cors());
+// --- CORS (unique source of truth) ---
+/**
+ * Important:
+ * - We must allow calls from:
+ *   - documentsdurand.fr (+ www)
+ *   - Wix embeds (wixsite / wix / editorx)
+ *   - Netlify (imaginatevie-hamster-040331.netlify.app)
+ *   - This Render app itself (mes-formulaires.onrender.com) and other onrender subdomains used internally
+ */
+const ALLOWED_ORIGINS_EXACT = new Set([
+  "https://www.documentsdurand.fr",
+  "https://documentsdurand.fr",
+  "https://imaginatevie-hamster-040331.netlify.app",
+  "https://mes-formulaires.onrender.com",
+]);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // server-to-server / same-origin cases without Origin
+  const o = String(origin).trim();
+
+  if (ALLOWED_ORIGINS_EXACT.has(o)) return true;
+
+  // Allow common embed / hosting subdomains used by DSG
+  if (/^https:\/\/[^\/]+\.wixsite\.com$/i.test(o)) return true;
+  if (/^https:\/\/[^\/]+\.wix\.com$/i.test(o)) return true;
+  if (/^https:\/\/[^\/]+\.editorx\.io$/i.test(o)) return true;
+
+  // Allow Render subdomains (useful for internal pages, previews, and same-app calls)
+  if (/^https:\/\/[^\/]+\.onrender\.com$/i.test(o)) return true;
+
+  // Allow Netlify subdomains if needed
+  if (/^https:\/\/[^\/]+\.netlify\.app$/i.test(o)) return true;
+
+  // Local dev
+  if (/^http:\/\/localhost(?::\d+)?$/i.test(o)) return true;
+  if (/^http:\/\/127\.0\.0\.1(?::\d+)?$/i.test(o)) return true;
+
+  return false;
+}
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (isAllowedOrigin(origin)) return cb(null, true);
+
+    // Do NOT throw (it would generate a 500 and break same-origin POSTs if a browser sends Origin).
+    console.warn("[CORS] blocked origin:", origin);
+    return cb(null, false);
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  const allowed = new Set([
-    "https://www.documentsdurand.fr",
-    "https://documentsdurand.fr",
-  ]);
-
-  if (origin && allowed.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  }
-
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") return res.sendStatus(204);
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    if (res.statusCode < 500) return;
+    const elapsedMs = Number(process.hrtime.bigint() - start) / 1e6;
+    const url = req.originalUrl || req.url || "";
+    console.error(`[HTTP] ${req.method} ${url} -> ${res.statusCode} ${elapsedMs.toFixed(1)}ms`);
+  });
   next();
 });
 app.use((req, res, next) => {
@@ -150,6 +211,103 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(mailLogsRouter);
 
+function mustEnv(name) {
+  const v = String(process.env[name] || "").trim();
+  if (!v) throw new Error(`Missing env ${name}`);
+  return v;
+}
+
+async function callNavetteGAS(action, params = {}) {
+  const url = mustEnv("NAVETTE_GAS_URL");
+  const key = mustEnv("NAVETTE_API_KEY");
+
+  const payload = new URLSearchParams({ action, key, ...params });
+
+  const { data } = await axios.post(url, payload.toString(), {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    timeout: 30000,
+  });
+
+  return data;
+}
+
+app.post("/api/navette/import", async (req, res) => {
+  try {
+    const { magasin, bons, tourneeId } = req.body || {};
+    const data = await callNavetteGAS("importList", {
+      magasin: String(magasin || ""),
+      bons: String(bons || ""),
+      tourneeId: String(tourneeId || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+app.post("/api/navette/valider", async (req, res) => {
+  try {
+    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const data = await callNavetteGAS("scanValider", {
+      tourneeId: String(tourneeId || ""),
+      magasin: String(magasin || ""),
+      livreurId: String(livreurId || ""),
+      bon: String(bon || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+app.post("/api/navette/livrer", async (req, res) => {
+  try {
+    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const data = await callNavetteGAS("scanLivrer", {
+      tourneeId: String(tourneeId || ""),
+      magasin: String(magasin || ""),
+      livreurId: String(livreurId || ""),
+      bon: String(bon || ""),
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+app.get("/api/navette/dashboard", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callNavetteGAS("getDashboard", { magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+app.get("/api/navette/livreur", async (req, res) => {
+  try {
+    const tourneeId = String(req.query.tourneeId || "");
+    const livreurId = String(req.query.livreurId || "");
+    const data = await callNavetteGAS("getLivreur", { tourneeId, livreurId });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+app.get("/api/navette/magasins", async (req, res) => {
+  try {
+    const data = await callNavetteGAS("getMagasins", {});
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+
+
+
 function isMonitorRequest(req) {
   const rawPath = req?.path || req?.url || "";
   const pathOnly = String(rawPath).split("?")[0];
@@ -166,6 +324,52 @@ app.use((req, res, next) => {
 });
 
 app.use("/monitor", monitorRoutes);
+
+const ADMIN_TOKEN_ALLOW_QUERY = parseBool(process.env.ADMIN_TOKEN_ALLOW_QUERY, true);
+
+function extractAdminToken(req) {
+  const headerToken = req.headers["x-admin-token"];
+  if (headerToken) return { token: String(headerToken).trim(), source: "header" };
+
+  const auth = req.headers.authorization;
+  if (auth) {
+    const value = String(auth).trim();
+    if (value.toLowerCase().startsWith("bearer ")) {
+      return { token: value.slice(7).trim(), source: "bearer" };
+    }
+  }
+
+  const queryToken = req.query?.token;
+  if (ADMIN_TOKEN_ALLOW_QUERY) {
+    if (Array.isArray(queryToken)) return { token: String(queryToken[0] || "").trim(), source: "query" };
+    if (queryToken != null) return { token: String(queryToken).trim(), source: "query" };
+  }
+
+  return { token: "", source: "none" };
+}
+
+app.get("/admin/monitor-pub", (req, res) => {
+  const adminToken = String(process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "").trim();
+  const { token, source } = extractAdminToken(req);
+  if (!adminToken || token !== adminToken) {
+    return res.status(401).send("Unauthorized");
+  }
+  if (source === "query") {
+    console.warn("[ADMIN] token via query string (consider disabling ADMIN_TOKEN_ALLOW_QUERY).");
+  }
+
+  const monitorToken = String(process.env.MONITOR_TOKEN || "").trim();
+  if (!monitorToken) {
+    return res.status(500).send("Monitor token missing");
+  }
+
+  const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  const secure = req.secure === true || proto === "https";
+  const cookie = `monitor_token=${encodeURIComponent(monitorToken)}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
+  res.setHeader("Set-Cookie", cookie);
+
+  return res.sendFile(path.join(__dirname, "public", "admin-monitor-pub.html"));
+});
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
@@ -1279,6 +1483,15 @@ if (bothSigned && !arr[i].finalMailSent) {
 });
 
 app.get("/healthz", (_req, res) => res.sendStatus(200));
+app.get("/healthz/details", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({
+    status: "ok",
+    uptimeSec: Math.floor(process.uptime()),
+    monitor: getHealthStatus(),
+    ts: new Date().toISOString(),
+  });
+});
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
 app.use("/formtelevente", formtelevente);
@@ -1356,6 +1569,17 @@ app.get("/commerce/links.json", (_req, res) => {
   });
 });
 
+app.use((err, req, res, next) => {
+  const url = req?.originalUrl || req?.url || "";
+  console.error("[HTTP] unhandled_error", {
+    method: req?.method,
+    url,
+    message: err?.message,
+    stack: err?.stack,
+  });
+  next(err);
+});
+
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 const PORT = process.env.PORT || 3000;
@@ -1368,6 +1592,7 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
+
 
 
 
