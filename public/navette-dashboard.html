@@ -39,6 +39,7 @@
     .iconBtn:active{transform:scale(.98)}
     .iconBtn.ok{border-color:#bbf7d0}
     .iconBtn.box{border-color:#bfdbfe}
+    .iconBtn:disabled{opacity:.45;cursor:not-allowed}
   </style>
 </head>
 <body>
@@ -118,8 +119,8 @@
 
 <script>
 const API_BASE = "https://mes-formulaires.onrender.com";
-
   const apiUrl = (u) => (String(u).startsWith("http") ? u : (API_BASE + u));
+
   const qs = new URLSearchParams(location.search);
 
   const magasinSelect = document.getElementById("magasinSelect");
@@ -144,11 +145,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   let paramsCache = [];
   let livreurTourneeMap = new Map();
 
-
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
-
 
   function buildLivreurTourneeMap(){
     livreurTourneeMap = new Map();
@@ -209,25 +208,28 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return `${jj}/${mm}/${aa} ${hh}:${mn}`;
   }
 
-  function ymdLocal(d){
-    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  }
-  function sameLocalDay(iso, ymd){
-    const d = new Date(iso);
-    if (isNaN(d)) return false;
-    return ymdLocal(d) === ymd;
+  async function apiPost(url, body) {
+    const r = await fetch(apiUrl(url), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    });
+    const j = await r.json().catch(()=> ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+    return j;
   }
 
-async function apiPost(url, body) {
-  const r = await fetch(apiUrl(url), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {})
-  });
-  const j = await r.json().catch(()=> ({}));
-  if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
-  return j;
-}
+  // ✅ NOUVEAU: ouvrir Google Maps sur les coordonnées du colis
+  function openMapsFromColis(c) {
+    const lat = Number(c.gpsLat);
+    const lng = Number(c.gpsLng);
+    if (!isFinite(lat) || !isFinite(lng)) {
+      alert("Pas de coordonnées GPS pour ce colis.");
+      return;
+    }
+    const url = `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lng)}&z=18`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   function mkMiniItem(text, right, actionsHtml) {
     const div = document.createElement("div");
@@ -363,7 +365,9 @@ async function apiPost(url, body) {
     const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
-    detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
+    detailTitle.textContent = selectedTourneeId
+      ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId))
+      : "Aucune tournée sélectionnée (affichage global).";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
@@ -381,13 +385,17 @@ async function apiPost(url, body) {
           <button class="iconBtn ok" title="Valider" data-act="valider" data-bon="${escapeHtml(c.bon)}">✅</button>
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
         `;
-      }
-
-      if (st === "VALIDE") {
+      } else if (st === "VALIDE") {
         actionsHtml = `
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
         `;
+      } else if (st === "LIVRE") {
+        const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+        actionsHtml = `
+          <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
+        `;
       }
+
       parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
     };
 
@@ -401,6 +409,14 @@ async function apiPost(url, body) {
       const act = btn.getAttribute("data-act");
       const bon = btn.getAttribute("data-bon");
       if (!act || !bon) return;
+
+      // ✅ Suivi GPS: pas besoin de sélectionner une tournée
+      if (act === "suivi") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openMapsFromColis(found);
+        return;
+      }
 
       if (!selectedTourneeId) {
         alert("Sélectionne d'abord une tournée à gauche.");
@@ -422,11 +438,10 @@ async function apiPost(url, body) {
       }
     };
 
-    [listAtt, listVal].forEach(el => {
+    [listAtt, listVal, listLiv].forEach(el => {
       if (!el) return;
       el.onclick = handleActionClick;
     });
-
   }
 
   function setNeutral() {
@@ -439,7 +454,6 @@ async function apiPost(url, body) {
   }
 
   async function loadMagasins() {
-
     const res = await fetch(apiUrl("/api/kilometrage/params"));
     const data = await res.json().catch(()=>null);
 
