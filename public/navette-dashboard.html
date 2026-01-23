@@ -118,6 +118,13 @@
 
 <script>
 const API_BASE = "https://mes-formulaires.onrender.com";
+function apiUrl(p){
+  if(!p) return p;
+  if(/^https?:\/\//i.test(p)) return p;
+  if(p.startsWith("/api/")) return API_BASE + p;
+  return p;
+}
+
 
   const qs = new URLSearchParams(location.search);
 
@@ -218,7 +225,8 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   }
 
   async function apiPost(url, body) {
-    if (typeof url === "string" && url.startsWith("/api/")) url = API_BASE + url;
+  url = apiUrl(url);
+
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -440,7 +448,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   async function loadMagasins() {
 
-    const res = await fetch(API_BASE + "/api/kilometrage/params");
+    const res = await fetch(apiUrl("/api/kilometrage/params"));
     const data = await res.json().catch(()=>null);
 
     if (!Array.isArray(data)) {
@@ -466,7 +474,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     if (!magasin) { setNeutral(); return; }
 
     subEl.textContent = "Chargement…";
-    const res = await fetch(API_BASE + `/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
+    const res = await fetch(apiUrl("/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}"));
     const data = await res.json().catch(()=>null);
     if (!data || data.success === false) {
       subEl.textContent = "Erreur de chargement.";

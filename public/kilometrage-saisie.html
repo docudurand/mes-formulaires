@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script>
+const API_BASE = "https://mes-formulaires.onrender.com";
+function apiUrl(p){
+  if(!p) return p;
+  if(/^https?:\/\//i.test(p)) return p;
+  if(p.startsWith('/api/')) return API_BASE + p;
+  return p;
+}
+</script>
+
   <meta charset="UTF-8" />
   <title>Saisie kilométrage tournée</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -172,9 +182,7 @@
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
   </style>
 
-  <script src="/js/html5-qrcode.min.js"></script>
-<script>
-const API_BASE = "https://mes-formulaires.onrender.com";
+  <script src="/js/html5-qrcode.min.js">
 </script>
 </head>
 <body>
@@ -506,7 +514,7 @@ function normalizeRowDate(row) {
 }
 
       try {
-        const res = await fetch(API_BASE + "/api/kilometrage/data?" + qs.toString());
+        const res = await fetch(apiUrl("/api/kilometrage/data?") + qs.toString());
         const data = await res.json().catch(() => null);
 
         console.log("Données reçues pour résumé :", data);
@@ -601,7 +609,7 @@ function normalizeRowDate(row) {
       submitBtn.textContent = "Enregistrement...";
 
       try {
-        const res = await fetch(API_BASE + "/api/kilometrage/save", {
+        const res = await fetch(apiUrl("/api/kilometrage/save"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -754,7 +762,8 @@ function refreshColisHeader() {
     refreshColisHeader();
 
     async function apiPost(url, body) {
-      if (typeof url === "string" && url.startsWith("/api/")) url = API_BASE + url;
+  url = apiUrl(url);
+
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -765,8 +774,7 @@ function refreshColisHeader() {
       return j;
     }
 
-    async function apiGet(url) {
-      if (typeof url === "string" && url.startsWith("/api/")) url = API_BASE + url;
+    async async async function apiGet(url){ url = apiUrl(url);
       const r = await fetch(url);
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
@@ -775,7 +783,7 @@ function refreshColisHeader() {
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
-      const j = await apiGet(`/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}`);
+      const j = await apiGet("/api/navette/active?magasin=${encodeURIComponent(magasinNavette)}");
       return String((j && j.tourneeId) || "");
     }
 
