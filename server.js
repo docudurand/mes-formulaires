@@ -314,11 +314,24 @@ app.get("/api/navette/dashboard", async (req, res) => {
   }
 });
 
+
+app.get("/api/navette/active", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callNavetteGAS("getActiveTournee", { magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
+
 app.get("/api/navette/livreur", async (req, res) => {
   try {
     const tourneeId = String(req.query.tourneeId || "");
     const livreurId = String(req.query.livreurId || "");
-    const data = await callNavetteGAS("getLivreur", { tourneeId, livreurId });
+    const magasin = String(req.query.magasin || "");
+    const data = await callNavetteGAS("getLivreur", { tourneeId, livreurId, magasin });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
