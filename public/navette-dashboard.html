@@ -169,48 +169,16 @@
     });
   }
 
-function formatLivreurTournee(livreurId, tournee, codeTournee) {
-  const liv = String(livreurId || "").trim();
-  const nomColis = String(tournee || "").trim();
-  const code = String(codeTournee || "").trim();
+  function formatLivreurTournee(livreurId, tournee, codeTournee) {
+    const liv = String(livreurId || "").trim();
+    const nomColis = String(tournee || "").trim();
+    const code = String(codeTournee || "").trim();
 
-  if (liv && (nomColis || code)) {
-    const tInfo = [nomColis, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-    return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
-  }
-
-  if (!liv) {
-    const tInfo = [nomColis, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-    return tInfo ? `Tournée: ${tInfo}` : "";
-  }
-
-  const key = liv.toUpperCase();
-  const nom = livreurTourneeMap.get(key) || "";
-  if (nom) {
-    const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-    return `Livreur: ${liv} • Tournée: ${tInfo}`;
-  }
-  return `Livreur: ${liv}`;
-}
-
-function buildLivreurRightHtml(c){
-  const livTxt = c && c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-
-  const lat = (c && (c.gpsLat ?? c.lat ?? c.latitude));
-  const lng = (c && (c.gpsLng ?? c.lng ?? c.longitude));
-  const has = (lat !== undefined && lat !== null && String(lat)!=="" && lng !== undefined && lng !== null && String(lng)!=="");
-
-  if (!livTxt && !has) return "";
-  const line1 = livTxt ? escapeHtml(livTxt) : "";
-
-  if (!has) return line1;
-
-  const q = `${lat},${lng}`;
-  const href = `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
-  const link = `<a href="${href}" target="_blank" rel="noopener" style="font-weight:800;color:#2563eb;text-decoration:underline">Suivi</a>`;
-  return [line1, link].filter(Boolean).join("<br>");
-}
-
+    if (liv && (nomColis || code)) {
+      const t = (nomColis || "").trim();
+      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
+    }
     if (!liv) {
       const t = (nomColis || "").trim();
       const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
@@ -258,20 +226,14 @@ function buildLivreurRightHtml(c){
     return j;
   }
 
-  function mkMiniItem(text, right, actionsHtml, rightIsHtml=false) {
+  function mkMiniItem(text, right, actionsHtml) {
     const div = document.createElement("div");
     div.className = "item";
-    const rightLine = right ? (
-      rightIsHtml
-        ? `<div class="small">${right}</div>`
-        : `<div class="small">${escapeHtml(right||"")}</div>`
-    ) : ``;
-
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <div style="min-width:0">
           <div style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(text)}</div>
-          ${rightLine}
+          ${right ? `<div class="small">${escapeHtml(right||"")}</div>` : ``}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
@@ -374,8 +336,8 @@ function buildLivreurRightHtml(c){
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const rightHtml = buildLivreurRightHtml(c);
-            list.appendChild(mkMiniItem(c.bon, rightHtml, "", true));
+            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+            list.appendChild(mkMiniItem(c.bon, right, ""));
           });
           body.appendChild(list);
         }
@@ -408,7 +370,7 @@ function buildLivreurRightHtml(c){
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const rightHtml = buildLivreurRightHtml(c);
+      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {
@@ -423,7 +385,7 @@ function buildLivreurRightHtml(c){
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
         `;
       }
-      parent.appendChild(mkMiniItem(c.bon, rightHtml, actionsHtml, true));
+      parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
     };
 
     att.slice(0, 700).forEach(c => add(listAtt, c));
