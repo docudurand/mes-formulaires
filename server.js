@@ -247,12 +247,14 @@ app.post("/api/navette/import", async (req, res) => {
 
 app.post("/api/navette/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
     const data = await callNavetteGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || ""),
     });
     res.json(data);
   } catch (e) {
@@ -262,13 +264,40 @@ app.post("/api/navette/valider", async (req, res) => {
 
 app.post("/api/navette/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
-    const data = await callNavetteGAS("scanLivrer", {
+    const {
+      tourneeId,
+      magasin,
+      livreurId,
+      bon,
+      tournee,
+      codeTournee,
+      gpsLat,
+      gpsLng,
+      gpsAcc,
+      gpsTs,
+    } = req.body || {};
+
+    const params = {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
-    });
+      // infos tournée (optionnel)
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || ""),
+    };
+
+    // GPS (optionnel) — ne pas envoyer "undefined"
+    const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
+    const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
+    if (hasLat && hasLng) {
+      params.gpsLat = String(gpsLat);
+      params.gpsLng = String(gpsLng);
+      if (gpsAcc !== undefined && gpsAcc !== null && String(gpsAcc).trim() !== "") params.gpsAcc = String(gpsAcc);
+      if (gpsTs !== undefined && gpsTs !== null && String(gpsTs).trim() !== "") params.gpsTs = String(gpsTs);
+    }
+
+    const data = await callNavetteGAS("scanLivrer", params);
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
