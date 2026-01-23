@@ -169,30 +169,47 @@
     });
   }
 
-  function formatLivreurTournee(livreurId, tournee, codeTournee) {
-    const liv = String(livreurId || "").trim();
-    const nomColis = String(tournee || "").trim();
-    const code = String(codeTournee || "").trim();
+function formatLivreurTournee(livreurId, tournee, codeTournee) {
+  const liv = String(livreurId || "").trim();
+  const nomColis = String(tournee || "").trim();
+  const code = String(codeTournee || "").trim();
 
-    if (liv && (nomColis || code)) {
-      const t = (nomColis || "").trim();
-      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
-    }
-
-  function buildLivreurRightHtml(c){
-    const livTxt = c && c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-    const lat = (c && (c.gpsLat ?? c.lat ?? c.latitude)) ;
-    const lng = (c && (c.gpsLng ?? c.lng ?? c.longitude)) ;
-    const has = (lat !== undefined && lat !== null && String(lat)!=="" && lng !== undefined && lng !== null && String(lng)!=="");
-    if (!livTxt && !has) return "";
-    const line1 = livTxt ? escapeHtml(livTxt) : "";
-    if (!has) return line1;
-    const q = `${lat},${lng}`;
-    const href = `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
-    const link = `<a href="${href}" target="_blank" rel="noopener" style="font-weight:800;color:#2563eb;text-decoration:underline">Suivi</a>`;
-    return [line1, link].filter(Boolean).join("<br>");
+  if (liv && (nomColis || code)) {
+    const tInfo = [nomColis, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+    return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
   }
+
+  if (!liv) {
+    const tInfo = [nomColis, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+    return tInfo ? `Tournée: ${tInfo}` : "";
+  }
+
+  const key = liv.toUpperCase();
+  const nom = livreurTourneeMap.get(key) || "";
+  if (nom) {
+    const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
+    return `Livreur: ${liv} • Tournée: ${tInfo}`;
+  }
+  return `Livreur: ${liv}`;
+}
+
+function buildLivreurRightHtml(c){
+  const livTxt = c && c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+
+  const lat = (c && (c.gpsLat ?? c.lat ?? c.latitude));
+  const lng = (c && (c.gpsLng ?? c.lng ?? c.longitude));
+  const has = (lat !== undefined && lat !== null && String(lat)!=="" && lng !== undefined && lng !== null && String(lng)!=="");
+
+  if (!livTxt && !has) return "";
+  const line1 = livTxt ? escapeHtml(livTxt) : "";
+
+  if (!has) return line1;
+
+  const q = `${lat},${lng}`;
+  const href = `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
+  const link = `<a href="${href}" target="_blank" rel="noopener" style="font-weight:800;color:#2563eb;text-decoration:underline">Suivi</a>`;
+  return [line1, link].filter(Boolean).join("<br>");
+}
 
     if (!liv) {
       const t = (nomColis || "").trim();
