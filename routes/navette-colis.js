@@ -31,11 +31,7 @@ router.post("/import", async (req, res) => {
       bons: String(bons || ""),
       tourneeId: String(tourneeId || ""),
       tournee: String(tournee || ""),
-      codeTournee: String(codeTournee || ""),
-      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
-      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
-      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
-      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
+      codeTournee: String(codeTournee || "")
     });
     res.json(data);
   } catch (e) {

@@ -39,6 +39,7 @@
     .iconBtn:active{transform:scale(.98)}
     .iconBtn.ok{border-color:#bbf7d0}
     .iconBtn.box{border-color:#bfdbfe}
+    a.iconBtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
   </style>
 </head>
 <body>
@@ -141,6 +142,15 @@
   let paramsCache = [];
   let livreurTourneeMap = new Map();
 
+
+
+  function buildMapsUrl(lat, lng){
+    const la = String(lat||"").trim();
+    const ln = String(lng||"").trim();
+    if (!la || !ln) return "";
+    // Google Maps "search" URL (works on mobile + desktop)
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(la + "," + ln)}`;
+  }
 
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -337,7 +347,11 @@
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
             const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-            list.appendChild(mkMiniItem(c.bon, right, ""));
+            {
+              const u = buildMapsUrl(c.gpsLat, c.gpsLng);
+              const actions = u ? `<a class="iconBtn box" title="Suivi (Google Maps)" href="${escapeHtml(u)}" target="_blank" rel="noopener">🗺️ Suivi</a>` : `<span class="small">GPS —</span>`;
+              list.appendChild(mkMiniItem(c.bon, right, actions));
+            }
           });
           body.appendChild(list);
         }
@@ -383,6 +397,15 @@
       if (st === "VALIDE") {
         actionsHtml = `
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
+        `;
+      }
+
+      if (st === "LIVRE") {
+        const u = buildMapsUrl(c.gpsLat, c.gpsLng);
+        actionsHtml = u ? `
+          <a class="iconBtn box" title="Suivi (Google Maps)" href="${escapeHtml(u)}" target="_blank" rel="noopener">🗺️ Suivi</a>
+        ` : `
+          <span class="small">GPS —</span>
         `;
       }
       parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
