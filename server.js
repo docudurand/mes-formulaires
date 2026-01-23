@@ -130,43 +130,21 @@ function isAllowedOrigin(origin) {
 }
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Autorise les appels serveur-to-serveur (origin undefined)
-    if (!origin) return callback(null, true);
+  origin: (origin, cb) => {
+    if (isAllowedOrigin(origin)) return cb(null, true);
 
-    const allowed = [
-      "https://documentsdurand.fr",
-      "https://www.documentsdurand.fr",
-      "https://documentsdurand.wixsite.com",
-      "https://mes-formulaires.onrender.com"
-    ];
-
-    // Autorise aussi tous les sous-domaines Wix
-    if (
-      allowed.includes(origin) ||
-      origin.endsWith(".wixsite.com") ||
-      origin.endsWith(".wix.com") ||
-      origin.endsWith(".editorx.io")
-    ) {
-      return callback(null, true);
-    }
-
-    console.error("[CORS BLOCKED]", origin);
-    return callback(new Error("Not allowed by CORS"));
+    // Do NOT throw (it would generate a 500 and break same-origin POSTs if a browser sends Origin).
+    console.warn("[CORS] blocked origin:", origin);
+    return cb(null, false);
   },
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Admin-Token",
-    "X-Requested-With",
-    "X-Request-Id"
-  ],
-  optionsSuccessStatus: 204
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With", "X-Request-Id"],
+  optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+
 
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
