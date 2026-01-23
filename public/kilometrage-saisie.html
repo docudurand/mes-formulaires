@@ -704,22 +704,39 @@ function normalizeRowDate(row) {
     }
 
     // --- GPS livraison (optionnel) ---
-    // Récupère une position une seule fois. Si refusé/indispo => retourne null (on livre quand même).
+    // IMPORTANT (iOS/Safari) : la géolocalisation peut échouer si elle n'est pas déclenchée suite à un "clic" utilisateur.
+    // On fait donc un "warmup" au clic sur le bouton 🚚, et on garde un cache (30s) à réutiliser au moment du scan.
+    let lastGps = null;
+
+    function gpsHintMessage(){
+      if (!window.isSecureContext) {
+        return "GPS indisponible : le site doit être en HTTPS.";
+      }
+      return "GPS indisponible : autorisation refusée ou localisation désactivée.";
+    }
+
     function getGpsOnce(opts) {
       return new Promise((resolve) => {
         try {
           if (!navigator.geolocation) return resolve(null);
-          const options = Object.assign({ enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }, (opts||{}));
+
+          const options = Object.assign(
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+            (opts||{})
+          );
+
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               const c = pos && pos.coords;
               if (!c) return resolve(null);
-              resolve({
+              const out = {
                 gpsLat: c.latitude,
                 gpsLng: c.longitude,
                 gpsAcc: c.accuracy,
                 gpsTs: pos.timestamp || Date.now()
-              });
+              };
+              lastGps = out;
+              resolve(out);
             },
             () => resolve(null),
             options
@@ -730,6 +747,19 @@ function normalizeRowDate(row) {
       });
     }
 
+    async function warmupGps() {
+      // Déclenché sur clic utilisateur (meilleure compat iOS)
+      const gps = await getGpsOnce({ timeout: 7000, maximumAge: 0 });
+      return gps;
+    }
+
+    function getCachedGps(maxAgeMs=30000){
+      if (!lastGps) return null;
+      const ts = Number(lastGps.gpsTs || 0);
+      if (!ts) return null;
+      if (Date.now() - ts > maxAgeMs) return null;
+      return lastGps;
+    }
 
 function refreshColisHeader() {
   // Affiche le libellé de tournée (même valeur que celle affichée en haut de la page)
@@ -966,6 +996,10 @@ function refreshColisHeader() {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
                     if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
+          setScanLoading(true, "Activation GPS...");
+          await warmupGps();
+          setScanLoading(false);
+
           await openScanner("Scanner colis livrer", async (txt) => {
             try {
               const bon = normalizeBon(txt);
@@ -977,7 +1011,12 @@ function refreshColisHeader() {
               // GPS (optionnel) : on tente de récupérer la position au moment de la livraison
               // Si refusé/KO => on continue sans bloquer.
               setScanLoading(true, `Livraison colis ${bon}... (GPS)`);
-              const gps = await getGpsOnce();
+              let gps = await getGpsOnce();
+              if (!gps) gps = getCachedGps(30000);
+              if (!gps) {
+                // On n'empêche pas la livraison, mais on prévient l'utilisateur.
+                setColisMsg('⚠️ ' + gpsHintMessage() + ' (colis livré quand même).', false);
+              }
 
               // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
               // on demande la tournée active du magasin
