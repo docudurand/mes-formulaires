@@ -31,7 +31,11 @@ router.post("/import", async (req, res) => {
       bons: String(bons || ""),
       tourneeId: String(tourneeId || ""),
       tournee: String(tournee || ""),
-      codeTournee: String(codeTournee || "")
+      codeTournee: String(codeTournee || ""),
+      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
+      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
+      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
+      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
     });
     res.json(data);
   } catch (e) {
@@ -41,14 +45,18 @@ router.post("/import", async (req, res) => {
 
 router.post("/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs } = req.body || {};
     const data = await callGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
       tournee: String(tournee || ""),
-      codeTournee: String(codeTournee || "")
+      codeTournee: String(codeTournee || ""),
+      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
+      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
+      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
+      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
     });
     res.json(data);
   } catch (e) {
@@ -58,14 +66,18 @@ router.post("/valider", async (req, res) => {
 
 router.post("/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs } = req.body || {};
     const data = await callGAS("scanLivrer", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
       tournee: String(tournee || ""),
-      codeTournee: String(codeTournee || "")
+      codeTournee: String(codeTournee || ""),
+      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
+      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
+      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
+      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
     });
     res.json(data);
   } catch (e) {

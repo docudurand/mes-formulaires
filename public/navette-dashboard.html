@@ -179,6 +179,21 @@
       const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
       return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
     }
+
+  function buildLivreurRightHtml(c){
+    const livTxt = c && c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+    const lat = (c && (c.gpsLat ?? c.lat ?? c.latitude)) ;
+    const lng = (c && (c.gpsLng ?? c.lng ?? c.longitude)) ;
+    const has = (lat !== undefined && lat !== null && String(lat)!=="" && lng !== undefined && lng !== null && String(lng)!=="");
+    if (!livTxt && !has) return "";
+    const line1 = livTxt ? escapeHtml(livTxt) : "";
+    if (!has) return line1;
+    const q = `${lat},${lng}`;
+    const href = `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
+    const link = `<a href="${href}" target="_blank" rel="noopener" style="font-weight:800;color:#2563eb;text-decoration:underline">Suivi</a>`;
+    return [line1, link].filter(Boolean).join("<br>");
+  }
+
     if (!liv) {
       const t = (nomColis || "").trim();
       const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
@@ -215,18 +230,7 @@
     return ymdLocal(d) === ymd;
   }
 
-  
-
-// --- Filtre "Livrés aujourd'hui" (onglet En cours) ---
-function todayYmd(){ return ymdLocal(new Date()); }
-function livreVisibleEnCours(c){
-  const st = String((c && c.statut) || "").toUpperCase();
-  if (st !== "LIVRE") return true;
-  const iso = (c && (c.dateMaj || c.dateAjout)) || "";
-  return sameLocalDay(iso, todayYmd());
-}
-
-async function apiPost(url, body) {
+  async function apiPost(url, body) {
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -237,14 +241,20 @@ async function apiPost(url, body) {
     return j;
   }
 
-  function mkMiniItem(text, right, actionsHtml) {
+  function mkMiniItem(text, right, actionsHtml, rightIsHtml=false) {
     const div = document.createElement("div");
     div.className = "item";
+    const rightLine = right ? (
+      rightIsHtml
+        ? `<div class="small">${right}</div>`
+        : `<div class="small">${escapeHtml(right||"")}</div>`
+    ) : ``;
+
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <div style="min-width:0">
           <div style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(text)}</div>
-          ${right ? `<div class="small">${escapeHtml(right||"")}</div>` : ``}
+          ${rightLine}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
@@ -262,27 +272,17 @@ async function apiPost(url, body) {
     `;
   }
 
-  
-function computeStatsFor(filterFn, opt) {
-  const options = opt || {};
-  const enCours = !!options.enCours;
-
-  const list = state.colis.filter(c => {
-    if (!filterFn(c)) return false;
-    if (enCours && !livreVisibleEnCours(c)) return false;
-    return true;
-  });
-
-  let enAttente=0, valides=0, livres=0;
-  for (const c of list) {
-    const st = String(c.statut||"").toUpperCase();
-    if (st==="EN_ATTENTE") enAttente++;
-    else if (st==="VALIDE") valides++;
-    else if (st==="LIVRE") livres++;
+  function computeStatsFor(filterFn) {
+    const list = state.colis.filter(filterFn);
+    let enAttente=0, valides=0, livres=0;
+    for (const c of list) {
+      const st = String(c.statut||"").toUpperCase();
+      if (st==="EN_ATTENTE") enAttente++;
+      else if (st==="VALIDE") valides++;
+      else if (st==="LIVRE") livres++;
+    }
+    return { enAttente, valides, livres };
   }
-  return { enAttente, valides, livres };
-}
-
 
   function renderTournees() {
     tourneesActivesEl.innerHTML = "";
@@ -294,25 +294,17 @@ function computeStatsFor(filterFn, opt) {
       actives.slice(0, 120).forEach(t => {
         const div = document.createElement("div");
         div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
-        
-const tid = String(t.tourneeId||"");
-const rows = state.colis.filter(c => String(c.tourneeId)===tid);
-const attN = rows.filter(c => String(c.statut).toUpperCase()==="EN_ATTENTE").length;
-const valN = rows.filter(c => String(c.statut).toUpperCase()==="VALIDE").length;
-const livN = rows.filter(c => String(c.statut).toUpperCase()==="LIVRE" && livreVisibleEnCours(c)).length;
-const totalN = attN + valN + livN;
-
-div.innerHTML = `
-  <div>
-    <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
-    <div class="small">Total ${Number(totalN||0)}</div>
-  </div>
-  <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-    <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(attN||0)}</span>
-    <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(valN||0)}</span>
-    <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(livN||0)}</span>
-  </div>
-`;
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)}</div>
+          </div>
+          <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(t.enAttente||0)}</span>
+            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(t.valides||0)}</span>
+            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(t.livres||0)}</span>
+          </div>
+        `;
         div.addEventListener("click", () => {
           selectedTourneeId = (selectedTourneeId === t.tourneeId) ? "" : t.tourneeId;
           renderDetail();
@@ -365,8 +357,8 @@ div.innerHTML = `
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-            list.appendChild(mkMiniItem(c.bon, right, ""));
+            const rightHtml = buildLivreurRightHtml(c);
+            list.appendChild(mkMiniItem(c.bon, rightHtml, "", true));
           });
           body.appendChild(list);
         }
@@ -386,20 +378,20 @@ div.innerHTML = `
 
   function renderDetail() {
     const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
-    const stats = computeStatsFor(filter, { enCours: true });
+    const stats = computeStatsFor(filter);
     setGlobalCounters(stats);
 
     detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
-    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE" && livreVisibleEnCours(c));
+    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE");
 
     listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+      const rightHtml = buildLivreurRightHtml(c);
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {
@@ -414,7 +406,7 @@ div.innerHTML = `
           <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
         `;
       }
-      parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+      parent.appendChild(mkMiniItem(c.bon, rightHtml, actionsHtml, true));
     };
 
     att.slice(0, 700).forEach(c => add(listAtt, c));

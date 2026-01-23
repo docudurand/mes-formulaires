@@ -703,6 +703,34 @@ function normalizeRowDate(row) {
       return out;
     }
 
+    // --- GPS livraison (optionnel) ---
+    // Récupère une position une seule fois. Si refusé/indispo => retourne null (on livre quand même).
+    function getGpsOnce(opts) {
+      return new Promise((resolve) => {
+        try {
+          if (!navigator.geolocation) return resolve(null);
+          const options = Object.assign({ enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }, (opts||{}));
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const c = pos && pos.coords;
+              if (!c) return resolve(null);
+              resolve({
+                gpsLat: c.latitude,
+                gpsLng: c.longitude,
+                gpsAcc: c.accuracy,
+                gpsTs: pos.timestamp || Date.now()
+              });
+            },
+            () => resolve(null),
+            options
+          );
+        } catch(e) {
+          resolve(null);
+        }
+      });
+    }
+
+
 function refreshColisHeader() {
   // Affiche le libellé de tournée (même valeur que celle affichée en haut de la page)
   // pour que l'utilisateur voie toujours la même info, quel que soit le tourneeId technique.
@@ -763,28 +791,55 @@ function refreshColisHeader() {
         return;
       }
 
+      // Helpers: compare dates in LOCAL time (important: your sheet stores ISO UTC)
+      const toLocalYMD = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      };
+
+      const isTodayLocal = (isoOrStr) => {
+        if (!isoOrStr) return false;
+        const d = new Date(String(isoOrStr));
+        if (isNaN(d)) return false;
+        return toLocalYMD(d) === toLocalYMD(new Date());
+      };
+
       // Toujours se recaler sur la tournée active du magasin (partagée entre profils/appareils)
       try {
         tourneeNavette = tourneeNavette || (await getActiveTourneeId());
       } catch(e){}
 
       const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
-      const list = j.colis || [];
-      restantsEl.textContent = String(j.restants || 0);
 
-      if (list.length === 0) {
+      // ⚠️ IMPORTANT:
+      // On n'affiche ici QUE les colis du jour (sinon, le lendemain, les colis d'hier réapparaissent).
+      // On se base sur dateMaj (sinon dateAjout) en heure locale.
+      const rawList = j.colis || [];
+      const listToday = rawList.filter(it => isTodayLocal(it.dateMaj || it.dateAjout));
+
+      const restantsToday = listToday.filter(x => String(x.statut).toUpperCase() !== "LIVRE").length;
+      restantsEl.textContent = String(restantsToday);
+
+      if (listToday.length === 0) {
         renderList([]);
-        setColisMsg("ℹ️ Feuille importée. Scanne les colis avec « Scanner colis à charger » pour les affecter au livreur.", false);
+        // Si on a des colis mais pas du jour, on l'indique clairement
+        if (rawList.length > 0) {
+          setColisMsg("ℹ️ Aucun colis du jour à afficher (les colis d’hier sont masqués).", false);
+        } else {
+          setColisMsg("ℹ️ Feuille importée. Scanne les colis avec « Scanner colis à charger » pour les affecter au livreur.", false);
+        }
         return;
       }
 
-      if (Number(j.restants || 0) <= 0) {
+      if (restantsToday <= 0) {
         renderList([]);
-        setColisMsg("✅ Tout est livré (liste masquée)", false);
+        setColisMsg("✅ Tout est livré (colis du jour) • liste masquée", false);
         return;
       }
 
-      renderList(list);
+      renderList(listToday);
     }
 
     const scanModal = document.getElementById("scanModal");
@@ -918,12 +973,20 @@ function refreshColisHeader() {
 
               setScanLoading(true, `Livraison colis ${bon}...`);
               setScanButtonsDisabled(true);
+
+              // GPS (optionnel) : on tente de récupérer la position au moment de la livraison
+              // Si refusé/KO => on continue sans bloquer.
+              setScanLoading(true, `Livraison colis ${bon}... (GPS)`);
+              const gps = await getGpsOnce();
+
               // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
               // on demande la tournée active du magasin
               if (!tourneeNavette) {
                 try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
               }
-              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
+
+              setScanLoading(true, `Livraison colis ${bon}...`);
+              const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"", ...(gps||{}) });
               if (j && (j.tourneeId || j.tournee)) {
                 tourneeNavette = j.tourneeId || j.tournee;
                 try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
