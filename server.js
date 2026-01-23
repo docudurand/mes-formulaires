@@ -138,7 +138,7 @@ const corsOptions = {
     return cb(null, false);
   },
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With", "X-Request-Id"],
   optionsSuccessStatus: 204,
 };
 
