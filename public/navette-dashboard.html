@@ -136,8 +136,7 @@
   let magasin = "";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
-  let currentView = "encours"; // 'encours' ou 'classes'
-let expandedClassees = new Set();
+  let expandedClassees = new Set();
   let refreshTimer = null;
   let paramsCache = [];
   let livreurTourneeMap = new Map();
@@ -217,9 +216,16 @@ let expandedClassees = new Set();
   }
 
   
-  function isTodayLocal(iso){
-    return sameLocalDay(iso, ymdLocal(new Date()));
-  }
+
+// --- Filtre "Livrés aujourd'hui" (onglet En cours) ---
+function todayYmd(){ return ymdLocal(new Date()); }
+function livreVisibleEnCours(c){
+  const st = String((c && c.statut) || "").toUpperCase();
+  if (st !== "LIVRE") return true;
+  const iso = (c && (c.dateMaj || c.dateAjout)) || "";
+  return sameLocalDay(iso, todayYmd());
+}
+
 async function apiPost(url, body) {
     const r = await fetch(url, {
       method: "POST",
@@ -256,17 +262,27 @@ async function apiPost(url, body) {
     `;
   }
 
-  function computeStatsFor(filterFn) {
-    const list = state.colis.filter(filterFn);
-    let enAttente=0, valides=0, livres=0;
-    for (const c of list) {
-      const st = String(c.statut||"").toUpperCase();
-      if (st==="EN_ATTENTE") enAttente++;
-      else if (st==="VALIDE") valides++;
-      else if (st === "LIVRE") { if (currentView !== "encours" || isTodayLocal(c.dateMaj || c.dateAjout)) livres++; }
-    }
-    return { enAttente, valides, livres };
+  
+function computeStatsFor(filterFn, opt) {
+  const options = opt || {};
+  const enCours = !!options.enCours;
+
+  const list = state.colis.filter(c => {
+    if (!filterFn(c)) return false;
+    if (enCours && !livreVisibleEnCours(c)) return false;
+    return true;
+  });
+
+  let enAttente=0, valides=0, livres=0;
+  for (const c of list) {
+    const st = String(c.statut||"").toUpperCase();
+    if (st==="EN_ATTENTE") enAttente++;
+    else if (st==="VALIDE") valides++;
+    else if (st==="LIVRE") livres++;
   }
+  return { enAttente, valides, livres };
+}
+
 
   function renderTournees() {
     tourneesActivesEl.innerHTML = "";
@@ -278,17 +294,25 @@ async function apiPost(url, body) {
       actives.slice(0, 120).forEach(t => {
         const div = document.createElement("div");
         div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
-        div.innerHTML = `
-          <div>
-            <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
-            <div class="small">Total ${Number(t.total||0)}</div>
-          </div>
-          <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(t.enAttente||0)}</span>
-            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(t.valides||0)}</span>
-            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(t.livres||0)}</span>
-          </div>
-        `;
+        
+const tid = String(t.tourneeId||"");
+const rows = state.colis.filter(c => String(c.tourneeId)===tid);
+const attN = rows.filter(c => String(c.statut).toUpperCase()==="EN_ATTENTE").length;
+const valN = rows.filter(c => String(c.statut).toUpperCase()==="VALIDE").length;
+const livN = rows.filter(c => String(c.statut).toUpperCase()==="LIVRE" && livreVisibleEnCours(c)).length;
+const totalN = attN + valN + livN;
+
+div.innerHTML = `
+  <div>
+    <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+    <div class="small">Total ${Number(totalN||0)}</div>
+  </div>
+  <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+    <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(attN||0)}</span>
+    <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(valN||0)}</span>
+    <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(livN||0)}</span>
+  </div>
+`;
         div.addEventListener("click", () => {
           selectedTourneeId = (selectedTourneeId === t.tourneeId) ? "" : t.tourneeId;
           renderDetail();
@@ -362,14 +386,14 @@ async function apiPost(url, body) {
 
   function renderDetail() {
     const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
-    const stats = computeStatsFor(filter);
+    const stats = computeStatsFor(filter, { enCours: true });
     setGlobalCounters(stats);
 
     detailTitle.textContent = selectedTourneeId ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId)) : "Aucune tournée sélectionnée (affichage global).";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
-    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE");
+    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE" && livreVisibleEnCours(c));
 
     listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
 
