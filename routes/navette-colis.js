@@ -70,16 +70,18 @@ router.post("/livrer", async (req, res) => {
       bon: String(bon || ""),
       tournee: String(tournee || ""),
       codeTournee: String(codeTournee || ""),
-      gpsLat: gpsLat === undefined ? "" : String(gpsLat),
-      gpsLng: gpsLng === undefined ? "" : String(gpsLng),
-      gpsAcc: gpsAcc === undefined ? "" : String(gpsAcc),
-      gpsTs: gpsTs === undefined ? "" : String(gpsTs)
+      // GPS : accepte soit les champs plats, soit un objet gps, soit lat/lng classiques
+      gpsLat: (gpsLat !== undefined ? String(gpsLat) : (gps && gps.gpsLat !== undefined ? String(gps.gpsLat) : (gps && gps.lat !== undefined ? String(gps.lat) : (gps && gps.latitude !== undefined ? String(gps.latitude) : "")))),
+      gpsLng: (gpsLng !== undefined ? String(gpsLng) : (gps && gps.gpsLng !== undefined ? String(gps.gpsLng) : (gps && gps.lng !== undefined ? String(gps.lng) : (gps && gps.longitude !== undefined ? String(gps.longitude) : "")))),
+      gpsAcc: (gpsAcc !== undefined ? String(gpsAcc) : (gps && gps.gpsAcc !== undefined ? String(gps.gpsAcc) : (gps && gps.acc !== undefined ? String(gps.acc) : (gps && gps.accuracy !== undefined ? String(gps.accuracy) : "")))),
+      gpsTs:  (gpsTs  !== undefined ? String(gpsTs)  : (gps && gps.gpsTs  !== undefined ? String(gps.gpsTs)  : (gps && gps.ts  !== undefined ? String(gps.ts)  : (gps && gps.timestamp !== undefined ? String(gps.timestamp) : ""))))
     });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success:false, error: String(e.message || e) });
   }
 });
+
 
 router.get("/active", async (req, res) => {
   try {
