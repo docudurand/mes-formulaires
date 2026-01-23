@@ -269,13 +269,23 @@ app.post("/api/navette/import", async (req, res) => {
 
 app.post("/api/navette/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs, gps } = req.body || {};
+
+    // GPS: accepte soit au top-level, soit dans un objet gps
+    const g = (gps && typeof gps === "object") ? gps : {};
     const data = await callNavetteGAS("scanValider", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || ""),
+      gpsLat: String(gpsLat ?? g.gpsLat ?? g.lat ?? g.latitude ?? ""),
+      gpsLng: String(gpsLng ?? g.gpsLng ?? g.lng ?? g.longitude ?? ""),
+      gpsAcc: String(gpsAcc ?? g.gpsAcc ?? g.acc ?? g.accuracy ?? ""),
+      gpsTs:  String(gpsTs  ?? g.gpsTs  ?? g.ts  ?? g.timestamp ?? "")
     });
+
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
@@ -284,18 +294,44 @@ app.post("/api/navette/valider", async (req, res) => {
 
 app.post("/api/navette/livrer", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon } = req.body || {};
+    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee, gpsLat, gpsLng, gpsAcc, gpsTs, gps } = req.body || {};
+
+    console.log("[NAVETTE][/livrer] body=", {
+      tourneeId, magasin, livreurId, bon, tournee, codeTournee,
+      gpsLat, gpsLng, gpsAcc, gpsTs,
+      gps: (gps && typeof gps === "object") ? gps : undefined
+    });
+
+    const g = (gps && typeof gps === "object") ? gps : {};
     const data = await callNavetteGAS("scanLivrer", {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
+      tournee: String(tournee || ""),
+      codeTournee: String(codeTournee || ""),
+      gpsLat: String(gpsLat ?? g.gpsLat ?? g.lat ?? g.latitude ?? ""),
+      gpsLng: String(gpsLng ?? g.gpsLng ?? g.lng ?? g.longitude ?? ""),
+      gpsAcc: String(gpsAcc ?? g.gpsAcc ?? g.acc ?? g.accuracy ?? ""),
+      gpsTs:  String(gpsTs  ?? g.gpsTs  ?? g.ts  ?? g.timestamp ?? "")
     });
+
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
+
+app.get("/api/navette/active", async (req, res) => {
+  try {
+    const magasin = String(req.query.magasin || "");
+    const data = await callNavetteGAS("getActiveTournee", { magasin });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
 
 app.get("/api/navette/dashboard", async (req, res) => {
   try {
