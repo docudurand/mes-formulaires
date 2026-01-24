@@ -362,7 +362,7 @@
               </div>
             </div>
             <div id="multiModalList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
-            <div class="multiSmall">Scanne plusieurs QR codes. Quand tu as fini, valide la liste (les numéros seront envoyés un par un).</div>
+            <div class="multiSmall">Scanne plusieurs QR codes. Quand tu as fini, valide la liste (la liste sera envoyée en une fois (tu peux fermer la page après)).</div>
           </div>
 
           <div style="font-size:12px;color:#555;margin-top:8px">
@@ -856,25 +856,40 @@ function refreshColisHeader() {
 
 async function apiPost(url, body, opts) {
   const fullUrl = apiUrl(url);
-  const o = opts || {};
-  const r = await fetch(fullUrl, {
-    method: "POST",
-    keepalive: !!o.keepalive,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {})
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) {
-    console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
-    const err = new Error(j.error || j.message || "Erreur API");
-    err.status = r.status;
-    err.statusText = r.statusText;
-    err.url = fullUrl;
-    err.body = j;
-    throw err;
+  const options = opts || {};
+  const timeoutMs = Number(options.timeoutMs || 0);
+
+  const ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+  let to = null;
+  if (ctrl && timeoutMs > 0) {
+    to = setTimeout(() => { try { ctrl.abort(); } catch(e) {} }, timeoutMs);
   }
-  return j;
+
+  try {
+    const r = await fetch(fullUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+      keepalive: !!options.keepalive,
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) {
+      console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
+      throw new Error(j.error || j.message || "Erreur API");
+    }
+    return j;
+  } catch (e) {
+    if (String(e && e.name) === "AbortError") {
+      throw new Error("Timeout API");
+    }
+    throw e;
+  } finally {
+    if (to) clearTimeout(to);
+  }
 }
+
+
 
 async function apiGet(url) {
   const fullUrl = apiUrl(url);
@@ -992,43 +1007,6 @@ async function apiGet(url) {
     let multiBons = [];        // liste ordonnée
     let multiSeen = new Set(); // dédoublonnage
 
-
-    let multiSending = false;
-
-    function multiStorageKey() {
-      // Clé par magasin + livreur pour éviter les mélanges
-      return `NAVETTE_MULTI_${(magasinNavette||"").toUpperCase()}_${(livreurId||"").toString().trim()}`;
-    }
-
-    function saveMultiState() {
-      try {
-        const state = {
-          v: 1,
-          mode: multiMode,
-          bons: multiBons,
-          sending: multiSending,
-          tourneeId: tourneeNavette || "",
-          updatedAt: Date.now()
-        };
-        localStorage.setItem(multiStorageKey(), JSON.stringify(state));
-      } catch(e) {}
-    }
-
-    function loadMultiState() {
-      try {
-        const raw = localStorage.getItem(multiStorageKey());
-        if (!raw) return null;
-        const st = JSON.parse(raw);
-        if (!st || !Array.isArray(st.bons)) return null;
-        return st;
-      } catch(e) { return null; }
-    }
-
-    function clearMultiState() {
-      try { localStorage.removeItem(multiStorageKey()); } catch(e) {}
-    }
-
-
     function showMultiPanel(show) {
       if (multiPanel) multiPanel.style.display = show ? "block" : "none";
     }
@@ -1074,44 +1052,10 @@ async function apiGet(url) {
       showMultiPanel(!!multiMode);
     }
 
-    // Restore multi-scan en cas de fermeture/reload
-    (function restoreMultiState(){
-      const st = loadMultiState();
-      if (!st || !st.bons || !st.bons.length) return;
-      multiMode = st.mode || multiMode;
-      multiBons = Array.isArray(st.bons) ? st.bons : [];
-      multiSeen = new Set(multiBons);
-      multiSending = false;
-
-      if (!tourneeNavette && st.tourneeId) tourneeNavette = st.tourneeId;
-
-      if (multiMode) {
-        if (multiPanelTitle) multiPanelTitle.textContent = (multiMode === "charger")
-          ? "Colis à CHARGER (multi-scan)"
-          : "Colis à LIVRER (multi-scan)";
-      }
-      renderMulti();
-      showMultiPanel(true);
-      setColisMsg(`ℹ️ ${multiBons.length} colis en attente (restaurés).`, false);
-    })();
-
-    // Empêche la fermeture accidentelle pendant un envoi / si des colis restent en file
-    window.addEventListener("beforeunload", (e) => {
-      if (multiSending || (multiBons && multiBons.length)) {
-        saveMultiState();
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    });
-
-
-
     function clearMulti() {
       multiBons = [];
       multiSeen = new Set();
-      multiSending = false;
       renderMulti();
-      clearMultiState();
     }
 
     function addBonToMulti(txt) {
@@ -1126,52 +1070,11 @@ async function apiGet(url) {
       multiSeen.add(bon);
       multiBons.push(bon);
       renderMulti();
-      saveMultiState();
       setColisMsg(`➕ Ajouté : ${bon}`, false);
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
 
-        
-async function sendMultiLegacy(bonsList, mode, currentTourneeId, gps) {
-  const total = bonsList.length;
-  let ok = 0;
-  const fails = [];
-
-  for (let i = 0; i < bonsList.length; i++) {
-    const bon = bonsList[i];
-    try {
-      setScanLoading(true, `Envoi ${ok+1}/${total} colis…`);
-      const endpoint = (mode === "livrer") ? "/api/navette/livrer" : "/api/navette/valider";
-
-      const j = await apiPost(endpoint, {
-        tourneeId: currentTourneeId,
-        magasin: magasinNavette,
-        livreurId,
-        bon,
-        tournee: (tournee||""),
-        codeTournee: (codeTournee||""),
-        ...(gps || {})
-      });
-
-      if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
-      ok++;
-
-      // Progress UI + persistance: on retire le colis validé
-      if (multiBons[0] === bon) multiBons.shift();
-      else multiBons = multiBons.filter(x => x !== bon);
-
-      multiSeen = new Set(multiBons);
-      renderMulti();
-      saveMultiState();
-    } catch (e) {
-      fails.push({ bon, err: e?.message || String(e), status: e?.status });
-    }
-  }
-
-  return { ok, total, fails, currentTourneeId };
-}
-
-async function validateMulti() {
+        async function validateMulti() {
       if (!multiMode) { setColisMsg("ℹ️ Lance d’abord un scan multi.", false); return; }
       if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
       if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
@@ -1207,11 +1110,10 @@ async function validateMulti() {
       saveMultiState();
 
       try {
+        // Objectif: 1 seule requête. Réponse immédiate (job en arrière-plan).
         setScanLoading(true, `Envoi ${total} colis…`);
 
-        let j;
-        try {
-          j = await apiPost("/api/navette/bulk", {
+        const j = await apiPost("/api/navette/bulk", {
           mode: multiMode,
           tourneeId: currentTourneeId, // peut être vide => création auto
           magasin: magasinNavette,
@@ -1220,84 +1122,26 @@ async function validateMulti() {
           tournee: (tournee||""),
           codeTournee: (codeTournee||""),
           ...(gps || {})
-        }, { keepalive: true });
-        } catch (e) {
-          // Compat: si le serveur n'a pas encore l'endpoint /bulk => fallback envoi un-par-un
-          if (e && e.status === 404) {
-            console.warn("[NAVETTE] /bulk introuvable (404). Fallback mode compatibilité (un par un).");
-            setColisMsg("ℹ️ Serveur non à jour (/bulk absent). Envoi en mode compatibilité…", false);
+        }, { keepalive: true, timeoutMs: 8000 });
 
-            const legacy = await sendMultiLegacy([...multiBons], multiMode, currentTourneeId, gps);
-
-            // tournéeId à jour pour les prochains scans
-            if (legacy.currentTourneeId) tourneeNavette = legacy.currentTourneeId;
-
-            if (legacy.fails.length === 0) {
-              setColisMsg(`✅ ${legacy.ok}/${legacy.total} envoyés (${multiMode})`, false);
-              multiMode = null;
-              clearMulti(); // clearMultiState() inclus
-              showMultiPanel(false);
-              setScanLoading(false);
-              setScanButtonsDisabled(false);
-              try { await refreshLivreurList(); } catch(e){}
-              return;
-            } else {
-              // garde uniquement les échecs pour reprise
-              multiBons = legacy.fails.map(f => f.bon);
-              multiSeen = new Set(multiBons);
-              renderMulti();
-              saveMultiState();
-
-              const first = legacy.fails.slice(0, 3).map(f => `${f.bon}`).join(", ");
-              setColisMsg(`⚠️ ${legacy.ok}/${legacy.total} OK • ${legacy.fails.length} en échec (ex: ${first}). Corrige et re-valide.
-Dernière erreur : ${legacy.fails[legacy.fails.length-1]?.err || "Erreur inconnue"}`, true);
-
-              console.warn("[NAVETTE] Échecs legacy:", legacy.fails);
-              setScanLoading(false);
-              setScanButtonsDisabled(false);
-              try { await refreshLivreurList(); } catch(e){}
-              return;
-            }
-          }
-          throw e;
-        }
-
+        // Sauvegarde la tournée utilisée pour les prochains scans (si renvoyée)
         if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
-
-        // Sauvegarde la tournée utilisée pour les prochains scans
         if (currentTourneeId) tourneeNavette = currentTourneeId;
-
-        const results = Array.isArray(j?.results) ? j.results : [];
-        const fails = results.filter(r => !r || r.success === false);
-        const ok = results.length - fails.length;
 
         multiSending = false;
 
-        if (fails.length === 0) {
-          setColisMsg(`✅ ${ok}/${total} envoyés (${multiMode})`, false);
-          multiMode = null;
-          clearMulti(); // clearMultiState() inclus
-          showMultiPanel(false);
-          setScanLoading(false);
-          setScanButtonsDisabled(false);
-          return;
-        }
+        // On peut vider la liste immédiatement: le serveur continue en arrière-plan
+        const jobId = j?.jobId ? ` • Job: ${j.jobId}` : "";
+        setColisMsg(`✅ Liste envoyée (${total} colis • ${multiMode}). Tu peux fermer la page${jobId}.`, false);
 
-        // garde uniquement les échecs pour reprise
-        multiBons = fails.map(f => f.bon).filter(Boolean);
-        multiSeen = new Set(multiBons);
-        renderMulti();
-        saveMultiState();
-
-        const first = fails.slice(0, 3).map(f => `${f.bon}`).join(", ");
-        setColisMsg(`⚠️ ${ok}/${total} OK • ${fails.length} en échec (ex: ${first}). Corrige et re-valide.
-Dernière erreur : ${fails[fails.length-1]?.error || fails[fails.length-1]?.err || "Erreur inconnue"}`, true);
-
-        console.warn("[NAVETTE] Échecs bulk:", fails);
+        multiMode = null;
+        clearMulti();
+        clearMultiState();
+        showMultiPanel(false);
       } catch (e) {
         multiSending = false;
         saveMultiState();
-        setColisMsg(`❌ Envoi interrompu. La liste est conservée, tu peux re-valider.
+        setColisMsg(`❌ Envoi non parti. La liste est conservée, tu peux re-valider.
 Erreur : ${e?.message || e}`, true);
       } finally {
         setScanLoading(false);
@@ -1305,12 +1149,12 @@ Erreur : ${e?.message || e}`, true);
       }
     }
 
+
 function startMultiScan(mode) {
       multiMode = mode;
       clearMulti();
       if (multiPanelTitle) multiPanelTitle.textContent = (mode === "charger") ? "Colis à CHARGER (multi-scan)" : "Colis à LIVRER (multi-scan)";
       renderMulti();
-      saveMultiState();
     }
 
     let html5Qr = null;
