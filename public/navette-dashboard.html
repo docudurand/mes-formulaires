@@ -145,6 +145,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   let paramsCache = [];
   let livreurTourneeMap = new Map();
 
+  window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
+  window.addEventListener("error", (e)=>{ console.error("[Dashboard] error", e.error || e.message); });
+
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
@@ -207,6 +210,45 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     const mn = pad2(d.getMinutes());
     return `${jj}/${mm}/${aa} ${hh}:${mn}`;
   }
+
+
+  function shortExcerpt_(t, n=260){
+    const s = String(t||"").replace(/\s+/g," ").trim();
+    return s.length > n ? (s.slice(0,n) + "…") : s;
+  }
+
+  async function fetchJson_(url){
+    let r;
+    try{
+      r = await fetch(url);
+    }catch(e){
+      throw new Error("Fetch impossible (réseau/CORS): " + (e && e.message ? e.message : e));
+    }
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const text = await r.text().catch(()=> "");
+    let j = null;
+    if (ct.includes("application/json") || ct.includes("text/json")) {
+      try{ j = JSON.parse(text || "{}"); }catch(e){ /* ignore */ }
+    } else {
+      // parfois l'API renvoie du JSON sans content-type correct
+      try{ j = JSON.parse(text || "{}"); }catch(e){ /* ignore */ }
+    }
+    if (!r.ok) {
+      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
+      throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
+    }
+    if (!j) {
+      throw new Error("Réponse non-JSON: " + shortExcerpt_(text));
+    }
+    return j;
+  }
+
+  function showLoadError_(context, err){
+    const msg = (err && err.message) ? err.message : String(err||"Erreur inconnue");
+    console.error("[Dashboard] " + context, err);
+    subEl.textContent = `Erreur de chargement (${context}): ${msg}`;
+  }
+
 
   async function apiPost(url, body) {
     const r = await fetch(apiUrl(url), {
@@ -477,11 +519,17 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   }
 
   async function loadMagasins() {
-    const res = await fetch(apiUrl("/api/kilometrage/params"));
-    const data = await res.json().catch(()=>null);
+    let data;
+    try {
+      data = await fetchJson_(apiUrl("/api/kilometrage/params"));
+    } catch (err) {
+      showLoadError_("PARAMS", err);
+      return;
+    }
 
     if (!Array.isArray(data)) {
-      throw new Error("Impossible de charger les agences (PARAMS)");
+      showLoadError_("PARAMS", new Error("Réponse inattendue: " + shortExcerpt_(JSON.stringify(data))))
+      return;
     }
 
     paramsCache = data;
@@ -503,10 +551,15 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     if (!magasin) { setNeutral(); return; }
 
     subEl.textContent = "Chargement…";
-    const res = await fetch(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
-    const data = await res.json().catch(()=>null);
+    let data;
+    try {
+      data = await fetchJson_(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
+    } catch (err) {
+      showLoadError_("DASHBOARD", err);
+      return;
+    }
     if (!data || data.success === false) {
-      subEl.textContent = "Erreur de chargement.";
+      showLoadError_("DASHBOARD", new Error((data && (data.error || data.message)) || "Réponse invalide"));
       return;
     }
 
