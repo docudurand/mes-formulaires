@@ -855,20 +855,28 @@ function refreshColisHeader() {
     refreshColisHeader();
 
 async function apiPost(url, body) {
-  const r = await fetch(apiUrl(url), {
+  const fullUrl = apiUrl(url);
+  const r = await fetch(fullUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {})
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+  if (!r.ok || j.success === false) {
+    console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
+    throw new Error(j.error || j.message || "Erreur API");
+  }
   return j;
 }
 
 async function apiGet(url) {
-  const r = await fetch(apiUrl(url));
+  const fullUrl = apiUrl(url);
+  const r = await fetch(fullUrl);
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
+  if (!r.ok || j.success === false) {
+    console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
+    throw new Error(j.error || j.message || "Erreur API");
+  }
   return j;
 }
 
@@ -1133,7 +1141,9 @@ async function apiGet(url) {
         multiSeen = new Set(multiBons);
         renderMulti();
         const first = fails.slice(0, 3).map(f => `${f.bon}`).join(", ");
-        setColisMsg(`⚠️ ${ok}/${total} OK • ${fails.length} en échec (ex: ${first}). Corrige et re-valide.`, true);
+        setColisMsg(`⚠️ ${ok}/${total} OK • ${fails.length} en échec (ex: ${first}). Corrige et re-valide.
+Dernière erreur : ${fails[fails.length-1]?.err || "Erreur inconnue"}`, true);
+        console.warn("[NAVETTE] Échecs validation:", fails);
       }
     }
 
