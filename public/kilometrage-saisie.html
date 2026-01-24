@@ -1033,53 +1033,17 @@ async function apiGet(url) {
     refreshLivreurList().catch(() => {});
   </script>
 
-<!-- DEBUG GPS (temporaire) -->
-<script>
-  function logi(msg){
-    const el = document.getElementById("debugGps");
-    if (el) el.textContent += msg + "\n";
-  }
-</script>
 
-<pre id="debugGps" style="
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  min-height:140px;
-  max-height:40vh;
-  overflow:auto;
-  background:#000;
-  color:#0f0;
-  font-size:11px;
-  padding:8px 8px calc(8px + env(safe-area-inset-bottom)) 8px;
-  z-index:999999;
-  white-space:pre-wrap;
-"></pre>
-<!-- /DEBUG GPS -->
+
+
+
+
 
 <script>
-  (function(){
-    const pre = document.getElementById('debugGps');
-    if (!pre) return;
-    pre.style.display = 'none';
-    const btn = document.createElement('button');
-    btn.id = 'toggleDebugGps';
-    btn.textContent = 'DEBUG GPS';
-    btn.style.position='fixed';
-    btn.style.right='10px';
-    btn.style.bottom='10px';
-    btn.style.zIndex='1000000';
-    btn.style.padding='8px 10px';
-    btn.style.borderRadius='10px';
-    btn.style.border='1px solid rgba(0,0,0,.2)';
-    btn.style.background='#fff';
-    btn.style.fontSize='12px';
-    btn.onclick = () => { pre.style.display = (pre.style.display==='none'?'block':'none'); };
-    document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(btn));
-  })();
+  // Helper conservé pour ne pas casser le GPS (les anciens logs utilisaient logi()).
+  // Ici on n'affiche rien : pas de panneau/bouton debug.
+  function logi(msg){ /* noop */ }
 </script>
-
 
 </body>
 </html>
