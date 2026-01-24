@@ -210,6 +210,42 @@
     }
     .multiSmall{ font-size:12px; color:#555; margin-top:8px; }
 
+
+
+.multiActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:6px;
+  width:100%;
+}
+.multiActions button{
+  flex:1;
+  min-width: 160px;
+  padding: 14px 14px;
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+.multiActions button:active{ transform: translateY(1px); }
+
+.multiPanelNote{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  background:#e2e8f0;
+  color:#0f172a;
+  border:1px solid #cbd5e1;
+}
+
+@media (max-width: 480px) {
+  .multiActions{ flex-direction:column; }
+  .multiActions button{ width:100%; min-width: unset; }
+}
   </style>
 
 <script src="/js/html5-qrcode.min.js"></script>
@@ -289,10 +325,7 @@
       <div id="multiPanel" class="multiPanel">
         <div class="multiTitleRow">
           <div><b id="multiPanelTitle">Liste à valider</b> <span class="pill">Scannés : <span id="multiPanelCount">0</span></span></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" id="btnMultiValidate2" class="btnScan" style="min-width:160px">✅ Valider la liste</button>
-            <button type="button" id="btnMultiClear2" class="btnSecondary" style="min-width:120px">🗑️ Vider</button>
-          </div>
+          <div class="multiPanelNote">Valide la liste dans la fenêtre de scan</div>
         </div>
         <div id="multiPanelList" class="multiList"></div>
         <div class="multiSmall">Astuce : tu peux scanner 1, 2, 10 colis… puis cliquer sur « Valider la liste ».</div>
@@ -323,9 +356,9 @@
           <div id="multiModalInfo" style="display:none;margin-top:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <span class="pill">Scannés : <span id="multiCount">0</span></span>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button type="button" id="btnMultiValidate" class="btnScan" style="min-width:160px">✅ Valider la liste</button>
-                <button type="button" id="btnMultiClear" class="btnSecondary" style="min-width:120px">🗑️ Vider</button>
+              <div class="multiActions">
+                <button type="button" id="btnMultiValidate" class="btnScan">✅ Valider la liste</button>
+                <button type="button" id="btnMultiClear" class="btnSecondary">🗑️ Vider</button>
               </div>
             </div>
             <div id="multiModalList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
@@ -936,10 +969,7 @@ async function apiGet(url) {
     const multiPanelCount = document.getElementById("multiPanelCount");
     const multiPanelList = document.getElementById("multiPanelList");
     const btnMultiValidate = document.getElementById("btnMultiValidate");
-    const btnMultiClear = document.getElementById("btnMultiClear");
-    const btnMultiValidate2 = document.getElementById("btnMultiValidate2");
-    const btnMultiClear2 = document.getElementById("btnMultiClear2");
-    const multiModalInfo = document.getElementById("multiModalInfo");
+    const btnMultiClear = document.getElementById("btnMultiClear");    const multiModalInfo = document.getElementById("multiModalInfo");
     const multiCount = document.getElementById("multiCount");
     const multiModalList = document.getElementById("multiModalList");
 
@@ -1175,13 +1205,7 @@ function startMultiScan(mode) {
       if (!btn) return;
       btn.addEventListener("click", () => clearMulti());
     }
-    hookMulti(btnMultiValidate);
-    hookMulti(btnMultiValidate2);
-    hookClear(btnMultiClear);
-    hookClear(btnMultiClear2);
-
-
-    if (btnScanFeuille) {
+    hookMulti(btnMultiValidate);    hookClear(btnMultiClear);    if (btnScanFeuille) {
       btnScanFeuille.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant (URL: ?magasin=...)", true); return; }
