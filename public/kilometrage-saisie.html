@@ -1014,7 +1014,7 @@ async function apiGet(url) {
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
 
-    async function validateMulti() {
+        async function validateMulti() {
       if (!multiMode) { setColisMsg("ℹ️ Lance d’abord un scan multi.", false); return; }
       if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
       if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
@@ -1027,15 +1027,13 @@ async function apiGet(url) {
       try { if (html5Qr) await html5Qr.stop(); } catch(e) {}
       if (scanModal) scanModal.style.display = "none";
 
-      // tournée active
-      if (!tourneeNavette) {
-        try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
-      }
-      if (!tourneeNavette) {
-        setScanLoading(false);
-        setScanButtonsDisabled(false);
-        setColisMsg("❌ Impossible de trouver la tournée active (tourneeId)", true);
-        return;
+      // tournéeId courante :
+      // - si on en a une en mémoire => on l'utilise
+      // - sinon on tente de récupérer une tournée active du magasin
+      // - si toujours vide => OK : l'API créera une tournée au 1er envoi (comme avant)
+      let currentTourneeId = tourneeNavette || "";
+      if (!currentTourneeId) {
+        try { currentTourneeId = await getActiveTourneeId(); } catch(e){}
       }
 
       // GPS une seule fois pour toutes les livraisons (si refusé => null)
@@ -1053,26 +1051,37 @@ async function apiGet(url) {
         const bon = multiBons[i];
         try {
           setScanLoading(true, `Envoi ${i+1}/${total} • ${bon}…`);
+
           if (multiMode === "charger") {
-            await apiPost("/api/navette/valider", {
-              tourneeId: tourneeNavette,
+            const j = await apiPost("/api/navette/valider", {
+              tourneeId: currentTourneeId, // peut être vide => création auto
               magasin: magasinNavette,
               livreurId,
               bon,
               tournee: (tournee||"") || (tournee||""),
               codeTournee: codeTournee||""
             });
+            if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
           } else {
-            await apiPost("/api/navette/livrer", {
-              tourneeId: tourneeNavette,
+            const j = await apiPost("/api/navette/livrer", {
+              tourneeId: currentTourneeId, // peut être vide => création auto
               magasin: magasinNavette,
               livreurId,
               bon,
               tournee: (tournee||"") || (tournee||""),
               codeTournee: codeTournee||"",
-              ...(gps||{})
+              ...(gps || {})
             });
+            if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
           }
+
+          // si l'API a créé/retourné une tournée, on la mémorise pour les envois suivants
+          if (currentTourneeId && currentTourneeId !== tourneeNavette) {
+            tourneeNavette = currentTourneeId;
+            try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+            refreshColisHeader();
+          }
+
           ok++;
         } catch (e) {
           fails.push({ bon, err: e && e.message ? e.message : "Erreur" });
@@ -1098,7 +1107,7 @@ async function apiGet(url) {
       }
     }
 
-    function startMultiScan(mode) {
+function startMultiScan(mode) {
       multiMode = mode;
       clearMulti();
       if (multiPanelTitle) multiPanelTitle.textContent = (mode === "charger") ? "Colis à CHARGER (multi-scan)" : "Colis à LIVRER (multi-scan)";
