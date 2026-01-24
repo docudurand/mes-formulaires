@@ -153,8 +153,8 @@ async function processBulkJob(jobId, body) {
 
     const gps = normGps(body);
     const bonsArr = pickArray(body.bons);
-    // On envoie une string compacte à GAS
-    const bons = bonsArr.join(",");
+    // On envoie une liste JSON (compatible bulkScan_ côté Apps Script)
+    const bonsJson = JSON.stringify(bonsArr);
 
     const data = await callGAS("bulkScan", {
       mode,
@@ -163,7 +163,7 @@ async function processBulkJob(jobId, body) {
       tourneeId,
       tournee,
       codeTournee,
-      bons,
+      bons: bonsJson,
       ...gps
     }, { timeoutMs: 120000 }); // bulk peut être plus long
 
