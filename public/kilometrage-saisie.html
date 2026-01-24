@@ -266,6 +266,21 @@
         </div>
         <div style="padding:10px">
           <div id="qr-reader" style="width:100%"></div>
+          <div id="batchZone" style="display:none;margin-top:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="font-weight:800">Bons scannés : <span id="batchCount">0</span></div>
+              <span class="pill" id="batchModePill">—</span>
+            </div>
+            <div id="batchList" style="max-height:180px;overflow:auto;border:1px solid #eee;border-radius:10px;padding:8px;background:#fafafa"></div>
+            <div style="display:flex;gap:10px;margin-top:10px">
+              <button type="button" id="btnBatchValidate" class="btnScan" style="flex:1;border-radius:999px;padding:12px 10px;font-weight:800">Valider</button>
+              <button type="button" id="btnBatchReset" class="btnSecondary" style="flex:1;border-radius:999px;padding:12px 10px;font-weight:800">Vider</button>
+            </div>
+            <div style="font-size:12px;color:#666;margin-top:8px">
+              Astuce : scanne plusieurs QR codes, puis clique sur “Valider”.
+            </div>
+          </div>
+
           <div style="font-size:12px;color:#555;margin-top:8px">
             Autorise la caméra. Utilise la caméra arrière si possible.
           </div>
@@ -864,40 +879,164 @@ async function apiGet(url) {
     const btnScanCharger = document.getElementById("btnScanCharger");
     const btnScanLivrer = document.getElementById("btnScanLivrer");
 
-    let html5Qr = null;
-    let onScanResult = null;
+    
+let html5Qr = null;
 
-    async function openScanner(title, cb) {
-      onScanResult = cb;
-      setScanLoading(false);
-      setColisMsg("", false);
-      if (scanTitle) scanTitle.textContent = title;
-      if (scanModal) scanModal.style.display = "block";
+// Mode scan: "single" (une seule lecture puis fermeture) ou "batch" (multi QR, validation manuelle)
+let scanMode = "single";
+let onScanSingle = null;
 
-      if (!html5Qr) html5Qr = new Html5Qrcode("qr-reader");
+let scannerStarted = false;
+let scanLock = false;
 
-      await html5Qr.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          closeScanner().finally(() => {
-            if (onScanResult) onScanResult(decodedText);
-          });
-        },
-        () => {}
-      );
+// Batch UI
+const batchZone = document.getElementById("batchZone");
+const batchListEl = document.getElementById("batchList");
+const batchCountEl = document.getElementById("batchCount");
+const batchModePill = document.getElementById("batchModePill");
+const btnBatchValidate = document.getElementById("btnBatchValidate");
+const btnBatchReset = document.getElementById("btnBatchReset");
+
+let batchAction = ""; // "valider" | "livrer"
+let batchBons = [];
+
+function uniqPush(arr, v) {
+  if (!v) return;
+  if (!arr.includes(v)) arr.push(v);
+}
+
+function renderBatch() {
+  if (!batchCountEl || !batchListEl) return;
+  batchCountEl.textContent = String(batchBons.length);
+  if (batchBons.length === 0) {
+    batchListEl.innerHTML = `<div style="color:#666;font-size:13px">Aucun bon scanné pour l’instant.</div>`;
+    return;
+  }
+  batchListEl.innerHTML = batchBons.map(b => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;background:#fff;border-radius:10px;margin-bottom:6px">
+      <b style="font-size:16px">${b}</b>
+      <button type="button" data-remove="${b}" class="btnSecondary" style="padding:8px 10px;border-radius:10px;font-weight:900">✕</button>
+    </div>
+  `).join("");
+}
+
+function setBatchVisible(visible) {
+  if (!batchZone) return;
+  batchZone.style.display = visible ? "" : "none";
+  if (visible) renderBatch();
+}
+
+async function ensureScannerStarted() {
+  if (!html5Qr) html5Qr = new Html5Qrcode("qr-reader");
+  if (scannerStarted) return;
+
+  // Callback unique (dispatch selon scanMode)
+  await html5Qr.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    async (decodedText) => {
+      if (scanLock) return;
+      scanLock = true;
+
+      try {
+        if (scanMode === "single") {
+          await closeScanner(); // pause + hide
+          try { if (onScanSingle) onScanSingle(decodedText); } finally {}
+        } else if (scanMode === "batch") {
+          // En batch on ne ferme pas. On ajoute et on évite la lecture multiple immédiate.
+          try { if (onScanSingle) onScanSingle(decodedText); } finally {}
+          try { await html5Qr.pause(true); } catch(e1) { try { html5Qr.pause(); } catch(e2) {} }
+          setTimeout(() => { try { html5Qr.resume(); } catch(e) {} }, 650);
+        }
+      } finally {
+        setTimeout(() => { scanLock = false; }, 250);
+      }
+    },
+    () => {}
+  );
+
+  scannerStarted = true;
+}
+
+async function openScanner(title, cb) {
+  // Single scan
+  scanMode = "single";
+  onScanSingle = cb;
+
+  setScanLoading(false);
+  setColisMsg("", false);
+
+  setBatchVisible(false);
+
+  if (scanTitle) scanTitle.textContent = title;
+  if (scanModal) scanModal.style.display = "block";
+
+  await ensureScannerStarted();
+  try { html5Qr.resume(); } catch(e) {}
+}
+
+async function openScannerBatch(title, action, onAdd) {
+  // Batch scan
+  scanMode = "batch";
+  batchAction = action;
+  onScanSingle = onAdd;
+
+  setScanLoading(false);
+  setColisMsg("", false);
+
+  if (batchModePill) batchModePill.textContent = (action === "livrer") ? "Multi • Livrer" : "Multi • Charger";
+  if (btnBatchValidate) btnBatchValidate.textContent = (action === "livrer") ? "Valider livraisons" : "Valider chargements";
+
+  setBatchVisible(true);
+
+  if (scanTitle) scanTitle.textContent = title;
+  if (scanModal) scanModal.style.display = "block";
+
+  await ensureScannerStarted();
+  try { html5Qr.resume(); } catch(e) {}
+}
+
+async function closeScanner() {
+  try {
+    // pause(true) garde le flux vidéo actif (évite de redemander l’autorisation sur iPhone)
+    if (html5Qr && scannerStarted) {
+      try { await html5Qr.pause(true); }
+      catch(e1) { try { html5Qr.pause(); } catch(e2) {} }
     }
+  } catch(e){}
+  if (scanModal) scanModal.style.display = "none";
+}
 
-    async function closeScanner() {
-      try { if (html5Qr) await html5Qr.stop(); } catch(e){}
-      if (scanModal) scanModal.style.display = "none";
-    }
-    if (btnCloseScan) btnCloseScan.addEventListener("click", closeScanner);
+// Libère la caméra quand on quitte la page (évite de garder le flux ouvert en arrière-plan)
+window.addEventListener("pagehide", () => {
+  try { if (html5Qr && scannerStarted) html5Qr.stop(); } catch(e){}
+});
+
+if (batchListEl) {
+  batchListEl.addEventListener("click", (ev) => {
+    const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-remove]") : null;
+    if (!btn) return;
+    const bon = btn.getAttribute("data-remove");
+    batchBons = batchBons.filter(x => x !== bon);
+    renderBatch();
+  });
+}
+
+if (btnBatchReset) {
+  btnBatchReset.addEventListener("click", () => {
+    batchBons = [];
+    renderBatch();
+  });
+}
+
+if (btnCloseScan) btnCloseScan.addEventListener("click", closeScanner);
 
     if (btnScanFeuille) {
       btnScanFeuille.addEventListener("click", async () => {
         try {
           if (!magasinNavette) { setColisMsg("❌ Magasin manquant (URL: ?magasin=...)", true); return; }
+
+          if (btnBatchValidate) btnBatchValidate.onclick = null;
 
           await openScanner("Scanner feuille d’émargement", async (txt) => {
             try {
@@ -933,72 +1072,204 @@ async function apiGet(url) {
     }
 
     if (btnScanCharger) {
-      btnScanCharger.addEventListener("click", async () => {
-        try {
-          if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+  btnScanCharger.addEventListener("click", async () => {
+    try {
+      if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
+      if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
-          await openScanner("Scanner colis à charger", async (txt) => {
-            try {
-              const bon = normalizeBon(txt);
-              if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
+      // Reset batch
+      batchBons = [];
+      renderBatch();
 
-              setScanLoading(true, `Validation colis ${bon}...`);
-              setScanButtonsDisabled(true);
-              // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
-              // on demande la tournée active du magasin
-              if (!tourneeNavette) {
-                try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
-              }
-              const j = await apiPost("/api/navette/valider", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"" });
-              if (j && (j.tourneeId || j.tournee)) {
-                tourneeNavette = j.tourneeId || j.tournee;
-                try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
-                refreshColisHeader();
-              }
-              setScanLoading(false);
-              setScanButtonsDisabled(false);
-              setColisMsg(`✅ Colis ${bon} validé (chargé)`, false);
-
-              await refreshLivreurList();
-            } catch (e) {
-              setScanLoading(false);
-              setScanButtonsDisabled(false);
-              setColisMsg("❌ " + e.message, true);
-            }
-          });
-        } catch (e) {
-          setScanLoading(false);
-              setScanButtonsDisabled(false);
-              setColisMsg("❌ " + e.message, true);
-        }
+      await openScannerBatch("Scanner colis à charger (multi)", "valider", async (txt) => {
+        const bon = normalizeBon(txt);
+        if (!bon) return;
+        uniqPush(batchBons, bon);
+        renderBatch();
       });
+
+      // Quand on clique "Valider" dans le modal, on envoie chaque bon individuellement
+      if (btnBatchValidate) {
+        btnBatchValidate.onclick = async () => {
+          if (!batchBons.length) {
+            setColisMsg("ℹ️ Aucun bon scanné.", false);
+            return;
+          }
+
+          setScanButtonsDisabled(true);
+          try {
+            // On récupère/assure la tournée active une seule fois pour le batch
+            if (!tourneeNavette) {
+              try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
+            }
+
+            let gps = null;
+            if ("valider" === "livrer") {
+              // GPS une seule fois au moment de valider (même position pour le batch)
+              setScanLoading(true, "Récupération GPS...");
+              gps = await getGpsOnce();
+            }
+
+            setScanLoading(true, "Envoi des bons...");
+            await closeScanner(); // masque le modal (caméra en pause)
+
+            for (let i = 0; i < batchBons.length; i++) {
+              const b = batchBons[i];
+              setScanLoading(true, `Envoi ${i+1}/${batchBons.length} : ${b}...`);
+
+              if ("valider" === "valider") {
+                const j = await apiPost("/api/navette/valider", {
+                  tourneeId: tourneeNavette,
+                  magasin: magasinNavette,
+                  livreurId,
+                  bon: b,
+                  tournee: (tournee||"") || (tournee||""),
+                  codeTournee: codeTournee||""
+                });
+                if (j && (j.tourneeId || j.tournee)) {
+                  tourneeNavette = j.tourneeId || j.tournee;
+                  try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                  refreshColisHeader();
+                }
+              } else {
+                const j = await apiPost("/api/navette/livrer", {
+                  tourneeId: tourneeNavette,
+                  magasin: magasinNavette,
+                  livreurId,
+                  bon: b,
+                  tournee: (tournee||"") || (tournee||""),
+                  codeTournee: codeTournee||"",
+                  ...(gps||{})
+                });
+                if (j && (j.tourneeId || j.tournee)) {
+                  tourneeNavette = j.tourneeId || j.tournee;
+                  try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                  refreshColisHeader();
+                }
+              }
+            }
+
+            setScanLoading(false);
+            setScanButtonsDisabled(false);
+            setColisMsg(`✅ Batch terminé : ${batchBons.length} bon(s) traité(s).`, false);
+            batchBons = [];
+            renderBatch();
+            await refreshLivreurList();
+          } catch (e) {
+            setScanLoading(false);
+            setScanButtonsDisabled(false);
+            setColisMsg("❌ " + e.message, true);
+          }
+        };
+      }
+
+    } catch (e) {
+      setScanLoading(false);
+      setScanButtonsDisabled(false);
+      setColisMsg("❌ " + e.message, true);
     }
+  });
+}
 
     if (btnScanLivrer) {
-      btnScanLivrer.addEventListener("click", async () => {
-        try {
-          if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
-                    if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
+  btnScanLivrer.addEventListener("click", async () => {
+    try {
+      if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
+      if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
 
-          await openScanner("Scanner colis livrer", async (txt) => {
-            try {
-              const bon = normalizeBon(txt);
-              if (!bon) { setColisMsg("❌ QR colis invalide", true); return; }
+      // Reset batch
+      batchBons = [];
+      renderBatch();
 
-              setScanLoading(true, `Livraison colis ${bon}...`);
-              setScanButtonsDisabled(true);
+      await openScannerBatch("Scanner colis livrer (multi)", "livrer", async (txt) => {
+        const bon = normalizeBon(txt);
+        if (!bon) return;
+        uniqPush(batchBons, bon);
+        renderBatch();
+      });
 
-              // GPS (optionnel) : on tente de récupérer la position au moment de la livraison
-              // Si refusé/KO => on continue sans bloquer.
-              setScanLoading(true, `Livraison colis ${bon}... (GPS)`);
-              const gps = await getGpsOnce();
+      // Quand on clique "Valider" dans le modal, on envoie chaque bon individuellement
+      if (btnBatchValidate) {
+        btnBatchValidate.onclick = async () => {
+          if (!batchBons.length) {
+            setColisMsg("ℹ️ Aucun bon scanné.", false);
+            return;
+          }
 
-              // si on n'a pas encore de tourneeId (ou si le profil n'est pas celui qui a importé la feuille),
-              // on demande la tournée active du magasin
-              if (!tourneeNavette) {
-                try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
+          setScanButtonsDisabled(true);
+          try {
+            // On récupère/assure la tournée active une seule fois pour le batch
+            if (!tourneeNavette) {
+              try { tourneeNavette = await getActiveTourneeId(); } catch(e){}
+            }
+
+            let gps = null;
+            if ("livrer" === "livrer") {
+              // GPS une seule fois au moment de valider (même position pour le batch)
+              setScanLoading(true, "Récupération GPS...");
+              gps = await getGpsOnce();
+            }
+
+            setScanLoading(true, "Envoi des bons...");
+            await closeScanner(); // masque le modal (caméra en pause)
+
+            for (let i = 0; i < batchBons.length; i++) {
+              const b = batchBons[i];
+              setScanLoading(true, `Envoi ${i+1}/${batchBons.length} : ${b}...`);
+
+              if ("livrer" === "valider") {
+                const j = await apiPost("/api/navette/valider", {
+                  tourneeId: tourneeNavette,
+                  magasin: magasinNavette,
+                  livreurId,
+                  bon: b,
+                  tournee: (tournee||"") || (tournee||""),
+                  codeTournee: codeTournee||""
+                });
+                if (j && (j.tourneeId || j.tournee)) {
+                  tourneeNavette = j.tourneeId || j.tournee;
+                  try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                  refreshColisHeader();
+                }
+              } else {
+                const j = await apiPost("/api/navette/livrer", {
+                  tourneeId: tourneeNavette,
+                  magasin: magasinNavette,
+                  livreurId,
+                  bon: b,
+                  tournee: (tournee||"") || (tournee||""),
+                  codeTournee: codeTournee||"",
+                  ...(gps||{})
+                });
+                if (j && (j.tourneeId || j.tournee)) {
+                  tourneeNavette = j.tourneeId || j.tournee;
+                  try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
+                  refreshColisHeader();
+                }
               }
+            }
+
+            setScanLoading(false);
+            setScanButtonsDisabled(false);
+            setColisMsg(`✅ Batch terminé : ${batchBons.length} bon(s) traité(s).`, false);
+            batchBons = [];
+            renderBatch();
+            await refreshLivreurList();
+          } catch (e) {
+            setScanLoading(false);
+            setScanButtonsDisabled(false);
+            setColisMsg("❌ " + e.message, true);
+          }
+        };
+      }
+
+    } catch (e) {
+      setScanLoading(false);
+      setScanButtonsDisabled(false);
+      setColisMsg("❌ " + e.message, true);
+    }
+  });
+}
 
               setScanLoading(true, `Livraison colis ${bon}...`);
               const j = await apiPost("/api/navette/livrer", { tourneeId: tourneeNavette, magasin: magasinNavette, livreurId, bon, tournee: (tournee||"") || (tournee||""), codeTournee: codeTournee||"", ...(gps||{}) });
