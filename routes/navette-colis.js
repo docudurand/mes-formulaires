@@ -25,6 +25,7 @@ function redactedBody(body) {
     magasin: pick("magasin"),
     tourneeId: pick("tourneeId"),
     bon: pick("bon"),
+    bonsCount: Array.isArray(body.bons) ? body.bons.length : undefined,
     tournee: pick("tournee"),
     codeTournee: pick("codeTournee"),
     livreurId: pick("livreurId"),
@@ -68,7 +69,7 @@ function axiosErrorDetails(err) {
   };
 }
 
-async function callGAS(action, params) {
+async function callGAS(action, params, timeoutMs = 30000) {
   const url = mustEnv("NAVETTE_GAS_URL");
   const key = mustEnv("NAVETTE_API_KEY");
 
@@ -77,7 +78,7 @@ async function callGAS(action, params) {
   try {
     const { data } = await axios.post(url, payload.toString(), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      timeout: 30000
+      timeout: timeoutMs
     });
     return data;
   } catch (err) {
@@ -166,6 +167,48 @@ router.post("/livrer", asyncRoute(async (req, res) => {
   });
   res.json(data);
 }));
+
+router.post("/bulk", asyncRoute(async (req, res) => {
+  console.log("[NAVETTE][/bulk] body=", safeJson(redactedBody(req.body)));
+
+  const {
+    mode,
+    magasin,
+    livreurId,
+    livreur,
+    tourneeId,
+    tournee,
+    codeTournee,
+    bons
+  } = req.body || {};
+
+  const list = Array.isArray(bons) ? bons : [];
+  if (!mode || !magasin) {
+    res.status(400).json({ success:false, error:"mode/magasin manquant" });
+    return;
+  }
+  if (!list.length) {
+    res.status(400).json({ success:false, error:"bons manquants" });
+    return;
+  }
+
+  const gps = normGps(req.body);
+
+  // timeout augmenté : un bulk peut prendre plus longtemps
+  const data = await callGAS("bulkScan", {
+    mode: String(mode || ""),
+    tourneeId: String(tourneeId || ""),
+    magasin: String(magasin || ""),
+    livreurId: String((livreurId || livreur || "")).trim(),
+    tournee: String(tournee || ""),
+    codeTournee: String(codeTournee || ""),
+    bons: JSON.stringify(list),
+    ...gps
+  }, 90000);
+
+  res.json(data);
+}));
+
 
 router.get("/active", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/active] query=", safeJson(req.query));

@@ -854,10 +854,12 @@ function refreshColisHeader() {
 
     refreshColisHeader();
 
-async function apiPost(url, body) {
+async function apiPost(url, body, opts) {
   const fullUrl = apiUrl(url);
+  const o = opts || {};
   const r = await fetch(fullUrl, {
     method: "POST",
+    keepalive: !!o.keepalive,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {})
   });
@@ -985,6 +987,43 @@ async function apiGet(url) {
     let multiBons = [];        // liste ordonnée
     let multiSeen = new Set(); // dédoublonnage
 
+
+    let multiSending = false;
+
+    function multiStorageKey() {
+      // Clé par magasin + livreur pour éviter les mélanges
+      return `NAVETTE_MULTI_${(magasinNavette||"").toUpperCase()}_${(livreurId||"").toString().trim()}`;
+    }
+
+    function saveMultiState() {
+      try {
+        const state = {
+          v: 1,
+          mode: multiMode,
+          bons: multiBons,
+          sending: multiSending,
+          tourneeId: tourneeNavette || "",
+          updatedAt: Date.now()
+        };
+        localStorage.setItem(multiStorageKey(), JSON.stringify(state));
+      } catch(e) {}
+    }
+
+    function loadMultiState() {
+      try {
+        const raw = localStorage.getItem(multiStorageKey());
+        if (!raw) return null;
+        const st = JSON.parse(raw);
+        if (!st || !Array.isArray(st.bons)) return null;
+        return st;
+      } catch(e) { return null; }
+    }
+
+    function clearMultiState() {
+      try { localStorage.removeItem(multiStorageKey()); } catch(e) {}
+    }
+
+
     function showMultiPanel(show) {
       if (multiPanel) multiPanel.style.display = show ? "block" : "none";
     }
@@ -1030,10 +1069,44 @@ async function apiGet(url) {
       showMultiPanel(!!multiMode);
     }
 
+    // Restore multi-scan en cas de fermeture/reload
+    (function restoreMultiState(){
+      const st = loadMultiState();
+      if (!st || !st.bons || !st.bons.length) return;
+      multiMode = st.mode || multiMode;
+      multiBons = Array.isArray(st.bons) ? st.bons : [];
+      multiSeen = new Set(multiBons);
+      multiSending = false;
+
+      if (!tourneeNavette && st.tourneeId) tourneeNavette = st.tourneeId;
+
+      if (multiMode) {
+        if (multiPanelTitle) multiPanelTitle.textContent = (multiMode === "charger")
+          ? "Colis à CHARGER (multi-scan)"
+          : "Colis à LIVRER (multi-scan)";
+      }
+      renderMulti();
+      showMultiPanel(true);
+      setColisMsg(`ℹ️ ${multiBons.length} colis en attente (restaurés).`, false);
+    })();
+
+    // Empêche la fermeture accidentelle pendant un envoi / si des colis restent en file
+    window.addEventListener("beforeunload", (e) => {
+      if (multiSending || (multiBons && multiBons.length)) {
+        saveMultiState();
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
+
+
+
     function clearMulti() {
       multiBons = [];
       multiSeen = new Set();
+      multiSending = false;
       renderMulti();
+      clearMultiState();
     }
 
     function addBonToMulti(txt) {
@@ -1048,6 +1121,7 @@ async function apiGet(url) {
       multiSeen.add(bon);
       multiBons.push(bon);
       renderMulti();
+      saveMultiState();
       setColisMsg(`➕ Ajouté : ${bon}`, false);
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
@@ -1082,68 +1156,65 @@ async function apiGet(url) {
       }
 
       const total = multiBons.length;
-      let ok = 0;
-      const fails = [];
 
-      for (let i = 0; i < total; i++) {
-        const bon = multiBons[i];
-        try {
-          setScanLoading(true, `Envoi ${i+1}/${total} • ${bon}…`);
+      // On persiste AVANT l'envoi (si l'utilisateur ferme l'onglet, on pourra reprendre)
+      multiSending = true;
+      saveMultiState();
 
-          if (multiMode === "charger") {
-            const j = await apiPost("/api/navette/valider", {
-              tourneeId: currentTourneeId, // peut être vide => création auto
-              magasin: magasinNavette,
-              livreurId,
-              bon,
-              tournee: (tournee||"") || (tournee||""),
-              codeTournee: codeTournee||""
-            });
-            if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
-          } else {
-            const j = await apiPost("/api/navette/livrer", {
-              tourneeId: currentTourneeId, // peut être vide => création auto
-              magasin: magasinNavette,
-              livreurId,
-              bon,
-              tournee: (tournee||"") || (tournee||""),
-              codeTournee: codeTournee||"",
-              ...(gps || {})
-            });
-            if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
-          }
+      try {
+        setScanLoading(true, `Envoi ${total} colis…`);
 
-          // si l'API a créé/retourné une tournée, on la mémorise pour les envois suivants
-          if (currentTourneeId && currentTourneeId !== tourneeNavette) {
-            tourneeNavette = currentTourneeId;
-            try { localStorage.setItem("NAVETTE_TOURNEE_" + magasinNavette, tourneeNavette); } catch(e){}
-            refreshColisHeader();
-          }
+        const j = await apiPost("/api/navette/bulk", {
+          mode: multiMode,
+          tourneeId: currentTourneeId, // peut être vide => création auto
+          magasin: magasinNavette,
+          livreurId,
+          bons: multiBons,
+          tournee: (tournee||""),
+          codeTournee: (codeTournee||""),
+          ...(gps || {})
+        }, { keepalive: true });
 
-          ok++;
-        } catch (e) {
-          fails.push({ bon, err: e && e.message ? e.message : "Erreur" });
+        if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
+
+        // Sauvegarde la tournée utilisée pour les prochains scans
+        if (currentTourneeId) tourneeNavette = currentTourneeId;
+
+        const results = Array.isArray(j?.results) ? j.results : [];
+        const fails = results.filter(r => !r || r.success === false);
+        const ok = results.length - fails.length;
+
+        multiSending = false;
+
+        if (fails.length === 0) {
+          setColisMsg(`✅ ${ok}/${total} envoyés (${multiMode})`, false);
+          multiMode = null;
+          clearMulti(); // clearMultiState() inclus
+          showMultiPanel(false);
+          setScanLoading(false);
+          setScanButtonsDisabled(false);
+          return;
         }
-      }
 
-      setScanLoading(false);
-      setScanButtonsDisabled(false);
-
-      try { await refreshLivreurList(); } catch(e){}
-
-      if (fails.length === 0) {
-        setColisMsg(`✅ ${ok}/${total} envoyés (${multiMode})`, false);
-        multiMode = null;
-        clearMulti();
-        showMultiPanel(false);
-      } else {
-        multiBons = fails.map(f => f.bon);
+        // garde uniquement les échecs pour reprise
+        multiBons = fails.map(f => f.bon).filter(Boolean);
         multiSeen = new Set(multiBons);
         renderMulti();
+        saveMultiState();
+
         const first = fails.slice(0, 3).map(f => `${f.bon}`).join(", ");
         setColisMsg(`⚠️ ${ok}/${total} OK • ${fails.length} en échec (ex: ${first}). Corrige et re-valide.
-Dernière erreur : ${fails[fails.length-1]?.err || "Erreur inconnue"}`, true);
-        console.warn("[NAVETTE] Échecs validation:", fails);
+Dernière erreur : ${fails[fails.length-1]?.error || fails[fails.length-1]?.err || "Erreur inconnue"}`, true);
+
+        console.warn("[NAVETTE] Échecs bulk:", fails);
+      } catch (e) {
+        multiSending = false;
+        saveMultiState();
+        setColisMsg(`❌ Envoi interrompu. La liste est conservée, tu peux re-valider.
+Erreur : ${e?.message || e}`, true);
+      } finally {
+        setScanLoading(false);
+        setScanButtonsDisabled(false);
       }
     }
 
@@ -1152,6 +1223,7 @@ function startMultiScan(mode) {
       clearMulti();
       if (multiPanelTitle) multiPanelTitle.textContent = (mode === "charger") ? "Colis à CHARGER (multi-scan)" : "Colis à LIVRER (multi-scan)";
       renderMulti();
+      saveMultiState();
     }
 
     let html5Qr = null;
