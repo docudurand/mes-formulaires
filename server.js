@@ -311,6 +311,17 @@ function makeJobId() {
   return `job_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function extractGps(body) {
+  const b = body || {};
+  const g = (b.gps && typeof b.gps === "object") ? b.gps : {};
+  // Supporte plusieurs formats possibles (gpsLat/gpsLng ou lat/lng etc.)
+  const lat = (b.gpsLat ?? g.gpsLat ?? b.lat ?? g.lat ?? b.latitude ?? g.latitude ?? "");
+  const lng = (b.gpsLng ?? g.gpsLng ?? b.lng ?? g.lng ?? b.longitude ?? g.longitude ?? "");
+  const acc = (b.gpsAcc ?? g.gpsAcc ?? b.acc ?? g.acc ?? b.accuracy ?? g.accuracy ?? "");
+  const ts  = (b.gpsTs  ?? g.gpsTs  ?? b.ts  ?? g.ts  ?? b.timestamp ?? g.timestamp ?? "");
+  return { lat, lng, acc, ts };
+}
+
 function parseBonsList(bons) {
   if (Array.isArray(bons)) return bons.map(x => String(x).trim()).filter(Boolean);
   return String(bons || "")
@@ -353,10 +364,11 @@ app.post("/api/navette/bulk", async (req, res) => {
       job.startedAt = new Date().toISOString();
 
       try {
-        const gpsLat = b.gpsLat ?? b.lat ?? b.latitude;
-        const gpsLng = b.gpsLng ?? b.lng ?? b.longitude;
-        const gpsAcc = b.gpsAcc ?? b.acc;
-        const gpsTs  = b.gpsTs  ?? b.ts;
+        const gps = extractGps(b);
+        const gpsLat = gps.lat;
+        const gpsLng = gps.lng;
+        const gpsAcc = gps.acc;
+        const gpsTs  = gps.ts;
 
         const params = {
           mode,
