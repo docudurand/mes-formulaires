@@ -270,7 +270,11 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   function renderTournees() {
     tourneesActivesEl.innerHTML = "";
-    const actives = state.tournees.filter(t => String(t.statut||"").toUpperCase() !== "CLASSEE");
+    const actives = state.tournees.filter(t => {
+      const st = String(t.statut||"").trim().toUpperCase();
+      // "En cours" = uniquement les tournées non classées
+      return st !== "CLASSEE";
+    });
 
     if (!actives.length) {
       tourneesActivesEl.appendChild(mkMiniItem("Aucune tournée en cours", ""));
@@ -299,7 +303,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     }
 
     tourneesClasseesEl.innerHTML = "";
-    const classes = state.tournees.filter(t => String(t.statut||"").toUpperCase() === "CLASSEE");
+    const classes = state.tournees.filter(t => String(t.statut||"").trim().toUpperCase() === "CLASSEE");
     if (!classes.length) {
       tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
     } else {
@@ -342,7 +346,11 @@ const API_BASE = "https://mes-formulaires.onrender.com";
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
             const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-            list.appendChild(mkMiniItem(c.bon, right, ""));
+            const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+            const actionsHtml = `
+              <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
+            `;
+            list.appendChild(mkMiniItem(c.bon, right, actionsHtml));
           });
           body.appendChild(list);
         }
@@ -442,6 +450,17 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       if (!el) return;
       el.onclick = handleActionClick;
     });
+
+    // ✅ Suivi GPS aussi dans l’onglet "Classés"
+    tourneesClasseesEl.onclick = (ev) => {
+      const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act='suivi']") : null;
+      if (!btn) return;
+      const bon = btn.getAttribute("data-bon");
+      const tid = btn.getAttribute("data-tourneeid");
+      const found = state.colis.find(x => String(x.bon) === String(bon) && String(x.tourneeId) === String(tid));
+      if (!found) { alert("Colis introuvable."); return; }
+      openMapsFromColis(found);
+    };
   }
 
   function setNeutral() {
