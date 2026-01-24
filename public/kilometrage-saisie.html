@@ -854,12 +854,15 @@ function refreshColisHeader() {
 
     refreshColisHeader();
 
-async function apiPost(url, body) {
+async function apiPost(url, body, opts) {
   const fullUrl = apiUrl(url);
+  const options = opts && typeof opts === "object" ? opts : {};
   const r = await fetch(fullUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {})
+    body: JSON.stringify(body || {}),
+    // important: permet au navigateur de terminer la requête même si l'onglet se ferme (support variable selon navigateur)
+    keepalive: !!options.keepalive
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.success === false) {
@@ -1052,7 +1055,8 @@ async function apiGet(url) {
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
 
-        async function validateMulti() {
+        
+    async function validateMulti() {
       if (!multiMode) { setColisMsg("ℹ️ Lance d’abord un scan multi.", false); return; }
       if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
       if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
@@ -1061,78 +1065,84 @@ async function apiGet(url) {
       setScanButtonsDisabled(true);
       setScanLoading(true, "Préparation…");
 
-      // stop caméra si elle tourne
+      // stop caméra si elle tourne (évite les doublons pendant l'envoi)
       try { if (html5Qr) await html5Qr.stop(); } catch(e) {}
       if (scanModal) scanModal.style.display = "none";
 
+      // tournéeId courante :
       let currentTourneeId = tourneeNavette || "";
       if (!currentTourneeId) {
         try { currentTourneeId = await getActiveTourneeId(); } catch(e){}
       }
 
-      // GPS une seule fois (utile surtout pour "livrer")
+      // === GPS (une fois) ===
+      // On privilégie un GPS déjà connu (cache), pour éviter d'attendre.
+      // Si pas dispo, on tente rapidement (timeout court) mais on n'empêche pas l'envoi.
       let gps = null;
       if (multiMode === "livrer") {
-        setScanLoading(true, "GPS…");
-        gps = await getGpsOnce();
+        try {
+          const st = JSON.parse(localStorage.getItem("NAVETTE_LAST_GPS") || "null");
+          if (st && st.gpsLat && st.gpsLng && st.gpsTs && (Date.now() - Number(st.gpsTs)) < 5*60*1000) {
+            gps = st;
+          }
+        } catch(e){}
+        if (!gps) {
+          setScanLoading(true, "GPS…");
+          gps = await getGpsOnce({ timeout: 1500, maximumAge: 600000 });
+          if (gps && gps.gpsLat && gps.gpsLng) {
+            try { localStorage.setItem("NAVETTE_LAST_GPS", JSON.stringify(gps)); } catch(e){}
+          }
+        }
       }
 
-      // Map: "charger" => valider
-      const bulkMode = (multiMode === "livrer") ? "livrer" : "valider";
-
       const payload = {
-        mode: bulkMode,
+        mode: multiMode,                // "charger" | "livrer"
+        tourneeId: currentTourneeId,    // peut être vide => création auto
         magasin: magasinNavette,
-        tourneeId: currentTourneeId,
+        livreurId,
         tournee: (tournee || ""),
         codeTournee: (codeTournee || ""),
-        livreurId,
-        bons: [...multiBons],
-        ...(gps ? { gps } : {})
+        bons: multiBons.slice()
       };
 
-      // Envoi "fire-and-forget" : sendBeacon (idéal quand on ferme la page), sinon fetch keepalive
-      const url = (location.origin || "") + "/api/navette/bulk";
+      if (gps && gps.gpsLat && gps.gpsLng) {
+        payload.gpsLat = gps.gpsLat;
+        payload.gpsLng = gps.gpsLng;
+        if (gps.gpsAcc != null) payload.gpsAcc = gps.gpsAcc;
+        if (gps.gpsTs != null)  payload.gpsTs  = gps.gpsTs;
+      }
 
-      let beaconOk = false;
+      // === Envoi "fire-and-forget" ===
+      // 1) sendBeacon (le plus fiable si l'utilisateur ferme l'onglet)
+      // 2) fallback fetch keepalive si beacon indisponible/échoue
+      setScanLoading(true, "Envoi…");
+      let queuedOk = false;
+
       try {
         if (navigator.sendBeacon) {
           const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-          beaconOk = navigator.sendBeacon(url, blob);
-        }
-      } catch(e){ beaconOk = false; }
-
-      let ack = null;
-      try {
-        if (!beaconOk) {
-          // fetch keepalive (Chrome/Edge ok)
-          ack = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            keepalive: true
-          }).then(r => r.json().catch(()=>null));
+          queuedOk = navigator.sendBeacon("/api/navette/bulk", blob);
         }
       } catch(e) {}
 
-      // On vide la liste tout de suite : le traitement continue côté serveur
+      if (!queuedOk) {
+        // fallback : on attend la réponse 202
+        const j = await apiPost("/api/navette/bulk", payload, { keepalive: true });
+        if (!j || j.success !== true) throw new Error((j && (j.error || j.message)) || "bulk failed");
+      }
+
+      // UI : on considère la liste envoyée (traitement côté serveur)
       const sentCount = multiBons.length;
       multiBons = [];
-      multiSeen.clear();
+      multiSeen = new Set();
       renderMulti();
-
-      setScanLoading(false, "");
+      setScanLoading(false);
       setScanButtonsDisabled(false);
 
-      const jobTxt = ack && ack.jobId ? ` (Job: ${ack.jobId})` : "";
-      setColisMsg(`✅ Envoyé en 1 fois : ${sentCount} colis. Tu peux fermer la page.${jobTxt}`, false);
-
-      // Rafraîchit la tournée/livreur si possible
-      try {
-        if (ack && ack.tourneeId) tourneeNavette = ack.tourneeId;
-      } catch(e){}
-      try { await refreshLivreurColis(); } catch(e){}
+      setColisMsg(`✅ Envoi lancé (${sentCount} colis). Tu peux quitter la page.`, false);
+      try { navigator.vibrate && navigator.vibrate([40, 30, 40]); } catch(e){}
     }
+
 
 function startMultiScan(mode) {
       multiMode = mode;
