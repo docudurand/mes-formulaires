@@ -304,6 +304,111 @@ app.post("/api/navette/livrer", async (req, res) => {
   }
 });
 
+// === BULK (1 seul envoi -> traitement serveur même si le livreur ferme l’onglet) ===
+const bulkJobs = new Map(); // jobId -> { status, createdAt, startedAt, finishedAt, ok, count, error, result }
+
+function makeJobId() {
+  return `job_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function parseBonsList(bons) {
+  if (Array.isArray(bons)) return bons.map(x => String(x).trim()).filter(Boolean);
+  return String(bons || "")
+    .split(/[\n,;\s\t\r]+/g)
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+
+// POST /api/navette/bulk
+// body: { mode:"charger"|"livrer", magasin, livreurId, tourneeId, tournee?, codeTournee?, bons:[...]|"...", gpsLat?,gpsLng?,gpsAcc?,gpsTs? }
+app.post("/api/navette/bulk", async (req, res) => {
+  try {
+    const b = req.body || {};
+
+    const mode = String(b.mode || "").trim().toLowerCase() === "livrer" ? "livrer" : "charger";
+    const magasin = String(b.magasin || "").trim().toUpperCase();
+    const livreurId = String(b.livreurId || b.livreur || "").trim();
+    const tourneeId = String(b.tourneeId || "").trim();
+    const tournee = String(b.tournee || "").trim();
+    const codeTournee = String(b.codeTournee || "").trim();
+
+    const list = parseBonsList(b.bons);
+
+    if (!magasin || !livreurId || !list.length) {
+      return res.status(400).json({ success:false, error:"bad_request", details:"magasin/livreurId/bons requis" });
+    }
+
+    const jobId = makeJobId();
+    bulkJobs.set(jobId, { status:"queued", createdAt: new Date().toISOString(), count: list.length });
+
+    // Réponse immédiate => le livreur peut fermer la page
+    res.status(202).json({ success:true, queued:true, jobId, count: list.length });
+
+    // Traitement en arrière-plan
+    setImmediate(async () => {
+      const job = bulkJobs.get(jobId);
+      if (!job) return;
+
+      job.status = "running";
+      job.startedAt = new Date().toISOString();
+
+      try {
+        const gpsLat = b.gpsLat ?? b.lat ?? b.latitude;
+        const gpsLng = b.gpsLng ?? b.lng ?? b.longitude;
+        const gpsAcc = b.gpsAcc ?? b.acc;
+        const gpsTs  = b.gpsTs  ?? b.ts;
+
+        const params = {
+          mode,
+          magasin,
+          livreurId,
+          tourneeId,
+          tournee,
+          codeTournee,
+          // GAS attend une string compacte
+          bons: list.join(","),
+        };
+
+        // GPS optionnel
+        const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
+        const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
+        if (hasLat && hasLng) {
+          params.gpsLat = String(gpsLat);
+          params.gpsLng = String(gpsLng);
+          if (gpsAcc !== undefined && gpsAcc !== null && String(gpsAcc).trim() !== "") params.gpsAcc = String(gpsAcc);
+          if (gpsTs  !== undefined && gpsTs  !== null && String(gpsTs).trim()  !== "") params.gpsTs  = String(gpsTs);
+        }
+
+        // Apps Script action = bulkScan
+        const data = await callNavetteGAS("bulkScan", params);
+
+        job.status = "done";
+        job.finishedAt = new Date().toISOString();
+        job.ok = true;
+        job.result = data;
+      } catch (e) {
+        job.status = "done";
+        job.finishedAt = new Date().toISOString();
+        job.ok = false;
+        job.error = String(e?.message || e);
+      }
+    });
+
+  } catch (e) {
+    return res.status(500).json({ success:false, error:String(e?.message || e) });
+  }
+});
+
+// (optionnel) GET /api/navette/bulk/status?jobId=...
+app.get("/api/navette/bulk/status", (req, res) => {
+  const jobId = String(req.query.jobId || "").trim();
+  if (!jobId) return res.status(400).json({ success:false, error:"missing_jobId" });
+  const st = bulkJobs.get(jobId);
+  if (!st) return res.status(404).json({ success:false, error:"unknown_jobId" });
+  return res.json({ success:true, jobId, ...st });
+});
+
+
 app.get("/api/navette/dashboard", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");

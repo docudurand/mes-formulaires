@@ -68,18 +68,16 @@ function axiosErrorDetails(err) {
   };
 }
 
-async function callGAS(action, params, opts = {}) {
+async function callGAS(action, params) {
   const url = mustEnv("NAVETTE_GAS_URL");
   const key = mustEnv("NAVETTE_API_KEY");
 
   const payload = new URLSearchParams({ action, key, ...params });
 
-  const timeout = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 30000;
-
   try {
     const { data } = await axios.post(url, payload.toString(), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      timeout
+      timeout: 30000
     });
     return data;
   } catch (err) {
@@ -95,7 +93,6 @@ async function callGAS(action, params, opts = {}) {
     throw e;
   }
 }
-
 
 function normGps(reqBody) {
   const b = reqBody || {};
@@ -121,119 +118,29 @@ function asyncRoute(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
+
 // ============ BULK JOBS (fire-and-forget) ============
-// Permet au livreur de fermer la page immédiatement après "Valider la liste".
-// Le serveur continue le traitement en arrière-plan.
-const BULK_JOBS = new Map();
-
-function genJobId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const BULK_JOBS = new Map(); // jobId -> {status, createdAt, doneAt, result, error}
+function createJobId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
-
-function pickArray(v) {
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return v.split(/[\n,;\s\t\r]+/g).filter(Boolean);
-  return [];
+function setJob(jobId, patch) {
+  const prev = BULK_JOBS.get(jobId) || {};
+  BULK_JOBS.set(jobId, { ...prev, ...patch });
 }
-
-async function processBulkJob(jobId, body) {
-  const job = BULK_JOBS.get(jobId);
-  if (!job) return;
-
-  job.status = "running";
-  job.startedAt = nowIso();
-
-  try {
-    const mode = String(body.mode || "").trim().toLowerCase() === "livrer" ? "livrer" : "charger";
-    const magasin = String(body.magasin || "").trim().toUpperCase();
-    const livreurId = String(body.livreurId || body.livreur || "").trim();
-    const tourneeId = String(body.tourneeId || "").trim();
-    const tournee = String(body.tournee || "").trim();
-    const codeTournee = String(body.codeTournee || "").trim();
-
-    const gps = normGps(body);
-    const bonsArr = pickArray(body.bons);
-    // On envoie une liste JSON (compatible bulkScan_ côté Apps Script)
-    const bonsJson = JSON.stringify(bonsArr);
-
-    const data = await callGAS("bulkScan", {
-      mode,
-      magasin,
-      livreurId,
-      tourneeId,
-      tournee,
-      codeTournee,
-      bons: bonsJson,
-      ...gps
-    }, { timeoutMs: 120000 }); // bulk peut être plus long
-
-    job.status = "done";
-    job.finishedAt = nowIso();
-    job.result = data;
-  } catch (err) {
-    job.status = "error";
-    job.finishedAt = nowIso();
-    job.error = String(err?.message || err);
-    job.details = err?.details;
+function getJob(jobId) {
+  return BULK_JOBS.get(jobId) || null;
+}
+// Nettoyage simple (garde 24h)
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, j] of BULK_JOBS.entries()) {
+    const t = j?.createdAt || now;
+    if (now - t > 24*3600*1000) BULK_JOBS.delete(id);
   }
-}
+}, 30*60*1000).unref?.();
 
 // ============ ROUTES ============
-
-// ----------- Bulk (liste) -----------
-// POST /api/navette/bulk { mode:"charger"|"livrer", magasin, livreurId, tourneeId?, bons:[...] , tournee?, codeTournee?, gps... }
-// Réponse 202 immédiate: {success:true, queued:true, jobId, count, tourneeId?}
-router.post("/bulk", asyncRoute(async (req, res) => {
-  console.log("[NAVETTE][/bulk] body=", safeJson(redactedBody(req.body)));
-
-  const b = req.body || {};
-  const mode = String(b.mode || "").trim().toLowerCase() === "livrer" ? "livrer" : "charger";
-  const magasin = String(b.magasin || "").trim().toUpperCase();
-  const livreurId = String(b.livreurId || b.livreur || "").trim();
-  const bonsArr = pickArray(b.bons);
-
-  if (!magasin) return res.status(400).json({ success:false, error:"magasin manquant" });
-  if (!livreurId) return res.status(400).json({ success:false, error:"livreurId manquant" });
-  if (!bonsArr.length) return res.status(400).json({ success:false, error:"bons manquants" });
-
-  const jobId = genJobId();
-  const job = {
-    jobId,
-    status: "queued",
-    createdAt: nowIso(),
-    mode,
-    magasin,
-    livreurId,
-    count: bonsArr.length
-  };
-  BULK_JOBS.set(jobId, job);
-
-  // Démarrage async (NE PAS await)
-  processBulkJob(jobId, b).catch((e) => {
-    console.error("[NAVETTE][/bulk] job failed", safeJson({ jobId, err: String(e?.message || e) }));
-  });
-
-  // Réponse immédiate -> le navigateur peut fermer la page sans annuler le job
-  res.status(202).json({
-    success: true,
-    queued: true,
-    jobId,
-    count: bonsArr.length,
-    tourneeId: String(b.tourneeId || "")
-  });
-}));
-
-// GET /api/navette/bulk/status?jobId=...
-router.get("/bulk/status", asyncRoute(async (req, res) => {
-  const jobId = String(req.query.jobId || "").trim();
-  if (!jobId) return res.status(400).json({ success:false, error:"jobId manquant" });
-  const job = BULK_JOBS.get(jobId);
-  if (!job) return res.status(404).json({ success:false, error:"jobId inconnu" });
-  res.json({ success:true, job });
-}));
-
-// Petit endpoint de test
-router.get("/ping", (req, res) => res.json({ ok:true, at: nowIso() }));
 
 router.post("/import", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/import] body=", safeJson(redactedBody(req.body)));
@@ -281,6 +188,63 @@ router.post("/livrer", asyncRoute(async (req, res) => {
   });
   res.json(data);
 }));
+
+
+// Fire-and-forget bulk: envoie une liste de bons en 1 requête.
+// Body: { mode: "valider"|"livrer", magasin, tourneeId, tournee, codeTournee, livreurId, livreur, bons:[], gpsLat,gpsLng,gpsAcc,gpsTs, gps:{...} }
+router.post("/bulk", asyncRoute(async (req, res) => {
+  console.log("[NAVETTE][/bulk] body=", safeJson(redactedBody(req.body)));
+
+  const { mode, magasin, tourneeId, tournee, codeTournee, livreurId, livreur, bons } = req.body || {};
+  const gps = normGps(req.body);
+
+  const list = Array.isArray(bons)
+    ? bons.map(String).map(s => s.trim()).filter(Boolean)
+    : String(bons || "").split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+
+  if (!list.length) {
+    return res.status(400).json({ success:false, error:"Aucun bon fourni" });
+  }
+
+  const jobId = createJobId();
+  setJob(jobId, { status:"queued", createdAt: Date.now(), mode: String(mode||"") });
+
+  // Réponse immédiate (le traitement continue côté serveur)
+  res.status(202).json({ success:true, queued:true, jobId, count:list.length });
+
+  // Lancement async
+  setImmediate(async () => {
+    try {
+      setJob(jobId, { status:"running" });
+      const data = await callGAS("bulkScan", {
+        mode: String(mode || "valider"),
+        tourneeId: String(tourneeId || ""),
+        magasin: String(magasin || ""),
+        livreurId: String((livreurId || livreur || "")).trim(),
+        tournee: String(tournee || ""),
+        codeTournee: String(codeTournee || ""),
+        bons: JSON.stringify(list),
+        ...gps
+      });
+      setJob(jobId, { status:"done", doneAt: Date.now(), result: data });
+    } catch (err) {
+      console.error("[NAVETTE][/bulk][JOB ERROR]", safeJson(axiosErrorDetails(err)));
+      setJob(jobId, { status:"error", doneAt: Date.now(), error: String(err?.message || err) });
+    }
+  });
+}));
+
+// Statut d'un job bulk
+router.get("/bulk/status", asyncRoute(async (req, res) => {
+  const jobId = String(req.query.jobId || "").trim();
+  if (!jobId) return res.status(400).json({ success:false, error:"jobId manquant" });
+  const job = getJob(jobId);
+  if (!job) return res.status(404).json({ success:false, error:"jobId inconnu" });
+  res.json({ success:true, job });
+}));
+
+// Ping (pour vérifier que Render a bien déployé la bonne version)
+router.get("/ping", (req, res) => res.json({ success:true, ts: nowIso() }));
 
 router.get("/active", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/active] query=", safeJson(req.query));

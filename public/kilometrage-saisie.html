@@ -844,45 +844,6 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
     }
 
 
-
-    // --- Cache LIEUX côté navigateur (anti-quota / anti-appels Maps) ---
-    const LIEUX_CACHE_KEY = "NAVETTE_LIEUX_CACHE_v1";
-    function loadLieuxCache() {
-      try { return JSON.parse(localStorage.getItem(LIEUX_CACHE_KEY) || "{}") || {}; }
-      catch(e){ return {}; }
-    }
-    function saveLieuxCache(cache) {
-      try { localStorage.setItem(LIEUX_CACHE_KEY, JSON.stringify(cache || {})); } catch(e){}
-    }
-    function lieuxKey(lat, lng) {
-      const latN = Number(lat), lngN = Number(lng);
-      if (!isFinite(latN) || !isFinite(lngN)) return "";
-      const latK = Math.round(latN * 10000) / 10000;
-      const lngK = Math.round(lngN * 10000) / 10000;
-      return latK.toFixed(4) + "," + lngK.toFixed(4);
-    }
-    function getCachedLieuByKey(key) {
-      if (!key) return "";
-      const c = loadLieuxCache();
-      const v = c[key];
-      return v && v.lieu ? String(v.lieu) : "";
-    }
-    function setCachedLieu(key, lieu) {
-      key = String(key||"");
-      lieu = String(lieu||"").trim();
-      if (!key || !lieu) return;
-      const c = loadLieuxCache();
-      c[key] = { lieu, ts: Date.now() };
-      // petit nettoyage: limite à ~500 entrées
-      const keys = Object.keys(c);
-      if (keys.length > 500) {
-        keys.sort((a,b) => (c[a].ts||0) - (c[b].ts||0));
-        for (let i=0; i<keys.length-500; i++) delete c[keys[i]];
-      }
-      saveLieuxCache(c);
-    }
-
-
 function refreshColisHeader() {
   // Affiche le libellé de tournée (même valeur que celle affichée en haut de la page)
   // pour que l'utilisateur voie toujours la même info, quel que soit le tourneeId technique.
@@ -893,63 +854,20 @@ function refreshColisHeader() {
 
     refreshColisHeader();
 
-async function apiPost(url, body, opts) {
+async function apiPost(url, body) {
   const fullUrl = apiUrl(url);
-  const o = opts || {};
   const r = await fetch(fullUrl, {
     method: "POST",
-    keepalive: !!o.keepalive,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {})
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.success === false) {
     console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
-    const err = new Error(j.error || j.message || "Erreur API");
-    err.status = r.status;
-    err.statusText = r.statusText;
-    err.url = fullUrl;
-    err.body = j;
-    throw err;
+    throw new Error(j.error || j.message || "Erreur API");
   }
   return j;
 }
-
-
-// Envoi "fire-and-forget" (ne bloque pas l'UI, et continue même si l'onglet est fermé)
-// - d'abord sendBeacon (le plus fiable sur fermeture)
-// - sinon fetch keepalive en arrière-plan
-function apiPostFireForget(url, body) {
-  const fullUrl = apiUrl(url);
-  try {
-    if (navigator && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
-      const ok = navigator.sendBeacon(fullUrl, blob);
-      if (ok) return { ok: true, method: "beacon" };
-    }
-  } catch (e) {}
-
-  try {
-    fetch(fullUrl, {
-      method: "POST",
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    }).catch(() => {});
-    return { ok: true, method: "fetch" };
-  } catch (e) {
-    return { ok: false, error: String(e && e.message ? e.message : e) };
-  }
-}
-
-// Sauvegarde de sécurité : dernière liste envoyée (permet de diagnostiquer / renvoyer si besoin)
-function lastSentKey() { return multiStorageKey() + "::LAST_SENT"; }
-function saveLastSentBatch(payload) {
-  try {
-    localStorage.setItem(lastSentKey(), JSON.stringify({ payload, sentAt: Date.now() }));
-  } catch (e) {}
-}
-
 
 async function apiGet(url) {
   const fullUrl = apiUrl(url);
@@ -1067,43 +985,6 @@ async function apiGet(url) {
     let multiBons = [];        // liste ordonnée
     let multiSeen = new Set(); // dédoublonnage
 
-
-    let multiSending = false;
-
-    function multiStorageKey() {
-      // Clé par magasin + livreur pour éviter les mélanges
-      return `NAVETTE_MULTI_${(magasinNavette||"").toUpperCase()}_${(livreurId||"").toString().trim()}`;
-    }
-
-    function saveMultiState() {
-      try {
-        const state = {
-          v: 1,
-          mode: multiMode,
-          bons: multiBons,
-          sending: multiSending,
-          tourneeId: tourneeNavette || "",
-          updatedAt: Date.now()
-        };
-        localStorage.setItem(multiStorageKey(), JSON.stringify(state));
-      } catch(e) {}
-    }
-
-    function loadMultiState() {
-      try {
-        const raw = localStorage.getItem(multiStorageKey());
-        if (!raw) return null;
-        const st = JSON.parse(raw);
-        if (!st || !Array.isArray(st.bons)) return null;
-        return st;
-      } catch(e) { return null; }
-    }
-
-    function clearMultiState() {
-      try { localStorage.removeItem(multiStorageKey()); } catch(e) {}
-    }
-
-
     function showMultiPanel(show) {
       if (multiPanel) multiPanel.style.display = show ? "block" : "none";
     }
@@ -1149,44 +1030,10 @@ async function apiGet(url) {
       showMultiPanel(!!multiMode);
     }
 
-    // Restore multi-scan en cas de fermeture/reload
-    (function restoreMultiState(){
-      const st = loadMultiState();
-      if (!st || !st.bons || !st.bons.length) return;
-      multiMode = st.mode || multiMode;
-      multiBons = Array.isArray(st.bons) ? st.bons : [];
-      multiSeen = new Set(multiBons);
-      multiSending = false;
-
-      if (!tourneeNavette && st.tourneeId) tourneeNavette = st.tourneeId;
-
-      if (multiMode) {
-        if (multiPanelTitle) multiPanelTitle.textContent = (multiMode === "charger")
-          ? "Colis à CHARGER (multi-scan)"
-          : "Colis à LIVRER (multi-scan)";
-      }
-      renderMulti();
-      showMultiPanel(true);
-      setColisMsg(`ℹ️ ${multiBons.length} colis en attente (restaurés).`, false);
-    })();
-
-    // Empêche la fermeture accidentelle pendant un envoi / si des colis restent en file
-    window.addEventListener("beforeunload", (e) => {
-      if (multiSending || (multiBons && multiBons.length)) {
-        saveMultiState();
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    });
-
-
-
     function clearMulti() {
       multiBons = [];
       multiSeen = new Set();
-      multiSending = false;
       renderMulti();
-      clearMultiState();
     }
 
     function addBonToMulti(txt) {
@@ -1201,59 +1048,11 @@ async function apiGet(url) {
       multiSeen.add(bon);
       multiBons.push(bon);
       renderMulti();
-      saveMultiState();
       setColisMsg(`➕ Ajouté : ${bon}`, false);
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
 
-        
-async function sendMultiLegacy(bonsList, mode, currentTourneeId, gps) {
-  const total = bonsList.length;
-  let ok = 0;
-  const fails = [];
-
-  for (let i = 0; i < bonsList.length; i++) {
-    const bon = bonsList[i];
-    try {
-      setScanLoading(true, `Envoi ${ok+1}/${total} colis…`);
-      const endpoint = (mode === "livrer") ? "/api/navette/livrer" : "/api/navette/valider";
-
-      const j = await apiPost(endpoint, {
-        tourneeId: currentTourneeId,
-        magasin: magasinNavette,
-        livreurId,
-        bon,
-        tournee: (tournee||""),
-        codeTournee: (codeTournee||""),
-        ...(gps || {})
-      });
-
-            // Cache LIEUX (si le GAS renvoie gpsLieu/gpsKey)
-      try {
-        const k = (j && j.gpsKey) ? String(j.gpsKey) : (gps && gps.gpsLat && gps.gpsLng ? lieuxKey(gps.gpsLat, gps.gpsLng) : "");
-        const lieu = j && j.gpsLieu ? String(j.gpsLieu) : "";
-        if (k && lieu) setCachedLieu(k, lieu);
-      } catch(e) {}
-
-if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
-      ok++;
-
-      // Progress UI + persistance: on retire le colis validé
-      if (multiBons[0] === bon) multiBons.shift();
-      else multiBons = multiBons.filter(x => x !== bon);
-
-      multiSeen = new Set(multiBons);
-      renderMulti();
-      saveMultiState();
-    } catch (e) {
-      fails.push({ bon, err: e?.message || String(e), status: e?.status });
-    }
-  }
-
-  return { ok, total, fails, currentTourneeId };
-}
-
-async function validateMulti() {
+        async function validateMulti() {
       if (!multiMode) { setColisMsg("ℹ️ Lance d’abord un scan multi.", false); return; }
       if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
       if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
@@ -1262,76 +1061,77 @@ async function validateMulti() {
       setScanButtonsDisabled(true);
       setScanLoading(true, "Préparation…");
 
-      // stop caméra si elle tourne (évite les doublons pendant l'envoi)
+      // stop caméra si elle tourne
       try { if (html5Qr) await html5Qr.stop(); } catch(e) {}
       if (scanModal) scanModal.style.display = "none";
 
-      // tournéeId courante :
-      // - si on en a une en mémoire => on l'utilise
-      // - sinon on tente de récupérer une tournée active du magasin
-      // - si toujours vide => OK : l'API créera une tournée au 1er envoi (comme avant)
       let currentTourneeId = tourneeNavette || "";
       if (!currentTourneeId) {
         try { currentTourneeId = await getActiveTourneeId(); } catch(e){}
       }
 
-      // GPS une seule fois pour toutes les livraisons (si refusé => null)
+      // GPS une seule fois (utile surtout pour "livrer")
       let gps = null;
       if (multiMode === "livrer") {
         setScanLoading(true, "GPS…");
-        gps = await getGpsOnce({ maximumAge: 300000, timeout: 15000 });
-        if (gps && gps.gpsLat && gps.gpsLng) {
-          const k = lieuxKey(gps.gpsLat, gps.gpsLng);
-          const cached = getCachedLieuByKey(k);
-          if (cached) gps.gpsLieu = cached;
-        }
+        gps = await getGpsOnce();
       }
 
-      const total = multiBons.length;
+      // Map: "charger" => valider
+      const bulkMode = (multiMode === "livrer") ? "livrer" : "valider";
 
-      // On persiste AVANT l'envoi (si l'utilisateur ferme l'onglet, on pourra reprendre)
-      multiSending = true;
-      saveMultiState();
+      const payload = {
+        mode: bulkMode,
+        magasin: magasinNavette,
+        tourneeId: currentTourneeId,
+        tournee: (tournee || ""),
+        codeTournee: (codeTournee || ""),
+        livreurId,
+        bons: [...multiBons],
+        ...(gps ? { gps } : {})
+      };
 
+      // Envoi "fire-and-forget" : sendBeacon (idéal quand on ferme la page), sinon fetch keepalive
+      const url = (location.origin || "") + "/api/navette/bulk";
+
+      let beaconOk = false;
       try {
-        setScanLoading(true, `Envoi ${total} colis…`);
-
-        // Payload unique (UN seul envoi pour toute la liste)
-        const payload = {
-          mode: multiMode,
-          tourneeId: currentTourneeId, // peut être vide => création auto
-          magasin: magasinNavette,
-          livreurId,
-          bons: multiBons,
-          tournee: (tournee||""),
-          codeTournee: (codeTournee||""),
-          ...(gps || {})
-        };
-
-        // On garde une trace de secours (si besoin de renvoyer / diagnostiquer)
-        saveLastSentBatch(payload);
-
-        // Envoi non-bloquant (beacon si possible)
-        const sent = apiPostFireForget("/api/navette/bulk", payload);
-
-        if (!sent || sent.ok !== true) {
-          throw new Error(sent && sent.error ? sent.error : "Envoi impossible");
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+          beaconOk = navigator.sendBeacon(url, blob);
         }
+      } catch(e){ beaconOk = false; }
 
-        // IMPORTANT :
-        // - on ne "await" pas la réponse => tu peux fermer la page tout de suite
-        // - le serveur continue le traitement en arrière-plan
-        multiSending = false;
+      let ack = null;
+      try {
+        if (!beaconOk) {
+          // fetch keepalive (Chrome/Edge ok)
+          ack = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).then(r => r.json().catch(()=>null));
+        }
+      } catch(e) {}
 
-      } catch (e) {
-        multiSending = false;
-        saveMultiState();
-        setColisMsg(`❌ Envoi interrompu. La liste est conservée, tu peux re-valider.
-Erreur : ${e?.message || e}`, true);
-      } finally {
-        setScanLoading(false);
-        setScanButtonsDisabled(false);
-      }
+      // On vide la liste tout de suite : le traitement continue côté serveur
+      const sentCount = multiBons.length;
+      multiBons = [];
+      multiSeen.clear();
+      renderMulti();
+
+      setScanLoading(false, "");
+      setScanButtonsDisabled(false);
+
+      const jobTxt = ack && ack.jobId ? ` (Job: ${ack.jobId})` : "";
+      setColisMsg(`✅ Envoyé en 1 fois : ${sentCount} colis. Tu peux fermer la page.${jobTxt}`, false);
+
+      // Rafraîchit la tournée/livreur si possible
+      try {
+        if (ack && ack.tourneeId) tourneeNavette = ack.tourneeId;
+      } catch(e){}
+      try { await refreshLivreurColis(); } catch(e){}
     }
 
 function startMultiScan(mode) {
@@ -1339,7 +1139,6 @@ function startMultiScan(mode) {
       clearMulti();
       if (multiPanelTitle) multiPanelTitle.textContent = (mode === "charger") ? "Colis à CHARGER (multi-scan)" : "Colis à LIVRER (multi-scan)";
       renderMulti();
-      saveMultiState();
     }
 
     let html5Qr = null;
