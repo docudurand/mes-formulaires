@@ -866,7 +866,12 @@ async function apiPost(url, body, opts) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.success === false) {
     console.warn("[API] Erreur", { url: fullUrl, status: r.status, statusText: r.statusText, body: j });
-    throw new Error(j.error || j.message || "Erreur API");
+    const err = new Error(j.error || j.message || "Erreur API");
+    err.status = r.status;
+    err.statusText = r.statusText;
+    err.url = fullUrl;
+    err.body = j;
+    throw err;
   }
   return j;
 }
@@ -1126,7 +1131,47 @@ async function apiGet(url) {
       try { navigator.vibrate && navigator.vibrate(35); } catch(e){}
     }
 
-        async function validateMulti() {
+        
+async function sendMultiLegacy(bonsList, mode, currentTourneeId, gps) {
+  const total = bonsList.length;
+  let ok = 0;
+  const fails = [];
+
+  for (let i = 0; i < bonsList.length; i++) {
+    const bon = bonsList[i];
+    try {
+      setScanLoading(true, `Envoi ${ok+1}/${total} colis…`);
+      const endpoint = (mode === "livrer") ? "/api/navette/livrer" : "/api/navette/valider";
+
+      const j = await apiPost(endpoint, {
+        tourneeId: currentTourneeId,
+        magasin: magasinNavette,
+        livreurId,
+        bon,
+        tournee: (tournee||""),
+        codeTournee: (codeTournee||""),
+        ...(gps || {})
+      });
+
+      if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
+      ok++;
+
+      // Progress UI + persistance: on retire le colis validé
+      if (multiBons[0] === bon) multiBons.shift();
+      else multiBons = multiBons.filter(x => x !== bon);
+
+      multiSeen = new Set(multiBons);
+      renderMulti();
+      saveMultiState();
+    } catch (e) {
+      fails.push({ bon, err: e?.message || String(e), status: e?.status });
+    }
+  }
+
+  return { ok, total, fails, currentTourneeId };
+}
+
+async function validateMulti() {
       if (!multiMode) { setColisMsg("ℹ️ Lance d’abord un scan multi.", false); return; }
       if (!magasinNavette) { setColisMsg("❌ Magasin manquant", true); return; }
       if (!livreurId) { setColisMsg("❌ Livreur manquant (URL: ?livreurId=...)", true); return; }
@@ -1164,7 +1209,9 @@ async function apiGet(url) {
       try {
         setScanLoading(true, `Envoi ${total} colis…`);
 
-        const j = await apiPost("/api/navette/bulk", {
+        let j;
+        try {
+          j = await apiPost("/api/navette/bulk", {
           mode: multiMode,
           tourneeId: currentTourneeId, // peut être vide => création auto
           magasin: magasinNavette,
@@ -1174,6 +1221,46 @@ async function apiGet(url) {
           codeTournee: (codeTournee||""),
           ...(gps || {})
         }, { keepalive: true });
+        } catch (e) {
+          // Compat: si le serveur n'a pas encore l'endpoint /bulk => fallback envoi un-par-un
+          if (e && e.status === 404) {
+            console.warn("[NAVETTE] /bulk introuvable (404). Fallback mode compatibilité (un par un).");
+            setColisMsg("ℹ️ Serveur non à jour (/bulk absent). Envoi en mode compatibilité…", false);
+
+            const legacy = await sendMultiLegacy([...multiBons], multiMode, currentTourneeId, gps);
+
+            // tournéeId à jour pour les prochains scans
+            if (legacy.currentTourneeId) tourneeNavette = legacy.currentTourneeId;
+
+            if (legacy.fails.length === 0) {
+              setColisMsg(`✅ ${legacy.ok}/${legacy.total} envoyés (${multiMode})`, false);
+              multiMode = null;
+              clearMulti(); // clearMultiState() inclus
+              showMultiPanel(false);
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
+              try { await refreshLivreurList(); } catch(e){}
+              return;
+            } else {
+              // garde uniquement les échecs pour reprise
+              multiBons = legacy.fails.map(f => f.bon);
+              multiSeen = new Set(multiBons);
+              renderMulti();
+              saveMultiState();
+
+              const first = legacy.fails.slice(0, 3).map(f => `${f.bon}`).join(", ");
+              setColisMsg(`⚠️ ${legacy.ok}/${legacy.total} OK • ${legacy.fails.length} en échec (ex: ${first}). Corrige et re-valide.
+Dernière erreur : ${legacy.fails[legacy.fails.length-1]?.err || "Erreur inconnue"}`, true);
+
+              console.warn("[NAVETTE] Échecs legacy:", legacy.fails);
+              setScanLoading(false);
+              setScanButtonsDisabled(false);
+              try { await refreshLivreurList(); } catch(e){}
+              return;
+            }
+          }
+          throw e;
+        }
 
         if (j && (j.tourneeId || j.tournee)) currentTourneeId = j.tourneeId || j.tournee;
 

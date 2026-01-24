@@ -121,6 +121,12 @@ function asyncRoute(fn) {
 
 // ============ ROUTES ============
 
+
+// Simple ping pour vérifier que le routeur navette est bien déployé
+router.get("/ping", (req, res) => {
+  res.json({ success: true, at: nowIso() });
+});
+
 router.post("/import", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/import] body=", safeJson(redactedBody(req.body)));
   const { magasin, bons, tourneeId, tournee, codeTournee } = req.body || {};
