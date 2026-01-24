@@ -385,7 +385,11 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
     const add = (parent, c) => {
       const st = String(c.statut||"").toUpperCase();
-      const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+      const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+      const lieu = String(c.gpsLieu || "").trim();
+      const right = (String(c.statut||"").toUpperCase()==="LIVRE" && lieu)
+        ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu))
+        : rightBase;
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {
