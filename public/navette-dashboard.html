@@ -434,12 +434,12 @@ const API_BASE = "https://mes-formulaires.onrender.com";
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
             const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-            const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
             const lieu = String(c.gpsLieu || "").trim();
-            const right = hasGps ? (lieu ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu)) : (rightBase ? (rightBase + " • 📍 (à nommer)") : "📍 (à nommer)")) : rightBase;
+            const right = lieu ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu)) : rightBase;
+            const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
             const actionsHtml = `
               <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
-              <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" data-row="${escapeHtml(String(c._row||""))}" data-lat="${escapeHtml(String(c.gpsLat||""))}" data-lng="${escapeHtml(String(c.gpsLng||""))}" ${hasGps ? "" : "disabled"}>🏷</button>
+              <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>🏷</button>
             `;
             list.appendChild(mkMiniItem(c.bon, right, actionsHtml));
           });
@@ -477,11 +477,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     const add = (parent, c) => {
       const st = normStatut(c.statut);
       const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
-      const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
       const lieu = String(c.gpsLieu || "").trim();
-      const isLivre = (String(c.statut||"").toUpperCase() === "LIVRE");
-      const right = isLivre && hasGps
-        ? (lieu ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu)) : (rightBase ? (rightBase + " • 📍 (à nommer)") : "📍 (à nommer)"))
+      const right = (String(c.statut||"").toUpperCase()==="LIVRE" && lieu)
+        ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu))
         : rightBase;
       let actionsHtml = "";
 
@@ -498,7 +496,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
         const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
         actionsHtml = `
           <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
-          <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" data-row="${escapeHtml(String(c._row||""))}" data-lat="${escapeHtml(String(c.gpsLat||""))}" data-lng="${escapeHtml(String(c.gpsLng||""))}" ${hasGps ? "" : "disabled"}>🏷</button>
+          <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
         `;
       }
 
@@ -517,33 +515,38 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       if (!act || !bon) return;
 
       // ✅ Suivi GPS: pas besoin de sélectionner une tournée
+// 🏷 Nommer / modifier un lieu (POI maison 30m)
+if (act === "nommer") {
+  const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+  if (!found) { alert("Colis introuvable."); return; }
+  const current = String(found.gpsLieu || "").trim();
+  const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
+  if (name === null) return;
+  const clean = String(name).trim();
+  if (!clean) { alert("Nom vide."); return; }
+  btn.disabled = true;
+  try {
+    await apiPost("/api/navette/set-lieu", {
+      magasin,
+      bon,
+      row: found.row || "",
+      gpsLat: found.gpsLat || "",
+      gpsLng: found.gpsLng || "",
+      gpsLieu: clean
+    });
+    await refresh();
+  } catch (e) {
+    alert("Erreur: " + (e && e.message ? e.message : e));
+  } finally {
+    btn.disabled = false;
+  }
+  return;
+}
+
       if (act === "suivi") {
         const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
         if (!found) { alert("Colis introuvable."); return; }
         openMapsFromColis(found);
-        return;
-      }
-
-      // 🏷 Nommer / modifier le client (lieu) pour ces coordonnées (stocké en feuille LIEUX, rayon 30m)
-      if (act === "nommer") {
-        const row = btn.getAttribute("data-row") || "";
-        const lat = btn.getAttribute("data-lat") || "";
-        const lng = btn.getAttribute("data-lng") || "";
-        const cur = (state.colis.find(x => String(x.bon)===String(bon) && (row ? String(x._row)===String(row) : true)) || {}).gpsLieu || "";
-        const nom = prompt("Nom du client / entreprise (rayon 30m) :", String(cur||"").trim());
-        if (nom === null) return; // annulé
-        const clean = String(nom||"").trim();
-        if (!clean) { alert("Nom vide."); return; }
-
-        btn.disabled = true;
-        try {
-          await apiPost("/api/navette/set-lieu", { magasin, row, gpsLat: lat, gpsLng: lng, gpsLieu: clean });
-          await refresh();
-        } catch (e) {
-          alert("Erreur: " + (e && e.message ? e.message : e));
-        } finally {
-          btn.disabled = false;
-        }
         return;
       }
 
@@ -573,42 +576,48 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     });
 
     // ✅ Suivi GPS aussi dans l’onglet "Classés"
-    tourneesClasseesEl.onclick = async (ev) => {
-      const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
-      if (!btn) return;
-      const act = btn.getAttribute("data-act");
-      const bon = btn.getAttribute("data-bon");
-      const tid = btn.getAttribute("data-tourneeid");
-      if (!act || !bon) return;
+    
+// ✅ Suivi GPS et nommage aussi dans l’onglet "Classés"
+tourneesClasseesEl.onclick = async (ev) => {
+  const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
+  if (!btn) return;
+  const act = btn.getAttribute("data-act");
+  const bon = btn.getAttribute("data-bon");
+  const tid = btn.getAttribute("data-tourneeid");
+  if (!act || !bon || !tid) return;
 
-      const found = state.colis.find(x => String(x.bon) === String(bon) && String(x.tourneeId) === String(tid));
-      if (!found) { alert("Colis introuvable."); return; }
+  const found = state.colis.find(x => String(x.bon) === String(bon) && String(x.tourneeId) === String(tid));
+  if (!found) { alert("Colis introuvable."); return; }
 
-      if (act === "suivi") {
-        openMapsFromColis(found);
-        return;
-      }
+  if (act === "suivi") {
+    openMapsFromColis(found);
+    return;
+  }
+  if (act === "nommer") {
+    const current = String(found.gpsLieu || "").trim();
+    const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
+    if (name === null) return;
+    const clean = String(name).trim();
+    if (!clean) { alert("Nom vide."); return; }
 
-      if (act === "nommer") {
-        const row = btn.getAttribute("data-row") || "";
-        const lat = btn.getAttribute("data-lat") || "";
-        const lng = btn.getAttribute("data-lng") || "";
-        const nom = prompt("Nom du client / entreprise (rayon 30m) :", String(found.gpsLieu||"").trim());
-        if (nom === null) return;
-        const clean = String(nom||"").trim();
-        if (!clean) { alert("Nom vide."); return; }
-
-        btn.disabled = true;
-        try {
-          await apiPost("/api/navette/set-lieu", { magasin, row, gpsLat: lat, gpsLng: lng, gpsLieu: clean });
-          await refresh();
-        } catch (e) {
-          alert("Erreur: " + (e && e.message ? e.message : e));
-        } finally {
-          btn.disabled = false;
-        }
-      }
-    };
+    btn.disabled = true;
+    try {
+      await apiPost("/api/navette/set-lieu", {
+        magasin,
+        bon,
+        row: found.row || "",
+        gpsLat: found.gpsLat || "",
+        gpsLng: found.gpsLng || "",
+        gpsLieu: clean
+      });
+      await refresh();
+    } catch (e) {
+      alert("Erreur: " + (e && e.message ? e.message : e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+};
   }
 
   function setNeutral() {

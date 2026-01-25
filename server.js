@@ -269,7 +269,6 @@ app.post("/api/navette/valider", async (req, res) => {
       codeTournee: String(codeTournee || ""),
     };
 
-    // GPS (optionnel) — ne pas envoyer "undefined"
     const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
     const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
     if (hasLat && hasLng) {
@@ -285,7 +284,6 @@ app.post("/api/navette/valider", async (req, res) => {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
-
 
 app.post("/api/navette/livrer", async (req, res) => {
   try {
@@ -332,27 +330,20 @@ app.post("/api/navette/livrer", async (req, res) => {
 
 app.post("/api/navette/set-lieu", async (req, res) => {
   try {
-    const { gpsLat, gpsLng, gpsLieu, row } = req.body || {};
-    if (!gpsLat || !gpsLng || !gpsLieu) {
-      return res.status(400).json({ success:false, error:"gpsLat/gpsLng/gpsLieu requis" });
-    }
-
-    const params = {
-      gpsLat: String(gpsLat),
-      gpsLng: String(gpsLng),
-      gpsLieu: String(gpsLieu),
-    };
-    if (row !== undefined && row !== null && String(row).trim() !== "") {
-      params.row = String(row);
-    }
-
-    const data = await callNavetteGAS("setLieuName", params);
+    const { magasin, bon, row, gpsLat, gpsLng, gpsLieu } = req.body || {};
+    const data = await callNavetteGAS("setLieuName", {
+      magasin: String(magasin || ""),
+      bon: String(bon || ""),
+      row: String(row || ""),
+      gpsLat: String(gpsLat || ""),
+      gpsLng: String(gpsLng || ""),
+      gpsLieu: String(gpsLieu || ""),
+    });
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
-
 
 // === BULK (1 seul envoi -> traitement serveur même si le livreur ferme l’onglet) ===
 const bulkJobs = new Map(); // jobId -> { status, createdAt, startedAt, finishedAt, ok, count, error, result }
