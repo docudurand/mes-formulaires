@@ -457,8 +457,9 @@ function setPermState(v){
   try { localStorage.setItem(PERMS_KEY, v); } catch(e){}
 }
 function shouldShowPermGate(){
+  // ✅ Ne pas demander si le mode Scan n'est pas activé dans l'URL
   // On n'affiche la demande automatique qu'à la 1ère ouverture (state vide)
-  return !getPermState();
+  return NAVETTE_ENABLED && !getPermState();
 }
 
 async function requestPermissionsOnce(){
@@ -524,7 +525,12 @@ function initPermGate(){
 }
 
 
-initPermGate();
+// ✅ Demande d'autorisations uniquement si le Scan colis est activé (?navette=1)
+if (NAVETTE_ENABLED) {
+  initPermGate();
+} else {
+  try { const g = document.getElementById('permGate'); if (g) g.style.display = 'none'; } catch(e) {}
+}
 
 if (!NAVETTE_ENABLED) {
   const tabScanBtn = document.getElementById("tabScanBtn");
