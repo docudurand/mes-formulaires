@@ -246,7 +246,59 @@
   .multiActions{ flex-direction:column; }
   .multiActions button{ width:100%; min-width: unset; }
 }
-  </style>
+  
+  /* === Permission Gate (caméra + géolocalisation) === */
+  #permGate{
+    position: fixed;
+    inset: 0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 9999;
+    padding: 18px;
+  }
+  #permGate .permCard{
+    width: min(520px, 100%);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.20);
+    padding: 18px 16px;
+  }
+  #permGate .permTitle{
+    font-weight: 800;
+    font-size: 16px;
+    margin: 0 0 8px 0;
+  }
+  #permGate .permTxt{
+    font-size: 14px;
+    line-height: 1.35;
+    color: #334155;
+    margin: 0 0 14px 0;
+  }
+  #permGate .permActions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  #permGate .permBtn{
+    border:0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #permGate .permBtn.primary{
+    background: var(--brandBlue, #2563eb);
+    color:#fff;
+  }
+  #permGate .permBtn.ghost{
+    background: #eef2ff;
+    color:#1e293b;
+  }
+
+</style>
 
 <script src="/js/html5-qrcode.min.js"></script>
 <script>
@@ -257,6 +309,24 @@
 </head>
 <body>
   <div class="card">
+
+    <!-- Permission Gate (1ère ouverture) -->
+    <div id="permGate" role="dialog" aria-modal="true">
+      <div class="permCard">
+        <div class="permTitle">🔐 Autorisations requises</div>
+        <div class="permTxt">
+          Pour scanner les colis et enregistrer la preuve de livraison, autorise :
+          <br>• 📷 la caméra (scan)
+          <br>• 📍 la géolocalisation (lieu de livraison)
+          <br><br><b>Astuce :</b> si tu refuses, tu peux les activer plus tard dans les réglages du navigateur.
+        </div>
+        <div class="permActions">
+          <button id="btnSkipPerms" class="permBtn ghost" type="button">Plus tard</button>
+          <button id="btnAskPerms" class="permBtn primary" type="button">Autoriser et continuer</button>
+        </div>
+      </div>
+    </div>
+
     <div class="logo">
       <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand Services" />
     </div>
@@ -377,6 +447,84 @@
   <script>
 const params = new URLSearchParams(window.location.search);
 const NAVETTE_ENABLED = params.get("navette") === "1";
+
+// === Permissions (caméra + géolocalisation) : demande 1 fois, mémorise le choix ===
+const PERMS_KEY = "NAVETTE_PERMS_STATE"; // "granted" | "partial" | "denied"
+function getPermState(){
+  try { return localStorage.getItem(PERMS_KEY) || ""; } catch(e){ return ""; }
+}
+function setPermState(v){
+  try { localStorage.setItem(PERMS_KEY, v); } catch(e){}
+}
+function shouldShowPermGate(){
+  // On n'affiche la demande automatique qu'à la 1ère ouverture (state vide)
+  return !getPermState();
+}
+
+async function requestPermissionsOnce(){
+  // GPS
+  const gpsOk = await new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(false);
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(true),
+      () => resolve(false),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+
+  // Caméra
+  let camOk = false;
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no_media_devices");
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    camOk = true;
+    stream.getTracks().forEach(t => t.stop());
+  } catch(e) {
+    camOk = false;
+  }
+
+  const state = (gpsOk && camOk) ? "granted" : ((gpsOk || camOk) ? "partial" : "denied");
+  setPermState(state);
+  return { gpsOk, camOk, state };
+}
+
+function initPermGate(){
+  const gate = document.getElementById("permGate");
+  const btnAsk = document.getElementById("btnAskPerms");
+  const btnSkip = document.getElementById("btnSkipPerms");
+  if (!gate || !btnAsk || !btnSkip) return;
+
+  const hide = () => { gate.style.display = "none"; };
+  const show = () => { gate.style.display = "flex"; };
+
+  if (shouldShowPermGate()) show();
+
+  btnSkip.addEventListener("click", () => {
+    // mémorise "denied" pour ne plus afficher à chaque ouverture
+    if (!getPermState()) setPermState("denied");
+    hide();
+  });
+
+  btnAsk.addEventListener("click", async () => {
+    btnAsk.disabled = true;
+    btnAsk.textContent = "Demande en cours…";
+    try{
+      const r = await requestPermissionsOnce();
+      hide();
+      // petit message si refus total
+      if (r.state === "denied") {
+        // on ne bloque pas, mais on prévient
+        try { setColisMsg("⚠️ Autorisations refusées. Tu peux les activer dans les réglages du navigateur.", true); } catch(e) {}
+      }
+    } finally {
+      btnAsk.disabled = false;
+      btnAsk.textContent = "Autoriser et continuer";
+    }
+  });
+}
+
+
+initPermGate();
 
 if (!NAVETTE_ENABLED) {
   const tabScanBtn = document.getElementById("tabScanBtn");
