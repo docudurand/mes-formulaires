@@ -153,6 +153,18 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
+
+  function normStatut(st){
+    const s = String(st||"").trim().toUpperCase();
+    // Tolère variantes possibles
+    if (s === "EN ATTENTE") return "EN_ATTENTE";
+    if (s === "EN_ATTENTE") return "EN_ATTENTE";
+    if (s.startsWith("EN_")) return s;
+    if (s.startsWith("VAL")) return "VALIDE";
+    if (s.startsWith("LIVR")) return "LIVRE"; // LIVRE, LIVRÉ, LIVREE...
+    if (s.startsWith("CLAS")) return "CLASSEE";
+    return s.replace(/\s+/g,"_");
+  }
   function buildLivreurTourneeMap(){
     livreurTourneeMap = new Map();
     if (!magasin || !Array.isArray(paramsCache)) return;
@@ -323,7 +335,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     const list = state.colis.filter(filterFn);
     let enAttente=0, valides=0, livres=0;
     for (const c of list) {
-      const st = String(c.statut||"").toUpperCase();
+      const st = normStatut(c.statut);
       if (st==="EN_ATTENTE") enAttente++;
       else if (st==="VALIDE") valides++;
       else if (st==="LIVRE") { if (isLivreVisible(c)) livres++; }
@@ -334,7 +346,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   function renderTournees() {
     tourneesActivesEl.innerHTML = "";
     const actives = state.tournees.filter(t => {
-      const st = String(t.statut||"").trim().toUpperCase();
+      const st = normStatut(t.statut);
       // "En cours" = uniquement les tournées non classées
       return st !== "CLASSEE";
     });
@@ -356,7 +368,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
               let a=0,v=0,l=0;
               for (const c of state.colis) {
                 if (String(c.tourneeId)!==tid) continue;
-                const st = String(c.statut||"").toUpperCase();
+                const st = normStatut(c.statut);
                 if (st==="EN_ATTENTE") a++;
                 else if (st==="VALIDE") v++;
                 else if (st==="LIVRE" && isLivreToday(c)) l++;
@@ -379,7 +391,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     }
 
     tourneesClasseesEl.innerHTML = "";
-    const classes = state.tournees.filter(t => String(t.statut||"").trim().toUpperCase() === "CLASSEE");
+    const classes = state.tournees.filter(t => normStatut(t.statut) === "CLASSEE");
     if (!classes.length) {
       tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
     } else {
@@ -414,7 +426,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
         body.style.display = isOpen ? "" : "none";
         body.style.marginTop = "10px";
 
-        const liv = state.colis.filter(c => String(c.tourneeId)===tid && String(c.statut).toUpperCase()==="LIVRE");
+        const liv = state.colis.filter(c => String(c.tourneeId)===tid && normStatut(c.statut)==="LIVRE");
         if (!liv.length) {
           body.appendChild(mkMiniItem("Aucun colis", ""));
         } else {
@@ -453,14 +465,14 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId))
       : "Aucune tournée sélectionnée (affichage global).";
 
-    const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
-    const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
-    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE" && isLivreVisible(c));
+    const att = state.colis.filter(c => filter(c) && normStatut(c.statut)==="EN_ATTENTE");
+    const val = state.colis.filter(c => filter(c) && normStatut(c.statut)==="VALIDE");
+    const liv = state.colis.filter(c => filter(c) && normStatut(c.statut)==="LIVRE" && isLivreVisible(c));
 
     listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
 
     const add = (parent, c) => {
-      const st = String(c.statut||"").toUpperCase();
+      const st = normStatut(c.statut);
       const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
       const lieu = String(c.gpsLieu || "").trim();
       const right = (String(c.statut||"").toUpperCase()==="LIVRE" && lieu)
