@@ -200,6 +200,21 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   }
 
   function pad2(n){ return String(n).padStart(2,"0"); }
+
+  function isSameLocalDay(a, b){
+    return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  }
+  function isTodayIso(iso){
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (isNaN(d)) return false;
+    return isSameLocalDay(d, new Date());
+  }
+  function isLivreToday(c){
+    // On considère la dateMaj comme date de livraison, sinon fallback dateAjout
+    return isTodayIso(c.dateMaj) || isTodayIso(c.dateAjout);
+  }
+
   function formatTourneeTitle(iso){
     const d = new Date(iso);
     if (isNaN(d)) return "";
@@ -305,7 +320,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const st = String(c.statut||"").toUpperCase();
       if (st==="EN_ATTENTE") enAttente++;
       else if (st==="VALIDE") valides++;
-      else if (st==="LIVRE") livres++;
+      else if (st==="LIVRE") { if (isLivreToday(c)) livres++; }
     }
     return { enAttente, valides, livres };
   }
@@ -330,9 +345,22 @@ const API_BASE = "https://mes-formulaires.onrender.com";
             <div class="small">Total ${Number(t.total||0)}</div>
           </div>
           <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${Number(t.enAttente||0)}</span>
-            <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${Number(t.valides||0)}</span>
-            <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${Number(t.livres||0)}</span>
+            ${(() => {
+              const tid = String(t.tourneeId);
+              let a=0,v=0,l=0;
+              for (const c of state.colis) {
+                if (String(c.tourneeId)!==tid) continue;
+                const st = String(c.statut||"").toUpperCase();
+                if (st==="EN_ATTENTE") a++;
+                else if (st==="VALIDE") v++;
+                else if (st==="LIVRE" && isLivreToday(c)) l++;
+              }
+              return `
+                <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${a}</span>
+                <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${v}</span>
+                <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${l}</span>
+              `;
+            })()}
           </div>
         `;
         div.addEventListener("click", () => {
@@ -380,7 +408,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
         body.style.display = isOpen ? "" : "none";
         body.style.marginTop = "10px";
 
-        const liv = state.colis.filter(c => String(c.tourneeId)===tid && String(c.statut).toUpperCase()==="LIVRE");
+        const liv = state.colis.filter(c => String(c.tourneeId)===tid && String(c.statut).toUpperCase()==="LIVRE" && isLivreToday(c));
         if (!liv.length) {
           body.appendChild(mkMiniItem("Aucun colis", ""));
         } else {
@@ -421,7 +449,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
     const att = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="EN_ATTENTE");
     const val = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="VALIDE");
-    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE");
+    const liv = state.colis.filter(c => filter(c) && String(c.statut).toUpperCase()==="LIVRE" && isLivreToday(c));
 
     listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
 
