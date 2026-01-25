@@ -433,7 +433,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
           const list = document.createElement("div");
           list.className = "list";
           liv.slice(0, 800).forEach(c => {
-            const right = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+            const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+            const lieu = String(c.gpsLieu || "").trim();
+            const right = lieu ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu)) : rightBase;
             const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
             const actionsHtml = `
               <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
