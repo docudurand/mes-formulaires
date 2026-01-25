@@ -277,6 +277,33 @@ router.get("/livreur", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+
+// === LIEUX : nommer / modifier un lieu (POI maison, sans Google) ===
+// Body attendu: { gpsLat, gpsLng, gpsLieu }
+// Appelle Apps Script action = setLieuName
+router.post("/set-lieu", asyncRoute(async (req, res) => {
+  console.log("[NAVETTE][/set-lieu] body=", safeJson(redactedBody(req.body)));
+  const { gpsLat, gpsLng, gpsLieu, row } = req.body || {};
+
+  if (!gpsLat || !gpsLng || !gpsLieu) {
+    return res.status(400).json({ success:false, error:"gpsLat/gpsLng/gpsLieu requis" });
+  }
+
+  const params = {
+    gpsLat: String(gpsLat),
+    gpsLng: String(gpsLng),
+    gpsLieu: String(gpsLieu)
+  };
+  // Optionnel: permet à Apps Script de mettre à jour la ligne COLIS correspondante
+  if (row !== undefined && row !== null && String(row).trim() !== "") {
+    params.row = String(row);
+  }
+
+  const data = await callGAS("setLieuName", params);
+  res.json(data);
+}));
+
+
 // ============ ERROR HANDLER (IMPORTANT) ============
 router.use((err, req, res, next) => {
   const details = err?.details ? err.details : undefined;

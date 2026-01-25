@@ -247,20 +247,45 @@ app.post("/api/navette/import", async (req, res) => {
 
 app.post("/api/navette/valider", async (req, res) => {
   try {
-    const { tourneeId, magasin, livreurId, bon, tournee, codeTournee } = req.body || {};
-    const data = await callNavetteGAS("scanValider", {
+    const {
+      tourneeId,
+      magasin,
+      livreurId,
+      bon,
+      tournee,
+      codeTournee,
+      gpsLat,
+      gpsLng,
+      gpsAcc,
+      gpsTs,
+    } = req.body || {};
+
+    const params = {
       tourneeId: String(tourneeId || ""),
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
       tournee: String(tournee || ""),
       codeTournee: String(codeTournee || ""),
-    });
+    };
+
+    // GPS (optionnel) — ne pas envoyer "undefined"
+    const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
+    const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
+    if (hasLat && hasLng) {
+      params.gpsLat = String(gpsLat);
+      params.gpsLng = String(gpsLng);
+      if (gpsAcc !== undefined && gpsAcc !== null && String(gpsAcc).trim() !== "") params.gpsAcc = String(gpsAcc);
+      if (gpsTs !== undefined && gpsTs !== null && String(gpsTs).trim() !== "") params.gpsTs = String(gpsTs);
+    }
+
+    const data = await callNavetteGAS("scanValider", params);
     res.json(data);
   } catch (e) {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
+
 
 app.post("/api/navette/livrer", async (req, res) => {
   try {
@@ -303,6 +328,31 @@ app.post("/api/navette/livrer", async (req, res) => {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
+
+
+app.post("/api/navette/set-lieu", async (req, res) => {
+  try {
+    const { gpsLat, gpsLng, gpsLieu, row } = req.body || {};
+    if (!gpsLat || !gpsLng || !gpsLieu) {
+      return res.status(400).json({ success:false, error:"gpsLat/gpsLng/gpsLieu requis" });
+    }
+
+    const params = {
+      gpsLat: String(gpsLat),
+      gpsLng: String(gpsLng),
+      gpsLieu: String(gpsLieu),
+    };
+    if (row !== undefined && row !== null && String(row).trim() !== "") {
+      params.row = String(row);
+    }
+
+    const data = await callNavetteGAS("setLieuName", params);
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e?.message || e) });
+  }
+});
+
 
 // === BULK (1 seul envoi -> traitement serveur même si le livreur ferme l’onglet) ===
 const bulkJobs = new Map(); // jobId -> { status, createdAt, startedAt, finishedAt, ok, count, error, result }
