@@ -187,30 +187,11 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     });
   }
 
-  function formatLivreurTournee(livreurId, tournee, codeTournee) {
+  function formatLivreurTournee(livreurId) {
     const liv = String(livreurId || "").trim();
-    const nomColis = String(tournee || "").trim();
-    const code = String(codeTournee || "").trim();
-
-    if (liv && (nomColis || code)) {
-      const t = (nomColis || "").trim();
-      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return tInfo ? `Livreur: ${liv} • Tournée: ${tInfo}` : `Livreur: ${liv}`;
-    }
-    if (!liv) {
-      const t = (nomColis || "").trim();
-      const tInfo = [t, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return tInfo ? `Tournée: ${tInfo}` : "";
-    }
-
-    const key = liv.toUpperCase();
-    const nom = livreurTourneeMap.get(key) || "";
-    if (nom) {
-      const tInfo = [nom, code ? `N° ${code}` : ""].filter(Boolean).join(" ");
-      return `Livreur: ${liv} • Tournée: ${tInfo}`;
-    }
-    return `Livreur: ${liv}`;
+    return liv ? `Livreur: ${liv}` : "";
   }
+
 
   function pad2(n){ return String(n).padStart(2,"0"); }
 
