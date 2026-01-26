@@ -46,11 +46,6 @@ function getSubjectPrefix(formOriginRaw) {
   return 'BDC';
 }
 
-
-// --- PDF filename counter (PERSISTENT) ---
-// Render restart wipes /tmp, so we persist on FTP (Freebox) when available.
-// Fallback: local /tmp file if FTP env vars are missing.
-
 const COUNTERS_FILE_LOCAL = path.join(os.tmpdir(), 'televente_pdf_counters.json');
 
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || '/').replace(/\/$/, '');
@@ -105,7 +100,7 @@ async function readRemoteCountersSafe() {
       try {
         await client.downloadTo(tmp, COUNTERS_REMOTE_FILE);
       } catch {
-        return {}; // doesn't exist yet
+        return {};
       }
       try {
         const raw = fs.readFileSync(tmp, 'utf-8');
@@ -139,10 +134,8 @@ async function writeRemoteCountersSafe(counters) {
   }
 }
 
-// In-process mutex (avoids 2 requests incrementing the same number simultaneously)
 let _counterLock = Promise.resolve();
 
-// Returns an integer 1..n for a given base key (client+sales+YYYY-MM)
 function nextCounter(baseKey) {
   _counterLock = _counterLock.then(async () => {
     const counters = FTP_ENABLED ? await readRemoteCountersSafe() : readLocalCountersSafe();

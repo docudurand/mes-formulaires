@@ -312,7 +312,6 @@
       const value = (URL_TOKEN || $("token").value || "").trim();
       localStorage.setItem(TOKEN_KEY, value);
     } catch {
-      // Ignore storage errors (private mode / blocked storage).
     }
   }
   function restoreToken(){

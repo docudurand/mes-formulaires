@@ -3,7 +3,6 @@ import axios from "axios";
 
 const router = express.Router();
 
-// ============ LOGS ============
 function nowIso() { return new Date().toISOString(); }
 
 function safeJson(obj, maxLen = 2000) {
@@ -16,8 +15,7 @@ function safeJson(obj, maxLen = 2000) {
 }
 
 function redactedBody(body) {
-  // Aucun secret ici normalement, mais on évite d'imprimer des gros payloads.
-  // On garde juste les champs utiles.
+
   if (!body || typeof body !== "object") return body;
   const pick = (k) => (body[k] === undefined ? undefined : body[k]);
   const out = {
@@ -39,12 +37,11 @@ function redactedBody(body) {
 }
 
 router.use((req, res, next) => {
-  // Log début requête (navette uniquement)
+
   console.log(`[NAVETTE] ${nowIso()} ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// ============ HELPERS ============
 function mustEnv(name) {
   const v = String(process.env[name] || "").trim();
   if (!v) throw new Error(`Missing env ${name}`);
@@ -52,7 +49,7 @@ function mustEnv(name) {
 }
 
 function axiosErrorDetails(err) {
-  // Donne un message exploitable dans Render logs
+
   const isAxios = !!(err && err.isAxiosError);
   const status = err?.response?.status;
   const data = err?.response?.data;
@@ -83,7 +80,7 @@ async function callGAS(action, params) {
   } catch (err) {
     const details = axiosErrorDetails(err);
     console.error("[NAVETTE][GAS ERROR]", safeJson({ action, params, details }));
-    // On remonte un message clair au front
+
     const e = new Error(
       details.status
         ? `GAS HTTP ${details.status}`
@@ -98,7 +95,6 @@ function normGps(reqBody) {
   const b = reqBody || {};
   const gpsObj = b.gps && typeof b.gps === "object" ? b.gps : null;
 
-  // Compat: certains envoient lat/lng ou latitude/longitude
   const lat =
     b.gpsLat ?? gpsObj?.gpsLat ?? gpsObj?.lat ?? gpsObj?.latitude ?? b.lat ?? b.latitude;
   const lng =
@@ -118,9 +114,7 @@ function asyncRoute(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
-
-// ============ BULK JOBS (fire-and-forget) ============
-const BULK_JOBS = new Map(); // jobId -> {status, createdAt, doneAt, result, error}
+const BULK_JOBS = new Map();
 function createJobId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -131,7 +125,7 @@ function setJob(jobId, patch) {
 function getJob(jobId) {
   return BULK_JOBS.get(jobId) || null;
 }
-// Nettoyage simple (garde 24h)
+
 setInterval(() => {
   const now = Date.now();
   for (const [id, j] of BULK_JOBS.entries()) {
@@ -139,8 +133,6 @@ setInterval(() => {
     if (now - t > 24*3600*1000) BULK_JOBS.delete(id);
   }
 }, 30*60*1000).unref?.();
-
-// ============ ROUTES ============
 
 router.post("/import", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/import] body=", safeJson(redactedBody(req.body)));
@@ -189,9 +181,6 @@ router.post("/livrer", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
-
-// Fire-and-forget bulk: envoie une liste de bons en 1 requête.
-// Body: { mode: "valider"|"livrer", magasin, tourneeId, tournee, codeTournee, livreurId, livreur, bons:[], gpsLat,gpsLng,gpsAcc,gpsTs, gps:{...} }
 router.post("/bulk", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/bulk] body=", safeJson(redactedBody(req.body)));
 
@@ -209,10 +198,8 @@ router.post("/bulk", asyncRoute(async (req, res) => {
   const jobId = createJobId();
   setJob(jobId, { status:"queued", createdAt: Date.now(), mode: String(mode||"") });
 
-  // Réponse immédiate (le traitement continue côté serveur)
   res.status(202).json({ success:true, queued:true, jobId, count:list.length });
 
-  // Lancement async
   setImmediate(async () => {
     try {
       setJob(jobId, { status:"running" });
@@ -234,7 +221,6 @@ router.post("/bulk", asyncRoute(async (req, res) => {
   });
 }));
 
-// Statut d'un job bulk
 router.get("/bulk/status", asyncRoute(async (req, res) => {
   const jobId = String(req.query.jobId || "").trim();
   if (!jobId) return res.status(400).json({ success:false, error:"jobId manquant" });
@@ -243,7 +229,6 @@ router.get("/bulk/status", asyncRoute(async (req, res) => {
   res.json({ success:true, job });
 }));
 
-// Ping (pour vérifier que Render a bien déployé la bonne version)
 router.get("/ping", (req, res) => res.json({ success:true, ts: nowIso() }));
 
 router.get("/active", asyncRoute(async (req, res) => {
@@ -277,10 +262,6 @@ router.get("/livreur", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
-
-// === LIEUX : nommer / modifier un lieu (POI maison, sans Google) ===
-// Body attendu: { gpsLat, gpsLng, gpsLieu }
-// Appelle Apps Script action = setLieuName
 router.post("/set-lieu", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/set-lieu] body=", safeJson(redactedBody(req.body)));
   const { gpsLat, gpsLng, gpsLieu, row } = req.body || {};
@@ -294,7 +275,7 @@ router.post("/set-lieu", asyncRoute(async (req, res) => {
     gpsLng: String(gpsLng),
     gpsLieu: String(gpsLieu)
   };
-  // Optionnel: permet à Apps Script de mettre à jour la ligne COLIS correspondante
+
   if (row !== undefined && row !== null && String(row).trim() !== "") {
     params.row = String(row);
   }
@@ -303,8 +284,6 @@ router.post("/set-lieu", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
-
-// ============ ERROR HANDLER (IMPORTANT) ============
 router.use((err, req, res, next) => {
   const details = err?.details ? err.details : undefined;
   console.error("[NAVETTE ERROR]", safeJson({
