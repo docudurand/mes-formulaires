@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { transporter, fromEmail } from '../mailer.js';
 
 dotenv.config();
@@ -39,6 +42,39 @@ function getSubjectPrefix(formOriginRaw) {
   if (s.includes('bosch')) return 'BOSCH JANVIER 2026';
   if (s.includes('lub'))   return 'LUB 2026';
   return 'BDC';
+}
+
+
+// --- PDF filename counter (persisted in /tmp) ---
+// Goal: avoid overwriting when Power Automate saves files with same name in Teams.
+const COUNTERS_FILE = path.join(os.tmpdir(), 'televente_pdf_counters.json');
+
+function readCountersSafe() {
+  try {
+    if (!fs.existsSync(COUNTERS_FILE)) return {};
+    const raw = fs.readFileSync(COUNTERS_FILE, 'utf-8');
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === 'object') ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCountersSafe(counters) {
+  try {
+    fs.writeFileSync(COUNTERS_FILE, JSON.stringify(counters, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('[televente] cannot persist counters:', e?.message || e);
+  }
+}
+
+// Returns an integer 1..n for a given base key (client+sales+YYYY-MM)
+function nextCounter(baseKey) {
+  const counters = readCountersSafe();
+  const n = (Number(counters[baseKey]) || 0) + 1;
+  counters[baseKey] = n;
+  writeCountersSafe(counters);
+  return n;
 }
 
 router.post('/send-order', async (req, res) => {
@@ -89,7 +125,11 @@ router.post('/send-order', async (req, res) => {
     text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
     attachments: [
       {
-        filename: `Bon ${safeSales} – ${safeClient} ${dateStr}.pdf`,
+        filename: (() => {
+        const baseKey = `${safeSales}__${safeClient}__${dateStr}`;
+        const n = nextCounter(baseKey);
+        return `Bon ${safeSales} – ${safeClient} ${dateStr} N°${n}.pdf`;
+      })(),
         content: Buffer.from(pdf, 'base64'),
         contentType: 'application/pdf',
       },
