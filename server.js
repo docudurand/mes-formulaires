@@ -31,41 +31,6 @@ import kilometrageRouter from "./routes/kilometrage.js";
 import "./mailInlineWorker.js";
 
 dotenv.config();
-
-function attachMonitorConsole() {
-  const enabled = String(process.env.MONITOR_ENABLED || "").toLowerCase() === "true";
-  if (!enabled) return;
-
-  const original = {
-    log: console.log.bind(console),
-    info: (console.info || console.log).bind(console),
-    warn: (console.warn || console.log).bind(console),
-    error: (console.error || console.log).bind(console),
-  };
-
-  const formatMessage = (args) => util.format(...args);
-
-  const wrap = (level, method) => (...args) => {
-    method(...args);
-    try {
-      const message = formatMessage(args);
-      const err = args.find((arg) => arg instanceof Error);
-      const context = err
-        ? { error: { name: err.name, message: err.message, stack: err.stack } }
-        : null;
-      monitorLog(level, message, context);
-    } catch {
-    }
-  };
-
-  console.log = wrap("info", original.log);
-  console.info = wrap("info", original.info);
-  console.warn = wrap("warn", original.warn);
-  console.error = wrap("error", original.error);
-}
-
-attachMonitorConsole();
-
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] unhandledRejection:", reason);
 });
@@ -86,15 +51,7 @@ const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-// --- CORS (unique source of truth) ---
-/**
- * Important:
- * - We must allow calls from:
- *   - documentsdurand.fr (+ www)
- *   - Wix embeds (wixsite / wix / editorx)
- *   - Netlify (imaginatevie-hamster-040331.netlify.app)
- *   - This Render app itself (mes-formulaires.onrender.com) and other onrender subdomains used internally
- */
+
 const ALLOWED_ORIGINS_EXACT = new Set([
   "https://www.documentsdurand.fr",
   "https://documentsdurand.fr",
@@ -103,23 +60,19 @@ const ALLOWED_ORIGINS_EXACT = new Set([
 ]);
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true; // server-to-server / same-origin cases without Origin
+  if (!origin) return true;
   const o = String(origin).trim();
 
   if (ALLOWED_ORIGINS_EXACT.has(o)) return true;
 
-  // Allow common embed / hosting subdomains used by DSG
   if (/^https:\/\/[^\/]+\.wixsite\.com$/i.test(o)) return true;
   if (/^https:\/\/[^\/]+\.wix\.com$/i.test(o)) return true;
   if (/^https:\/\/[^\/]+\.editorx\.io$/i.test(o)) return true;
 
-  // Allow Render subdomains (useful for internal pages, previews, and same-app calls)
   if (/^https:\/\/[^\/]+\.onrender\.com$/i.test(o)) return true;
 
-  // Allow Netlify subdomains if needed
   if (/^https:\/\/[^\/]+\.netlify\.app$/i.test(o)) return true;
 
-  // Local dev
   if (/^http:\/\/localhost(?::\d+)?$/i.test(o)) return true;
   if (/^http:\/\/127\.0\.0\.1(?::\d+)?$/i.test(o)) return true;
 
@@ -130,7 +83,6 @@ const corsOptions = {
   origin: (origin, cb) => {
     if (isAllowedOrigin(origin)) return cb(null, true);
 
-    // Do NOT throw (it would generate a 500 and break same-origin POSTs if a browser sends Origin).
     console.warn("[CORS] blocked origin:", origin);
     return cb(null, false);
   },
@@ -302,12 +254,10 @@ app.post("/api/navette/livrer", async (req, res) => {
       magasin: String(magasin || ""),
       livreurId: String(livreurId || ""),
       bon: String(bon || ""),
-      // infos tournée (optionnel)
       tournee: String(tournee || ""),
       codeTournee: String(codeTournee || ""),
     };
 
-    // GPS (optionnel) — ne pas envoyer "undefined"
     const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
     const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
     if (hasLat && hasLng) {
@@ -342,8 +292,7 @@ app.post("/api/navette/set-lieu", async (req, res) => {
   }
 });
 
-// === BULK (1 seul envoi -> traitement serveur même si le livreur ferme l’onglet) ===
-const bulkJobs = new Map(); // jobId -> { status, createdAt, startedAt, finishedAt, ok, count, error, result }
+const bulkJobs = new Map();
 
 function makeJobId() {
   return `job_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -352,7 +301,7 @@ function makeJobId() {
 function extractGps(body) {
   const b = body || {};
   const g = (b.gps && typeof b.gps === "object") ? b.gps : {};
-  // Supporte plusieurs formats possibles (gpsLat/gpsLng ou lat/lng etc.)
+
   const lat = (b.gpsLat ?? g.gpsLat ?? b.lat ?? g.lat ?? b.latitude ?? g.latitude ?? "");
   const lng = (b.gpsLng ?? g.gpsLng ?? b.lng ?? g.lng ?? b.longitude ?? g.longitude ?? "");
   const acc = (b.gpsAcc ?? g.gpsAcc ?? b.acc ?? g.acc ?? b.accuracy ?? g.accuracy ?? "");
@@ -368,8 +317,6 @@ function parseBonsList(bons) {
     .filter(Boolean);
 }
 
-// POST /api/navette/bulk
-// body: { mode:"charger"|"livrer", magasin, livreurId, tourneeId, tournee?, codeTournee?, bons:[...]|"...", gpsLat?,gpsLng?,gpsAcc?,gpsTs? }
 app.post("/api/navette/bulk", async (req, res) => {
   try {
     const b = req.body || {};
@@ -390,10 +337,8 @@ app.post("/api/navette/bulk", async (req, res) => {
     const jobId = makeJobId();
     bulkJobs.set(jobId, { status:"queued", createdAt: new Date().toISOString(), count: list.length });
 
-    // Réponse immédiate => le livreur peut fermer la page
     res.status(202).json({ success:true, queued:true, jobId, count: list.length });
 
-    // Traitement en arrière-plan
     setImmediate(async () => {
       const job = bulkJobs.get(jobId);
       if (!job) return;
@@ -415,11 +360,10 @@ app.post("/api/navette/bulk", async (req, res) => {
           tourneeId,
           tournee,
           codeTournee,
-          // GAS attend une string compacte
+
           bons: list.join(","),
         };
 
-        // GPS optionnel
         const hasLat = gpsLat !== undefined && gpsLat !== null && String(gpsLat).trim() !== "";
         const hasLng = gpsLng !== undefined && gpsLng !== null && String(gpsLng).trim() !== "";
         if (hasLat && hasLng) {
@@ -429,7 +373,6 @@ app.post("/api/navette/bulk", async (req, res) => {
           if (gpsTs  !== undefined && gpsTs  !== null && String(gpsTs).trim()  !== "") params.gpsTs  = String(gpsTs);
         }
 
-        // Apps Script action = bulkScan
         const data = await callNavetteGAS("bulkScan", params);
 
         job.status = "done";
@@ -449,7 +392,6 @@ app.post("/api/navette/bulk", async (req, res) => {
   }
 });
 
-// (optionnel) GET /api/navette/bulk/status?jobId=...
 app.get("/api/navette/bulk/status", (req, res) => {
   const jobId = String(req.query.jobId || "").trim();
   if (!jobId) return res.status(400).json({ success:false, error:"missing_jobId" });
@@ -501,27 +443,6 @@ app.get("/api/navette/magasins", async (req, res) => {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
-
-
-
-
-function isMonitorRequest(req) {
-  const rawPath = req?.path || req?.url || "";
-  const pathOnly = String(rawPath).split("?")[0];
-
-  if (pathOnly === "/monitor" || pathOnly.startsWith("/monitor/")) return true;
-  if (/^\/monitor\.(html|js|css)$/.test(pathOnly)) return true;
-  if (/^\/public\/monitor\.(html|js|css)$/.test(pathOnly)) return true;
-  return false;
-}
-
-app.use((req, res, next) => {
-  if (!isMonitorRequest(req)) return next();
-  return monitorAuth(req, res, next);
-});
-
-app.use("/monitor", monitorRoutes);
-
 const ADMIN_TOKEN_ALLOW_QUERY = parseBool(process.env.ADMIN_TOKEN_ALLOW_QUERY, true);
 
 function extractAdminToken(req) {
@@ -545,28 +466,6 @@ function extractAdminToken(req) {
   return { token: "", source: "none" };
 }
 
-app.get("/admin/monitor-pub", (req, res) => {
-  const adminToken = String(process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "").trim();
-  const { token, source } = extractAdminToken(req);
-  if (!adminToken || token !== adminToken) {
-    return res.status(401).send("Unauthorized");
-  }
-  if (source === "query") {
-    console.warn("[ADMIN] token via query string (consider disabling ADMIN_TOKEN_ALLOW_QUERY).");
-  }
-
-  const monitorToken = String(process.env.MONITOR_TOKEN || "").trim();
-  if (!monitorToken) {
-    return res.status(500).send("Monitor token missing");
-  }
-
-  const proto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
-  const secure = req.secure === true || proto === "https";
-  const cookie = `monitor_token=${encodeURIComponent(monitorToken)}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
-  res.setHeader("Set-Cookie", cookie);
-
-  return res.sendFile(path.join(__dirname, "public", "admin-monitor-pub.html"));
-});
 
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
@@ -1685,8 +1584,7 @@ app.get("/healthz/details", (_req, res) => {
   return res.status(200).json({
     status: "ok",
     uptimeSec: Math.floor(process.uptime()),
-    monitor: getHealthStatus(),
-    ts: new Date().toISOString(),
+ts: new Date().toISOString(),
   });
 });
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));

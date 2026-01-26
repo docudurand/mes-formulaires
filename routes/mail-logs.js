@@ -3,7 +3,7 @@ import { getMailLogs } from "../mailLog.js";
 
 const router = express.Router();
 
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.MONITOR_TOKEN || "";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 
 function parseBool(value, fallback = false) {
   if (value == null) return fallback;
