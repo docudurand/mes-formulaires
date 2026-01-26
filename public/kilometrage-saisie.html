@@ -296,6 +296,34 @@
     color:#1e293b;
   }
 
+
+    /* === Scroll fiable dans la popup de scan (iPhone/Android) === */
+    #scanModal{ overscroll-behavior: contain; }
+    /* le "card" de la popup */
+    #scanModal .scanCard{
+      max-height: calc(100vh - 28px);
+      display:flex;
+      flex-direction:column;
+    }
+    /* zone contenu sous le header (caméra + liste) */
+    #scanModal .scanBody{
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+      max-height: calc(100vh - 120px); /* header + marges */
+    }
+    /* liste des bons scannés (chips) */
+    #multiModalList{
+      margin-top:10px !important;
+      height: 26vh;              /* hauteur fixe => scroll garanti */
+      max-height: 220px;
+      overflow-y:auto !important;
+      -webkit-overflow-scrolling: touch;
+      padding:6px;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#f8fafc;
+    }
+
 </style>
 
 <script src="/js/html5-qrcode.min.js"></script>
@@ -403,12 +431,12 @@
     </div>
 
     <div id="scanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;padding:14px">
-      <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
+      <div class="scanCard" style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:visible">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#111;color:#fff">
           <b id="scanTitle">Scan</b>
           <button type="button" id="btnCloseScan" style="background:#fff;border:0;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer">Fermer</button>
         </div>
-        <div style="padding:10px">
+        <div class="scanBody" style="padding:10px">
           <div id="qr-reader" style="width:100%"></div>
 
           <div id="multiModalInfo" style="display:none;margin-top:10px">
@@ -419,7 +447,7 @@
                 <button type="button" id="btnMultiClear" class="btnSecondary">🗑️ Vider</button>
               </div>
             </div>
-            <div id="multiModalList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
+            <div id="multiModalList"></div>
             <div class="multiSmall">Scanne plusieurs QR codes. Quand tu as fini, valide la liste (les numéros seront envoyés un par un).</div>
           </div>
 
