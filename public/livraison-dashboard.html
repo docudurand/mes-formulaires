@@ -6,9 +6,14 @@
   <title>Livraison – Tableau de bord</title>
   <meta name="theme-color" content="#003c8f">
   <style>
+    html,body{height:100%;overflow:hidden}
     body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f6f7fb}
-    .wrap{width:min(98vw,1900px);max-width:1900px;margin:0 auto;padding:16px}
+    .wrap{width:min(98vw,1900px);max-width:1900px;margin:0 auto;padding:16px;height:100vh;box-sizing:border-box;overflow:hidden}
     .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:16px}
+    .pageCard{height:100%;display:flex;flex-direction:column;overflow:hidden}
+    .viewArea{flex:1;min-height:0;overflow:hidden}
+    .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    .fillRow{flex:1;min-height:0;align-items:stretch}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     h1{font-size:18px;margin:0}
@@ -25,15 +30,21 @@
     .tab{padding:8px 12px;border-radius:999px;border:1px solid #dbeafe;background:#fff;cursor:pointer;font-weight:800}
     .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
     .sep{height:10px}
-    .list{display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow:auto}
+    .list{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow:auto}
     .item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #eef2ff}
     .item.active{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.15)}
     .small{font-size:12px;color:#6b7280}
-    .cols{display:grid;grid-template-columns:repeat(3,minmax(320px,1fr));gap:14px}
+    .cols{display:grid;grid-template-columns:repeat(3,minmax(320px,1fr));gap:14px;flex:1;min-height:0}
     @media(max-width:1100px){.cols{grid-template-columns:1fr}}
-    .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff}
+    .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff;display:flex;flex-direction:column;min-height:0}
     .box h2{margin:0 0 8px;font-size:15px}
     .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;background:#f3f4f6;color:#111827}
+
+    .group{border:1px solid #eef2ff;border-radius:12px;background:#fff;overflow:hidden}
+    .groupHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #eef2ff;position:sticky;top:0;z-index:2}
+    .groupHeader .title{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .groupBody{display:flex;flex-direction:column;gap:10px;padding:10px 12px}
+    .groupCount{font-size:12px;font-weight:900;background:#eef2ff;color:#1f2937;border-radius:999px;padding:4px 8px;white-space:nowrap}
 
     .iconBtn{border:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;cursor:pointer;font-size:16px;line-height:1}
     .iconBtn:active{transform:scale(.98)}
@@ -44,7 +55,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
+    <div class="card pageCard">
       <div class="top">
         <div>
           <h1>Livraison – Tableau de bord magasin</h1>
@@ -71,9 +82,11 @@
 
       <div class="sep"></div>
 
-      <div id="encoursView">
-        <div class="row" style="align-items:flex-start">
-          <div class="card" style="flex:1;min-width:260px">
+      <div class="viewArea" id="viewArea">
+
+      <div id="encoursView" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+        <div class="row fillRow" style="align-items:stretch">
+          <div class="card panel" style="flex:1;min-width:260px">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
               <h2 style="margin:0;font-size:15px">Tournées en cours</h2>
               <span class="badge" id="autoInfo"></span>
@@ -83,7 +96,7 @@
             <div id="tourneesActives" class="list"></div>
           </div>
 
-          <div class="card" style="flex:2;min-width:280px">
+          <div class="card panel" style="flex:2;min-width:280px">
             <h2 style="margin:0 0 6px 0;font-size:15px">Détail tournée</h2>
             <div class="muted" id="detailTitle">Aucune tournée sélectionnée (affichage global).</div>
             <div class="sep"></div>
@@ -106,14 +119,17 @@
         </div>
       </div>
 
-      <div id="classesView" style="display:none">
-        <div class="card">
+      <div id="classesView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+        <div class="card panel">
           <h2 style="margin:0 0 6px 0;font-size:15px">Tournées classées</h2>
           <div class="muted"></div>
           <div class="sep"></div>
           <div id="tourneesClassees" class="list"></div>
         </div>
       </div>
+
+      </div>
+
     </div>
   </div>
 
@@ -445,6 +461,100 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     }
   }
 
+
+  function tourneeMetaById_(tourneeId){
+    const tid = String(tourneeId||"");
+    const t = state.tournees.find(x => String(x.tourneeId) === tid);
+    if (!t) return { dateCreation:"", title: tid, hhmm:"", ms: -1 };
+    const iso = t.dateCreation || "";
+    const ms = iso ? (new Date(iso)).getTime() : -1;
+    const title = formatTourneeTitle(iso) || tid;
+    const hhmm = formatMajHHMM(iso) || "";
+    return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
+  }
+
+  function renderLivresGrouped_(parent, list, includeTournee){
+    parent.innerHTML = "";
+    if (!Array.isArray(list) || !list.length) return;
+
+    const groups = new Map();
+    for (const c of list){
+      const tid = String(c.tourneeId || "");
+      const liv = String(c.livreurId || "").trim() || "—";
+      const key = tid + "||" + liv;
+      if (!groups.has(key)){
+        const meta = tourneeMetaById_(tid);
+        groups.set(key, { tid, liv, meta, items: [] });
+      }
+      groups.get(key).items.push(c);
+    }
+
+    const arr = Array.from(groups.values());
+    arr.sort((a,b)=>{
+      const ta = a.meta.ms, tb = b.meta.ms;
+      if (ta !== tb) return (ta<0?1:ta) - (tb<0?1:tb);
+      return String(a.liv).localeCompare(String(b.liv));
+    });
+
+    for (const g of arr){
+      g.items.sort((a,b)=>{
+        const ma = a.dateMaj ? new Date(a.dateMaj).getTime() : 0;
+        const mb = b.dateMaj ? new Date(b.dateMaj).getTime() : 0;
+        return ma - mb;
+      });
+
+      const group = document.createElement("div");
+      group.className = "group";
+
+      const h = document.createElement("div");
+      h.className = "groupHeader";
+
+      const left = document.createElement("div");
+      left.style.minWidth = "0";
+
+      const t1 = document.createElement("div");
+      t1.className = "title";
+      const hhmm = g.meta.hhmm ? g.meta.hhmm : "—:—";
+      t1.textContent = includeTournee ? (`⏱ ${hhmm} — Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
+
+      const t2 = document.createElement("div");
+      t2.className = "small";
+      t2.textContent = includeTournee ? (`Tournée: ${g.meta.title}`) : "";
+
+      left.appendChild(t1);
+      if (includeTournee) left.appendChild(t2);
+
+      const count = document.createElement("div");
+      count.className = "groupCount";
+      count.textContent = String(g.items.length);
+
+      h.appendChild(left);
+      h.appendChild(count);
+
+      const body = document.createElement("div");
+      body.className = "groupBody";
+
+      g.items.forEach(c => {
+        const lieu = String(c.gpsLieu || "").trim();
+        const hh = formatMajHHMM(c.dateMaj) || "";
+        let right = "";
+        if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+        if (hh) right = right ? (right + " • ⏱ " + hh) : ("⏱ " + hh);
+
+        const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+        const actionsHtml = `
+          <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
+          <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
+        `;
+        body.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+      });
+
+      group.appendChild(h);
+      group.appendChild(body);
+      parent.appendChild(group);
+    }
+  }
+
   function renderDetail() {
     const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
     const stats = computeStatsFor(filter);
@@ -496,7 +606,10 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
     att.slice(0, 700).forEach(c => add(listAtt, c));
     val.slice(0, 700).forEach(c => add(listVal, c));
-    liv.slice(0, 700).forEach(c => add(listLiv, c));
+
+    const livLimited = liv.slice(0, 700);
+    const includeTournee = !selectedTourneeId;
+    renderLivresGrouped_(listLiv, livLimited, includeTournee);
 
     const handleActionClick = async (ev) => {
       const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
