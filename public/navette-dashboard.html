@@ -156,12 +156,11 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   function normStatut(st){
     const s = String(st||"").trim().toUpperCase();
-    // Tolère variantes possibles
     if (s === "EN ATTENTE") return "EN_ATTENTE";
     if (s === "EN_ATTENTE") return "EN_ATTENTE";
     if (s.startsWith("EN_")) return s;
     if (s.startsWith("VAL")) return "VALIDE";
-    if (s.startsWith("LIVR")) return "LIVRE"; // LIVRE, LIVRÉ, LIVREE...
+    if (s.startsWith("LIVR")) return "LIVRE";
     if (s.startsWith("CLAS")) return "CLASSEE";
     return s.replace(/\s+/g,"_");
   }
@@ -195,8 +194,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   function pad2(n){ return String(n).padStart(2,"0"); }
 
-
-  // Affiche uniquement l'heure de dateMaj au format HH:MM (ex: 09:23)
   function formatMajHHMM(iso){
     if (!iso) return "";
     const d = new Date(iso);
@@ -214,11 +211,10 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return isSameLocalDay(d, new Date());
   }
   function isLivreToday(c){
-    // On considère la dateMaj comme date de livraison, sinon fallback dateAjout
+
     return isTodayIso(c.dateMaj) || isTodayIso(c.dateAjout);
   }
 
-  // ✅ Filtre demandé: on filtre les LIVRÉS uniquement dans l’onglet « En cours »
   function isLivreVisible(c){
     return (currentView === "encours") ? isLivreToday(c) : true;
   }
@@ -251,10 +247,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     const text = await r.text().catch(()=> "");
     let j = null;
     if (ct.includes("application/json") || ct.includes("text/json")) {
-      try{ j = JSON.parse(text || "{}"); }catch(e){ /* ignore */ }
+      try{ j = JSON.parse(text || "{}"); }catch(e){  }
     } else {
-      // parfois l'API renvoie du JSON sans content-type correct
-      try{ j = JSON.parse(text || "{}"); }catch(e){ /* ignore */ }
+      try{ j = JSON.parse(text || "{}"); }catch(e){  }
     }
     if (!r.ok) {
       const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
@@ -284,7 +279,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return j;
   }
 
-  // ✅ NOUVEAU: ouvrir Google Maps sur les coordonnées du colis
   function openMapsFromColis(c) {
     const lat = Number(c.gpsLat);
     const lng = Number(c.gpsLng);
@@ -337,7 +331,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     tourneesActivesEl.innerHTML = "";
     const actives = state.tournees.filter(t => {
       const st = normStatut(t.statut);
-      // "En cours" = uniquement les tournées non classées
       return st !== "CLASSEE";
     });
 
@@ -473,11 +466,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const lieu = String(c.gpsLieu || "").trim();
       const hhmm = formatMajHHMM(c.dateMaj) || "";
       let right = rightBase;
-      // Livrés: affiche le lieu si présent
       if (String(c.statut||"").toUpperCase()==="LIVRE" && lieu) {
         right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
       }
-      // Validés + Livrés: affiche l'heure de mise à jour
       if ((st === "VALIDE" || st === "LIVRE") && hhmm) {
         right = right ? (right + " • ⏱ " + hhmm) : ("⏱ " + hhmm);
       }
@@ -514,8 +505,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const bon = btn.getAttribute("data-bon");
       if (!act || !bon) return;
 
-      // ✅ Suivi GPS: pas besoin de sélectionner une tournée
-// 🏷 Nommer / modifier un lieu (POI maison 30m)
 if (act === "nommer") {
   const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
   if (!found) { alert("Colis introuvable."); return; }
@@ -575,9 +564,6 @@ if (act === "nommer") {
       el.onclick = handleActionClick;
     });
 
-    // ✅ Suivi GPS aussi dans l’onglet "Classés"
-    
-// ✅ Suivi GPS et nommage aussi dans l’onglet "Classés"
 tourneesClasseesEl.onclick = async (ev) => {
   const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
   if (!btn) return;
@@ -717,7 +703,6 @@ tourneesClasseesEl.onclick = async (ev) => {
       currentView = view;
       document.getElementById("encoursView").style.display = (view==="encours") ? "" : "none";
       document.getElementById("classesView").style.display = (view==="classes") ? "" : "none";
-      // Recalcule les compteurs/liste selon la vue (filtre livrés uniquement en "En cours")
       renderDetail();
     });
   });

@@ -15,9 +15,6 @@ import { PDFDocument as PDFLib, StandardFonts, rgb } from "pdf-lib";
 import ftp from "basic-ftp";
 import ExcelJS from "exceljs";
 import mailLogsRouter from "./routes/mail-logs.js";
-import { monitorAuth } from "./monitor/auth.js";
-import { log as monitorLog, getHealthStatus } from "./monitor/monitor.js";
-import monitorRoutes from "./monitor/routes.js";
 
 import * as stats from "./stats.js";
 import * as visits from "./visits.js";
