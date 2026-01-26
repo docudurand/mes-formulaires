@@ -170,7 +170,7 @@
     .btnSecondary { background:#0f172a; color:#fff; }
     .btnScan { background:#2563eb; color:#fff; }
     .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1e3a8a; }
-
+    /* --- Multi-scan colis (charger / livrer) --- */
     .multiPanel{
       display:none;
       margin-top:12px;
@@ -210,8 +210,6 @@
     }
     .multiSmall{ font-size:12px; color:#555; margin-top:8px; }
 
-
-
 .multiActions{
   display:flex;
   gap:10px;
@@ -247,6 +245,7 @@
   .multiActions button{ width:100%; min-width: unset; }
 }
   
+  /* === Permission Gate (caméra + géolocalisation) === */
   #permGate{
     position: fixed;
     inset: 0;
@@ -297,27 +296,6 @@
     color:#1e293b;
   }
 
-    #multiModalList{
-      margin-top:10px;
-      height: 26vh;
-      max-height: 220px;
-      overflow-y:auto;
-      -webkit-overflow-scrolling: touch;
-      padding:6px;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      background:#f8fafc;
-    }
-
-    #scanModal > div{
-      max-height: calc(100vh - 28px);
-    }
-    .scanModalBody{
-      overflow-y:auto;
-      max-height: calc(100vh - 120px);
-      -webkit-overflow-scrolling: touch;
-    }
-
 </style>
 
 <script src="/js/html5-qrcode.min.js"></script>
@@ -330,6 +308,7 @@
 <body>
   <div class="card">
 
+    <!-- Permission Gate (1ère ouverture) -->
     <div id="permGate" role="dialog" aria-modal="true">
       <div class="permCard">
         <div class="permTitle">🔐 Autorisations requises</div>
@@ -409,12 +388,7 @@
         <button type="button" id="btnScanLivrer" class="btnScan">🚚 Scanner colis livrer</button>
       </div>
 
-      
-
-      <div id="multiPanel" class="multiPanel">
-        <div class="multiTitleRow">
-          <div><b id="multiPanelTitle">Liste à valider</b> <span class="pill">Scannés : <span id="multiPanelCount">0</span></span></div>
-          <div class="multiPanelNote">Valide la liste dans la fenêtre de scan</div>
+<div class="multiPanelNote">Valide la liste dans la fenêtre de scan</div>
         </div>
         <div id="multiPanelList" class="multiList"></div>
         <div class="multiSmall">Astuce : tu peux scanner 1, 2, 10 colis… puis cliquer sur « Valider la liste ».</div>
@@ -439,7 +413,7 @@
           <b id="scanTitle">Scan</b>
           <button type="button" id="btnCloseScan" style="background:#fff;border:0;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer">Fermer</button>
         </div>
-        <div class="scanModalBody" style="padding:10px">
+        <div style="padding:10px">
           <div id="qr-reader" style="width:100%"></div>
 
           <div id="multiModalInfo" style="display:none;margin-top:10px">
@@ -450,7 +424,7 @@
                 <button type="button" id="btnMultiClear" class="btnSecondary">🗑️ Vider</button>
               </div>
             </div>
-            <div id="multiModalList"></div>
+            <div id="multiModalList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
             <div class="multiSmall">Scanne plusieurs QR codes. Quand tu as fini, valide la liste (les numéros seront envoyés un par un).</div>
           </div>
 
@@ -467,7 +441,8 @@
 const params = new URLSearchParams(window.location.search);
 const NAVETTE_ENABLED = params.get("navette") === "1";
 
-const PERMS_KEY = "NAVETTE_PERMS_STATE";
+// === Permissions (caméra + géolocalisation) : demande 1 fois, mémorise le choix ===
+const PERMS_KEY = "NAVETTE_PERMS_STATE"; // "granted" | "partial" | "denied"
 function getPermState(){
   try { return localStorage.getItem(PERMS_KEY) || ""; } catch(e){ return ""; }
 }
@@ -475,12 +450,13 @@ function setPermState(v){
   try { localStorage.setItem(PERMS_KEY, v); } catch(e){}
 }
 function shouldShowPermGate(){
-
+  // ✅ Ne pas demander si le mode Scan n'est pas activé dans l'URL
+  // On n'affiche la demande automatique qu'à la 1ère ouverture (state vide)
   return NAVETTE_ENABLED && !getPermState();
 }
 
 async function requestPermissionsOnce(){
-
+  // GPS
   const gpsOk = await new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(false);
     navigator.geolocation.getCurrentPosition(
@@ -490,6 +466,7 @@ async function requestPermissionsOnce(){
     );
   });
 
+  // Caméra
   let camOk = false;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no_media_devices");
@@ -517,7 +494,7 @@ function initPermGate(){
   if (shouldShowPermGate()) show();
 
   btnSkip.addEventListener("click", () => {
-
+    // mémorise "denied" pour ne plus afficher à chaque ouverture
     if (!getPermState()) setPermState("denied");
     hide();
   });
@@ -528,9 +505,9 @@ function initPermGate(){
     try{
       const r = await requestPermissionsOnce();
       hide();
-
+      // petit message si refus total
       if (r.state === "denied") {
-
+        // on ne bloque pas, mais on prévient
         try { setColisMsg("⚠️ Autorisations refusées. Tu peux les activer dans les réglages du navigateur.", true); } catch(e) {}
       }
     } finally {
@@ -540,6 +517,7 @@ function initPermGate(){
   });
 }
 
+// ✅ Demande d'autorisations uniquement si le Scan colis est activé (?navette=1)
 if (NAVETTE_ENABLED) {
   initPermGate();
 } else {
@@ -593,7 +571,6 @@ let codeTournee   = params.get("codeTournee")   || "";
 let chauffeur     = params.get("chauffeur")     || "";
 let codeChauffeur = params.get("codeChauffeur") || "";
 let idQr          = params.get("id")            || "";
-
 
     const infoBloc = document.getElementById("infoBloc");
     const messageEl = document.getElementById("message");
@@ -865,7 +842,6 @@ function normalizeRowDate(row) {
         id: idQr
       };
 
-
       submitBtn.disabled = true;
       submitBtn.textContent = "Enregistrement...";
 
@@ -922,6 +898,7 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
       } catch(e){}
     }
 
+    // Toujours synchroniser sur la tournée active (partagée entre profils/appareils)
     (async () => {
       try {
         const active = await getActiveTourneeId();
@@ -956,7 +933,9 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
     }
 
     function normalizeBon(v) {
-
+      // Garde uniquement les chiffres, puis supprime tous les zéros en tête (peu importe le nombre)
+      // Exemple: "000074704606" -> "74704606"
+      // Si le code est composé uniquement de zéros, on retourne "0"
       const s = (v || "").toString().trim().replace(/[^\d]/g, "");
       return s ? (s.replace(/^0+/, "") || "0") : "";
     }
@@ -976,6 +955,7 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
       return out;
     }
 
+    // --- GPS livraison (optionnel) ---
     // Récupère une position une seule fois. Si refusé/indispo => retourne null (on livre quand même).
     function getGpsOnce(opts) {
       return new Promise((resolve) => {
@@ -1011,9 +991,9 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
       });
     }
 
-
 function refreshColisHeader() {
-
+  // Affiche le libellé de tournée (même valeur que celle affichée en haut de la page)
+  // pour que l'utilisateur voie toujours la même info, quel que soit le tourneeId technique.
   if (tourneeNavetteTxt) tourneeNavetteTxt.textContent = (tournee || codeTournee || tourneeNavette || "—");
   if (livreurTxt) livreurTxt.textContent = livreurId || "—";
   if (magasinTxt) magasinTxt.textContent = magasinNavette || "—";
@@ -1028,7 +1008,7 @@ async function apiPost(url, body, opts) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {}),
-
+    // important: permet au navigateur de terminer la requête même si l'onglet se ferme (support variable selon navigateur)
     keepalive: !!options.keepalive
   });
   const j = await r.json().catch(() => ({}));
@@ -1049,7 +1029,6 @@ async function apiGet(url) {
   }
   return j;
 }
-
 
     async function getActiveTourneeId() {
       if (!magasinNavette) return "";
@@ -1083,6 +1062,7 @@ async function apiGet(url) {
         return;
       }
 
+      // Helpers: compare dates in LOCAL time (important: your sheet stores ISO UTC)
       const toLocalYMD = (d) => {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -1097,12 +1077,16 @@ async function apiGet(url) {
         return toLocalYMD(d) === toLocalYMD(new Date());
       };
 
+      // Toujours se recaler sur la tournée active du magasin (partagée entre profils/appareils)
       try {
         tourneeNavette = tourneeNavette || (await getActiveTourneeId());
       } catch(e){}
 
       const j = await apiGet(`/api/navette/livreur?tourneeId=${encodeURIComponent(tourneeNavette||"")}&magasin=${encodeURIComponent(magasinNavette)}&livreurId=${encodeURIComponent(livreurId)}`);
 
+      // ⚠️ IMPORTANT:
+      // On n'affiche ici QUE les colis du jour (sinon, le lendemain, les colis d'hier réapparaissent).
+      // On se base sur dateMaj (sinon dateAjout) en heure locale.
       const rawList = j.colis || [];
       const listToday = rawList.filter(it => isTodayLocal(it.dateMaj || it.dateAjout));
 
@@ -1111,7 +1095,7 @@ async function apiGet(url) {
 
       if (listToday.length === 0) {
         renderList([]);
-
+        // Si on a des colis mais pas du jour, on l'indique clairement
         if (rawList.length > 0) {
           setColisMsg("ℹ️ Aucun colis du jour à afficher (les colis d’hier sont masqués).", false);
         } else {
@@ -1136,6 +1120,7 @@ async function apiGet(url) {
     const btnScanCharger = document.getElementById("btnScanCharger");
     const btnScanLivrer = document.getElementById("btnScanLivrer");
 
+    // --- Multi-scan (charger / livrer) ---
     const multiPanel = document.getElementById("multiPanel");
     const multiPanelTitle = document.getElementById("multiPanelTitle");
     const multiPanelCount = document.getElementById("multiPanelCount");
@@ -1145,9 +1130,9 @@ async function apiGet(url) {
     const multiCount = document.getElementById("multiCount");
     const multiModalList = document.getElementById("multiModalList");
 
-    let multiMode = null;
-    let multiBons = [];
-    let multiSeen = new Set();
+    let multiMode = null;      // "charger" | "livrer"
+    let multiBons = [];        // liste ordonnée
+    let multiSeen = new Set(); // dédoublonnage
 
     function showMultiPanel(show) {
       if (multiPanel) multiPanel.style.display = show ? "block" : "none";
@@ -1175,7 +1160,7 @@ async function apiGet(url) {
               <button type="button" aria-label="Retirer ${b}" data-bon="${b}">✕</button>
             </span>
           `).join("");
-
+          // boutons ✕
           container.querySelectorAll("button[data-bon]").forEach(btn => {
             btn.addEventListener("click", () => {
               const bon = btn.getAttribute("data-bon");
@@ -1226,14 +1211,19 @@ async function apiGet(url) {
       setScanButtonsDisabled(true);
       setScanLoading(true, "Préparation…");
 
+      // stop caméra si elle tourne (évite les doublons pendant l'envoi)
       try { if (html5Qr) await html5Qr.stop(); } catch(e) {}
       if (scanModal) scanModal.style.display = "none";
 
+      // tournéeId courante :
       let currentTourneeId = tourneeNavette || "";
       if (!currentTourneeId) {
         try { currentTourneeId = await getActiveTourneeId(); } catch(e){}
       }
 
+      // === GPS (une fois) ===
+      // On privilégie un GPS déjà connu (cache), pour éviter d'attendre.
+      // Si pas dispo, on tente rapidement (timeout court) mais on n'empêche pas l'envoi.
       let gps = null;
       if (multiMode === "livrer") {
         try {
@@ -1252,7 +1242,7 @@ async function apiGet(url) {
       }
 
       const payload = {
-        mode: multiMode, 
+        mode: multiMode,                // "charger" | "livrer"
         tourneeId: currentTourneeId,    // peut être vide => création auto
         magasin: magasinNavette,
         livreurId,
@@ -1268,6 +1258,9 @@ async function apiGet(url) {
         if (gps.gpsTs != null)  payload.gpsTs  = gps.gpsTs;
       }
 
+      // === Envoi "fire-and-forget" ===
+      // 1) sendBeacon (le plus fiable si l'utilisateur ferme l'onglet)
+      // 2) fallback fetch keepalive si beacon indisponible/échoue
       setScanLoading(true, "Envoi…");
       let queuedOk = false;
 
@@ -1279,11 +1272,12 @@ async function apiGet(url) {
       } catch(e) {}
 
       if (!queuedOk) {
-
+        // fallback : on attend la réponse 202
         const j = await apiPost("/api/navette/bulk", payload, { keepalive: true });
         if (!j || j.success !== true) throw new Error((j && (j.error || j.message)) || "bulk failed");
       }
 
+      // UI : on considère la liste envoyée (traitement côté serveur)
       const sentCount = multiBons.length;
       multiBons = [];
       multiSeen = new Set();
@@ -1294,7 +1288,6 @@ async function apiGet(url) {
       setColisMsg(`✅ Envoi lancé (${sentCount} colis). Tu peux quitter la page.`, false);
       try { navigator.vibrate && navigator.vibrate([40, 30, 40]); } catch(e){}
     }
-
 
 function startMultiScan(mode) {
       multiMode = mode;
@@ -1315,11 +1308,13 @@ function startMultiScan(mode) {
       setColisMsg("", false);
       if (scanTitle) scanTitle.textContent = title;
 
+      // UI multi dans la modale
       if (multiModalInfo) multiModalInfo.style.display = multi ? "block" : "none";
       if (scanModal) scanModal.style.display = "block";
 
       if (!html5Qr) html5Qr = new Html5Qrcode("qr-reader");
 
+      // Anti double trigger (html5-qrcode peut rappeler plusieurs fois le même code)
       let lastTxt = "";
       let lastTs = 0;
 
@@ -1337,6 +1332,7 @@ function startMultiScan(mode) {
               if (onScanResult) onScanResult(txt);
             });
           } else {
+            // multi: on garde la caméra ouverte
             if (onScanResult) onScanResult(txt);
           }
         },
@@ -1350,6 +1346,7 @@ function startMultiScan(mode) {
     }
     if (btnCloseScan) btnCloseScan.addEventListener("click", closeScanner);
 
+    // Boutons multi (dans la modale + dans le panneau)
     function hookMulti(btn) {
       if (!btn) return;
       btn.addEventListener("click", () => {
@@ -1438,8 +1435,9 @@ function startMultiScan(mode) {
   </script>
 
 <script>
-
-  function logi(msg){  }
+  // Helper conservé pour ne pas casser le GPS (les anciens logs utilisaient logi()).
+  // Ici on n'affiche rien : pas de panneau/bouton debug.
+  function logi(msg){ /* noop */ }
 </script>
 
 </body>
