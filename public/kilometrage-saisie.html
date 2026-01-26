@@ -943,7 +943,11 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
     }
 
     function normalizeBon(v) {
-      return (v || "").toString().trim().replace(/[^\d]/g, "");
+      // Garde uniquement les chiffres, puis supprime tous les zéros en tête (peu importe le nombre)
+      // Exemple: "000074704606" -> "74704606"
+      // Si le code est composé uniquement de zéros, on retourne "0"
+      const s = (v || "").toString().trim().replace(/[^\d]/g, "");
+      return s ? (s.replace(/^0+/, "") || "0") : "";
     }
 
     function parseBonsFromFeuille(text) {
