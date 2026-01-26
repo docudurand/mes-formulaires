@@ -460,20 +460,37 @@
 const params = new URLSearchParams(window.location.search);
 const NAVETTE_ENABLED = params.get("navette") === "1";
 
-const PERMS_KEY = "NAVETTE_PERMS_STATE";
-function getPermState(){
-  try { return localStorage.getItem(PERMS_KEY) || ""; } catch(e){ return ""; }
-}
-function setPermState(v){
-  try { localStorage.setItem(PERMS_KEY, v); } catch(e){}
-}
-function shouldShowPermGate(){
+const PERM_OK_KEY = "NAVETTE_PERMS_OK_V1";
 
-  return NAVETTE_ENABLED;
+function hasPermsOkFlag() {
+  try { return localStorage.getItem(PERM_OK_KEY) === "1"; } catch (e) { return false; }
+}
+function setPermsOkFlag(v) {
+  try { localStorage.setItem(PERM_OK_KEY, v ? "1" : "0"); } catch (e) {}
 }
 
-async function requestPermissionsOnce(){
+async function getGeoState() {
+  try {
+    if (!navigator.permissions) return "unknown";
+    const r = await navigator.permissions.query({ name: "geolocation" });
+    return r.state;
+  } catch (e) {
+    return "unknown";
+  }
+}
 
+async function shouldShowPermGate() {
+  if (!NAVETTE_ENABLED) return false;
+
+  if (hasPermsOkFlag()) {
+    const geo = await getGeoState();
+
+    if (geo !== "denied") return false;
+  }
+  return true;
+}
+
+async function requestPermissionsOnUserGesture() {
   const gpsOk = await new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(false);
     navigator.geolocation.getCurrentPosition(
@@ -486,19 +503,19 @@ async function requestPermissionsOnce(){
   let camOk = false;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no_media_devices");
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     camOk = true;
     stream.getTracks().forEach(t => t.stop());
-  } catch(e) {
+  } catch (e) {
     camOk = false;
   }
 
-  const state = (gpsOk && camOk) ? "granted" : ((gpsOk || camOk) ? "partial" : "denied");
-  setPermState(state);
-  return { gpsOk, camOk, state };
+  const ok = !!(gpsOk && camOk);
+  setPermsOkFlag(ok);
+  return { gpsOk, camOk, ok };
 }
 
-function initPermGate(){
+function initPermGate() {
   const gate = document.getElementById("permGate");
   const btnAsk = document.getElementById("btnAskPerms");
   const btnSkip = document.getElementById("btnSkipPerms");
@@ -507,40 +524,31 @@ function initPermGate(){
   const hide = () => { gate.style.display = "none"; };
   const show = () => { gate.style.display = "flex"; };
 
-  if (shouldShowPermGate()) show();
-
-  let autoProbeDone = false;
-  const autoProbePerms = async () => {
-    if (autoProbeDone) return;
-    autoProbeDone = true;
-    try{
-      const r = await requestPermissionsOnce();
-      if (r && r.gpsOk && r.camOk) hide();
-    } catch(e){  }
-  };
-
-  setTimeout(autoProbePerms, 350);
-
+  (async () => {
+    const showIt = await shouldShowPermGate();
+    if (showIt) show(); else hide();
+  })();
 
   btnSkip.addEventListener("click", () => {
 
     hide();
   });
 
-btnAsk.addEventListener("click", async () => {
+  btnAsk.addEventListener("click", async () => {
     btnAsk.disabled = true;
+    const oldTxt = btnAsk.textContent;
     btnAsk.textContent = "Demande en cours…";
-    try{
-      const r = await requestPermissionsOnce();
+    try {
+      const r = await requestPermissionsOnUserGesture();
+
       hide();
 
-      if (r.state === "denied") {
-
-        try { setColisMsg("⚠️ Autorisations refusées. Tu peux les activer dans les réglages du navigateur.", true); } catch(e) {}
+      if (!r.ok) {
+        try { setColisMsg("⚠️ Autorisations refusées. Tu peux les activer dans les réglages du navigateur.", true); } catch (e) {}
       }
     } finally {
       btnAsk.disabled = false;
-      btnAsk.textContent = "Autoriser et continuer";
+      btnAsk.textContent = oldTxt;
     }
   });
 }
@@ -548,7 +556,7 @@ btnAsk.addEventListener("click", async () => {
 if (NAVETTE_ENABLED) {
   initPermGate();
 } else {
-  try { const g = document.getElementById('permGate'); if (g) g.style.display = 'none'; } catch(e) {}
+  try { const g = document.getElementById('permGate'); if (g) g.style.display = 'none'; } catch (e) {}
 }
 
 if (!NAVETTE_ENABLED) {
@@ -557,7 +565,7 @@ if (!NAVETTE_ENABLED) {
   if (tabScanBtn) tabScanBtn.style.display = "none";
   if (tabScan) tabScan.style.display = "none";
 
-  try { localStorage.setItem("kmActiveTab", "km"); } catch(e){}
+  try { localStorage.setItem("kmActiveTab", "km"); } catch (e) {}
 }
 
     const tabKmBtn = document.getElementById("tabKmBtn");
