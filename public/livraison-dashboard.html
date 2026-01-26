@@ -285,15 +285,61 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   }
 
 
-  async function apiPost(url, body) {
-    const r = await fetch(apiUrl(url), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body || {})
+  async function getGpsOnce_(options){
+    options = options || {};
+    if (!navigator.geolocation) throw new Error("Géolocalisation non disponible");
+    const timeout = Number(options.timeout || 8000);
+    const high = (options.enableHighAccuracy !== undefined) ? !!options.enableHighAccuracy : true;
+
+    return await new Promise((resolve, reject) => {
+      const opts = { enableHighAccuracy: high, timeout, maximumAge: 0 };
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const c = pos && pos.coords ? pos.coords : {};
+          resolve({
+            gpsLat: String(c.latitude ?? ""),
+            gpsLng: String(c.longitude ?? ""),
+            gpsAcc: String(c.accuracy ?? ""),
+            gpsTs:  String(pos.timestamp ?? Date.now())
+          });
+        },
+        (err) => reject(err || new Error("Géolocalisation refusée")),
+        opts
+      );
     });
-    const j = await r.json().catch(()=> ({}));
-    if (!r.ok || j.success === false) throw new Error(j.error || "Erreur API");
-    return j;
+  }
+
+
+  
+  async function apiPost(url, body) {
+    let r;
+    try{
+      r = await fetch(apiUrl(url), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+    } catch(e){
+      throw new Error("Fetch impossible (réseau/CORS): " + (e && e.message ? e.message : e));
+    }
+
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const text = await r.text().catch(()=> "");
+    let j = null;
+    if (ct.includes("application/json") || ct.includes("text/json")) {
+      try{ j = JSON.parse(text || "{}"); }catch(e){ }
+    } else {
+      try{ j = JSON.parse(text || "{}"); }catch(e){ }
+    }
+
+    if (!r.ok) {
+      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
+      throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
+    }
+    if (j && j.success === false) {
+      throw new Error(j.error || j.message || "Erreur API");
+    }
+    return j || {};
   }
 
   function openMapsFromColis(c) {
@@ -658,8 +704,9 @@ if (act === "nommer") {
         if (act === "valider") {
           await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
         } else if (act === "livrer") {
+          
           await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
-        }
+}
         await refresh();
       } catch (e) {
         alert("Erreur: " + (e && e.message ? e.message : e));
