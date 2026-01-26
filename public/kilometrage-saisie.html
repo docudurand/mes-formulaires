@@ -477,7 +477,14 @@ async function requestPermissionsOnce(){
   let camOk = false;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no_media_devices");
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+  video: {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30 }
+  },
+  audio: false
+});
     camOk = true;
     stream.getTracks().forEach(t => t.stop());
   } catch(e) {
@@ -943,11 +950,7 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
     }
 
     function normalizeBon(v) {
-      // Garde uniquement les chiffres, puis supprime tous les zéros en tête (peu importe le nombre)
-      // Exemple: "000074704606" -> "74704606"
-      // Si le code est composé uniquement de zéros, on retourne "0"
-      const s = (v || "").toString().trim().replace(/[^\d]/g, "");
-      return s ? (s.replace(/^0+/, "") || "0") : "";
+      return (v || "").toString().trim().replace(/[^\d]/g, "");
     }
 
     function parseBonsFromFeuille(text) {
@@ -1331,22 +1334,35 @@ function startMultiScan(mode) {
       let lastTxt = "";
       let lastTs = 0;
 
-      await html5Qr.start(
-        { facingMode: "environment" },
+      return html5Qr.start(
+        {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         async (decodedText) => {
-          const txt = String(decodedText || "");
           const now = Date.now();
-          if (txt === lastTxt && (now - lastTs) < 1200) return;
-          lastTxt = txt; lastTs = now;
+          const txt = String(decodedText || "").trim();
+          if (!txt) return;
 
-          if (!multi) {
-            closeScanner().finally(() => {
-              if (onScanResult) onScanResult(txt);
-            });
-          } else {
-            // multi: on garde la caméra ouverte
-            if (onScanResult) onScanResult(txt);
+          // anti double trigger (même QR relu plusieurs fois)
+          if (txt === lastTxt && (now - lastTs) < 900) return;
+          lastTxt = txt;
+          lastTs = now;
+
+          try {
+            if (typeof onScanResult === "function") {
+              await onScanResult(txt);
+            }
+
+            // si pas en mode multi, on ferme après 1 scan
+            if (!multi) {
+              await closeScanner();
+            }
+          } catch (e) {
+            setColisMsg("❌ " + (e && e.message ? e.message : e), true);
           }
         },
         () => {}
