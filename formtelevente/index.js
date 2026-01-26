@@ -5,6 +5,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { transporter, fromEmail } from '../mailer.js';
+import ftp from 'basic-ftp';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -45,14 +47,22 @@ function getSubjectPrefix(formOriginRaw) {
 }
 
 
-// --- PDF filename counter (persisted in /tmp) ---
-// Goal: avoid overwriting when Power Automate saves files with same name in Teams.
-const COUNTERS_FILE = path.join(os.tmpdir(), 'televente_pdf_counters.json');
+// --- PDF filename counter (PERSISTENT) ---
+// Render restart wipes /tmp, so we persist on FTP (Freebox) when available.
+// Fallback: local /tmp file if FTP env vars are missing.
 
-function readCountersSafe() {
+const COUNTERS_FILE_LOCAL = path.join(os.tmpdir(), 'televente_pdf_counters.json');
+
+const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || '/').replace(/\/$/, '');
+const COUNTERS_REMOTE_DIR = (process.env.TELEVENTE_COUNTERS_DIR || `${FTP_ROOT_BASE}/televente`).replace(/\/$/, '');
+const COUNTERS_REMOTE_FILE = `${COUNTERS_REMOTE_DIR}/pdf_counters.json`;
+
+const FTP_ENABLED = Boolean(process.env.FTP_HOST && process.env.FTP_USER && process.env.FTP_PASSWORD);
+
+function readLocalCountersSafe() {
   try {
-    if (!fs.existsSync(COUNTERS_FILE)) return {};
-    const raw = fs.readFileSync(COUNTERS_FILE, 'utf-8');
+    if (!fs.existsSync(COUNTERS_FILE_LOCAL)) return {};
+    const raw = fs.readFileSync(COUNTERS_FILE_LOCAL, 'utf-8');
     const obj = JSON.parse(raw);
     return (obj && typeof obj === 'object') ? obj : {};
   } catch {
@@ -60,21 +70,92 @@ function readCountersSafe() {
   }
 }
 
-function writeCountersSafe(counters) {
+function writeLocalCountersSafe(counters) {
   try {
-    fs.writeFileSync(COUNTERS_FILE, JSON.stringify(counters, null, 2), 'utf-8');
+    fs.writeFileSync(COUNTERS_FILE_LOCAL, JSON.stringify(counters, null, 2), 'utf-8');
   } catch (e) {
-    console.warn('[televente] cannot persist counters:', e?.message || e);
+    console.warn('[televente] cannot persist local counters:', e?.message || e);
   }
 }
 
+async function withFtpClient(fn) {
+  const client = new ftp.Client(30000);
+  try {
+    await client.access({
+      host: process.env.FTP_HOST,
+      user: process.env.FTP_USER,
+      password: process.env.FTP_PASSWORD,
+      port: process.env.FTP_PORT ? Number(process.env.FTP_PORT) : 21,
+      secure: String(process.env.FTP_SECURE || 'false') === 'true',
+      secureOptions: {
+        rejectUnauthorized: String(process.env.FTP_TLS_REJECT_UNAUTH || '1') === '1',
+        servername: process.env.FTP_HOST || undefined,
+      },
+    });
+    return await fn(client);
+  } finally {
+    client.close();
+  }
+}
+
+async function readRemoteCountersSafe() {
+  const tmp = path.join(os.tmpdir(), `televente_counters_${crypto.randomUUID()}.json`);
+  try {
+    return await withFtpClient(async (client) => {
+      try {
+        await client.downloadTo(tmp, COUNTERS_REMOTE_FILE);
+      } catch {
+        return {}; // doesn't exist yet
+      }
+      try {
+        const raw = fs.readFileSync(tmp, 'utf-8');
+        const obj = JSON.parse(raw);
+        return (obj && typeof obj === 'object') ? obj : {};
+      } catch {
+        return {};
+      }
+    });
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
+}
+
+async function writeRemoteCountersSafe(counters) {
+  const tmp = path.join(os.tmpdir(), `televente_counters_${crypto.randomUUID()}.json`);
+  const remoteTmp = `${COUNTERS_REMOTE_DIR}/pdf_counters_${Date.now()}_${Math.random().toString(16).slice(2)}.json`;
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(counters, null, 2), 'utf-8');
+
+    await withFtpClient(async (client) => {
+      try { await client.ensureDir(COUNTERS_REMOTE_DIR); } catch {}
+      await client.uploadFrom(tmp, remoteTmp);
+      try { await client.remove(COUNTERS_REMOTE_FILE); } catch {}
+      await client.rename(remoteTmp, COUNTERS_REMOTE_FILE);
+    });
+  } catch (e) {
+    console.warn('[televente] cannot persist remote counters:', e?.message || e);
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
+}
+
+// In-process mutex (avoids 2 requests incrementing the same number simultaneously)
+let _counterLock = Promise.resolve();
+
 // Returns an integer 1..n for a given base key (client+sales+YYYY-MM)
 function nextCounter(baseKey) {
-  const counters = readCountersSafe();
-  const n = (Number(counters[baseKey]) || 0) + 1;
-  counters[baseKey] = n;
-  writeCountersSafe(counters);
-  return n;
+  _counterLock = _counterLock.then(async () => {
+    const counters = FTP_ENABLED ? await readRemoteCountersSafe() : readLocalCountersSafe();
+    const n = (Number(counters[baseKey]) || 0) + 1;
+    counters[baseKey] = n;
+
+    if (FTP_ENABLED) await writeRemoteCountersSafe(counters);
+    else writeLocalCountersSafe(counters);
+
+    return n;
+  });
+
+  return _counterLock;
 }
 
 router.post('/send-order', async (req, res) => {
@@ -118,6 +199,10 @@ router.post('/send-order', async (req, res) => {
   const fromName = getFromName(form_origin);
   const subjectPrefix = getSubjectPrefix(form_origin);
 
+  const baseKey = `${safeSales}__${safeClient}__${dateStr}`;
+  const n = await nextCounter(baseKey);
+  const pdfFilename = `Bon ${safeSales} – ${safeClient} ${dateStr} N°${n}.pdf`;
+
   const mailOptions = {
     from: `"${fromName}" <${fromEmail}>`,
     to,
@@ -125,11 +210,7 @@ router.post('/send-order', async (req, res) => {
     text: 'Veuillez trouver le bon de commande en pièce jointe (PDF).',
     attachments: [
       {
-        filename: (() => {
-        const baseKey = `${safeSales}__${safeClient}__${dateStr}`;
-        const n = nextCounter(baseKey);
-        return `Bon ${safeSales} – ${safeClient} ${dateStr} N°${n}.pdf`;
-      })(),
+        filename: pdfFilename,
         content: Buffer.from(pdf, 'base64'),
         contentType: 'application/pdf',
       },

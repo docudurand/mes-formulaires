@@ -195,6 +195,15 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   function pad2(n){ return String(n).padStart(2,"0"); }
 
+
+  // Affiche uniquement l'heure de dateMaj au format HH:MM (ex: 09:23)
+  function formatMajHHMM(iso){
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+
   function isSameLocalDay(a, b){
     return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
   }
@@ -416,7 +425,10 @@ const API_BASE = "https://mes-formulaires.onrender.com";
           liv.slice(0, 800).forEach(c => {
             const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
             const lieu = String(c.gpsLieu || "").trim();
-            const right = lieu ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu)) : rightBase;
+            const hhmm = formatMajHHMM(c.dateMaj) || "";
+            let right = rightBase;
+            if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+            if (hhmm) right = right ? (right + " • ⏱ " + hhmm) : ("⏱ " + hhmm);
             const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
             const actionsHtml = `
               <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
@@ -459,9 +471,16 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const st = normStatut(c.statut);
       const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
       const lieu = String(c.gpsLieu || "").trim();
-      const right = (String(c.statut||"").toUpperCase()==="LIVRE" && lieu)
-        ? (rightBase ? (rightBase + " • 📍 " + lieu) : ("📍 " + lieu))
-        : rightBase;
+      const hhmm = formatMajHHMM(c.dateMaj) || "";
+      let right = rightBase;
+      // Livrés: affiche le lieu si présent
+      if (String(c.statut||"").toUpperCase()==="LIVRE" && lieu) {
+        right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+      }
+      // Validés + Livrés: affiche l'heure de mise à jour
+      if ((st === "VALIDE" || st === "LIVRE") && hhmm) {
+        right = right ? (right + " • ⏱ " + hhmm) : ("⏱ " + hhmm);
+      }
       let actionsHtml = "";
 
       if (st === "EN_ATTENTE") {
