@@ -1311,7 +1311,50 @@ function startMultiScan(mode) {
     let html5Qr = null;
     let onScanResult = null;
 
-    async function openScanner(title, cb, opts) {
+    
+    // Amélioration scan code-barres (focus/zoom + formats)
+    const SCAN_FORMATS = (typeof Html5QrcodeSupportedFormats !== "undefined") ? [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.ITF,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E
+    ] : undefined;
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    async function tuneCameraAfterStart({ zoomHint = 1.7 } = {}) {
+      try {
+        const video = document.querySelector("#qr-reader video");
+        if (!video || !video.srcObject) return;
+
+        const stream = video.srcObject;
+        const track = stream.getVideoTracks && stream.getVideoTracks()[0];
+        if (!track) return;
+
+        const caps = track.getCapabilities ? track.getCapabilities() : null;
+
+        // Focus continu si dispo
+        if (caps && caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes("continuous")) {
+          try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch(e){}
+        }
+
+        // Petit zoom si dispo (utile pour code-barres)
+        if (caps && typeof caps.zoom === "object") {
+          const zmin = (caps.zoom.min != null) ? caps.zoom.min : 1;
+          const zmax = (caps.zoom.max != null) ? caps.zoom.max : 3;
+          const z = clamp(zoomHint, zmin, zmax);
+          try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch(e){}
+        }
+      } catch(e) {
+        // silencieux
+      }
+    }
+
+async function openScanner(title, cb, opts) {
       onScanResult = cb;
       const options = opts || {};
       const multi = !!options.multi;
@@ -1328,9 +1371,25 @@ function startMultiScan(mode) {
       let lastTxt = "";
       let lastTs = 0;
 
+      
+      const scanCfg = {
+        fps: 15,
+        // zone de scan plus large (meilleur pour code-barres)
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const w = Math.floor(Math.min(viewfinderWidth * 0.92, 420));
+          const h = Math.floor(Math.min(viewfinderHeight * 0.28, 180));
+          return { width: w, height: h };
+        },
+        aspectRatio: 16 / 9,
+        disableFlip: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+      };
+
+      if (SCAN_FORMATS) scanCfg.formatsToSupport = SCAN_FORMATS;
+
       await html5Qr.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        scanCfg,
         async (decodedText) => {
           const txt = String(decodedText || "");
           const now = Date.now();
@@ -1347,6 +1406,9 @@ function startMultiScan(mode) {
         },
         () => {}
       );
+
+      // Laisse le temps à la vidéo de démarrer puis ajuste focus/zoom si possible
+      setTimeout(() => { tuneCameraAfterStart({ zoomHint: 1.7 }); }, 180);
     }
 
     async function closeScanner() {
