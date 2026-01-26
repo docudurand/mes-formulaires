@@ -210,18 +210,6 @@
     }
     .multiSmall{ font-size:12px; color:#555; margin-top:8px; }
 
-    .multiModalListScroll{
-      margin-top:10px;
-      max-height:35vh;
-      overflow-y:auto;
-      -webkit-overflow-scrolling: touch;
-      padding:6px;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      background:#f8fafc;
-    }
-
-
 
 
 .multiActions{
@@ -308,6 +296,27 @@
     background: #eef2ff;
     color:#1e293b;
   }
+
+    #multiModalList{
+      margin-top:10px;
+      height: 26vh;
+      max-height: 220px;
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+      padding:6px;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#f8fafc;
+    }
+
+    #scanModal > div{
+      max-height: calc(100vh - 28px);
+    }
+    .scanModalBody{
+      overflow-y:auto;
+      max-height: calc(100vh - 120px);
+      -webkit-overflow-scrolling: touch;
+    }
 
 </style>
 
@@ -430,7 +439,7 @@
           <b id="scanTitle">Scan</b>
           <button type="button" id="btnCloseScan" style="background:#fff;border:0;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer">Fermer</button>
         </div>
-        <div style="padding:10px">
+        <div class="scanModalBody" style="padding:10px">
           <div id="qr-reader" style="width:100%"></div>
 
           <div id="multiModalInfo" style="display:none;margin-top:10px">
@@ -441,7 +450,7 @@
                 <button type="button" id="btnMultiClear" class="btnSecondary">🗑️ Vider</button>
               </div>
             </div>
-            <div id="multiModalList" class="multiModalListScroll"></div>
+            <div id="multiModalList"></div>
             <div class="multiSmall">Scanne plusieurs QR codes. Quand tu as fini, valide la liste (les numéros seront envoyés un par un).</div>
           </div>
 
@@ -508,6 +517,7 @@ function initPermGate(){
   if (shouldShowPermGate()) show();
 
   btnSkip.addEventListener("click", () => {
+
     if (!getPermState()) setPermState("denied");
     hide();
   });
@@ -518,7 +528,9 @@ function initPermGate(){
     try{
       const r = await requestPermissionsOnce();
       hide();
+
       if (r.state === "denied") {
+
         try { setColisMsg("⚠️ Autorisations refusées. Tu peux les activer dans les réglages du navigateur.", true); } catch(e) {}
       }
     } finally {
@@ -964,6 +976,7 @@ const res = await fetch(apiUrl("/api/kilometrage/save"), {
       return out;
     }
 
+    // Récupère une position une seule fois. Si refusé/indispo => retourne null (on livre quand même).
     function getGpsOnce(opts) {
       return new Promise((resolve) => {
         try {
@@ -1015,6 +1028,7 @@ async function apiPost(url, body, opts) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {}),
+
     keepalive: !!options.keepalive
   });
   const j = await r.json().catch(() => ({}));
@@ -1161,6 +1175,7 @@ async function apiGet(url) {
               <button type="button" aria-label="Retirer ${b}" data-bon="${b}">✕</button>
             </span>
           `).join("");
+
           container.querySelectorAll("button[data-bon]").forEach(btn => {
             btn.addEventListener("click", () => {
               const bon = btn.getAttribute("data-bon");
@@ -1237,7 +1252,7 @@ async function apiGet(url) {
       }
 
       const payload = {
-        mode: multiMode,                // "charger" | "livrer"
+        mode: multiMode, 
         tourneeId: currentTourneeId,    // peut être vide => création auto
         magasin: magasinNavette,
         livreurId,
@@ -1264,6 +1279,7 @@ async function apiGet(url) {
       } catch(e) {}
 
       if (!queuedOk) {
+
         const j = await apiPost("/api/navette/bulk", payload, { keepalive: true });
         if (!j || j.success !== true) throw new Error((j && (j.error || j.message)) || "bulk failed");
       }
