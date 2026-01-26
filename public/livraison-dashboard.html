@@ -6,14 +6,14 @@
   <title>Livraison – Tableau de bord</title>
   <meta name="theme-color" content="#003c8f">
   <style>
-    html,body{height:100%;overflow:hidden}
+    html,body{height:auto;min-height:100%;overflow:auto}
     body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f6f7fb}
-    .wrap{width:min(98vw,1900px);max-width:1900px;margin:0 auto;padding:16px;height:100vh;box-sizing:border-box;overflow:hidden}
+    .wrap{width:min(98vw,1900px);max-width:1900px;margin:0 auto;padding:16px;min-height:100vh;box-sizing:border-box;overflow:visible}
     .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:16px}
-    .pageCard{height:100%;display:flex;flex-direction:column;overflow:hidden}
-    .viewArea{flex:1;min-height:0;overflow:hidden}
-    .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden;height:100%}
-    .fillRow{flex:1;min-height:0;align-items:stretch;flex-wrap:nowrap;overflow:hidden}
+    .pageCard{min-height:100vh;display:flex;flex-direction:column;overflow:visible}
+    .viewArea{flex:1;min-height:0;overflow:visible}
+    .panel{display:flex;flex-direction:column;min-height:0;overflow:visible}
+    .fillRow{flex:1;min-height:0;align-items:stretch;flex-wrap:nowrap;overflow:visible}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     h1{font-size:18px;margin:0}
@@ -85,7 +85,7 @@
 
       <div class="viewArea" id="viewArea">
 
-      <div id="encoursView" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+      <div id="encoursView" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:visible">
         <div class="row fillRow" style="align-items:stretch">
           <div class="card panel" style="flex:1;min-width:260px">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -120,7 +120,7 @@
         </div>
       </div>
 
-      <div id="classesView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+      <div id="classesView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:visible">
         <div class="card panel">
           <h2 style="margin:0 0 6px 0;font-size:15px">Tournées classées</h2>
           <div class="muted"></div>
