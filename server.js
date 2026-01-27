@@ -189,7 +189,7 @@ async function callNavetteGAS(action, params = {}) {
 
   const { data } = await axios.post(url, payload.toString(), {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    timeout: 30000,
+    timeout: 60000,
   });
 
   return data;
