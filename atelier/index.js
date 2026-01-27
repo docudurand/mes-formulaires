@@ -1,3 +1,6 @@
+// module Atelier (formulaires + suivi + mails + PDF)
+// server.js (route /atelier)
+
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -5,11 +8,14 @@ import { fileURLToPath } from "url";
 import { transporter, fromEmail } from "../mailer.js";
 import axios from "axios";
 
+// Chemins utilitaires
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+// routeur Express separe
 const router = express.Router();
 
+// Config Apps Script / Google Sheets
 const GS_URL   = process.env.GS_ATELIER_URL || "";
 const GS_SHEET = process.env.GS_ATELIER_SHEET || "Atelier";
 
@@ -17,11 +23,13 @@ if (!GS_URL) {
   console.warn("[ATELIER] ⚠️ GS_ATELIER_URL est vide. Les opérations Sheets/Apps Script échoueront.");
 }
 
+// Client HTTP avec timeout
 const http = axios.create({
   timeout: 60000,
   headers: { "User-Agent": "atelier-api/1.1 (+render)" }
 });
 
+// retry uniquement sur erreurs reseau
 async function httpGetWithRetry(url, config = {}, tries = 2) {
   let lastErr;
   for (let i = 0; i <= tries; i++) {
@@ -38,6 +46,7 @@ async function httpGetWithRetry(url, config = {}, tries = 2) {
 }
 
 
+// Expose la config en JS pour la page atelier
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -49,6 +58,7 @@ router.get("/config.js", (_req, res) => {
   );
 });
 
+// autorise l'iframe uniquement sur certains domaines
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.fr https://www.documentsdurand.fr https://mes-formulaires.onrender.com;";
 router.use((req, res, next) => {
@@ -57,9 +67,11 @@ router.use((req, res, next) => {
   next();
 });
 
+// Parsers JSON / form
 router.use(express.json({ limit: "2mb" }));
 router.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
+// Dossier public pour les pages atelier
 const publicDir = path.join(__dirname, "public");
 router.use(express.static(publicDir, {
   extensions: ["html", "htm"],
@@ -69,13 +81,16 @@ router.use(express.static(publicDir, {
     if (p.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
   }
 }));
+// Page principale
 router.get("/", (_req, res) => {
   const f = path.join(publicDir, "index.html");
   if (fs.existsSync(f)) return res.sendFile(f);
   res.status(500).type("text").send("atelier/public/index.html introuvable.");
 });
 
+// Echappement HTML simple
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;"}[c])); }
+// Format date JJ-MM-AAAA
 function fmtJJMMYYYYdash(v){
   if (!v) return "";
   const d = new Date(v);
@@ -83,6 +98,7 @@ function fmtJJMMYYYYdash(v){
   const p2 = (n) => String(n).padStart(2,"0");
   return `${p2(d.getDate())}-${p2(d.getMonth()+1)}-${d.getFullYear()}`;
 }
+// Libelle de site selon le service
 function siteLabelForService(service = ""){
   if (service === "Arbre de Transmission") return "BOURGOIN";
   if (service === "Contrôle injection Essence") return "ST EGREVE";
@@ -94,6 +110,7 @@ function siteLabelForService(service = ""){
   return "";
 }
 
+// Nettoie l'estimation (retourne undefined si vide)
 function sanitizeEstimation(v){
   if (v === 0 || v === "0") return "0";
   if (v === undefined || v === null) return undefined;
@@ -102,10 +119,12 @@ function sanitizeEstimation(v){
   return s;
 }
 
+// Stockage local pour le compteur dossier
 const dataDir = path.join(__dirname, ".data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const COUNTER_FILE = path.join(dataDir, "counter.json");
 
+// Lecture JSON safe
 function readJsonSafe(file, fallback) {
   try {
     if (!fs.existsSync(file)) return fallback;
@@ -113,10 +132,12 @@ function readJsonSafe(file, fallback) {
     return s ? JSON.parse(s) : fallback;
   } catch { return fallback; }
 }
+// Ecriture JSON safe
 function writeJsonSafe(file, obj) {
   try { fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8"); } catch {}
 }
 
+// genere le prochain numero de dossier
 async function nextDossierNumber(){
   let current = readJsonSafe(COUNTER_FILE, null)?.value ?? null;
 
@@ -142,6 +163,7 @@ async function nextDossierNumber(){
   return String(next).padStart(5, "0");
 }
 
+// Liste des dossiers depuis Google Sheets
 async function gsListCases() {
   if (!GS_URL) return { ok: true, data: [] };
   const r = await httpGetWithRetry(GS_URL, {
@@ -154,13 +176,16 @@ async function gsListCases() {
   return { ok:true, data: [] };
 }
 
+// Cache simple pour eviter trop d'appels
 let CASES_CACHE = { ts: 0, data: [] };
 const CASES_TTL_MS = Number(process.env.ATELIER_CASES_TTL_MS || 30000);
 
+// Normalise le numero de dossier
 function normalizeNo_(v) {
   return String(v ?? "").trim().replace(/^0+/, "");
 }
 
+// Recupere les dossiers avec cache
 async function getCasesCached() {
   const now = Date.now();
   if (now - CASES_CACHE.ts < CASES_TTL_MS && Array.isArray(CASES_CACHE.data)) {
@@ -172,11 +197,13 @@ async function getCasesCached() {
   return { ok: true, data, cached: false };
 }
 
+// Ajoute un dossier dans Google Sheets
 async function gsAppendCase(entry) {
   if (!GS_URL) return { ok: false, error: "no_gs_url" };
   const r = await http.post(GS_URL, { action: "save_case", sheet: GS_SHEET, entry });
   return r.data;
 }
+// Met a jour le statut d'un dossier dans Google Sheets
 async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
   if (!GS_URL) return { ok: false, error: "no_gs_url" };
   const body = {
@@ -193,6 +220,7 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
   return r.data;
 }
 
+// Destinataires mails selon le service
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Rectification Vilebrequin": process.env.DEST_EMAIL_ATELIER_CULASSE,
@@ -202,10 +230,12 @@ const DEST_ATELIER = {
   "__DEFAULT__": process.env.MAIL_TO || process.env.MAIL_CG || ""
 };
 
+// Choisit le bon destinataire
 function destForService(service = ""){
   return DEST_ATELIER[service] || DEST_ATELIER.__DEFAULT__;
 }
 
+// Envoi mail interne atelier
 async function sendServiceMail(no, snapshot){
 const t = transporter;
 if (!t) {
@@ -280,6 +310,7 @@ if (!t) {
   });
 }
 
+// Envoi mail au client quand la piece est renvoyee
 async function sendClientStatusMail(no, entry) {
   try {
     const t = transporter;
@@ -314,6 +345,7 @@ if (!t) {
   }
 }
 
+// Genere la page HTML a imprimer (PDF via navigateur)
 function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
   const meta   = payload.meta   || {};
   const header = payload.header || {};
@@ -325,6 +357,7 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
   const titre    = esc(header.service || meta.titre || "Demande d’intervention");
   const siteLbl  = siteLabelForService(header.service);
 
+  // Bloc operations (si service culasse)
   const opsHTML = (() => {
     if (!culasse || !Array.isArray(culasse.operations) || !culasse.operations.length) {
       return `<div class="muted">Aucune opération cochée.</div>`;
@@ -341,6 +374,7 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
     }).join("");
   })();
 
+  // Bloc pieces a fournir
   const piecesHTML = (() => {
     const list = (culasse && culasse.piecesAFournir) || [];
     if (!list.length) return `<div class="muted">Aucune pièce sélectionnée.</div>`;
@@ -349,6 +383,7 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
 
   const dossierTag = no ? `<div class="dossier-tag">Dossier n° ${esc(no)}</div>` : "";
 
+  // QR code pour validation (si disponible)
   let qrBlock = "";
   if (validationUrl) {
     const qrImgSrc =
@@ -468,6 +503,7 @@ function renderPrintHTML(payload = {}, no = "", validationUrl = ""){
 </html>`;
 }
 
+// Genere la page HTML d'impression
 router.post("/api/print-html", (req, res) => {
   try {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
@@ -494,6 +530,7 @@ router.options("/api/submit", (_req, res) => res.status(204).end());
 router.options("/api/cases", (_req, res) => res.status(204).end());
 router.options("/api/cases/:no/status", (_req, res) => res.status(204).end());
 
+// Creation d'un nouveau dossier atelier
 router.post("/api/submit", async (req, res) => {
   try {
     const raw  = (req.body && "payload" in req.body) ? req.body.payload : req.body;
@@ -531,6 +568,7 @@ router.post("/api/submit", async (req, res) => {
   }
 });
 
+// Liste des dossiers (pour le suivi)
 router.get("/api/cases", async (_req, res) => {
   try {
     const r = await gsListCases();
@@ -542,6 +580,7 @@ router.get("/api/cases", async (_req, res) => {
   }
 });
 
+// Details d'un dossier
 router.get("/api/cases/:no", async (req, res) => {
   try {
     const { no } = req.params;
@@ -560,6 +599,7 @@ router.get("/api/cases/:no", async (req, res) => {
   }
 });
 
+// Mise a jour de statut d'un dossier
 router.post("/api/cases/:no/status", async (req, res) => {
   try {
     const { no } = req.params;

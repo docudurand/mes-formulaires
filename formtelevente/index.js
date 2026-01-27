@@ -1,3 +1,5 @@
+// routes televente (envoi de bon de commande par email)
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -8,8 +10,10 @@ import { transporter, fromEmail } from '../mailer.js';
 import ftp from 'basic-ftp';
 import crypto from 'crypto';
 
+// Chargement des variables d'environnement pour ce module
 dotenv.config();
 
+// routeur Express separe pour la televente
 const router = express.Router();
 
 router.use(cors());
@@ -19,6 +23,7 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
+// Map vendeur -> email (lu depuis env JSON)
 let salesMap = {};
 try {
   const raw = process.env.SALES_MAP_JSON;
@@ -32,6 +37,7 @@ try {
   salesMap = {};
 }
 
+// Choisit le nom "from" selon l'origine du formulaire
 function getFromName(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
   if (s.includes('bosch')) return 'Bon de Commande BOSCH Janvier 2026';
@@ -39,6 +45,7 @@ function getFromName(formOriginRaw) {
   return 'Bon de Commande';
 }
 
+// Prefix sujet email selon l'origine du formulaire
 function getSubjectPrefix(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
   if (s.includes('bosch')) return 'BOSCH JANVIER 2026';
@@ -46,14 +53,18 @@ function getSubjectPrefix(formOriginRaw) {
   return 'BDC';
 }
 
+// Fichier local pour compter les PDFs (si pas de FTP)
 const COUNTERS_FILE_LOCAL = path.join(os.tmpdir(), 'televente_pdf_counters.json');
 
+// Parametres FTP
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || '/').replace(/\/$/, '');
 const COUNTERS_REMOTE_DIR = (process.env.TELEVENTE_COUNTERS_DIR || `${FTP_ROOT_BASE}/televente`).replace(/\/$/, '');
 const COUNTERS_REMOTE_FILE = `${COUNTERS_REMOTE_DIR}/pdf_counters.json`;
 
+// si FTP pas configure, on reste en local
 const FTP_ENABLED = Boolean(process.env.FTP_HOST && process.env.FTP_USER && process.env.FTP_PASSWORD);
 
+// Lecture du compteur local
 function readLocalCountersSafe() {
   try {
     if (!fs.existsSync(COUNTERS_FILE_LOCAL)) return {};
@@ -65,6 +76,7 @@ function readLocalCountersSafe() {
   }
 }
 
+// Ecriture du compteur local
 function writeLocalCountersSafe(counters) {
   try {
     fs.writeFileSync(COUNTERS_FILE_LOCAL, JSON.stringify(counters, null, 2), 'utf-8');
@@ -73,6 +85,7 @@ function writeLocalCountersSafe(counters) {
   }
 }
 
+// Helper FTP
 async function withFtpClient(fn) {
   const client = new ftp.Client(30000);
   try {
@@ -93,6 +106,7 @@ async function withFtpClient(fn) {
   }
 }
 
+// Lecture du compteur distant via FTP
 async function readRemoteCountersSafe() {
   const tmp = path.join(os.tmpdir(), `televente_counters_${crypto.randomUUID()}.json`);
   try {
@@ -115,6 +129,7 @@ async function readRemoteCountersSafe() {
   }
 }
 
+// Ecriture du compteur distant via FTP
 async function writeRemoteCountersSafe(counters) {
   const tmp = path.join(os.tmpdir(), `televente_counters_${crypto.randomUUID()}.json`);
   const remoteTmp = `${COUNTERS_REMOTE_DIR}/pdf_counters_${Date.now()}_${Math.random().toString(16).slice(2)}.json`;
@@ -134,8 +149,10 @@ async function writeRemoteCountersSafe(counters) {
   }
 }
 
+// lock simple pour eviter les collisions d'increment
 let _counterLock = Promise.resolve();
 
+// Prochain numero pour un couple (vendeur/client/date)
 function nextCounter(baseKey) {
   _counterLock = _counterLock.then(async () => {
     const counters = FTP_ENABLED ? await readRemoteCountersSafe() : readLocalCountersSafe();
@@ -151,6 +168,7 @@ function nextCounter(baseKey) {
   return _counterLock;
 }
 
+// Envoi du PDF par email (televente)
 router.post('/send-order', async (req, res) => {
   const { client, salesperson, pdf, form_origin } = req.body;
 
@@ -163,6 +181,7 @@ router.post('/send-order', async (req, res) => {
     return res.status(500).json({ success: false, error: 'smtp_not_configured' });
   }
 
+  // Choix du destinataire (vendeur, default, ou MAIL_TO)
   let to = '';
   if (salesperson && salesMap[salesperson]) {
     to = salesMap[salesperson];
@@ -176,6 +195,7 @@ router.post('/send-order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'no_recipient' });
   }
 
+  // Donnees pour le nom de fichier
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
@@ -196,6 +216,7 @@ router.post('/send-order', async (req, res) => {
   const n = await nextCounter(baseKey);
   const pdfFilename = `Bon ${safeSales} – ${safeClient} ${dateStr} N°${n}.pdf`;
 
+  // Email final (avec PDF en piece jointe)
   const mailOptions = {
     from: `"${fromName}" <${fromEmail}>`,
     to,

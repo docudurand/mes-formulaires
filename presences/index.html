@@ -1,4 +1,5 @@
 <!doctype html>
+<!--interface Presences (saisie, resume, admin conges)-->
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
@@ -216,6 +217,7 @@ button.badge.code{border-radius:8px}
 </style>
 </head>
 <body>
+<!-- En-tete + navigation par onglets -->
 <header class="app-header">
   <h1>Présences Durand Services</h1>
   <div class="today">Aujourd’hui : <span id="today"></span></div>
@@ -229,12 +231,14 @@ button.badge.code{border-radius:8px}
     <button class="tab" data-tab="leaves">Admin</button>
   </nav>
 
+  <!-- Onglet: choix du magasin -->
   <section id="tab-magasins" class="tab-panel active">
     <p class="hint">Choisissez un magasin :</p>
     <div id="magasin-buttons" class="grid-buttons"></div>
     <div id="magasin-loading" class="loading" style="display:none">Chargement du personnel…</div>
   </section>
 
+  <!-- Onglet: saisie du jour -->
   <section id="tab-saisie" class="tab-panel">
     <div class="saisie-stick">
       <div class="toolbar">
@@ -255,6 +259,7 @@ button.badge.code{border-radius:8px}
     <p id="saisie-error" class="error" style="display:none"></p>
   </section>
 
+  <!-- Onglet: resume mensuel -->
   <section id="tab-resume" class="tab-panel">
     <div class="resume-stick">
       <div class="toolbar">
@@ -268,6 +273,7 @@ button.badge.code{border-radius:8px}
     <p id="resume-error" class="error" style="display:none"></p>
   </section>
 
+  <!-- Onglet: admin conges -->
   <section id="tab-leaves" class="tab-panel">
     <div class="toolbar">
       <form id="leaves-login-form" autocomplete="on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -311,6 +317,7 @@ button.badge.code{border-radius:8px}
 </main>
 
 <script>
+// JS principal: saisie presences, gestion conges, export
 const pad=n=>n<10?`0${n}`:`${n}`;
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 const thisYM = ()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;}

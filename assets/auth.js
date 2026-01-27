@@ -1,25 +1,34 @@
+//pages publiques + login.html
+
 const AUTH_KEY = "dd_auth_ok_v1";
 
+// Nom d'utilisateur fixe (pour l'autofill)
 const SITE_USERNAME = "durand";
 
+// verification mot de passe
 const LOGIN_ENDPOINT = "/api/site/login";
 
+// Prefix pour servir le site depuis un sous-chemin
 function getPrefix() {
   return (window.__SITE_PREFIX__ !== undefined) ? String(window.__SITE_PREFIX__) : "";
 }
 
+// Est-ce que la session est deja validee ?
 function isAuthed() {
   return sessionStorage.getItem(AUTH_KEY) === "1";
 }
 
+// Marque la session comme validee
 function setAuthed() {
   sessionStorage.setItem(AUTH_KEY, "1");
 }
 
+// Supprime la session
 function clearAuthed() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
+// Redirige vers login si pas connecte
 function requireAuth() {
   if (isAuthed()) return;
 
@@ -29,6 +38,7 @@ function requireAuth() {
   window.location.replace(prefix + "login.html?redirect=" + encodeURIComponent(dest));
 }
 
+// Verifie le mot de passe via l'API
 function loginWith(pwd) {
   return fetch(LOGIN_ENDPOINT, {
     method: "POST",
@@ -45,11 +55,13 @@ function loginWith(pwd) {
     .catch(() => false);
 }
 
+// Deconnexion simple
 function logout() {
   clearAuthed();
   window.location.href = getPrefix() + "login.html";
 }
 
+// Lit le param redirect en securise
 function getRedirectTarget() {
   const qs = new URLSearchParams(window.location.search || "");
   const r = qs.get("redirect");
@@ -58,6 +70,7 @@ function getRedirectTarget() {
   return r;
 }
 
+// Redirection apres login
 function goAfterLogin() {
   const prefix = getPrefix();
   const target = getRedirectTarget();
@@ -68,6 +81,7 @@ function goAfterLogin() {
   }
 }
 
+// Branche un formulaire de login
 function wireLoginForm(options = {}) {
   const {
     formId = "loginForm",
@@ -125,6 +139,7 @@ function wireLoginForm(options = {}) {
   });
 }
 
+// Expose les fonctions globalement
 window.requireAuth = requireAuth;
 window.loginWith = loginWith;
 window.logout = logout;

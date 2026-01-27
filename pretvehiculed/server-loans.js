@@ -1,14 +1,19 @@
+// API pret vehicule (Apps Script + PDF + email)
+
 import express from 'express';
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import { transporter, fromEmail } from '../mailer.js';
 
+// routeur Express separe
 const router = express.Router();
 
+// config Apps Script obligatoire
 const APPSCRIPT_URL = process.env.APPSCRIPT_URL;
 const APPSCRIPT_KEY = process.env.APPSCRIPT_KEY;
 
+// Verifie la config avant d'appeler Apps Script
 function assertConfig(res) {
   if (!APPSCRIPT_URL || !APPSCRIPT_KEY) {
     res.status(500).json({ ok: false, error: 'config_missing' });
@@ -17,6 +22,7 @@ function assertConfig(res) {
   return true;
 }
 
+// Liste des vehicules disponibles
 router.get('/vehicles', async (_req, res) => {
   try {
     if (!APPSCRIPT_URL) throw new Error('APPSCRIPT_URL missing');
@@ -27,6 +33,7 @@ router.get('/vehicles', async (_req, res) => {
   }
 });
 
+// Liste des magasins
 router.get('/stores', async (_req, res) => {
   try {
     if (!APPSCRIPT_URL) throw new Error('APPSCRIPT_URL missing');
@@ -37,6 +44,7 @@ router.get('/stores', async (_req, res) => {
   }
 });
 
+// Recherche de prets
 router.get('/loans/search', async (req, res) => {
   try {
     if (!APPSCRIPT_URL) throw new Error('APPSCRIPT_URL missing');
@@ -49,6 +57,7 @@ router.get('/loans/search', async (req, res) => {
   }
 });
 
+// Creation d'un pret
 router.post('/loans', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
@@ -69,6 +78,7 @@ router.post('/loans', async (req, res) => {
   }
 });
 
+// Mise a jour d'un pret
 router.post('/loans/:loan_id/update', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
@@ -88,6 +98,7 @@ router.post('/loans/:loan_id/update', async (req, res) => {
   }
 });
 
+// Cloture d'un pret
 router.post('/loans/:loan_id/close', async (req, res) => {
   if (!assertConfig(res)) return;
   try {
@@ -107,6 +118,7 @@ router.post('/loans/:loan_id/close', async (req, res) => {
   }
 });
 
+// Genere la page HTML imprimable (PDF)
 router.post('/loans/print', async (req, res) => {
   try {
     const d = req.body || {};
@@ -258,6 +270,7 @@ router.post('/loans/print', async (req, res) => {
   }
 });
 
+// Envoi email recap pret
 router.post('/loans/email', async (req, res) => {
   try {
     const loan = req.body?.loan || {};

@@ -1,3 +1,5 @@
+// formulaire creation reference PL (upload + envoi email)
+
 import express from "express";
 import multer from "multer";
 import cors from "cors";
@@ -8,8 +10,10 @@ import crypto from "crypto";
 import { fromEmail } from "../mailer.js";
 import { enqueueMailJob, getIdempotencyKey } from "../mailQueue.js";
 
+// Chargement des variables d'environnement
 dotenv.config();
 
+// routeur Express separe
 const router = express.Router();
 
 router.use(cors());
@@ -19,11 +23,13 @@ router.use(express.json({ limit: "15mb" }));
 router.get("/healthz", (_req, res) => res.sendStatus(200));
 router.get("/", (_req, res) => res.send("✅ Formulaire Création Référence PL – OK"));
 
+// dossier d'upload (doit etre accessible en ecriture)
 const UPLOAD_DIR = (process.env.UPLOAD_DIR || "/var/data/uploads").trim();
 try {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 } catch {}
 
+// Stockage des pieces jointes sur disque
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
@@ -34,6 +40,7 @@ const storage = multer.diskStorage({
   },
 });
 
+// Configuration multer (taille + filtre de fichiers)
 const upload = multer({
   storage,
   limits: { fileSize: 15 * 1024 * 1024 },
@@ -46,6 +53,7 @@ const upload = multer({
   },
 });
 
+// Libelles pour le mail HTML
 const FIELD_LABELS = {
   email: "Adresse e-mail",
   marque: "Nom de l'équipementier ou code fournisseur",
@@ -54,6 +62,7 @@ const FIELD_LABELS = {
   commentaire: "Commentaire",
 };
 
+// HTML non exécuté
 function escapeHtml(s = "") {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -69,6 +78,7 @@ function valueOrEmpty(v) {
     : "<em>(non renseigné)</em>";
 }
 
+// Mail HTML pour le magasin
 function generateHtml(data = {}) {
   const rows = Object.entries(FIELD_LABELS)
     .map(
@@ -96,6 +106,7 @@ function generateHtml(data = {}) {
   `;
 }
 
+// Mail HTML d'accuse de reception (demandeur)
 function accuseHtml(data = {}) {
   const rows = Object.entries(FIELD_LABELS)
     .map(
@@ -124,6 +135,7 @@ function accuseHtml(data = {}) {
   `;
 }
 
+// Envoi du formulaire (stockage + mise en file d'attente email)
 router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => {
   const formData = req.body || {};
   const files = Array.isArray(req.files) ? req.files : [];
@@ -144,6 +156,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
       return res.status(500).send("Erreur: destinataire non configuré.");
     }
 
+    // eviter les doublons
     const requestId =
       getIdempotencyKey(req) ||
       (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex"));
