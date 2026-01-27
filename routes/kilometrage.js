@@ -1,10 +1,14 @@
+// routes API kilometrage (appel Google Apps Script)
+
 import express from "express";
 import axios from "axios";
 
+// routeur Express separe
 const router = express.Router();
 
 router.use(express.json({ limit: "5mb" }));
 
+// URL Google Apps Script obligatoire
 function getApiUrl() {
   const url = process.env.GS_KILOMETRAGE_URL;
   if (!url) {
@@ -13,6 +17,7 @@ function getApiUrl() {
   return url;
 }
 
+// Enregistre une saisie kilometrage
 router.post("/save", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -38,6 +43,7 @@ router.post("/save", async (req, res) => {
   }
 });
 
+// Genere un nouvel ID de tournee
 router.post("/newid", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -70,6 +76,7 @@ router.post("/newid", async (req, res) => {
   }
 });
 
+// Declare une absence
 router.post("/absent", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -123,6 +130,7 @@ router.post("/absent", async (req, res) => {
   }
 });
 
+// Recupere les parametres (agences, tournees, etc.)
 router.get("/params", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -147,6 +155,7 @@ router.get("/params", async (req, res) => {
   }
 });
 
+// Recupere les donnees d'une annee
 router.get("/data", async (req, res) => {
   try {
     const apiUrl = getApiUrl();
@@ -171,6 +180,7 @@ router.get("/data", async (req, res) => {
   }
 });
 
+// Resume d'une journee (filtre sur une date)
 router.get("/resume", async (req, res) => {
   try {
     const apiUrl = getApiUrl();

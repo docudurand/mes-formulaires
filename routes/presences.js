@@ -1,23 +1,29 @@
+// routes API presences (saisie, export, conges)
+
 import express from "express";
 import ftp from "basic-ftp";
 import fs from "fs";
 import path from "path";
 import os from "os";
 
+// routeur Express separe
 const router = express.Router();
 
+// Config FTP et fichiers presences
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const FTP_ROOT = `${FTP_ROOT_BASE}/presences`;
 const LEAVES_FILE = `${FTP_ROOT}/leaves.json`;
 const LEAVES_ADMIN_TOKEN = (process.env.PRESENCES_LEAVES_PASSWORD || "").trim();
 const GS_URL = process.env.GS_PRESENCES_URL || "";
 
+// dates
 const yyyymm = (dateStr = "") => String(dateStr).slice(0, 7);
 const tmpFile = (name) => path.join(os.tmpdir(), name);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const FTP_DEBUG = String(process.env.PRESENCES_FTP_DEBUG || "0") === "1";
 const isWE = (d) => { const x = d.getDay(); return x === 0 || x === 6; };
 
+// Jours feries (a mettre a jour chaque annee)
 const HOLIDAYS = new Set([
   "2025-01-01",
   "2025-04-21",
@@ -38,6 +44,7 @@ function tlsOptions() {
   const servername = process.env.FTP_HOST || undefined;
   return { rejectUnauthorized, servername };
 }
+// Ouvre une session FTP
 async function openFtp() {
   const client = new ftp.Client(30_000);
   if (FTP_DEBUG) client.ftp.verbose = true;
@@ -54,6 +61,7 @@ async function openFtp() {
 }
 async function ensureDir(client, remoteDir) { await client.ensureDir(remoteDir); }
 
+// Telecharge un JSON depuis FTP
 async function tryDownloadJSON(client, remotePath) {
   const out = tmpFile("pres_" + Date.now() + ".json");
   try {
@@ -65,6 +73,7 @@ async function tryDownloadJSON(client, remotePath) {
     return null;
   } finally { try { fs.unlinkSync(out); } catch {} }
 }
+// Ecrit un JSON sur FTP
 async function writeJSON(client, remotePath, obj) {
   const dir = path.posix.dirname(remotePath);
   await ensureDir(client, dir);
@@ -73,6 +82,7 @@ async function writeJSON(client, remotePath, obj) {
   await client.uploadFrom(out, remotePath);
   try { fs.unlinkSync(out); } catch {}
 }
+// wrapper FTP avec retry
 async function withFtp(actionLabel, fn, retries = 2) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -95,10 +105,12 @@ async function withFtp(actionLabel, fn, retries = 2) {
   throw lastErr;
 }
 
+// Verifie le token admin (conges)
 function authOk(req) {
   const token = String(req.get("X-Admin-Token") || req.query.token || "").trim();
   return LEAVES_ADMIN_TOKEN && token && token === LEAVES_ADMIN_TOKEN;
 }
+// Traduit un statut en francais
 function frStatus(s) {
   switch (String(s || "").toLowerCase()) {
     case "pending": return "en attente";
@@ -112,6 +124,7 @@ const MAIN_CODES = ['P','CP','AM','AT','F','Cep','Ann','SS','E','R','D','RI','US
 const PSITE_CODES = Array.from({length:20}, (_,i)=>`P${i+1}`);
 const ALL_CODES = new Set([...MAIN_CODES, ...PSITE_CODES]);
 
+// Ajuste les CP dans Google Sheets (si GS_URL configure)
 async function gsAdjustCP({ magasin, nom, prenom, delta }) {
   if (!GS_URL) {
     console.warn("[GS] GS_PRESENCES_URL non défini — pas d’ajustement CP");
@@ -135,6 +148,7 @@ async function gsAdjustCP({ magasin, nom, prenom, delta }) {
   }
 }
 
+// Determine les slots a marquer sur une plage
 async function resolveSlotsForRangeMark({ magasin, nom, prenom, slotsFromBody }) {
   const fallback = ['Matin', 'A. Midi'];
 
@@ -159,6 +173,7 @@ async function resolveSlotsForRangeMark({ magasin, nom, prenom, slotsFromBody })
   return fallback;
 }
 
+// API: liste personnel par magasin
 router.get("/personnel", async (req, res) => {
   const magasin = String(req.query.magasin || "");
   if (GS_URL) {
@@ -170,6 +185,7 @@ router.get("/personnel", async (req, res) => {
   return res.json({ employes: [], interims: [], livreurs: {} });
 });
 
+// API: liste employes
 router.get("/employes", async (req, res) => {
   const magasin = String(req.query.magasin || "");
   try {
@@ -201,6 +217,7 @@ router.get("/employes", async (req, res) => {
   }
 });
 
+// API: sauvegarde d'une journee
 router.post("/save", express.json({ limit: "2mb" }), async (req, res) => {
   try {
     const { magasin, date, data } = req.body || {};
@@ -222,6 +239,7 @@ router.post("/save", express.json({ limit: "2mb" }), async (req, res) => {
   }
 });
 
+// API: lecture d'une journee
 router.get("/day", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "").trim();
@@ -242,6 +260,7 @@ router.get("/day", async (req, res) => {
   }
 });
 
+// API: recupere le mois complet
 router.get("/month-store", async (req, res) => {
   try {
     const month = String(req.query.yyyymm || "").trim();
@@ -269,6 +288,7 @@ router.get("/month-store", async (req, res) => {
   }
 });
 
+// API admin: liste des conges
 router.get("/leaves", async (req, res) => {
   if (!authOk(req)) return res.status(401).json({ ok: false, error: "auth_required" });
   try {
@@ -283,6 +303,7 @@ router.get("/leaves", async (req, res) => {
   }
 });
 
+// API admin: decision sur un conge
 router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res) => {
   if (!authOk(req)) return res.status(401).json({ ok: false, error: "auth_required" });
   const { id, decision, reason } = req.body || {};
@@ -388,6 +409,7 @@ router.post("/leaves/decision", express.json({ limit: "1mb" }), async (req, res)
   }
 });
 
+// API admin: marquer un code sur une plage de dates
 router.post("/range-mark", express.json({ limit: "1mb" }), async (req, res) => {
   if (!authOk(req)) return res.status(401).json({ ok:false, error:"auth_required" });
 

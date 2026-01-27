@@ -1,3 +1,5 @@
+// serveur principal (Express) pour tous les formulaires et APIs
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -30,7 +32,9 @@ import ramasseRouter from "./routes/ramasse.js";
 import kilometrageRouter from "./routes/kilometrage.js";
 import "./mailInlineWorker.js";
 
+// Chargement des variables d'environnement (.env)
 dotenv.config();
+// on log les erreurs non gerees pour ne pas les rater en prod
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] unhandledRejection:", reason);
 });
@@ -39,6 +43,7 @@ process.on("uncaughtException", (err) => {
   console.error("[FATAL] uncaughtException:", err);
 });
 
+// Helper pour lire un booleen depuis une variable d'environnement
 function parseBool(value, fallback = false) {
   if (value == null) return fallback;
   const v = String(value).trim().toLowerCase();
@@ -46,12 +51,16 @@ function parseBool(value, fallback = false) {
   return v === "1" || v === "true" || v === "yes";
 }
 
+// Chemins utilitaires pour servir des fichiers statiques
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+// Instance Express principale
 const app = express();
+
 app.set("trust proxy", 1);
 
+// Liste blanche CORS
 const ALLOWED_ORIGINS_EXACT = new Set([
   "https://www.documentsdurand.fr",
   "https://documentsdurand.fr",
@@ -59,6 +68,7 @@ const ALLOWED_ORIGINS_EXACT = new Set([
   "https://mes-formulaires.onrender.com",
 ]);
 
+// Cette fonction sert a verifier une origine CORS
 function isAllowedOrigin(origin) {
   if (!origin) return true;
   const o = String(origin).trim();
@@ -79,6 +89,7 @@ function isAllowedOrigin(origin) {
   return false;
 }
 
+// Parametres CORS
 const corsOptions = {
   origin: (origin, cb) => {
     if (isAllowedOrigin(origin)) return cb(null, true);
@@ -95,6 +106,7 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
 
+// Log uniquement les erreurs 5xx avec temps de traitement
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
   res.on("finish", () => {
@@ -158,14 +170,17 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+// Routes pour lecture des logs mails
 app.use(mailLogsRouter);
 
+// bloque si une variable d'environnement manque
 function mustEnv(name) {
   const v = String(process.env[name] || "").trim();
   if (!v) throw new Error(`Missing env ${name}`);
   return v;
 }
 
+// Appel Google Apps Script pour le module livraison
 async function callNavetteGAS(action, params = {}) {
   const url = mustEnv("NAVETTE_GAS_URL");
   const key = mustEnv("NAVETTE_API_KEY");
@@ -180,6 +195,7 @@ async function callNavetteGAS(action, params = {}) {
   return data;
 }
 
+// ---- API LIVRAISON (import/scan/livraison) ----
 app.post("/api/navette/import", async (req, res) => {
   try {
     const { magasin, bons, tourneeId } = req.body || {};
@@ -298,6 +314,7 @@ function makeJobId() {
   return `job_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// Essaie de lire les coordonnees GPS depuis plusieurs formats
 function extractGps(body) {
   const b = body || {};
   const g = (b.gps && typeof b.gps === "object") ? b.gps : {};
@@ -309,6 +326,7 @@ function extractGps(body) {
   return { lat, lng, acc, ts };
 }
 
+// Parse une liste de bons depuis texte ou tableau
 function parseBonsList(bons) {
   if (Array.isArray(bons)) return bons.map(x => String(x).trim()).filter(Boolean);
   return String(bons || "")
@@ -443,8 +461,10 @@ app.get("/api/navette/magasins", async (req, res) => {
     res.status(500).json({ success: false, error: String(e?.message || e) });
   }
 });
+// option pour accepter un token admin en query string
 const ADMIN_TOKEN_ALLOW_QUERY = parseBool(process.env.ADMIN_TOKEN_ALLOW_QUERY, true);
 
+// Recupere le token admin
 function extractAdminToken(req) {
   const headerToken = req.headers["x-admin-token"];
   if (headerToken) return { token: String(headerToken).trim(), source: "header" };
@@ -467,8 +487,10 @@ function extractAdminToken(req) {
 }
 
 
+// Fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html", "htm"], index: false }));
 
+// Login simple protege par un mot de passe (site entier)
 app.post("/api/site/login", (req, res) => {
   try {
     const pwd = (req.body && req.body.password) ? String(req.body.password) : "";
@@ -482,6 +504,7 @@ app.post("/api/site/login", (req, res) => {
   }
 });
 
+// Formate une date au format francais (avec ou sans heure)
 function fmtFR(dt, { withTime = true } = {}) {
   if (!dt) return "";
   const raw = String(dt);
@@ -503,10 +526,13 @@ function fmtFR(dt, { withTime = true } = {}) {
   }
 }
 
+// Base publique du site (utilisee dans les liens emails)
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://mes-formulaires.onrender.com";
 
+// Email du responsable site pour les envois de mails
 const SITE_RESP_EMAIL = (process.env.MAIL_CG || "").trim();
 
+// Map magasin -> email responsable (lu depuis env JSON)
 let RESP_SERVICE_BY_MAGASIN = {};
 try {
   const raw = process.env.RESP_SERVICE_BY_MAGASIN_JSON;
@@ -520,27 +546,33 @@ try {
   RESP_SERVICE_BY_MAGASIN = {};
 }
 
+// Retourne l'email responsable du service pour un magasin
 function respServiceEmailFor(magasin) {
   const m = String(magasin || '').trim().toUpperCase();
   return (RESP_SERVICE_BY_MAGASIN[m] || '').trim();
 }
 
+// ajouter un vrai nom de responsable de site si besoin
 function siteRespNameFor(_magasin) {
   return "";
 }
 
+// Montage des routes metiers
 app.use("/atelier", atelier);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
 
+// Liste des magasins autorises pour export presences
 const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
 
+// Helpers dates pour exports presences
 const pad2 = n => String(n).padStart(2,'0');
 const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const daysOfMonth = (ym) => { const [y,m] = ym.split('-').map(Number); const out=[]; for(let i=1;i<=new Date(y,m,0).getDate();i++) out.push(new Date(y,m-1,i)); return out; };
 const dowLetter = d => ["D","L","M","M","J","V","S"][d.getDay()];
 
+// Recupere le JSON des presences pour un mois/magasin
 async function fetchMonthStoreJSON(req, ym, magasin){
   const base = `${req.protocol}://${req.get('host')}`;
   const url  = `${base}/presence/month-store?yyyymm=${encodeURIComponent(ym)}&magasin=${encodeURIComponent(magasin)}`;
@@ -551,6 +583,7 @@ async function fetchMonthStoreJSON(req, ym, magasin){
   return data || {};
 }
 
+// Export Excel des presences du mois
 app.get('/presence/export-month', async (req, res) => {
   try {
     const ym = String(req.query.yyyymm || '').trim();
@@ -1260,6 +1293,7 @@ async function makeLeavePdf({ logoUrl, magasin, nomPrenom, service, nbJours, du,
   return done;
 }
 
+// Coordonnees d'incrustation de signature dans le PDF conges
 const SIGN_COORDS = {
   resp_service: { page: 0, x: 120, y: 130, w: 220, h: 70 },
   resp_site:    { page: 0, x: 390, y: 130, w: 220, h: 70 },
@@ -1269,6 +1303,7 @@ const NAME_COORDS = {
   resp_site:    { page: 0, x: 390, y: 210, size: 12 },
 };
 
+// ---- DEMANDE DE CONGES (generation PDF + envoi mail) ----
 app.post("/conges/api", async (req, res) => {
   try {
     const { magasin, nomPrenom, nom, prenom, service, nbJours, dateDu, dateAu, email, signatureData } = req.body || {};
@@ -1389,6 +1424,7 @@ await transporter.sendMail({
   }
 });
 
+// Page de signature en ligne (canvas + POST)
 app.get("/conges/sign/:id", async (req, res) => {
   const { id } = req.params;
   const role = String(req.query.role||"").trim();
@@ -1456,6 +1492,7 @@ document.getElementById('ok').onclick=async()=>{
 </script>`);
 });
 
+// Enregistre la signature et met a jour le PDF
 app.post("/conges/sign/:id", async (req, res) => {
   const { id } = req.params;
   const { role, token, imageBase64, fullName } = req.body || {};
@@ -1589,11 +1626,13 @@ ts: new Date().toISOString(),
 });
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
+// Routes des differents formulaires
 app.use("/formtelevente", formtelevente);
 app.use("/formulaire-piece", formulairePiece);
 app.use("/formulaire-piecepl", formulairePiecePL);
 app.use("/formulaire-pneu", formulairePneu);
 
+// Pret vehicule: pages statiques + API
 const pretPublic = path.join(__dirname, "pretvehiculed", "public");
 app.use("/pret", express.static(pretPublic, { extensions: ["html", "htm"], index: false }));
 app.get("/pret/fiche", (_req, res) => res.sendFile(path.join(pretPublic, "fiche-pret.html")));
@@ -1630,6 +1669,7 @@ app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
+// Pages statiques PL / VL
 app.use("/pl", express.static(path.join(__dirname, "pl"), {
   extensions: ["html", "htm"],
   index: false
@@ -1640,8 +1680,10 @@ app.use("/vl", express.static(path.join(__dirname, "vl"), {
   index: false
 }));
 
+// Assets generaux (images, css, etc.)
 app.use("/assets", express.static(path.join(__dirname, "assets")));
 
+// Contacts fournisseurs (depuis env JSON)
 app.get("/api/util/contacts-fournisseurs", (_req, res) => {
   try {
     const raw = process.env.CONTACTS_FOURNISSEURS_JSON || "[]";
@@ -1653,6 +1695,7 @@ app.get("/api/util/contacts-fournisseurs", (_req, res) => {
   }
 });
 
+// Liens televente exposes en JSON
 const COMMERCE_TELEVENTE_BOSCH_URL = (process.env.COMMERCE_TELEVENTE_BOSCH_URL || "").trim();
 const COMMERCE_TELEVENTE_LUB_URL   = (process.env.COMMERCE_TELEVENTE_LUB_URL   || "").trim();
 
@@ -1677,8 +1720,10 @@ app.use((err, req, res, next) => {
 
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
+// Port d'ecoute
 const PORT = process.env.PORT || 3000;
 
+// Demarrage du serveur + initialisation stats/visites
 (async () => {
   try { await stats.initCounters(); }
   catch (e) { console.warn("[COMPTEUR] initCounters souci:", e?.message || e); }
@@ -1687,8 +1732,3 @@ const PORT = process.env.PORT || 3000;
 
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 })();
-
-
-
-
-

@@ -1,18 +1,23 @@
+// journalisation des emails via Google Apps Script
+
 const GS_URL = process.env.GS_MAIL_LOG_URL || "";
 const TIMEOUT = Number(process.env.GS_MAIL_LOG_TIMEOUT_MS || 15000);
 
+// sans URL, on ne peut pas logger
 function assertConfigured() {
   if (!GS_URL) {
     throw new Error("[MAIL_LOG] GS_MAIL_LOG_URL manquant (Apps Script Web App).");
   }
 }
 
+// Petit helper pour timeout des requetes
 function withTimeout(ms) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   return { ctrl, clear: () => clearTimeout(t) };
 }
 
+// Requete HTTP qui renvoie du JSON
 async function httpJson(url, options = {}) {
   const { ctrl, clear } = withTimeout(TIMEOUT);
   try {
@@ -29,6 +34,7 @@ async function httpJson(url, options = {}) {
   }
 }
 
+// Ajoute une ligne de log (envoi reussi ou echoue)
 export async function addMailLog(entry) {
   assertConfigured();
   const payload = { action: "appendMailLog", entry };
@@ -39,6 +45,7 @@ export async function addMailLog(entry) {
   });
 }
 
+// Liste des logs (avec filtre optionnel)
 export async function getMailLogs({ limit = 200, q = "" } = {}) {
   assertConfigured();
   const u = new URL(GS_URL);
@@ -48,6 +55,7 @@ export async function getMailLogs({ limit = 200, q = "" } = {}) {
   return httpJson(u.toString(), { method: "GET" });
 }
 
+// Envoie un mail ET cree un log (success/fail)
 export async function sendMailWithLog(transporter, mailOptions, formType, meta = {}, opts = {}) {
   const { logFailed = true } = opts || {};
 

@@ -1,19 +1,25 @@
+// gestion des compteurs (forms + ramasse) avec sauvegarde FTP
+
 import fs from "fs";
 import path from "path";
 import ftp from "basic-ftp";
 
+// Fichier local de sauvegarde
 const compteurFile = path.join(process.cwd(), "compteurs.json");
 
+// Emplacement FTP principal
 function getFtpRemotePath() {
   const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
   return `${root}/compteurs.json`.replace(/\/+/g, "/");
 }
 
+// Ancien emplacement FTP
 function getLegacyFtpRemotePath() {
   const root = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
   return `${root}/sauvegardegarantie/counters.json`.replace(/\/+/g, "/");
 }
 
+// wrapper FTP (retourne null si FTP non configure)
 async function withFtpClient(fn) {
   if (!process.env.FTP_HOST || !process.env.FTP_USER) return null;
 
@@ -45,6 +51,7 @@ async function withFtpClient(fn) {
   }
 }
 
+// Compteurs par defaut
 function defaultFormCounters() {
   return {
     piece: { byYear: {}, total: 0 },
@@ -53,6 +60,7 @@ function defaultFormCounters() {
   };
 }
 
+// Normalise la structure des compteurs
 function normalizeCompteursShape(obj) {
   const out = obj && typeof obj === "object" ? obj : {};
 
@@ -79,6 +87,7 @@ function normalizeCompteursShape(obj) {
   return out;
 }
 
+// Telecharge un JSON depuis FTP vers un fichier temporaire
 async function downloadJsonFromFtpToTemp(remotePath) {
   const tmp = path.join(process.cwd(), `.tmp-${Date.now()}-${Math.random()}.json`);
 
@@ -109,14 +118,17 @@ async function downloadJsonFromFtpToTemp(remotePath) {
   }
 }
 
+// Lecture du fichier principal FTP
 async function downloadCompteursFromFtpIfExists() {
   return await downloadJsonFromFtpToTemp(getFtpRemotePath());
 }
 
+// Lecture du fichier legacy FTP
 async function downloadLegacyCountersFromFtpIfExists() {
   return await downloadJsonFromFtpToTemp(getLegacyFtpRemotePath());
 }
 
+// Upload du fichier local vers FTP
 async function uploadCompteursToFtp() {
   if (!fs.existsSync(compteurFile)) return;
 
@@ -135,12 +147,14 @@ async function uploadCompteursToFtp() {
   });
 }
 
+// Detecte l'ancien format
 function isLegacyCountersShape(obj) {
   if (!obj || typeof obj !== "object") return false;
   const keys = ["piece", "piecepl", "pneu"];
   return keys.some((k) => obj[k] && typeof obj[k] === "object");
 }
 
+// Importe l'ancien format dans le nouveau
 function importLegacyIntoCompteurs(base, legacy) {
   const out = normalizeCompteursShape(base);
   const def = defaultFormCounters();
@@ -162,6 +176,7 @@ function importLegacyIntoCompteurs(base, legacy) {
   return normalizeCompteursShape(out);
 }
 
+// Init des compteurs
 async function initCompteurs() {
   if (fs.existsSync(compteurFile)) {
     try {
@@ -222,12 +237,15 @@ async function initCompteurs() {
   return empty;
 }
 
+// Cache en memoire
 let cachedCompteurs = await initCompteurs();
 
+// Lecture du cache
 function loadCompteurs() {
   return cachedCompteurs;
 }
 
+// Sauvegarde locale + FTP
 function saveCompteurs(data) {
   const normalized = normalizeCompteursShape(data);
   cachedCompteurs = normalized;
@@ -243,6 +261,7 @@ function saveCompteurs(data) {
   );
 }
 
+// Incremente un compteur de formulaire (piece/piecepl/pneu)
 export function recordFormSubmission(formType) {
   const type = String(formType || "").toLowerCase();
   if (!["piece", "piecepl", "pneu"].includes(type)) return;
@@ -256,6 +275,7 @@ export function recordFormSubmission(formType) {
   saveCompteurs(data);
 }
 
+// Incremente un compteur generique
 export function incrementCompteur(formulaire) {
   const key = String(formulaire || "").trim();
   const lower = key.toLowerCase();
@@ -275,6 +295,7 @@ export function incrementCompteur(formulaire) {
   saveCompteurs(data);
 }
 
+// Incremente le compteur ramasse par magasin
 export function incrementRamasseMagasin(magasinRaw) {
   const data = normalizeCompteursShape(loadCompteurs());
   const year = String(new Date().getFullYear());
@@ -291,10 +312,12 @@ export function incrementRamasseMagasin(magasinRaw) {
   saveCompteurs(data);
 }
 
+// Retourne tous les compteurs
 export function getCompteurs() {
   return loadCompteurs();
 }
 
+// Retourne les compteurs par type de formulaire
 export function getFormCounters() {
   const data = normalizeCompteursShape(loadCompteurs());
   const c = data.forms;

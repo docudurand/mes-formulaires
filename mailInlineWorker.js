@@ -1,3 +1,5 @@
+// worker d'envoi des emails en arriere-plan
+
 import fs from "fs";
 import path from "path";
 import { transporter } from "./mailer.js";
@@ -11,48 +13,58 @@ import {
   FAIL_DIR,
 } from "./mailQueue.js";
 
+// Reglages de la boucle de traitement
 const POLL_MS = Number(process.env.MAIL_QUEUE_POLL_MS || 1500);
 const MAX_ATTEMPTS = Number(process.env.MAIL_QUEUE_MAX_ATTEMPTS || 10);
 const BASE_DELAY_MS = Number(process.env.MAIL_QUEUE_BASE_DELAY_MS || 2000);
 
+// Nettoyage automatique des vieux fichiers de queue
 const CLEANUP_EVERY_MS = Number(process.env.MAIL_QUEUE_CLEANUP_EVERY_MS || 6 * 60 * 60 * 1000);
 const RETENTION_DAYS_DONE = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_DONE || 30);
 const RETENTION_DAYS_FAILED = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_FAILED || 30);
 const RETENTION_DAYS_IDEM = Number(process.env.MAIL_QUEUE_RETENTION_DAYS_IDEM || 60);
 
+// Destinataire des alertes si un mail echoue trop de fois
 const FAILED_ALERT_TO = (process.env.MAIL_FAILED_ALERT_TO || "").trim();
 
+// Pause dans la boucle
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// re-tentatives
 function nextDelay(attempt) {
   const d = BASE_DELAY_MS * Math.pow(2, Math.max(0, attempt - 1));
   return Math.min(d, 5 * 60 * 1000);
 }
 
+// Suppression securisee
 function safeUnlink(p) {
   try {
     if (p && fs.existsSync(p)) fs.unlinkSync(p);
   } catch {}
 }
 
+// Coupe un texte pour les logs
 function short(s, n = 140) {
   const str = String(s ?? "");
   return str.length > n ? str.slice(0, n) + "…" : str;
 }
 
+// Recupere le champ "to" en format texte
 function getTo(mailOptions) {
   const to = mailOptions?.to;
   if (Array.isArray(to)) return to.join(", ");
   return to || "";
 }
 
+// Ne garde que les pieces jointes qui existent vraiment
 function attachmentsThatExist(mailOptions) {
   const atts = Array.isArray(mailOptions?.attachments) ? mailOptions.attachments : [];
   return atts.filter((a) => a && a.path && fs.existsSync(a.path));
 }
 
+// envoi d'alerte si un job echoue au bout de 10 essais
 async function sendFailedAlert({ job, formType, msg }) {
   if (!FAILED_ALERT_TO) return;
   if (!transporter) return;
@@ -101,6 +113,7 @@ async function sendFailedAlert({ job, formType, msg }) {
   }
 }
 
+// Traite un seul job de la file d'attente
 async function processOne(jobFile) {
   const job = loadJob(jobFile);
   if (!job) {
@@ -155,6 +168,7 @@ async function processOne(jobFile) {
       { logFailed: isFinalAttempt }
     );
 
+    // Nettoyage des fichiers temporaires
     (job?.payload?.cleanupPaths || []).forEach(safeUnlink);
 
     job.status = "sent";
@@ -194,6 +208,7 @@ async function processOne(jobFile) {
   }
 }
 
+// Lecture JSON simple
 function safeReadJson(file, fallback) {
   try {
     if (!fs.existsSync(file)) return fallback;
@@ -203,12 +218,14 @@ function safeReadJson(file, fallback) {
   }
 }
 
+// ecriture atomique pour ne pas corrompre les fichiers
 function writeJsonAtomic(file, obj) {
   const tmp = file + "." + process.pid + "." + Date.now() + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf8");
   fs.renameSync(tmp, file);
 }
 
+// Liste les fichiers JSON d'un dossier
 function listJsonFiles(dir) {
   try {
     return fs
@@ -220,6 +237,7 @@ function listJsonFiles(dir) {
   }
 }
 
+// Age du fichier en millisecondes
 function fileAgeMs(file) {
   try {
     const st = fs.statSync(file);
@@ -229,6 +247,7 @@ function fileAgeMs(file) {
   }
 }
 
+// Supprime les vieux fichiers d'un dossier
 function deleteIfOlderThan(dir, retentionDays) {
   const cutoffMs = retentionDays * 24 * 60 * 60 * 1000;
   let removed = 0;
@@ -244,6 +263,7 @@ function deleteIfOlderThan(dir, retentionDays) {
   return removed;
 }
 
+// Nettoie l'index
 function cleanupIdemIndex(queueDir) {
   const file = path.join(queueDir, "idem-index.json");
   const idx = safeReadJson(file, {});
@@ -271,6 +291,7 @@ function cleanupIdemIndex(queueDir) {
   return { kept: Object.keys(out).length, removed };
 }
 
+// Lance un nettoyage complet des fichiers de queue
 async function runCleanupOnce() {
   const queueDir = path.resolve(DONE_DIR, "..");
 
@@ -301,6 +322,7 @@ async function runCleanupOnce() {
 
 let nextCleanupAt = Date.now() + 15 * 1000;
 
+// Boucle principale du worker (tourne en continu)
 (async function loop() {
   console.log("[INLINE_MAIL_WORKER] started");
 

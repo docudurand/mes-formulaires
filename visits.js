@@ -1,19 +1,26 @@
+// stats de visites (local + FTP)
+
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import ftp from "basic-ftp";
 
+// Chemins utilitaires
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Dossier local pour le cache
 const DATA_DIR = path.join(process.cwd(), "data");
 const LOCAL_FILE = path.join(DATA_DIR, "visits.json");
 
+// Emplacement FTP distant
 const FTP_ROOT_BASE = (process.env.FTP_BACKUP_FOLDER || "/").replace(/\/$/, "");
 const REMOTE_FILE = `${FTP_ROOT_BASE}/analytics/visits.json`;
 
+// Cache en memoire
 let cache = null;
 
+// Date du jour AAAA-MM-JJ
 function todayYMD() {
   const d = new Date();
   const y = d.getFullYear();
@@ -22,6 +29,7 @@ function todayYMD() {
   return `${y}-${m}-${day}`;
 }
 
+// Lecture locale
 async function readLocal() {
   try {
     const txt = await fs.readFile(LOCAL_FILE, "utf8");
@@ -31,15 +39,18 @@ async function readLocal() {
   }
 }
 
+// Ecriture locale
 async function writeLocal(obj) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(LOCAL_FILE, JSON.stringify(obj, null, 2), "utf8");
 }
 
+// Verifie si FTP configure
 function ftpEnabled() {
   return !!(process.env.FTP_HOST && process.env.FTP_USER && process.env.FTP_PASSWORD);
 }
 
+// Ouvre un client FTP
 async function ftpClient() {
   const client = new ftp.Client(45_000);
 
@@ -59,6 +70,7 @@ async function ftpClient() {
   return client;
 }
 
+// Telecharge le fichier distant
 async function downloadRemote() {
   if (!ftpEnabled()) return null;
 
@@ -81,6 +93,7 @@ async function downloadRemote() {
   }
 }
 
+// Upload le fichier distant
 async function uploadRemote(obj) {
   if (!ftpEnabled()) return;
 
@@ -98,6 +111,7 @@ async function uploadRemote(obj) {
   }
 }
 
+// Nettoie la structure de donnees
 function normalize(data) {
   const out = data && typeof data === "object" ? data : {};
   if (!out.byDate || typeof out.byDate !== "object") out.byDate = {};
@@ -106,6 +120,7 @@ function normalize(data) {
   return out;
 }
 
+// Init des stats
 export async function initVisits() {
   const local = await readLocal();
   if (local) {
@@ -127,6 +142,7 @@ export async function initVisits() {
   return cache;
 }
 
+// Incremente les visites (jour + total)
 export async function recordVisit() {
   if (!cache) await initVisits();
 
@@ -140,6 +156,7 @@ export async function recordVisit() {
   return cache;
 }
 
+// Retourne le cache en memoire
 export async function getVisits() {
   if (!cache) await initVisits();
   return cache;

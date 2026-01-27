@@ -1,10 +1,15 @@
+// routes API livraison
+
 import express from "express";
 import axios from "axios";
 
+// routeur Express separe
 const router = express.Router();
 
+// Date ISO pour logs
 function nowIso() { return new Date().toISOString(); }
 
+// Log JSON limite (evite logs enormes)
 function safeJson(obj, maxLen = 2000) {
   try {
     const s = JSON.stringify(obj);
@@ -14,6 +19,7 @@ function safeJson(obj, maxLen = 2000) {
   }
 }
 
+// masque les champs sensibles dans les logs
 function redactedBody(body) {
 
   if (!body || typeof body !== "object") return body;
@@ -36,18 +42,21 @@ function redactedBody(body) {
   return out;
 }
 
+// Log basique des requetes navette
 router.use((req, res, next) => {
 
   console.log(`[NAVETTE] ${nowIso()} ${req.method} ${req.originalUrl}`);
   next();
 });
 
+// bloque si variable manquante
 function mustEnv(name) {
   const v = String(process.env[name] || "").trim();
   if (!v) throw new Error(`Missing env ${name}`);
   return v;
 }
 
+// Normalise les erreurs
 function axiosErrorDetails(err) {
 
   const isAxios = !!(err && err.isAxiosError);
@@ -65,6 +74,7 @@ function axiosErrorDetails(err) {
   };
 }
 
+// Appel Apps Script
 async function callGAS(action, params) {
   const url = mustEnv("NAVETTE_GAS_URL");
   const key = mustEnv("NAVETTE_API_KEY");
@@ -91,6 +101,7 @@ async function callGAS(action, params) {
   }
 }
 
+// Normalise les donnees GPS
 function normGps(reqBody) {
   const b = reqBody || {};
   const gpsObj = b.gps && typeof b.gps === "object" ? b.gps : null;
@@ -114,6 +125,7 @@ function asyncRoute(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
+// Jobs bulk en memoire (import multi ligne via serveur)
 const BULK_JOBS = new Map();
 function createJobId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -134,6 +146,7 @@ setInterval(() => {
   }
 }, 30*60*1000).unref?.();
 
+// API: import list
 router.post("/import", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/import] body=", safeJson(redactedBody(req.body)));
   const { magasin, bons, tourneeId, tournee, codeTournee } = req.body || {};
@@ -147,6 +160,7 @@ router.post("/import", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: scan valider
 router.post("/valider", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/valider] body=", safeJson(redactedBody(req.body)));
   const { tourneeId, magasin, livreurId, livreur, bon, tournee, codeTournee } = req.body || {};
@@ -164,6 +178,7 @@ router.post("/valider", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: scan livrer
 router.post("/livrer", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/livrer] body=", safeJson(redactedBody(req.body)));
   const { tourneeId, magasin, livreurId, livreur, bon, tournee, codeTournee } = req.body || {};
@@ -181,6 +196,7 @@ router.post("/livrer", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: bulk
 router.post("/bulk", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/bulk] body=", safeJson(redactedBody(req.body)));
 
@@ -221,6 +237,7 @@ router.post("/bulk", asyncRoute(async (req, res) => {
   });
 }));
 
+// API: statut d'un job bulk
 router.get("/bulk/status", asyncRoute(async (req, res) => {
   const jobId = String(req.query.jobId || "").trim();
   if (!jobId) return res.status(400).json({ success:false, error:"jobId manquant" });
@@ -231,6 +248,7 @@ router.get("/bulk/status", asyncRoute(async (req, res) => {
 
 router.get("/ping", (req, res) => res.json({ success:true, ts: nowIso() }));
 
+// API: tournee active
 router.get("/active", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/active] query=", safeJson(req.query));
   const magasin = String(req.query.magasin || "");
@@ -238,12 +256,14 @@ router.get("/active", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: liste magasins
 router.get("/magasins", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/magasins]");
   const data = await callGAS("getMagasins", {});
   res.json(data);
 }));
 
+// API: dashboard
 router.get("/dashboard", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/dashboard] query=", safeJson(req.query));
   const magasin = String(req.query.magasin || "");
@@ -251,6 +271,7 @@ router.get("/dashboard", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: infos livreur
 router.get("/livreur", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/livreur] query=", safeJson(req.query));
   const { tourneeId, magasin, livreurId, livreur } = req.query || {};
@@ -262,6 +283,7 @@ router.get("/livreur", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// API: nommer un lieu
 router.post("/set-lieu", asyncRoute(async (req, res) => {
   console.log("[NAVETTE][/set-lieu] body=", safeJson(redactedBody(req.body)));
   const { gpsLat, gpsLng, gpsLieu, row } = req.body || {};
@@ -284,6 +306,7 @@ router.post("/set-lieu", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 
+// Gestionnaire d'erreur global
 router.use((err, req, res, next) => {
   const details = err?.details ? err.details : undefined;
   console.error("[NAVETTE ERROR]", safeJson({

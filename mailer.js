@@ -1,3 +1,5 @@
+// configuration d'envoi d'emails (SMTP)
+
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
@@ -13,12 +15,14 @@ const {
   FROM_NAME,
 } = process.env;
 
+// Cette fonction sert a lire les booleens venant des variables d'environnement
 function isTruthy(v) {
   if (!v) return false;
   const s = String(v).trim().toLowerCase();
   return s === "true" || s === "1" || s === "yes";
 }
 
+// Ici je prepare le transporteur SMTP (si les variables sont bien presentes)
 let transporter = undefined;
 let fromEmail = (FROM_EMAIL || "").trim();
 let fromName = (FROM_NAME || "").trim();
@@ -27,6 +31,7 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
   const port = SMTP_PORT ? Number(SMTP_PORT) : 587;
   const secure = isTruthy(SMTP_SECURE) || port === 465;
 
+  // si ces infos sont fausses, aucun email ne partira
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port,
@@ -36,6 +41,7 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
 
   if (!fromEmail) fromEmail = SMTP_USER;
 } else {
+  // sans SMTP, le reste du code doit gerer l'absence de transporteur
   transporter = undefined;
 }
 

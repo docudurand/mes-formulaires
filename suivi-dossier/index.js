@@ -1,17 +1,23 @@
+// serveur pour le module suivi-dossier (page + config.js)
+
 import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+// Chemins utilitaires
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+// routeur Express separe
 const router = express.Router();
 
+// Mots de passe pour les acces
 const SUIVI_PASS_STE     = process.env.ATELIER_SUIVI_PASS_STE     || "";
 const SUIVI_PASS_BG      = process.env.ATELIER_SUIVI_PASS_BG      || "";
 const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
 
+// autorise l'iframe uniquement sur certains domaines
 const FRAME_ANCESTORS =
   "frame-ancestors 'self' https://documentsdurand.wixsite.com https://*.wixsite.com https://*.wix.com https://*.editorx.io;";
 
@@ -21,8 +27,10 @@ router.use((_req, res, next) => {
   next();
 });
 
+// Dossier de fichiers statiques
 const publicDir = path.join(__dirname, "public");
 
+// Expose la config en JS pour la page
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -36,6 +44,7 @@ router.get("/config.js", (_req, res) => {
   );
 });
 
+// Pages statiques (index.html, etc.)
 router.use(express.static(publicDir, {
   extensions: ["html", "htm"],
   index: false,
@@ -45,6 +54,7 @@ router.use(express.static(publicDir, {
   }
 }));
 
+// Page principale
 router.get("/", (_req, res) => {
   const f = path.join(publicDir, "index.html");
   if (fs.existsSync(f)) return res.sendFile(f);

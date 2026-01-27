@@ -1,3 +1,5 @@
+// routes API pour la demande de ramasse (PDF + emails + ack)
+
 import express from "express";
 import multer from "multer";
 import path from "path";
@@ -12,15 +14,19 @@ import { incrementRamasseMagasin, getCompteurs } from "../compteur.js";
 import { transporter, fromEmail } from "../mailer.js";
 import { sendMailWithLog } from "../mailLog.js";
 
+// Chemins utilitaires
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+// routeur Express separe
 const router = express.Router();
 router.use(express.urlencoded({ extended: true }));
 
+// Dossier temporaire pour les PDFs et uploads
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
+// liste CSV en tableau
 function parseCsv(value) {
   if (!value) return [];
   return String(value)
@@ -29,15 +35,18 @@ function parseCsv(value) {
     .filter(Boolean);
 }
 
+// Filtres optionnels de fichiers uploades
 const UPLOAD_ALLOWED_MIME = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_MIME);
 const UPLOAD_ALLOWED_EXT = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_EXT);
 
+// secret pour signer les liens d'accuse
 const RAMASSE_SECRET =
   process.env.RAMASSE_SECRET ||
   process.env.PRESENCES_LEAVES_PASSWORD ||
   process.env.LEAVES_PASS ||
   "change-me";
 
+// Emplacements possibles des JSON
 const FOURNISSEUR_PATHS = [
   path.resolve(__dirname, "fournisseur.json"),
   path.resolve(__dirname, "../fournisseur.json"),
@@ -47,9 +56,11 @@ const MAGASINS_PATHS = [
   path.resolve(__dirname, "../magasins.json"),
 ];
 
+// Dedoublonnage des envois
 const RECENT_POST_RAMASSE = new Map();
 const RAMASSE_DEDUP_WINDOW_MS = 120_000;
 
+// Verifie si la requete est un doublon recent
 function isDuplicateRamasse(requestId) {
   const id = String(requestId || "").trim();
   if (!id) return false;
@@ -66,6 +77,7 @@ function isDuplicateRamasse(requestId) {
   return false;
 }
 
+// Gestion upload fichier (piece jointe)
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, TMP_DIR),
@@ -94,6 +106,7 @@ const upload = multer({
   limits: { fileSize: 24 * 1024 * 1024 },
 });
 
+// Charge un JSON depuis une liste de chemins
 function loadJsonFrom(paths, fallback) {
   for (const p of paths) {
     try {
@@ -107,6 +120,7 @@ function loadJsonFrom(paths, fallback) {
   return fallback;
 }
 
+// Fournisseurs definis en variable d'env (optionnel)
 let ENV_FOURNISSEURS;
 (() => {
   const raw = process.env.FOURNISSEUR_JSON;
@@ -123,6 +137,7 @@ let ENV_FOURNISSEURS;
   }
 })();
 
+// Liste des fournisseurs (env ou fichier)
 function loadFournisseurs() {
   if (Array.isArray(ENV_FOURNISSEURS)) {
     return ENV_FOURNISSEURS;
@@ -131,6 +146,7 @@ function loadFournisseurs() {
   return Array.isArray(arr) ? arr : [];
 }
 
+// Liste des magasins deduite des fournisseurs
 function loadMagasins() {
   const data = loadJsonFrom(MAGASINS_PATHS, []);
   if (Array.isArray(data) && data.length) {
@@ -149,6 +165,7 @@ function loadMagasins() {
   return Array.from(set);
 }
 
+// Recherche un fournisseur par nom
 function findFournisseur(name) {
   const list = loadFournisseurs();
   const n = String(name || "").trim().toLowerCase();
@@ -157,10 +174,12 @@ function findFournisseur(name) {
   );
 }
 
+// Validation email simple
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
 }
 
+// Nettoie et dedoublonne une liste d'emails
 function uniqEmails(arr) {
   const flat = [];
 
@@ -175,6 +194,7 @@ function uniqEmails(arr) {
   return Array.from(new Set(flat.filter(isValidEmail)));
 }
 
+// HTML non exécuté
 function esc(t = "") {
   return String(t).replace(/[&<>"']/g, c =>
     ({
@@ -187,6 +207,7 @@ function esc(t = "") {
   );
 }
 
+// Force une seule ligne (utile pour PDF)
 function oneLine(s) {
   return (
     String(s ?? "")
@@ -196,6 +217,7 @@ function oneLine(s) {
   );
 }
 
+// Date/heure Paris pour le PDF
 function formatParisNow() {
   const d = new Date();
   const dateStr = new Intl.DateTimeFormat("fr-FR", {
@@ -214,6 +236,7 @@ function formatParisNow() {
   return { dateStr, timeStr };
 }
 
+// Genere le PDF de demande de ramasse
 async function buildPdf({
   fournisseur,
   magasinDest,
@@ -384,6 +407,7 @@ dateStr, timeStr } = formatParisNow();
   });
 }
 
+// Corps HTML du mail principal
 function buildMailHtml({
   fournisseur,
   magasinDest,
@@ -420,6 +444,7 @@ function buildMailHtml({
   </div>`;
 }
 
+// Signe un lien d'accuse
 function signAck(params) {
   const h = crypto.createHmac("sha256", RAMASSE_SECRET);
   const keys = Object.keys(params).sort();
@@ -428,6 +453,7 @@ function signAck(params) {
   return h.digest("hex");
 }
 
+// Construit le lien d'accuse signe
 function buildAckUrl(req, payload) {
   const urlBase = `${req.protocol}://${req.get("host")}`;
   const qs = new URLSearchParams(payload);
@@ -436,6 +462,7 @@ function buildAckUrl(req, payload) {
   return `${urlBase}/api/ramasse/ack?${qs.toString()}`;
 }
 
+// Upload FTP
 async function ftpUpload(localPath, remoteDir) {
   if (!process.env.FTP_HOST || !process.env.FTP_USER) return;
   const client = new ftp.Client();
@@ -470,6 +497,7 @@ async function ftpUpload(localPath, remoteDir) {
 const ackRecent   = new Map();
 const ACK_TTL_MS  = 60 * 1000;
 
+// Evite d'envoyer 2 fois le meme accuse
 function shouldSendAckOnce(sig) {
   const now  = Date.now();
   const last = ackRecent.get(sig);
@@ -482,6 +510,7 @@ function shouldSendAckOnce(sig) {
   return true;
 }
 
+// API: liste fournisseurs (pour le formulaire)
 router.get("/fournisseurs", (_req, res) => {
   const out = loadFournisseurs().map(
     ({ name, magasin, infoLivreur }) => ({ name, magasin, infoLivreur })
@@ -489,10 +518,12 @@ router.get("/fournisseurs", (_req, res) => {
   res.json(out);
 });
 
+// API: liste magasins (pour le formulaire)
 router.get("/magasins", (_req, res) => {
   res.json(loadMagasins());
 });
 
+// API: stats ramasse
 router.get("/stats", (_req, res) => {
   try {
     const all = getCompteurs();
@@ -513,6 +544,7 @@ router.get("/stats", (_req, res) => {
   }
 });
 
+// API: demande de ramasse (upload + mail + PDF)
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (req.fileValidationError) {
@@ -529,6 +561,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       requestId,
      } = req.body;
 
+    // eviter double envoi
     const rid = String(requestId || req.get('x-request-id') || '').trim();
     if (rid && isDuplicateRamasse(rid)) {
       return res.json({ ok: true, dedup: true });
@@ -608,6 +641,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       });
     }
 
+    // sans SMTP, pas d'envoi
     if (!transporter) {
       console.error("[RAMASSE] SMTP not configured");
       return res.status(500).json({ error: "smtp_not_configured" });
@@ -725,6 +759,7 @@ await sendMailWithLog(
     });
   }
 });
+// Page d'accuse
 router.get("/ack", (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.query;
@@ -786,6 +821,7 @@ router.get("/ack", (req, res) => {
     res.status(400).send("Lien invalide.");
   }
 });
+// Envoi de l'accuse
 router.post("/ack", async (req, res) => {
   try {
     const { email, fournisseur, magasin, pieces, ts, nonce, sig } = req.body;

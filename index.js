@@ -1,11 +1,15 @@
+// routes legacy (liens JSON + envoi televente)
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+// Chargement des variables d'environnement
 dotenv.config();
 
 import { transporter, fromEmail } from './mailer.js';
 
+// routeur Express separe
 const router = express.Router();
 
 router.use(cors());
@@ -21,6 +25,7 @@ function parseEnvJSON(raw, fallback) {
   return JSON.parse(s);
 }
 
+// API: liens garantie/retour PL
 router.get("/api/pl/liens-garantie-retour", (_req, res) => {
   try {
     const data = parseEnvJSON(process.env.PL_LIENS_GARANTIE_RETOUR_JSON, []);
@@ -31,6 +36,7 @@ router.get("/api/pl/liens-garantie-retour", (_req, res) => {
   }
 });
 
+// API: liens formulaire garantie VL
 router.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   try {
     const data = parseEnvJSON(process.env.VL_LIENS_FORMULAIRE_GARANTIE_JSON, []);
@@ -42,6 +48,7 @@ router.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
 });
 
 
+// API: retour garantie VL
 router.get("/api/vl/retour-garantie", (_req, res) => {
   try {
     const data = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
@@ -56,6 +63,7 @@ router.get('/healthz', (_req, res) => {
   res.sendStatus(200);
 });
 
+// Map vendeur -> email (televente)
 let salesMap = {};
 try {
   const raw = process.env.SALES_MAP_JSON;
@@ -69,6 +77,7 @@ try {
   salesMap = {};
 }
 
+// Choisit le nom "from" selon origine
 function getFromName(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
   if (s.includes('bosch')) return 'Bon de Commande BOSCH Janvier 2026';
@@ -76,6 +85,7 @@ function getFromName(formOriginRaw) {
   return 'Bon de Commande';
 }
 
+// Prefix sujet email selon origine
 function getSubjectPrefix(formOriginRaw) {
   const s = String(formOriginRaw || '').toLowerCase();
   if (s.includes('bosch')) return 'BOSCH JANVIER 2026';
@@ -83,6 +93,7 @@ function getSubjectPrefix(formOriginRaw) {
   return 'BDC';
 }
 
+// Envoi d'un bon de commande par email
 router.post('/send-order', async (req, res) => {
   const { client, salesperson, pdf, form_origin } = req.body;
 
@@ -117,6 +128,7 @@ router.post('/send-order', async (req, res) => {
   const fromName = getFromName(form_origin);
   const subjectPrefix = getSubjectPrefix(form_origin);
 
+  // sans SMTP, pas d'envoi
   if (!transporter) {
     console.error('Email transporter not configured');
     return res.status(500).json({ success: false, error: 'smtp_not_configured' });

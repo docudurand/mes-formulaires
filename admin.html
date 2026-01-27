@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!--page admin pour la garantie (liste + detail + actions)-->
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -706,6 +707,7 @@ html {
     </div>
   </div>
 
+  <!-- Modale de modification du dossier -->
   <div class="modal-backdrop" id="edit-modal-backdrop" style="display:none;">
     <div class="modal">
       <h3>Modifier le dossier</h3>
@@ -797,6 +799,7 @@ html {
     </div>
   </div>
 
+  <!-- Bloc de connexion admin -->
   <div id="login">
     <h2>Accès administration</h2>
     <label for="admin-password">Mot de passe</label>
@@ -805,6 +808,7 @@ html {
     <div id="login-msg"></div>
   </div>
 
+  <!-- Contenu principal (visible apres login) -->
   <div id="admin-content">
     <div class="top-tools">
       <div class="top-left">
@@ -930,6 +934,7 @@ html {
   </div>
 
   <script>
+    // JS principal: login admin, chargement dossiers, actions (modifier, exporter, etc.)
     let isSuperAdmin = false;
     let isAdmin = false;
     let magasinAdmin = null;
