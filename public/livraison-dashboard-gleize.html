@@ -1,0 +1,763 @@
+<!doctype html>
+<!--dashboard livraison-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Livraison – Tableau de bord</title>
+  <meta name="theme-color" content="#003c8f">
+  <style>
+    html,body{height:auto;min-height:100%;overflow:auto}
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f6f7fb}
+    .wrap{width:min(98vw,1900px);max-width:1900px;margin:0 auto;padding:16px;min-height:100vh;box-sizing:border-box;overflow:visible}
+    .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:16px}
+    .pageCard{min-height:100vh;display:flex;flex-direction:column;overflow:visible}
+    .viewArea{flex:1;min-height:0;overflow:visible}
+    .panel{display:flex;flex-direction:column;min-height:0;overflow:visible}
+    .fillRow{flex:1;min-height:0;align-items:stretch;flex-wrap:nowrap;overflow:visible}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    h1{font-size:18px;margin:0}
+    .muted{color:#666;font-size:13px}
+    .pill{padding:6px 10px;border-radius:999px;font-size:13px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+    .p-att{background:#fff7ed;color:#9a3412}
+    .p-val{background:#ecfeff;color:#155e75}
+    .p-liv{background:#ecfdf5;color:#166534}
+    .p-cls{background:#f3f4f6;color:#111827}
+    .btn{border:0;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .btn-ghost{background:#fff;border:1px solid #dbeafe;color:#1d4ed8}
+    select{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:12px;padding:10px;font-size:14px;background:#fff}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid #dbeafe;background:#fff;cursor:pointer;font-weight:800}
+    .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .sep{height:10px}
+    .list{display:flex;flex-direction:column;gap:10px;overflow:visible}
+    .item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #eef2ff}
+    .item.active{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+    .small{font-size:12px;color:#6b7280}
+    .cols{display:grid;grid-template-columns:repeat(3,minmax(320px,1fr));gap:14px}
+    @media(max-width:1100px){.cols{grid-template-columns:1fr}}
+    @media(max-width:1100px){.fillRow{flex-wrap:wrap}}
+    .box{border:1px solid #eef2ff;border-radius:12px;padding:10px;background:#fbfdff;display:flex;flex-direction:column}
+    .box h2{margin:0 0 8px;font-size:15px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;background:#f3f4f6;color:#111827}
+
+    .group{border:1px solid #eef2ff;border-radius:12px;background:#fff;overflow:hidden}
+    .groupHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #eef2ff;position:sticky;top:0;z-index:2}
+    .groupHeader .title{font-weight:900;white-space:pre-line;overflow:visible;text-overflow:clip;line-height:1.15}
+    .groupBody{display:flex;flex-direction:column;gap:10px;padding:10px 12px}
+    .groupCount{font-size:12px;font-weight:900;background:#eef2ff;color:#1f2937;border-radius:999px;padding:4px 8px;white-space:nowrap}
+
+    .iconBtn{border:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;cursor:pointer;font-size:16px;line-height:1}
+    .iconBtn:active{transform:scale(.98)}
+    .iconBtn.ok{border-color:#bbf7d0}
+    .iconBtn.box{border-color:#bfdbfe}
+    .iconBtn:disabled{opacity:.45;cursor:not-allowed}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card pageCard">
+      <div class="top">
+        <div>
+          <h1>Livraison – Tableau de bord magasin</h1>
+          <div class="muted" id="sub">Choisis une agence.</div>
+        </div>
+        <div class="row" style="align-items:center">
+          <select id="magasinSelect" style="min-width:220px;max-width:320px">
+            <option value="">— Choisir un magasin —</option>
+          </select>
+          <button class="btn btn-ghost" id="btnClear">Tout afficher</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-view="encours">En cours</button>
+        <button class="tab" data-view="classes">Classés</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row" id="globalCounters"></div>
+
+      <div class="sep"></div>
+
+      <div class="viewArea" id="viewArea">
+
+      <div id="encoursView" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:visible">
+        <div class="row fillRow" style="align-items:stretch">
+          <div class="card panel" style="flex:1;min-width:260px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <h2 style="margin:0;font-size:15px">Tournées en cours</h2>
+              <span class="badge" id="autoInfo"></span>
+            </div>
+            <div class="muted">Clique une tournée pour voir le détail.</div>
+            <div class="sep"></div>
+            <div id="tourneesActives" class="list"></div>
+          </div>
+
+          <div class="card panel" style="flex:2;min-width:280px">
+            <h2 style="margin:0 0 6px 0;font-size:15px">Détail tournée</h2>
+            <div class="muted" id="detailTitle">Aucune tournée sélectionnée (affichage global).</div>
+            <div class="sep"></div>
+
+            <div class="cols">
+              <div class="box">
+                <h2><span class="pill p-att">En attente</span></h2>
+                <div class="list" id="listAtt"></div>
+              </div>
+              <div class="box">
+                <h2><span class="pill p-val">Validés</span></h2>
+                <div class="list" id="listVal"></div>
+              </div>
+              <div class="box">
+                <h2><span class="pill p-liv">Livrés</span></h2>
+                <div class="list" id="listLiv"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="classesView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:visible">
+        <div class="card panel">
+          <h2 style="margin:0 0 6px 0;font-size:15px">Tournées classées</h2>
+          <div class="muted"></div>
+          <div class="sep"></div>
+          <div id="tourneesClassees" class="list"></div>
+        </div>
+      </div>
+
+      </div>
+
+    </div>
+  </div>
+
+<script>
+const API_BASE = "https://mes-formulaires.onrender.com";
+  const apiUrl = (u) => (String(u).startsWith("http") ? u : (API_BASE + u));
+
+  const qs = new URLSearchParams(location.search);
+
+  const magasinSelect = document.getElementById("magasinSelect");
+  const btnClear = document.getElementById("btnClear");
+
+  const subEl = document.getElementById("sub");
+  const globalCounters = document.getElementById("globalCounters");
+
+  const tourneesActivesEl = document.getElementById("tourneesActives");
+  const tourneesClasseesEl = document.getElementById("tourneesClassees");
+
+  const detailTitle = document.getElementById("detailTitle");
+  const listAtt = document.getElementById("listAtt");
+  const listVal = document.getElementById("listVal");
+  const listLiv = document.getElementById("listLiv");
+
+  let magasin = "";
+  let currentView = "encours";
+  let state = { tournees: [], colis: [] };
+  let selectedTourneeId = "";
+  let expandedClassees = new Set();
+  let refreshTimer = null;
+  let paramsCache = [];
+  let livreurTourneeMap = new Map();
+
+  window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
+  window.addEventListener("error", (e)=>{ console.error("[Dashboard] error", e.error || e.message); });
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // *** FONCTION MANQUANTE AJOUTÉE ***
+  async function fetchJson_(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
+  async function apiPost(path, body) {
+    const response = await fetch(apiUrl(path), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
+  function showLoadError_(context, err) {
+    console.error(`[${context}]`, err);
+    subEl.textContent = `Erreur ${context}: ${err.message}`;
+  }
+
+  function shortExcerpt_(str) {
+    const s = String(str || "");
+    return s.length > 100 ? s.substring(0, 100) + "..." : s;
+  }
+
+  function normStatut(st){
+    const s = String(st||"").trim().toUpperCase();
+    if (s === "EN_ATTENTE") return "EN_ATTENTE";
+    if (s.startsWith("EN_")) return s;
+    if (s.startsWith("VAL")) return "VALIDE";
+    if (s.startsWith("LIVR")) return "LIVRE";
+    if (s.startsWith("CLAS")) return "CLASSEE";
+    return s.replace(/\s+/g,"_");
+  }
+  function buildLivreurTourneeMap(){
+    livreurTourneeMap = new Map();
+    if (!magasin || !Array.isArray(paramsCache)) return;
+
+    const magKey = String(magasin||"").trim().toUpperCase();
+
+    paramsCache.forEach(r => {
+      if (!r) return;
+      const codeAg = String(r.codeAgence || "").trim().toUpperCase();
+      const ag = String(r.agence || "").trim().toUpperCase();
+      if (codeAg !== magKey && ag !== magKey) return;
+
+      const nom = String(r.tournee || r.codeTournee || "").trim();
+      if (!nom) return;
+
+      const k1 = String(r.codeTransporteur || "").trim().toUpperCase();
+      const k2 = String(r.transporteur || "").trim().toUpperCase();
+      if (k1) livreurTourneeMap.set(k1, nom);
+      if (k2) livreurTourneeMap.set(k2, nom);
+    });
+  }
+
+  function formatLivreurTournee(livreurId) {
+    const liv = String(livreurId || "").trim();
+    return liv ? `Livreur: ${liv}` : "";
+  }
+
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+
+  function formatMajHHMM(iso){
+    if (!iso) return "";
+    const d = new Date(iso);
+    return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+
+  function isSameDay(d1, d2){
+    return d1.getFullYear()===d2.getFullYear() && d1.getMonth()===d2.getMonth() && d1.getDate()===d2.getDate();
+  }
+
+  function setGlobalCounters(counts) {
+    globalCounters.innerHTML = `
+      <div class="pill p-att"><span style="font-size:20px">${counts.enAttente}</span> en attente</div>
+      <div class="pill p-val"><span style="font-size:20px">${counts.valides}</span> validés</div>
+      <div class="pill p-liv"><span style="font-size:20px">${counts.livres}</span> livrés</div>
+    `;
+  }
+
+  function renderTournees(){
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const actives = state.tournees.filter(t=>normStatut(t.statut)!=="CLASSEE");
+    const classees = state.tournees.filter(t=>normStatut(t.statut)==="CLASSEE");
+
+    const enCoursHTML = actives.map(t=>{
+      const tid = String(t.tourneeId||"");
+      const isSelected = (tid === selectedTourneeId);
+      const cls = isSelected ? "item active" : "item";
+
+      const colisCount = state.colis.filter(c=>String(c.tourneeId)===tid).length;
+      const valCount = state.colis.filter(c=>String(c.tourneeId)===tid && normStatut(c.statut)==="VALIDE").length;
+      const livCount = state.colis.filter(c=>String(c.tourneeId)===tid && normStatut(c.statut)==="LIVRE").length;
+
+      const createdAt = t.createdAt || t.creationDate || "";
+      const maj = t.updatedAt || t.lastUpdate || "";
+      const createdDate = createdAt ? new Date(createdAt) : null;
+      const majDate = maj ? new Date(maj) : null;
+
+      const createdFmt = (createdDate && isSameDay(createdDate, today)) ? formatMajHHMM(createdDate) : "";
+      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
+
+      const nom = escapeHtml(t.tournee || t.codeTournee || tid);
+
+      return `
+        <div class="${cls}" data-tourneeid="${escapeHtml(tid)}" style="cursor:pointer">
+          <div style="flex:1">
+            <div style="font-weight:900">${nom}</div>
+            <div class="small">
+              ${colisCount} colis • ${valCount} val • ${livCount} liv
+              ${createdFmt ? ` • Créée: ${createdFmt}` : ""}
+              ${majFmt ? ` • MAJ: ${majFmt}` : ""}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    tourneesActivesEl.innerHTML = enCoursHTML || `<div class="muted" style="text-align:center;padding:20px">Aucune tournée active.</div>`;
+
+    const classeesHTML = classees.map(t=>{
+      const tid = String(t.tourneeId||"");
+      const isExp = expandedClassees.has(tid);
+      const nom = escapeHtml(t.tournee || t.codeTournee || tid);
+
+      const colisOfThisTournee = state.colis.filter(c=>String(c.tourneeId)===tid);
+      const livCount = colisOfThisTournee.filter(c=>normStatut(c.statut)==="LIVRE").length;
+
+      const createdAt = t.createdAt || t.creationDate || "";
+      const maj = t.updatedAt || t.lastUpdate || "";
+      const createdDate = createdAt ? new Date(createdAt) : null;
+      const majDate = maj ? new Date(maj) : null;
+
+      const createdFmt = createdDate ? createdDate.toLocaleDateString("fr-FR") : "";
+      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
+
+      let bodyHTML = "";
+      if (isExp) {
+        const items = colisOfThisTournee.map(c=>{
+          const st = normStatut(c.statut);
+          const pillClass = (st==="LIVRE") ? "pill p-liv" : "pill p-cls";
+          const bon = escapeHtml(c.bon||"");
+          const dest = escapeHtml(c.adresseDestination||"");
+          const livreur = escapeHtml(c.livreurId||"");
+
+          const createdAtC = c.createdAt || "";
+          const majC = c.updatedAt || c.lastUpdate || "";
+          const createdDateC = createdAtC ? new Date(createdAtC) : null;
+          const majDateC = majC ? new Date(majC) : null;
+
+          const createdFmtC = (createdDateC && isSameDay(createdDateC, today)) ? formatMajHHMM(createdDateC) : "";
+          const majFmtC = (majDateC && isSameDay(majDateC, today)) ? formatMajHHMM(majDateC) : "";
+
+          const hasGps = !!(c.gpsLat && c.gpsLng);
+          const hasPhoto = !!(c.photoUrl);
+          const gpsLieu = String(c.gpsLieu || "").trim();
+          const nommerLabel = gpsLieu ? `✏️ ${escapeHtml(gpsLieu)}` : "📍";
+
+          return `
+            <div class="item">
+              <div style="flex:1">
+                <div style="font-weight:900">${bon}</div>
+                <div class="small">
+                  ${dest ? dest : "(Aucune adresse)"}
+                  ${livreur ? ` • Liv: ${livreur}` : ""}
+                  ${createdFmtC ? ` • Créé: ${createdFmtC}` : ""}
+                  ${majFmtC ? ` • MAJ: ${majFmtC}` : ""}
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span class="${pillClass}">${escapeHtml(st)}</span>
+                ${hasGps ? `<button class="iconBtn" data-act="suivi" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Suivi GPS">🗺️</button>` : ""}
+                ${hasPhoto ? `<button class="iconBtn" data-act="photo" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Photo">📷</button>` : ""}
+                ${hasGps ? `<button class="iconBtn" data-act="nommer" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Nommer ce lieu">${nommerLabel}</button>` : ""}
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        bodyHTML = `<div class="groupBody">${items || `<div class="muted" style="text-align:center;padding:10px">Aucun colis.</div>`}</div>`;
+      }
+
+      return `
+        <div class="group">
+          <div class="groupHeader" style="cursor:pointer" data-toggle-classee="${escapeHtml(tid)}">
+            <div class="title">${nom}</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="groupCount">${livCount} livrés</span>
+              ${createdFmt ? `<span class="small">${createdFmt}</span>` : ""}
+              ${majFmt ? `<span class="small">MAJ: ${majFmt}</span>` : ""}
+              <span style="font-size:18px">${isExp ? "▲" : "▼"}</span>
+            </div>
+          </div>
+          ${bodyHTML}
+        </div>
+      `;
+    }).join("");
+
+    tourneesClasseesEl.innerHTML = classeesHTML || `<div class="muted" style="text-align:center;padding:20px">Aucune tournée classée.</div>`;
+
+    let nextRefresh = 10;
+    if (!magasin) {
+      nextRefresh = 0;
+    } else {
+      if (actives.length === 0 && classees.length === 0) {
+        nextRefresh = 30;
+      }
+    }
+    const autoEl = document.getElementById("autoInfo");
+    if (autoEl) {
+      if (nextRefresh > 0) {
+        autoEl.textContent = `Auto-refresh: ${nextRefresh}s`;
+      } else {
+        autoEl.textContent = "";
+      }
+    }
+  }
+
+  function renderDetail(){
+    if (currentView !== "encours") return;
+
+    let colis = state.colis;
+    if (selectedTourneeId) {
+      colis = colis.filter(c=>String(c.tourneeId)===selectedTourneeId);
+      const t = state.tournees.find(x=>String(x.tourneeId)===selectedTourneeId);
+      const nom = t ? (t.tournee || t.codeTournee || selectedTourneeId) : selectedTourneeId;
+      detailTitle.textContent = `Tournée: ${nom}`;
+    } else {
+      detailTitle.textContent = "Affichage global (toutes tournées)";
+    }
+
+    const att = colis.filter(c=>normStatut(c.statut)==="EN_ATTENTE");
+    const val = colis.filter(c=>normStatut(c.statut)==="VALIDE");
+    const liv = colis.filter(c=>normStatut(c.statut)==="LIVRE");
+
+    const total = colis.length;
+    const totalAtt = state.colis.filter(c=>normStatut(c.statut)==="EN_ATTENTE").length;
+    const totalVal = state.colis.filter(c=>normStatut(c.statut)==="VALIDE").length;
+    const totalLiv = state.colis.filter(c=>normStatut(c.statut)==="LIVRE").length;
+
+    setGlobalCounters({ enAttente: totalAtt, valides: totalVal, livres: totalLiv });
+
+    const buildItem = (c) => {
+      const bon = escapeHtml(c.bon||"");
+      const dest = escapeHtml(c.adresseDestination||"");
+      const st = normStatut(c.statut);
+
+      const livreur = escapeHtml(c.livreurId||"");
+
+      const createdAt = c.createdAt || "";
+      const maj = c.updatedAt || c.lastUpdate || "";
+      const createdDate = createdAt ? new Date(createdAt) : null;
+      const majDate = maj ? new Date(maj) : null;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      const createdFmt = (createdDate && isSameDay(createdDate, today)) ? formatMajHHMM(createdDate) : "";
+      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
+
+      const hasGps = !!(c.gpsLat && c.gpsLng);
+      const hasPhoto = !!(c.photoUrl);
+      const gpsLieu = String(c.gpsLieu || "").trim();
+      const nommerLabel = gpsLieu ? `✏️ ${escapeHtml(gpsLieu)}` : "📍";
+
+      let actions = "";
+      if (st === "EN_ATTENTE") {
+        actions = `<button class="iconBtn ok" data-act="valider" data-bon="${bon}" title="Valider">✅</button>`;
+      } else if (st === "VALIDE") {
+        actions = `<button class="iconBtn box" data-act="livrer" data-bon="${bon}" title="Livrer">📦</button>`;
+      }
+
+      if (hasGps) {
+        actions += `<button class="iconBtn" data-act="suivi" data-bon="${bon}" title="Suivi GPS">🗺️</button>`;
+      }
+      if (hasPhoto) {
+        actions += `<button class="iconBtn" data-act="photo" data-bon="${bon}" title="Photo">📷</button>`;
+      }
+      if (hasGps) {
+        actions += `<button class="iconBtn" data-act="nommer" data-bon="${bon}" title="Nommer ce lieu">${nommerLabel}</button>`;
+      }
+
+      return `
+        <div class="item">
+          <div style="flex:1">
+            <div style="font-weight:900">${bon}</div>
+            <div class="small">
+              ${dest ? dest : "(Aucune adresse)"}
+              ${livreur ? ` • Liv: ${livreur}` : ""}
+              ${createdFmt ? ` • Créé: ${createdFmt}` : ""}
+              ${majFmt ? ` • MAJ: ${majFmt}` : ""}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${actions}
+          </div>
+        </div>
+      `;
+    };
+
+    listAtt.innerHTML = att.length ? att.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
+    listVal.innerHTML = val.length ? val.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
+    listLiv.innerHTML = liv.length ? liv.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
+  }
+
+  function openMapsFromColis(c) {
+    if (!c.gpsLat || !c.gpsLng) {
+      alert("Pas de coordonnées GPS pour ce colis.");
+      return;
+    }
+    const lat = c.gpsLat;
+    const lng = c.gpsLng;
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    window.open(url, "_blank");
+  }
+
+  function openPhotoFromColis(c) {
+    if (!c.photoUrl) {
+      alert("Pas de photo pour ce colis.");
+      return;
+    }
+    window.open(c.photoUrl, "_blank");
+  }
+
+  tourneesActivesEl.addEventListener("click", (ev) => {
+    const item = ev.target && ev.target.closest ? ev.target.closest("[data-tourneeid]") : null;
+    if (!item) return;
+    const tid = item.getAttribute("data-tourneeid");
+    if (!tid) return;
+    selectedTourneeId = (selectedTourneeId === tid) ? "" : tid;
+    renderTournees();
+    renderDetail();
+  });
+
+  tourneesClasseesEl.addEventListener("click", (ev) => {
+    const toggler = ev.target && ev.target.closest ? ev.target.closest("[data-toggle-classee]") : null;
+    if (toggler) {
+      const tid = toggler.getAttribute("data-toggle-classee");
+      if (!tid) return;
+      if (expandedClassees.has(tid)) {
+        expandedClassees.delete(tid);
+      } else {
+        expandedClassees.add(tid);
+      }
+      renderTournees();
+      return;
+    }
+  });
+
+const handleActionClick = async (ev) => {
+      const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
+      if (!btn) return;
+      const act = btn.getAttribute("data-act");
+      const bon = btn.getAttribute("data-bon");
+      if (!act || !bon) return;
+
+if (act === "nommer") {
+  const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+  if (!found) { alert("Colis introuvable."); return; }
+  const current = String(found.gpsLieu || "").trim();
+  const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
+  if (name === null) return;
+  const clean = String(name).trim();
+  if (!clean) { alert("Nom vide."); return; }
+  btn.disabled = true;
+  try {
+    await apiPost("/api/navette/set-lieu", {
+      magasin,
+      bon,
+      row: found.row || "",
+      gpsLat: found.gpsLat || "",
+      gpsLng: found.gpsLng || "",
+      gpsLieu: clean
+    });
+    await refresh();
+  } catch (e) {
+    alert("Erreur: " + (e && e.message ? e.message : e));
+  } finally {
+    btn.disabled = false;
+  }
+  return;
+}
+
+      if (act === "suivi") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openMapsFromColis(found);
+        return;
+      }
+
+      if (act === "photo") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openPhotoFromColis(found);
+        return;
+      }
+
+      if (!selectedTourneeId) {
+        alert("Sélectionne d'abord une tournée à gauche.");
+        return;
+      }
+
+            btn.disabled = true;
+      try {
+        if (act === "valider") {
+          await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
+        } else if (act === "livrer") {
+          await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
+        }
+        await refresh();
+      } catch (e) {
+        alert("Erreur: " + (e && e.message ? e.message : e));
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    [listAtt, listVal, listLiv].forEach(el => {
+      if (!el) return;
+      el.onclick = handleActionClick;
+    });
+
+tourneesClasseesEl.onclick = async (ev) => {
+  const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
+  if (!btn) return;
+  const act = btn.getAttribute("data-act");
+  const bon = btn.getAttribute("data-bon");
+  const tid = btn.getAttribute("data-tourneeid");
+  if (!act || !bon || !tid) return;
+
+  const found = state.colis.find(x => String(x.bon) === String(bon) && String(x.tourneeId) === String(tid));
+  if (!found) { alert("Colis introuvable."); return; }
+
+  if (act === "suivi") {
+    openMapsFromColis(found);
+    return;
+  }
+  if (act === "photo") {
+    openPhotoFromColis(found);
+    return;
+  }
+  if (act === "nommer") {
+    const current = String(found.gpsLieu || "").trim();
+    const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
+    if (name === null) return;
+    const clean = String(name).trim();
+    if (!clean) { alert("Nom vide."); return; }
+
+    btn.disabled = true;
+    try {
+      await apiPost("/api/navette/set-lieu", {
+        magasin,
+        bon,
+        row: found.row || "",
+        gpsLat: found.gpsLat || "",
+        gpsLng: found.gpsLng || "",
+        gpsLieu: clean
+      });
+      await refresh();
+    } catch (e) {
+      alert("Erreur: " + (e && e.message ? e.message : e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+};
+
+  function setNeutral() {
+    subEl.textContent = "Choisis une agence.";
+    setGlobalCounters({enAttente:0, valides:0, livres:0});
+    state = { tournees: [], colis: [] };
+    selectedTourneeId = "";
+    renderTournees();
+    renderDetail();
+  }
+
+  async function loadMagasins() {
+    let data;
+    try {
+      data = await fetchJson_(apiUrl("/api/kilometrage/params"));
+    } catch (err) {
+      showLoadError_("PARAMS", err);
+      return;
+    }
+
+    if (!Array.isArray(data)) {
+      showLoadError_("PARAMS", new Error("Réponse inattendue: " + shortExcerpt_(JSON.stringify(data))))
+      return;
+    }
+
+    paramsCache = data;
+
+    const list = Array.from(new Set(
+      data.map(r => String((r && r.codeAgence) || "").trim().toUpperCase()).filter(Boolean)
+    )).sort((a,b)=>a.localeCompare(b,"fr"));
+
+    magasinSelect.innerHTML = `<option value="">— Choisir une agence —</option>` +
+      list.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
+
+    magasin = "";
+    magasinSelect.value = "";
+    livreurTourneeMap = new Map();
+    setNeutral();
+  }
+
+  async function refresh() {
+    if (!magasin) { setNeutral(); return; }
+
+    subEl.textContent = "Chargement…";
+    let data;
+    try {
+      data = await fetchJson_(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
+    } catch (err) {
+      showLoadError_("DASHBOARD", err);
+      return;
+    }
+    if (!data || data.success === false) {
+      showLoadError_("DASHBOARD", new Error((data && (data.error || data.message)) || "Réponse invalide"));
+      return;
+    }
+
+    state.tournees = data.tournees || [];
+    state.colis = data.colis || [];
+
+    const ts = new Date().toLocaleTimeString("fr-FR");
+    subEl.textContent = `Agence: ${magasin} • Jour: ${new Date().toLocaleDateString("fr-FR")} • Tournées: ${state.tournees.length} • Colis: ${state.colis.length} • MAJ: ${ts}`;
+
+    renderTournees();
+    renderDetail();
+
+    const u = new URL(location.href);
+    u.searchParams.set("magasin", magasin);
+    history.replaceState(null, "", u.toString());
+  }
+
+  function startAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      if (magasin) refresh();
+    }, 10000);
+  }
+
+  magasinSelect.addEventListener("change", async () => {
+    try {
+      magasin = String(magasinSelect.value || "").trim().toUpperCase();
+      selectedTourneeId = "";
+      buildLivreurTourneeMap();
+      await refresh();
+    } catch (error) {
+      console.error("Erreur lors du changement de magasin:", error);
+      showLoadError_("SELECTION", error);
+    }
+  });
+
+  btnClear.addEventListener("click", () => {
+    selectedTourneeId = "";
+    expandedClassees = new Set();
+    renderTournees();
+    renderDetail();
+  });
+
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      const view = b.dataset.view;
+      currentView = view;
+      document.getElementById("encoursView").style.display = (view==="encours") ? "" : "none";
+      document.getElementById("classesView").style.display = (view==="classes") ? "" : "none";
+      renderDetail();
+    });
+  });
+
+  setNeutral();
+  startAutoRefresh();
+  loadMagasins().catch(err => {
+    subEl.textContent = "Erreur: " + err.message;
+  });
+</script>
+</body>
+</html>
