@@ -525,6 +525,60 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
 });
 
 
+// 📥 Servir un fichier (photo preuve) stocké sur le FTP à partir d'un chemin enregistré en Google Sheet.
+// Exemple: /api/navette/file?path=/Disque%201/navette-preuves/2026/01/28/xxx.jpg
+app.get("/api/navette/file", async (req, res) => {
+  let client;
+  let tmp = "";
+  try {
+    const raw = String(req.query.path || req.query.p || "").trim();
+    if (!raw) return res.status(400).json({ success:false, error:"missing_path" });
+
+    const requested = normFtpPath_(decodeURIComponent(raw));
+
+    const baseDirRaw = String(process.env.NAVETTE_FTP_DIR || "navette-preuves").trim() || "navette-preuves";
+    const baseDir = normFtpPath_(baseDirRaw);
+
+    const reqNoLead  = requested.replace(/^\/+/, "");
+    const baseNoLead = baseDir.replace(/^\/+/, "");
+    const allowed = (reqNoLead === baseNoLead) || reqNoLead.startsWith(baseNoLead + "/");
+    if (!allowed) return res.status(403).json({ success:false, error:"forbidden_path" });
+
+    client = await ftpClient();
+
+    const ext = (path.extname(reqNoLead) || "").toLowerCase();
+    tmp = tmpFile("navette_" + Date.now() + (ext || ".bin"));
+
+    try {
+      await client.downloadTo(tmp, requested);
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (msg.includes("550") && requested.startsWith("/")) {
+        await client.downloadTo(tmp, requested.replace(/^\/+/, ""));
+      } else {
+        throw e;
+      }
+    }
+
+    const filename = path.posix.basename(reqNoLead).replace(/"/g, "");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    if (ext) res.type(ext);
+
+    const stream = fs.createReadStream(tmp);
+    res.on("finish", () => { try { fs.unlinkSync(tmp); } catch {} });
+    stream.on("error", () => { try { res.status(500).end("read_error"); } catch {} });
+    stream.pipe(res);
+  } catch (e) {
+    console.error("[NAVETTE][file] error", e);
+    try { if (tmp) fs.unlinkSync(tmp); } catch {}
+    return res.status(500).json({ success:false, error:String(e?.message || e) });
+  } finally {
+    try { client?.close?.(); } catch {}
+  }
+});
+
+
 app.get("/api/navette/dashboard", async (req, res) => {
   try {
     const magasin = String(req.query.magasin || "");
@@ -1140,67 +1194,6 @@ function normFtpPath_(p){
   s = s.replace(/\/+$/,"");
   return s;
 }
-
-// 📥 Ouvrir/servir une photo preuve depuis le FTP
-// Utilise le chemin stocké dans Google Sheets (ex: /Disque 1/navette-preuves/2026/01/28/xxx.jpg)
-app.get("/api/navette/file", async (req, res) => {
-  let client;
-  let tmp = "";
-  try {
-    const raw = String(req.query.path || req.query.p || "").trim();
-    if (!raw) return res.status(400).json({ success:false, error:"missing_path" });
-
-    const requested = normFtpPath_(decodeURIComponent(raw));
-
-    // Sécurité: on n'autorise que les fichiers dans NAVETTE_FTP_DIR
-    const baseDirRaw = String(process.env.NAVETTE_FTP_DIR || "navette-preuves").trim() || "navette-preuves";
-    const baseDir = normFtpPath_(baseDirRaw);
-
-    const reqNoLead  = requested.replace(/^\/+/, "");
-    const baseNoLead = baseDir.replace(/^\/+/, "");
-    const allowed = (reqNoLead === baseNoLead) || reqNoLead.startsWith(baseNoLead + "/");
-    if (!allowed) return res.status(403).json({ success:false, error:"forbidden_path" });
-
-    client = await ftpClient();
-
-    const ext = (path.extname(reqNoLead) || "").toLowerCase();
-    tmp = tmpFile(`navette_${Date.now()}${ext || ".bin"}`);
-
-    // Certains serveurs FTP n'aiment pas le leading "/"
-    try {
-      await client.downloadTo(tmp, requested);
-    } catch (e) {
-      const msg = String(e?.message || e);
-      if (msg.includes("550") && requested.startsWith("/")) {
-        await client.downloadTo(tmp, requested.replace(/^\/+/, ""));
-      } else {
-        throw e;
-      }
-    }
-
-    const filename = path.posix.basename(reqNoLead).replace(/"/g, "");
-    res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-
-    if (ext) res.type(ext.replace(/^\./, "")); // ex: "jpg"
-
-    const stream = fs.createReadStream(tmp);
-    stream.on("error", () => {
-      try { res.status(500).end("read_error"); } catch {}
-    });
-    res.on("finish", () => { try { fs.unlinkSync(tmp); } catch {} });
-
-    stream.pipe(res);
-  } catch (e) {
-    console.error("[NAVETTE][file] error", e);
-    try { if (tmp) fs.unlinkSync(tmp); } catch {}
-    return res.status(500).json({ success:false, error:String(e?.message || e) });
-  } finally {
-    try { client?.close?.(); } catch {}
-  }
-});
-
-
 
 async function ensureDirSafe_(client, dir){
   const d = normFtpPath_(dir);
