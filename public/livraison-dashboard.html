@@ -159,12 +159,13 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   let currentView = "encours";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
-  let expandedClassees = new Set();
-  let expandedLivresGroups = new Set();
-  let refreshTimer = null;
-    let refreshSeq = 0;
-  let refreshAbort = null;
-let paramsCache = [];
+      expandedLivresGroups = new Set();
+let expandedClassees = new Set();
+        expandedLivresGroups = new Set();
+let expandedLivresGroups = new Set();
+  let refreshSeq = 0;
+let refreshTimer = null;
+  let paramsCache = [];
   let livreurTourneeMap = new Map();
 
   window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
@@ -583,7 +584,6 @@ let paramsCache = [];
       caret.className = "badge";
       caret.style.background = "#eef2ff";
 
-      // Comme dans l’onglet "Classés": sections repliables
       const isOpen = expandedLivresGroups.has(g.key);
       caret.textContent = isOpen ? "▲" : "▼";
 
@@ -795,22 +795,18 @@ tourneesClasseesEl.onclick = async (ev) => {
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
-    expandedLivresGroups = new Set();
     renderTournees();
     renderDetail();
   }
 
   function resetUiForLoading_(mag) {
-    // Vide immédiatement l’écran (évite le flash de l’ancien magasin)
     subEl.textContent = mag ? `Agence: ${mag} • Chargement…` : "Chargement…";
-    setGlobalCounters({ enAttente: 0, valides: 0, livres: 0 });
-
+    setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
     expandedClassees = new Set();
+    expandedLivresGroups = new Set();
 
-        expandedLivresGroups = new Set();
-// Vide les listes visibles
     tourneesActivesEl.innerHTML = "";
     tourneesClasseesEl.innerHTML = "";
     listAtt.innerHTML = "";
@@ -851,40 +847,18 @@ tourneesClasseesEl.onclick = async (ev) => {
     async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
-    // Empêche les courses: une réponse ancienne ne doit jamais écraser la nouvelle
     const mySeq = ++refreshSeq;
-
-    // Annule la requête précédente si on change d’agence rapidement
-    if (refreshAbort) {
-      try { refreshAbort.abort(); } catch(e) {}
-    }
-    refreshAbort = new AbortController();
-
-    // Reset UI immédiat (plus de flash de l’ancien magasin)
     resetUiForLoading_(magasin);
 
     let data;
     try {
-      const url = apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
-      const r = await fetch(url, { signal: refreshAbort.signal });
-
-      const text = await r.text().catch(() => "");
-      let j = null;
-      try { j = JSON.parse(text || "{}"); } catch(e) {}
-
-      if (!r.ok) {
-        const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
-        throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
-      }
-      data = j;
+      data = await fetchJson_(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
     } catch (err) {
-      // Abort volontaire: on ignore
-      if (err && err.name === "AbortError") return;
+      if (mySeq !== refreshSeq) return;
       showLoadError_("DASHBOARD", err);
       return;
     }
 
-    // Si une requête plus récente a été lancée, on ignore cette réponse
     if (mySeq !== refreshSeq) return;
 
     if (!data || data.success === false) {
@@ -924,8 +898,7 @@ tourneesClasseesEl.onclick = async (ev) => {
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     expandedClassees = new Set();
-        expandedLivresGroups = new Set();
-renderTournees();
+    renderTournees();
     renderDetail();
   });
 
