@@ -351,8 +351,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       return;
     }
     const url = `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lng)}&z=18`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
 
   function resolvePhotoUrl_(urlOrPath) {
     const s = String(urlOrPath || "").trim();
@@ -753,6 +751,9 @@ if (act === "nommer") {
       el.onclick = handleActionClick;
     });
 
+}
+
+
 tourneesClasseesEl.onclick = async (ev) => {
   const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
   if (!btn) return;
@@ -797,6 +798,7 @@ tourneesClasseesEl.onclick = async (ev) => {
     }
   }
 };
+
 
   function setNeutral() {
     subEl.textContent = "Choisis une agence.";
