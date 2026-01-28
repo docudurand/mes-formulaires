@@ -466,14 +466,13 @@ const SERVICES_STE = [
 function matchesServiceByView(row){
   const svc = (row.service || "").trim();
   if (VIEW_MODE === "STE") {
-    return SERVICES_STE.includes(svc);
+    return ["Rectification Culasse", "Contrôle injection Diesel", "Contrôle injection Essence"].includes(svc);
   }
   if (VIEW_MODE === "BG") {
     return svc === "Arbre de Transmission";
   }
   if (VIEW_MODE === "CHASSE") {
-    return svc === "Rectification des Volants Moteur";
-    return svc === "Regarnissages Machoires";
+    return ["Rectification des Volants Moteur", "Regarnissages Machoires"].includes(svc);
   }
   return true;
 }
