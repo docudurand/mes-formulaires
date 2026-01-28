@@ -156,19 +156,18 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   const listLiv = document.getElementById("listLiv");
 
 
-  let magasin = "";
-  let currentView = "encours";
-  let state = { tournees: [], colis: [] };
-  let selectedTourneeId = "";
-  let expandedClassees = new Set();
-  let expandedLivresGroups = new Set();
-  let refreshSeq = 0;
-  let refreshTimer = null;
-  let paramsCache = [];
-  let livreurTourneeMap = new Map();
-  let livreurTourneeMap = new Map();
+    let magasin = "";
+    let currentView = "encours";
+    let state = { tournees: [], colis: [] };
+    let selectedTourneeId = "";
+    let expandedClassees = new Set();
+    let expandedLivresGroups = new Set();
+    let refreshSeq = 0;
+    let refreshTimer = null;
+    let paramsCache = [];
+    let livreurTourneeMap = new Map();
 
-  window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
+window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
   window.addEventListener("error", (e)=>{ console.error("[Dashboard] error", e.error || e.message); });
 
   function escapeHtml(s){
@@ -525,7 +524,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
   }
 
-      function renderLivresGrouped_(parent, list, includeTournee){
+        function renderLivresGrouped_(parent, list, includeTournee){
     parent.innerHTML = "";
     if (!Array.isArray(list) || !list.length) return;
 
@@ -795,6 +794,8 @@ tourneesClasseesEl.onclick = async (ev) => {
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
+    expandedLivresGroups = new Set();
+    expandedClassees = new Set();
 renderTournees();
     renderDetail();
   }
@@ -805,7 +806,8 @@ renderTournees();
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
     expandedClassees = new Set();
-    tourneesActivesEl.innerHTML = "";
+        expandedLivresGroups = new Set();
+tourneesActivesEl.innerHTML = "";
     tourneesClasseesEl.innerHTML = "";
     listAtt.innerHTML = "";
     listVal.innerHTML = "";
@@ -842,11 +844,12 @@ renderTournees();
     setNeutral();
   }
 
-      async function refresh() {
+        async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
     const mySeq = ++refreshSeq;
 
+    // Reset immédiat pour éviter d’afficher l’ancien magasin pendant le chargement
     resetUiForLoading_(magasin);
 
     let data;
@@ -897,6 +900,7 @@ renderTournees();
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     expandedClassees = new Set();
+    expandedLivresGroups = new Set();
 renderTournees();
     renderDetail();
   });
