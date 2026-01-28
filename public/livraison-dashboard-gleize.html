@@ -767,6 +767,7 @@ if (act === "nommer") {
       if (!el) return;
       el.onclick = handleActionClick;
     });
+  }
 
 tourneesClasseesEl.onclick = async (ev) => {
   const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
