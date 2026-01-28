@@ -425,6 +425,59 @@ app.get("/api/navette/bulk/status", (req, res) => {
   return res.json({ success:true, jobId, ...st });
 });
 
+// Fonction retry avec backoff exponentiel pour robustesse réseau
+async function retryWithBackoff(fn, options = {}) {
+  const {
+    maxRetries = 3,
+    initialDelay = 1000,
+    maxDelay = 10000,
+    backoffMultiplier = 2,
+    onRetry = null
+  } = options;
+
+  let lastError;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      // Ne pas retry si c'est la dernière tentative
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Calculer le délai avec backoff exponentiel
+      const delay = Math.min(
+        initialDelay * Math.pow(backoffMultiplier, attempt),
+        maxDelay
+      );
+
+      // Log et callback optionnel
+      const attemptNum = attempt + 1;
+      console.log(`[RETRY] Attempt ${attemptNum}/${maxRetries} failed, retrying in ${delay}ms...`, {
+        error: error?.message || String(error),
+        code: error?.code
+      });
+
+      if (onRetry) {
+        try {
+          onRetry(attempt, error, delay);
+        } catch (e) {
+          console.error("[RETRY] onRetry callback error:", e);
+        }
+      }
+
+      // Attendre avant de réessayer
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  // Si on arrive ici, tous les retries ont échoué
+  throw lastError;
+}
+
 // Jobs pour photos (similaire aux bulk jobs)
 const PHOTO_JOBS = new Map();
 function createPhotoJobId() {
@@ -507,30 +560,63 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
     // Traiter l'upload en arrière-plan
     setImmediate(async () => {
       let client;
+      let uploadAttempts = 0;
+      let gasAttempts = 0;
+      
       try {
-        setPhotoJob(jobId, { status: "uploading" });
+        setPhotoJob(jobId, { status: "uploading", attempts: 0 });
         
-        client = await ftpClient();
+        // ÉTAPE 1: Upload FTP avec retry
+        let remotePath, photoUrl;
+        await retryWithBackoff(async () => {
+          uploadAttempts++;
+          
+          // Fermer le client précédent si retry
+          if (client) {
+            try { await client.close(); } catch {}
+          }
+          
+          client = await ftpClient();
 
-        // 1) crée le dossier (compatible chemins absolus/relatifs)
-        const remoteDir = await ensureDirSafe_(client, remoteDirWanted);
+          // 1) crée le dossier (compatible chemins absolus/relatifs)
+          const remoteDir = await ensureDirSafe_(client, remoteDirWanted);
 
-        // 2) upload (idem)
-        const remotePath = await uploadFromSafe_(client, f.path, path.posix.join(remoteDir, fileName));
+          // 2) upload (idem)
+          remotePath = await uploadFromSafe_(client, f.path, path.posix.join(remoteDir, fileName));
+          
+          // URL publique (si configurée) sinon on renvoie le chemin FTP
+          const pubBase = String(process.env.NAVETTE_FTP_PUBLIC_BASE_URL || process.env.FTP_PUBLIC_BASE_URL || "").trim();
+          photoUrl = pubBase
+            ? (pubBase.replace(/\/+$/,"") + "/" + remotePath.replace(/^\/+/, ""))
+            : remotePath;
+            
+          console.log(`[NAVETTE][proof-photo][${jobId}] FTP upload success on attempt ${uploadAttempts}`);
+        }, {
+          maxRetries: 3,
+          initialDelay: 2000,
+          maxDelay: 10000,
+          onRetry: (attempt, error) => {
+            setPhotoJob(jobId, { 
+              status: "uploading", 
+              attempts: attempt + 1,
+              lastError: error?.message || String(error)
+            });
+          }
+        });
 
-        // Nettoyage du tmp local
+        // Nettoyage du tmp local après upload réussi
         try { fs.unlinkSync(f.path); } catch {}
 
-        // URL publique (si configurée) sinon on renvoie le chemin FTP
-        const pubBase = String(process.env.NAVETTE_FTP_PUBLIC_BASE_URL || process.env.FTP_PUBLIC_BASE_URL || "").trim();
-        const photoUrl = pubBase
-          ? (pubBase.replace(/\/+$/,"") + "/" + remotePath.replace(/^\/+/, ""))
-          : remotePath;
+        setPhotoJob(jobId, { 
+          status: "linking", 
+          photoUrl,
+          uploadAttempts 
+        });
 
-        setPhotoJob(jobId, { status: "linking", photoUrl });
-
-        // Association au Google Sheet (Apps Script à compléter côté GAS)
-        try {
+        // ÉTAPE 2: Association Google Sheet avec retry
+        await retryWithBackoff(async () => {
+          gasAttempts++;
+          
           const linkResp = await callNavetteGAS("setPhotoForBons", {
             tourneeId,
             magasin,
@@ -547,6 +633,8 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
               status: "done", 
               doneAt: Date.now(), 
               photoUrl,
+              uploadAttempts,
+              gasAttempts,
               warning: "sheet_link_not_applied",
               missing: linkResp.missing || []
             });
@@ -555,28 +643,46 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
               status: "done", 
               doneAt: Date.now(), 
               photoUrl,
+              uploadAttempts,
+              gasAttempts,
               updated: linkResp?.updated || 0
             });
           }
-        } catch (e) {
-          // On ne casse pas l'upload si le lien GAS échoue : on enregistre quand même l'URL
-          console.error("[NAVETTE][proof-photo][background] GAS link failed", e);
-          setPhotoJob(jobId, { 
-            status: "done", 
-            doneAt: Date.now(), 
-            photoUrl,
-            warning: "upload_ok_but_sheet_link_failed",
-            error: String(e?.message || e)
-          });
-        }
+          
+          console.log(`[NAVETTE][proof-photo][${jobId}] GAS link success on attempt ${gasAttempts}, updated ${linkResp?.updated || 0} rows`);
+        }, {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 8000,
+          onRetry: (attempt, error) => {
+            setPhotoJob(jobId, { 
+              status: "linking", 
+              photoUrl,
+              uploadAttempts,
+              gasAttempts: attempt + 1,
+              lastError: error?.message || String(error)
+            });
+          }
+        });
+
       } catch (e) {
-        console.error("[NAVETTE][proof-photo][background] error", e);
+        console.error(`[NAVETTE][proof-photo][${jobId}] Final error after all retries:`, {
+          error: e?.message || String(e),
+          code: e?.code,
+          uploadAttempts,
+          gasAttempts
+        });
+        
         setPhotoJob(jobId, { 
           status: "error", 
-          doneAt: Date.now(), 
-          error: String(e?.message || e) 
+          doneAt: Date.now(),
+          uploadAttempts,
+          gasAttempts,
+          error: String(e?.message || e),
+          errorCode: e?.code
         });
-        // Nettoyer le fichier en cas d'erreur
+        
+        // Nettoyer le fichier en cas d'erreur finale
         try { if (f?.path) fs.unlinkSync(f.path); } catch {}
       } finally {
         try { client?.close?.(); } catch {}
