@@ -354,6 +354,16 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  function openPhotoFromColis(c) {
+    const url = String((c && (c.photoUrl || c.photo || c.preuve || c.urlPhoto)) || "").trim();
+    if (!url) {
+      alert("Aucune photo associée à ce colis.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+
   function mkMiniItem(text, right, actionsHtml) {
     const div = document.createElement("div");
     div.className = "item";
@@ -490,6 +500,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
             const actionsHtml = `
               <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
               <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>🏷</button>
+              <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
             `;
             list.appendChild(mkMiniItem(c.bon, right, actionsHtml));
           });
@@ -588,6 +599,7 @@ Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
         const actionsHtml = `
           <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
           <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
+          <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
         `;
         body.appendChild(mkMiniItem(c.bon, right, actionsHtml));
       });
@@ -641,6 +653,7 @@ Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
         actionsHtml = `
           <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
           <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
+          <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
         `;
       }
 
@@ -704,6 +717,11 @@ if (act === "nommer") {
       try {
         if (act === "valider") {
           await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
+        } else if (act === "photo") {
+          const found = state.colis.find(x => String(x.bon)===String(bon) && (!selectedTourneeId || String(x.tourneeId)===String(selectedTourneeId)));
+          if (!found) { alert("Colis introuvable."); return; }
+          openPhotoFromColis(found);
+          return;
         } else if (act === "livrer") {
           
           await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });

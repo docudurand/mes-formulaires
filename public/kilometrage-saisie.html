@@ -455,6 +455,34 @@
       </div>
     </div>
 
+
+    <!-- Modal preuve photo livraison -->
+    <div id="photoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;padding:14px">
+      <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#111;color:#fff">
+          <b>📸 Preuve de livraison</b>
+          <button type="button" id="btnClosePhoto" style="background:#fff;border:0;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer">Fermer</button>
+        </div>
+        <div style="padding:12px">
+          <div id="photoInfo" class="info" style="margin:0 0 10px 0">Prends une photo, puis clique sur Envoyer.</div>
+
+          <input id="photoInput" type="file" accept="image/*" capture="environment"
+                 style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc" />
+
+          <div style="margin-top:10px">
+            <img id="photoPreview" alt="Aperçu" style="display:none;width:100%;border-radius:12px;border:1px solid #e5e7eb" />
+          </div>
+
+          <div class="btnRow" style="margin-top:12px">
+            <button type="button" id="btnSendPhoto" class="btnScan">📤 Envoyer la photo</button>
+            <button type="button" id="btnSkipPhoto" class="btnSecondary">Ignorer</button>
+          </div>
+
+          <div id="photoMsg" class="msg" style="display:none;margin-top:10px;text-align:left"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -1291,16 +1319,129 @@ async function apiGet(url) {
         if (!j || j.success !== true) throw new Error((j && (j.error || j.message)) || "bulk failed");
       }
 
-      const sentCount = multiBons.length;
+
+      const sentBons = multiBons.slice();
+      const sentCount = sentBons.length;
+
+      // On vide la liste de scan immédiatement (évite les doubles envois)
       multiBons = [];
       multiSeen = new Set();
       renderMulti();
       setScanLoading(false);
       setScanButtonsDisabled(false);
 
-      setColisMsg(`✅ Envoi lancé (${sentCount} colis). Tu peux quitter la page.`, false);
+      setColisMsg(`✅ Envoi lancé (${sentCount} colis).`, false);
       try { navigator.vibrate && navigator.vibrate([40, 30, 40]); } catch(e){}
+
+      // 🔎 Après une livraison : demande une preuve photo (optionnel)
+      if (multiMode === "livrer" && sentBons.length) {
+        openProofModal({
+          tourneeId: currentTourneeId || "",
+          magasin: magasinNavette || "",
+          livreurId: livreurId || "",
+          tournee: (tournee || ""),
+          codeTournee: (codeTournee || ""),
+          bons: sentBons
+        });
+      }
+
     }
+
+
+// ---- Preuve photo (après livraison) ----
+const photoModal   = document.getElementById("photoModal");
+const photoInput   = document.getElementById("photoInput");
+const photoPreview = document.getElementById("photoPreview");
+const photoInfo    = document.getElementById("photoInfo");
+const photoMsg     = document.getElementById("photoMsg");
+const btnSendPhoto = document.getElementById("btnSendPhoto");
+const btnSkipPhoto = document.getElementById("btnSkipPhoto");
+const btnClosePhoto= document.getElementById("btnClosePhoto");
+
+let proofCtx = null; // {tourneeId, magasin, livreurId, tournee, codeTournee, bons[]}
+
+function setPhotoMsg(t, isErr=false){
+  if (!photoMsg) return;
+  photoMsg.textContent = t || "";
+  photoMsg.style.display = t ? "block" : "none";
+  photoMsg.className = "msg " + (isErr ? "err" : "ok");
+}
+
+function openProofModal(ctx){
+  proofCtx = ctx || null;
+  setPhotoMsg("", false);
+
+  // reset
+  if (photoInput) photoInput.value = "";
+  if (photoPreview) { photoPreview.src=""; photoPreview.style.display="none"; }
+
+  const n = (ctx && Array.isArray(ctx.bons)) ? ctx.bons.length : 0;
+  if (photoInfo) {
+    photoInfo.innerHTML =
+      `Colis livrés : <b>${n}</b><br>` +
+      `Tournée : <b>${(ctx.tournee || ctx.tourneeId || "—")}</b> • Livreur : <b>${ctx.livreurId || "—"}</b><br>` +
+      `<span class="pill">Photo associée à la liste</span>`;
+  }
+  if (photoModal) photoModal.style.display = "block";
+}
+
+async function closeProofModal(){
+  if (photoModal) photoModal.style.display = "none";
+  proofCtx = null;
+}
+
+async function sendProofPhoto(){
+  if (!proofCtx) { setPhotoMsg("❌ Contexte manquant (liste des colis).", true); return; }
+  const file = photoInput && photoInput.files ? photoInput.files[0] : null;
+  if (!file) { setPhotoMsg("ℹ️ Choisis/Prends une photo avant d’envoyer.", true); return; }
+
+  btnSendPhoto.disabled = true;
+  const old = btnSendPhoto.textContent;
+  btnSendPhoto.textContent = "Envoi…";
+
+  try{
+    const fd = new FormData();
+    fd.append("photo", file, file.name || "preuve.jpg");
+    fd.append("tourneeId", proofCtx.tourneeId || "");
+    fd.append("magasin", proofCtx.magasin || "");
+    fd.append("livreurId", proofCtx.livreurId || "");
+    fd.append("tournee", proofCtx.tournee || "");
+    fd.append("codeTournee", proofCtx.codeTournee || "");
+    fd.append("bons", JSON.stringify(proofCtx.bons || []));
+
+    const r = await fetch(apiUrl("/api/navette/proof-photo"), { method:"POST", body: fd });
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || j.message || "Erreur upload");
+
+    setPhotoMsg("✅ Photo envoyée et liée aux colis.", false);
+    try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch(e){}
+
+    // On peut refermer automatiquement
+    setTimeout(() => closeProofModal(), 600);
+  }catch(e){
+    setPhotoMsg("❌ " + (e && e.message ? e.message : e), true);
+  }finally{
+    btnSendPhoto.disabled = false;
+    btnSendPhoto.textContent = old;
+  }
+}
+
+if (photoInput) {
+  photoInput.addEventListener("change", () => {
+    setPhotoMsg("", false);
+    const f = photoInput.files && photoInput.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    if (photoPreview) {
+      photoPreview.src = url;
+      photoPreview.style.display = "block";
+    }
+  });
+}
+if (btnSendPhoto) btnSendPhoto.addEventListener("click", () => sendProofPhoto());
+if (btnSkipPhoto) btnSkipPhoto.addEventListener("click", () => closeProofModal());
+if (btnClosePhoto) btnClosePhoto.addEventListener("click", () => closeProofModal());
+
 
 function startMultiScan(mode) {
       multiMode = mode;
