@@ -1,5 +1,4 @@
-// module Atelier (formulaires + suivi + mails + PDF)
-// server.js (route /atelier)
+// Atelier (formulaires + suivi + mails + PDF)
 
 import express from "express";
 import path from "path";
@@ -105,14 +104,15 @@ function siteLabelForService(service = ""){
   if (
     service === "Rectification Culasse" ||
     service === "Rectification Vilebrequin" ||
-    service === "Rectification des Volants Moteur" ||
-    service === "Regarnissages Machoires" ||
     service === "Contrôle injection Diesel"
   ) return "ST EGREVE";
+   if (service === "Rectification des Volants Moteur") return "CHASSE SUR RHONE";
+   if (service === "Regarnissages Machoires") return "CHASSE SUR RHONE";
+  
   return "";
 }
 
-// Nettoie l'estimation (retourne undefined si vide)
+// Nettoie l'estimation
 function sanitizeEstimation(v){
   if (v === 0 || v === "0") return "0";
   if (v === undefined || v === null) return undefined;
@@ -226,8 +226,8 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Rectification Vilebrequin": process.env.DEST_EMAIL_ATELIER_CULASSE,
-  "Rectification Rectification des Volants Moteur": process.env.DEST_EMAIL_ATELIER_CULASSE,
-  "Rectification Regarnissages Machoires": process.env.DEST_EMAIL_ATELIER_CULASSE,
+  "Rectification Rectification des Volants Moteur": process.env.DEST_EMAIL_ATELIER_CHASSE,
+  "Rectification Regarnissages Machoires": process.env.DEST_EMAIL_ATELIER_CHASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,

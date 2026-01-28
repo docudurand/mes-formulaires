@@ -373,6 +373,7 @@ const cfgSuivi = window.__SUIVI_CFG || {};
 const PASS_STE     = cfgSuivi.ATELIER_SUIVI_PASS_STE     || "";
 const PASS_BG      = cfgSuivi.ATELIER_SUIVI_PASS_BG      || "";
 const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
+const PASS_CHASSE      = cfgSuivi.ATELIER_SUIVI_PASS_CHASSE      || "";
 
 let LIMITED_VIEW = false;
 let VIEW_MODE    = "ALL";
@@ -451,7 +452,7 @@ function fmtJJMMYYYYdash(v){ const d = parseDate(v); return d ? `${p2(d.getDate(
 const MONTHS_FULL = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 let YEAR_FILTER = '';
 let MONTH_FILTER = '';
-let STATUS_FILTER = ''; // "" = tous les statuts
+let STATUS_FILTER = '';
 
 const SERVICES_STE = [
   "Rectification Culasse",
@@ -469,6 +470,10 @@ function matchesServiceByView(row){
   }
   if (VIEW_MODE === "BG") {
     return svc === "Arbre de Transmission";
+  }
+  if (VIEW_MODE === "CHASSE") {
+    return svc === "Rectification des Volants Moteur";
+    return svc === "Regarnissages Machoires";
   }
   return true;
 }
@@ -995,7 +1000,7 @@ if ($filterService) {
   function handleLogin(){
     const v = (input.value || "").trim();
 
-    if (!PASS_STE && !PASS_BG && !PASS_LIMITED){
+    if (!PASS_STE && !PASS_BG && !PASS_LIMITED && !PASS_CHASSE){
       LIMITED_VIEW = false;
       VIEW_MODE = "ALL";
       startApp();
@@ -1034,6 +1039,22 @@ if ($filterService) {
       return;
     }
 
+    if (PASS_CHASSE && v === PASS_CHASSE){
+      LIMITED_VIEW = false;
+      VIEW_MODE = "CHASSE";
+
+      try {
+        if (remember && remember.checked) {
+          localStorage.setItem(STORAGE_KEY, v);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {}
+
+      startApp();
+      return;
+    }
+
     if (PASS_LIMITED && v === PASS_LIMITED){
       LIMITED_VIEW = true;
       VIEW_MODE = "ALL";
@@ -1058,7 +1079,7 @@ if ($filterService) {
     if (e.key === "Enter") handleLogin();
   });
 
-  if (!PASS_STE && !PASS_BG && !PASS_LIMITED){
+  if (!PASS_STE && !PASS_BG && !PASS_LIMITED && !PASS_CHASSE){
     overlay.style.display = "none";
     startApp();
   }

@@ -42,7 +42,6 @@
 </head>
 <body>
 <script>
-// Resize auto pour intégration Wix (annotation conservée)
 (function () {
   try {
     if (window.self !== window.top) {
@@ -158,7 +157,6 @@
           <option value="" selected disabled>-- Choisissez un service --</option>
           <option value="Rectification Culasse">Rectification Culasse</option>
           <option value="Rectification Vilebrequin">Rectification Vilebrequin</option>
-          <!-- AJOUT SERVICES (comme Rectification Vilebrequin) -->
           <option value="Rectification des Volants Moteur">Rectification des Volants Moteur</option>
           <option value="Regarnissages Machoires">Regarnissages Machoires</option>
           <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
@@ -285,7 +283,6 @@
   const allCulasseChosen = () =>
     el('segment').value && el('cylindre').value && el('carburant').value;
 
-  // --- helpers (annotations conservées) ---
   function normalizeLigneName_(v){
     return String(v||'').trim().toUpperCase()
       .replace(/\s+/g,' ')
@@ -405,7 +402,6 @@
     const label = el('labelCommentaires');
     if (!textarea || !label) return;
 
-    // NOTE: on garde la logique spéciale “Arbre de Transmission” si tu l'utilises ailleurs
     if (service === 'Arbre de Transmission') {
       label.innerHTML = 'LIBELLE DES TRAVAUX DEMANDES <span class="req">*</span>';
       textarea.required = true;
@@ -420,7 +416,6 @@
   }
 
   async function loadConfig(){
-    // On récupère LIGNES + REGLES via Apps Script (comme avant)
     try{
       if(!APPSCRIPT_URL){
         console.warn('GS_URL manquant dans /atelier/config.js');
@@ -577,7 +572,6 @@
 
     const payload = {
       meta: {
-        // IMPORTANT: titre = service (affiché dans le PDF côté serveur)
         titre: service,
         logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
         dateGeneration: new Date().toISOString()
@@ -591,7 +585,6 @@
         immat: data.immat || '',
         dateDemande: data.dateDemande || '',
         magasin: data.magasin || '',
-        // IMPORTANT: service aussi dans le header
         service: service
       },
       commentaires,

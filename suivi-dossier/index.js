@@ -16,6 +16,7 @@ const router = express.Router();
 const SUIVI_PASS_STE     = process.env.ATELIER_SUIVI_PASS_STE     || "";
 const SUIVI_PASS_BG      = process.env.ATELIER_SUIVI_PASS_BG      || "";
 const SUIVI_PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
+const SUIVI_PASS_CHASSE = process.env.ATELIER_SUIVI_PASS_CHASSE || "";
 
 // autorise l'iframe uniquement sur certains domaines
 const FRAME_ANCESTORS =
@@ -39,7 +40,8 @@ router.get("/config.js", (_req, res) => {
     `window.__SUIVI_CFG = {
       ATELIER_SUIVI_PASS_STE: ${JSON.stringify(SUIVI_PASS_STE)},
       ATELIER_SUIVI_PASS_BG: ${JSON.stringify(SUIVI_PASS_BG)},
-      ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)}
+      ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(SUIVI_PASS_LIMITED)},
+      ATELIER_SUIVI_PASS_CHASSE: ${JSON.stringify(SUIVI_PASS_CHASSE)}
     };`
   );
 });
