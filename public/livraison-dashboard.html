@@ -155,17 +155,17 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   const listVal = document.getElementById("listVal");
   const listLiv = document.getElementById("listLiv");
 
+
   let magasin = "";
   let currentView = "encours";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
-      expandedLivresGroups = new Set();
-let expandedClassees = new Set();
-        expandedLivresGroups = new Set();
-let expandedLivresGroups = new Set();
+  let expandedClassees = new Set();
+  let expandedLivresGroups = new Set();
   let refreshSeq = 0;
-let refreshTimer = null;
+  let refreshTimer = null;
   let paramsCache = [];
+  let livreurTourneeMap = new Map();
   let livreurTourneeMap = new Map();
 
   window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
@@ -525,7 +525,7 @@ let refreshTimer = null;
     return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
   }
 
-    function renderLivresGrouped_(parent, list, includeTournee){
+      function renderLivresGrouped_(parent, list, includeTournee){
     parent.innerHTML = "";
     if (!Array.isArray(list) || !list.length) return;
 
@@ -795,7 +795,7 @@ tourneesClasseesEl.onclick = async (ev) => {
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
-    renderTournees();
+renderTournees();
     renderDetail();
   }
 
@@ -805,8 +805,6 @@ tourneesClasseesEl.onclick = async (ev) => {
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
     expandedClassees = new Set();
-    expandedLivresGroups = new Set();
-
     tourneesActivesEl.innerHTML = "";
     tourneesClasseesEl.innerHTML = "";
     listAtt.innerHTML = "";
@@ -844,10 +842,11 @@ tourneesClasseesEl.onclick = async (ev) => {
     setNeutral();
   }
 
-    async function refresh() {
+      async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
     const mySeq = ++refreshSeq;
+
     resetUiForLoading_(magasin);
 
     let data;
@@ -898,7 +897,7 @@ tourneesClasseesEl.onclick = async (ev) => {
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     expandedClassees = new Set();
-    renderTournees();
+renderTournees();
     renderDetail();
   });
 
