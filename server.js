@@ -485,7 +485,7 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
 
     // Association au Google Sheet (Apps Script à compléter côté GAS)
     try {
-      await callNavetteGAS("setPhotoForBons", {
+      const linkResp = await callNavetteGAS("setPhotoForBons", {
         tourneeId,
         magasin,
         livreurId,
@@ -494,7 +494,19 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
         photoUrl,
         bons: JSON.stringify(bons),
       });
+
+      // Si GAS répond mais n'a rien mis à jour, on renvoie un warning (upload OK)
+      if (linkResp && linkResp.success && Number(linkResp.updated||0) <= 0) {
+        return res.status(200).json({
+          success: true,
+          photoUrl,
+          count: bons.length,
+          warning: "sheet_link_not_applied",
+          missing: linkResp.missing || []
+        });
+      }
     } catch (e) {
+ catch (e) {
       // On ne casse pas l'upload si le lien GAS échoue : on renvoie quand même l'URL
       return res.status(200).json({
         success: false,
