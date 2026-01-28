@@ -273,12 +273,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return `${jj}/${mm}/${aa} ${hh}:${mn}`;
   }
 
-
-  function shortExcerpt_(t, n=260){
-    const s = String(t||"").replace(/\s+/g," ").trim();
-    return s.length > n ? (s.slice(0,n) + "…") : s;
-  }
-
   async function fetchJson_(url){
     let r;
     try{
