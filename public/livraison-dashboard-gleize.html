@@ -60,13 +60,10 @@
     <div class="card pageCard">
       <div class="top">
         <div>
-          <h1>Livraison – Tableau de bord magasin</h1>
-          <div class="muted" id="sub">Choisis une agence.</div>
+          <h1>Livraison – Tableau de bord GLEIZE</h1>
+          <div class="muted" id="sub">Chargement...</div>
         </div>
         <div class="row" style="align-items:center">
-          <select id="magasinSelect" style="min-width:220px;max-width:320px">
-            <option value="">— Choisir un magasin —</option>
-          </select>
           <button class="btn btn-ghost" id="btnClear">Tout afficher</button>
         </div>
       </div>
@@ -141,7 +138,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   const qs = new URLSearchParams(location.search);
 
-  const magasinSelect = document.getElementById("magasinSelect");
   const btnClear = document.getElementById("btnClear");
 
   const subEl = document.getElementById("sub");
@@ -155,7 +151,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   const listVal = document.getElementById("listVal");
   const listLiv = document.getElementById("listLiv");
 
-  let magasin = "";
+  let magasin = "GLEIZE";
   let currentView = "encours";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
@@ -171,7 +167,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  // *** FONCTION MANQUANTE AJOUTÉE ***
   async function fetchJson_(url) {
     const response = await fetch(url);
     if (!response.ok) {
@@ -201,6 +196,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     const s = String(str || "");
     return s.length > 100 ? s.substring(0, 100) + "..." : s;
   }
+
 
   function normStatut(st){
     const s = String(st||"").trim().toUpperCase();
@@ -244,292 +240,468 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   function formatMajHHMM(iso){
     if (!iso) return "";
     const d = new Date(iso);
-    return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    if (isNaN(d)) return "";
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   }
 
-  function isSameDay(d1, d2){
-    return d1.getFullYear()===d2.getFullYear() && d1.getMonth()===d2.getMonth() && d1.getDate()===d2.getDate();
+  function isSameLocalDay(a, b){
+    return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  }
+  function isTodayIso(iso){
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (isNaN(d)) return false;
+    return isSameLocalDay(d, new Date());
+  }
+  function isLivreToday(c){
+
+    return isTodayIso(c.dateMaj) || isTodayIso(c.dateAjout);
   }
 
-  function setGlobalCounters(counts) {
-    globalCounters.innerHTML = `
-      <div class="pill p-att"><span style="font-size:20px">${counts.enAttente}</span> en attente</div>
-      <div class="pill p-val"><span style="font-size:20px">${counts.valides}</span> validés</div>
-      <div class="pill p-liv"><span style="font-size:20px">${counts.livres}</span> livrés</div>
-    `;
+  function isLivreVisible(c){
+    return (currentView === "encours") ? isLivreToday(c) : true;
   }
 
-  function renderTournees(){
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  function formatTourneeTitle(iso){
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const jj = pad2(d.getDate());
+    const mm = pad2(d.getMonth()+1);
+    const aa = String(d.getFullYear()).slice(-2);
+    const hh = pad2(d.getHours());
+    const mn = pad2(d.getMinutes());
+    return `${jj}/${mm}/${aa} ${hh}:${mn}`;
+  }
 
-    const actives = state.tournees.filter(t=>normStatut(t.statut)!=="CLASSEE");
-    const classees = state.tournees.filter(t=>normStatut(t.statut)==="CLASSEE");
 
-    const enCoursHTML = actives.map(t=>{
-      const tid = String(t.tourneeId||"");
-      const isSelected = (tid === selectedTourneeId);
-      const cls = isSelected ? "item active" : "item";
+  function shortExcerpt_(t, n=260){
+    const s = String(t||"").replace(/\s+/g," ").trim();
+    return s.length > n ? (s.slice(0,n) + "…") : s;
+  }
 
-      const colisCount = state.colis.filter(c=>String(c.tourneeId)===tid).length;
-      const valCount = state.colis.filter(c=>String(c.tourneeId)===tid && normStatut(c.statut)==="VALIDE").length;
-      const livCount = state.colis.filter(c=>String(c.tourneeId)===tid && normStatut(c.statut)==="LIVRE").length;
-
-      const createdAt = t.createdAt || t.creationDate || "";
-      const maj = t.updatedAt || t.lastUpdate || "";
-      const createdDate = createdAt ? new Date(createdAt) : null;
-      const majDate = maj ? new Date(maj) : null;
-
-      const createdFmt = (createdDate && isSameDay(createdDate, today)) ? formatMajHHMM(createdDate) : "";
-      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
-
-      const nom = escapeHtml(t.tournee || t.codeTournee || tid);
-
-      return `
-        <div class="${cls}" data-tourneeid="${escapeHtml(tid)}" style="cursor:pointer">
-          <div style="flex:1">
-            <div style="font-weight:900">${nom}</div>
-            <div class="small">
-              ${colisCount} colis • ${valCount} val • ${livCount} liv
-              ${createdFmt ? ` • Créée: ${createdFmt}` : ""}
-              ${majFmt ? ` • MAJ: ${majFmt}` : ""}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    tourneesActivesEl.innerHTML = enCoursHTML || `<div class="muted" style="text-align:center;padding:20px">Aucune tournée active.</div>`;
-
-    const classeesHTML = classees.map(t=>{
-      const tid = String(t.tourneeId||"");
-      const isExp = expandedClassees.has(tid);
-      const nom = escapeHtml(t.tournee || t.codeTournee || tid);
-
-      const colisOfThisTournee = state.colis.filter(c=>String(c.tourneeId)===tid);
-      const livCount = colisOfThisTournee.filter(c=>normStatut(c.statut)==="LIVRE").length;
-
-      const createdAt = t.createdAt || t.creationDate || "";
-      const maj = t.updatedAt || t.lastUpdate || "";
-      const createdDate = createdAt ? new Date(createdAt) : null;
-      const majDate = maj ? new Date(maj) : null;
-
-      const createdFmt = createdDate ? createdDate.toLocaleDateString("fr-FR") : "";
-      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
-
-      let bodyHTML = "";
-      if (isExp) {
-        const items = colisOfThisTournee.map(c=>{
-          const st = normStatut(c.statut);
-          const pillClass = (st==="LIVRE") ? "pill p-liv" : "pill p-cls";
-          const bon = escapeHtml(c.bon||"");
-          const dest = escapeHtml(c.adresseDestination||"");
-          const livreur = escapeHtml(c.livreurId||"");
-
-          const createdAtC = c.createdAt || "";
-          const majC = c.updatedAt || c.lastUpdate || "";
-          const createdDateC = createdAtC ? new Date(createdAtC) : null;
-          const majDateC = majC ? new Date(majC) : null;
-
-          const createdFmtC = (createdDateC && isSameDay(createdDateC, today)) ? formatMajHHMM(createdDateC) : "";
-          const majFmtC = (majDateC && isSameDay(majDateC, today)) ? formatMajHHMM(majDateC) : "";
-
-          const hasGps = !!(c.gpsLat && c.gpsLng);
-          const hasPhoto = !!(c.photoUrl);
-          const gpsLieu = String(c.gpsLieu || "").trim();
-          const nommerLabel = gpsLieu ? `✏️ ${escapeHtml(gpsLieu)}` : "📍";
-
-          return `
-            <div class="item">
-              <div style="flex:1">
-                <div style="font-weight:900">${bon}</div>
-                <div class="small">
-                  ${dest ? dest : "(Aucune adresse)"}
-                  ${livreur ? ` • Liv: ${livreur}` : ""}
-                  ${createdFmtC ? ` • Créé: ${createdFmtC}` : ""}
-                  ${majFmtC ? ` • MAJ: ${majFmtC}` : ""}
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <span class="${pillClass}">${escapeHtml(st)}</span>
-                ${hasGps ? `<button class="iconBtn" data-act="suivi" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Suivi GPS">🗺️</button>` : ""}
-                ${hasPhoto ? `<button class="iconBtn" data-act="photo" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Photo">📷</button>` : ""}
-                ${hasGps ? `<button class="iconBtn" data-act="nommer" data-bon="${bon}" data-tourneeid="${escapeHtml(tid)}" title="Nommer ce lieu">${nommerLabel}</button>` : ""}
-              </div>
-            </div>
-          `;
-        }).join("");
-
-        bodyHTML = `<div class="groupBody">${items || `<div class="muted" style="text-align:center;padding:10px">Aucun colis.</div>`}</div>`;
-      }
-
-      return `
-        <div class="group">
-          <div class="groupHeader" style="cursor:pointer" data-toggle-classee="${escapeHtml(tid)}">
-            <div class="title">${nom}</div>
-            <div style="display:flex;gap:6px;align-items:center">
-              <span class="groupCount">${livCount} livrés</span>
-              ${createdFmt ? `<span class="small">${createdFmt}</span>` : ""}
-              ${majFmt ? `<span class="small">MAJ: ${majFmt}</span>` : ""}
-              <span style="font-size:18px">${isExp ? "▲" : "▼"}</span>
-            </div>
-          </div>
-          ${bodyHTML}
-        </div>
-      `;
-    }).join("");
-
-    tourneesClasseesEl.innerHTML = classeesHTML || `<div class="muted" style="text-align:center;padding:20px">Aucune tournée classée.</div>`;
-
-    let nextRefresh = 10;
-    if (!magasin) {
-      nextRefresh = 0;
+  async function fetchJson_(url){
+    let r;
+    try{
+      r = await fetch(url);
+    }catch(e){
+      throw new Error("Fetch impossible (réseau/CORS): " + (e && e.message ? e.message : e));
+    }
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const text = await r.text().catch(()=> "");
+    let j = null;
+    if (ct.includes("application/json") || ct.includes("text/json")) {
+      try{ j = JSON.parse(text || "{}"); }catch(e){  }
     } else {
-      if (actives.length === 0 && classees.length === 0) {
-        nextRefresh = 30;
-      }
+      try{ j = JSON.parse(text || "{}"); }catch(e){  }
     }
-    const autoEl = document.getElementById("autoInfo");
-    if (autoEl) {
-      if (nextRefresh > 0) {
-        autoEl.textContent = `Auto-refresh: ${nextRefresh}s`;
-      } else {
-        autoEl.textContent = "";
-      }
+    if (!r.ok) {
+      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
+      throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
     }
+    if (!j) {
+      throw new Error("Réponse non-JSON: " + shortExcerpt_(text));
+    }
+    return j;
   }
 
-  function renderDetail(){
-    if (currentView !== "encours") return;
+  function showLoadError_(context, err){
+    const msg = (err && err.message) ? err.message : String(err||"Erreur inconnue");
+    console.error("[Dashboard] " + context, err);
+    subEl.textContent = `Erreur de chargement (${context}): ${msg}`;
+  }
 
-    let colis = state.colis;
-    if (selectedTourneeId) {
-      colis = colis.filter(c=>String(c.tourneeId)===selectedTourneeId);
-      const t = state.tournees.find(x=>String(x.tourneeId)===selectedTourneeId);
-      const nom = t ? (t.tournee || t.codeTournee || selectedTourneeId) : selectedTourneeId;
-      detailTitle.textContent = `Tournée: ${nom}`;
-    } else {
-      detailTitle.textContent = "Affichage global (toutes tournées)";
+
+  async function getGpsOnce_(options){
+    options = options || {};
+    if (!navigator.geolocation) throw new Error("Géolocalisation non disponible");
+    const timeout = Number(options.timeout || 8000);
+    const high = (options.enableHighAccuracy !== undefined) ? !!options.enableHighAccuracy : true;
+
+    return await new Promise((resolve, reject) => {
+      const opts = { enableHighAccuracy: high, timeout, maximumAge: 0 };
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const c = pos && pos.coords ? pos.coords : {};
+          resolve({
+            gpsLat: String(c.latitude ?? ""),
+            gpsLng: String(c.longitude ?? ""),
+            gpsAcc: String(c.accuracy ?? ""),
+            gpsTs:  String(pos.timestamp ?? Date.now())
+          });
+        },
+        (err) => reject(err || new Error("Géolocalisation refusée")),
+        opts
+      );
+    });
+  }
+
+
+  
+  async function apiPost(url, body) {
+    let r;
+    try{
+      r = await fetch(apiUrl(url), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+    } catch(e){
+      throw new Error("Fetch impossible (réseau/CORS): " + (e && e.message ? e.message : e));
     }
 
-    const att = colis.filter(c=>normStatut(c.statut)==="EN_ATTENTE");
-    const val = colis.filter(c=>normStatut(c.statut)==="VALIDE");
-    const liv = colis.filter(c=>normStatut(c.statut)==="LIVRE");
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const text = await r.text().catch(()=> "");
+    let j = null;
+    if (ct.includes("application/json") || ct.includes("text/json")) {
+      try{ j = JSON.parse(text || "{}"); }catch(e){ }
+    } else {
+      try{ j = JSON.parse(text || "{}"); }catch(e){ }
+    }
 
-    const total = colis.length;
-    const totalAtt = state.colis.filter(c=>normStatut(c.statut)==="EN_ATTENTE").length;
-    const totalVal = state.colis.filter(c=>normStatut(c.statut)==="VALIDE").length;
-    const totalLiv = state.colis.filter(c=>normStatut(c.statut)==="LIVRE").length;
-
-    setGlobalCounters({ enAttente: totalAtt, valides: totalVal, livres: totalLiv });
-
-    const buildItem = (c) => {
-      const bon = escapeHtml(c.bon||"");
-      const dest = escapeHtml(c.adresseDestination||"");
-      const st = normStatut(c.statut);
-
-      const livreur = escapeHtml(c.livreurId||"");
-
-      const createdAt = c.createdAt || "";
-      const maj = c.updatedAt || c.lastUpdate || "";
-      const createdDate = createdAt ? new Date(createdAt) : null;
-      const majDate = maj ? new Date(maj) : null;
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      const createdFmt = (createdDate && isSameDay(createdDate, today)) ? formatMajHHMM(createdDate) : "";
-      const majFmt = (majDate && isSameDay(majDate, today)) ? formatMajHHMM(majDate) : "";
-
-      const hasGps = !!(c.gpsLat && c.gpsLng);
-      const hasPhoto = !!(c.photoUrl);
-      const gpsLieu = String(c.gpsLieu || "").trim();
-      const nommerLabel = gpsLieu ? `✏️ ${escapeHtml(gpsLieu)}` : "📍";
-
-      let actions = "";
-      if (st === "EN_ATTENTE") {
-        actions = `<button class="iconBtn ok" data-act="valider" data-bon="${bon}" title="Valider">✅</button>`;
-      } else if (st === "VALIDE") {
-        actions = `<button class="iconBtn box" data-act="livrer" data-bon="${bon}" title="Livrer">📦</button>`;
-      }
-
-      if (hasGps) {
-        actions += `<button class="iconBtn" data-act="suivi" data-bon="${bon}" title="Suivi GPS">🗺️</button>`;
-      }
-      if (hasPhoto) {
-        actions += `<button class="iconBtn" data-act="photo" data-bon="${bon}" title="Photo">📷</button>`;
-      }
-      if (hasGps) {
-        actions += `<button class="iconBtn" data-act="nommer" data-bon="${bon}" title="Nommer ce lieu">${nommerLabel}</button>`;
-      }
-
-      return `
-        <div class="item">
-          <div style="flex:1">
-            <div style="font-weight:900">${bon}</div>
-            <div class="small">
-              ${dest ? dest : "(Aucune adresse)"}
-              ${livreur ? ` • Liv: ${livreur}` : ""}
-              ${createdFmt ? ` • Créé: ${createdFmt}` : ""}
-              ${majFmt ? ` • MAJ: ${majFmt}` : ""}
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            ${actions}
-          </div>
-        </div>
-      `;
-    };
-
-    listAtt.innerHTML = att.length ? att.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
-    listVal.innerHTML = val.length ? val.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
-    listLiv.innerHTML = liv.length ? liv.map(buildItem).join("") : `<div class="muted" style="text-align:center;padding:20px">Aucun.</div>`;
+    if (!r.ok) {
+      const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
+      throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
+    }
+    if (j && j.success === false) {
+      throw new Error(j.error || j.message || "Erreur API");
+    }
+    return j || {};
   }
 
   function openMapsFromColis(c) {
-    if (!c.gpsLat || !c.gpsLng) {
+    const lat = Number(c.gpsLat);
+    const lng = Number(c.gpsLng);
+    if (!isFinite(lat) || !isFinite(lng)) {
       alert("Pas de coordonnées GPS pour ce colis.");
       return;
     }
-    const lat = c.gpsLat;
-    const lng = c.gpsLng;
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    window.open(url, "_blank");
+    const url = `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lng)}&z=18`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  function openPhotoFromColis(c) {
-    if (!c.photoUrl) {
-      alert("Pas de photo pour ce colis.");
+  function resolvePhotoUrl_(urlOrPath) {
+    const s = String(urlOrPath || "").trim();
+    if (!s) return "";
+    if (/^https?:\/\//i.test(s)) return s; // déjà une URL
+    // Chemin FTP stocké dans la sheet => on passe par le serveur
+    return apiUrl(`/api/navette/file?path=${encodeURIComponent(s)}`);
+  }
+
+  // IMPORTANT: on utilise "var" pour garantir une portée globale (évite ReferenceError selon le contexte)
+  var openPhotoFromColis = function(c) {
+    const raw = String((c && (c.photoUrl || c.photo || c.preuve || c.urlPhoto)) || "").trim();
+    const url = resolvePhotoUrl_(raw);
+    if (!url) {
+      alert("Aucune photo associée à ce colis.");
       return;
     }
-    window.open(c.photoUrl, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  function mkMiniItem(text, right, actionsHtml) {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div style="min-width:0">
+          <div style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(text)}</div>
+          ${right ? `<div class="small">${escapeHtml(right||"")}</div>` : ``}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
+        ${actionsHtml || ``}
+      </div>
+    `;
+    return div;
   }
 
-  tourneesActivesEl.addEventListener("click", (ev) => {
-    const item = ev.target && ev.target.closest ? ev.target.closest("[data-tourneeid]") : null;
-    if (!item) return;
-    const tid = item.getAttribute("data-tourneeid");
-    if (!tid) return;
-    selectedTourneeId = (selectedTourneeId === tid) ? "" : tid;
-    renderTournees();
-    renderDetail();
-  });
+  function setGlobalCounters(stats) {
+    globalCounters.innerHTML = `
+      <span class="pill p-att">En attente: <b>${stats.enAttente}</b></span>
+      <span class="pill p-val">Validés: <b>${stats.valides}</b></span>
+      <span class="pill p-liv">Livrés: <b>${stats.livres}</b></span>
+    `;
+  }
 
-  tourneesClasseesEl.addEventListener("click", (ev) => {
-    const toggler = ev.target && ev.target.closest ? ev.target.closest("[data-toggle-classee]") : null;
-    if (toggler) {
-      const tid = toggler.getAttribute("data-toggle-classee");
-      if (!tid) return;
-      if (expandedClassees.has(tid)) {
-        expandedClassees.delete(tid);
-      } else {
-        expandedClassees.add(tid);
+  function computeStatsFor(filterFn) {
+    const list = state.colis.filter(filterFn);
+    let enAttente=0, valides=0, livres=0;
+    for (const c of list) {
+      const st = normStatut(c.statut);
+      if (st==="EN_ATTENTE") enAttente++;
+      else if (st==="VALIDE") valides++;
+      else if (st==="LIVRE") { if (isLivreVisible(c)) livres++; }
+    }
+    return { enAttente, valides, livres };
+  }
+
+  function renderTournees() {
+    tourneesActivesEl.innerHTML = "";
+    const actives = state.tournees.filter(t => {
+      const st = normStatut(t.statut);
+      return st !== "CLASSEE";
+    });
+
+    if (!actives.length) {
+      tourneesActivesEl.appendChild(mkMiniItem("Aucune tournée en cours", ""));
+    } else {
+      actives.slice(0, 120).forEach(t => {
+        const div = document.createElement("div");
+        div.className = "item" + (t.tourneeId === selectedTourneeId ? " active" : "");
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)}</div>
+          </div>
+          <div class="small" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            ${(() => {
+              const tid = String(t.tourneeId);
+              let a=0,v=0,l=0;
+              for (const c of state.colis) {
+                if (String(c.tourneeId)!==tid) continue;
+                const st = normStatut(c.statut);
+                if (st==="EN_ATTENTE") a++;
+                else if (st==="VALIDE") v++;
+                else if (st==="LIVRE" && isLivreToday(c)) l++;
+              }
+              return `
+                <span class="pill p-att" style="padding:4px 8px;font-size:12px">Att ${a}</span>
+                <span class="pill p-val" style="padding:4px 8px;font-size:12px">Val ${v}</span>
+                <span class="pill p-liv" style="padding:4px 8px;font-size:12px">Liv ${l}</span>
+              `;
+            })()}
+          </div>
+        `;
+        div.addEventListener("click", () => {
+          selectedTourneeId = (selectedTourneeId === t.tourneeId) ? "" : t.tourneeId;
+          renderDetail();
+          renderTournees();
+        });
+        tourneesActivesEl.appendChild(div);
+      });
+    }
+
+    tourneesClasseesEl.innerHTML = "";
+    const classes = state.tournees.filter(t => normStatut(t.statut) === "CLASSEE");
+    if (!classes.length) {
+      tourneesClasseesEl.appendChild(mkMiniItem("Aucune tournée classée", ""));
+    } else {
+      classes.slice(0, 200).forEach(t => {
+        const tid = String(t.tourneeId);
+        const isOpen = expandedClassees.has(tid);
+
+        const div = document.createElement("div");
+        div.className = "item";
+        div.style.flexDirection = "column";
+        div.style.alignItems = "stretch";
+
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "space-between";
+        header.style.alignItems = "center";
+        header.style.gap = "10px";
+        header.style.cursor = "pointer";
+
+        header.innerHTML = `
+          <div>
+            <div style="font-weight:900;white-space:nowrap">${escapeHtml(formatTourneeTitle(t.dateCreation) || t.tourneeId)}</div>
+            <div class="small">Total ${Number(t.total||0)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="pill p-cls" style="padding:6px 10px;font-size:12px">Classée</div>
+            <div class="badge" style="background:#eef2ff">${isOpen ? "▲" : "▼"}</div>
+          </div>
+        `;
+
+        const body = document.createElement("div");
+        body.style.display = isOpen ? "" : "none";
+        body.style.marginTop = "10px";
+
+        const liv = state.colis.filter(c => String(c.tourneeId)===tid && normStatut(c.statut)==="LIVRE");
+        if (!liv.length) {
+          body.appendChild(mkMiniItem("Aucun colis", ""));
+        } else {
+          const list = document.createElement("div");
+          list.className = "list";
+          liv.slice(0, 800).forEach(c => {
+            const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+            const lieu = String(c.gpsLieu || "").trim();
+            const hhmm = formatMajHHMM(c.dateMaj) || "";
+            let right = rightBase;
+            if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+            if (hhmm) right = right ? (right + " • ⏱ " + hhmm) : ("⏱ " + hhmm);
+            const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+            const actionsHtml = `
+              <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>📍</button>
+              <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${hasGps ? "" : "disabled"}>🏷</button>
+              <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" data-tourneeid="${escapeHtml(tid)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
+            `;
+            list.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+          });
+          body.appendChild(list);
+        }
+
+        header.addEventListener("click", () => {
+          const open = expandedClassees.has(tid);
+          if (open) expandedClassees.delete(tid); else expandedClassees.add(tid);
+          renderTournees();
+        });
+
+        div.appendChild(header);
+        div.appendChild(body);
+        tourneesClasseesEl.appendChild(div);
+      });
+    }
+  }
+
+
+  function tourneeMetaById_(tourneeId){
+    const tid = String(tourneeId||"");
+    const t = state.tournees.find(x => String(x.tourneeId) === tid);
+    if (!t) return { dateCreation:"", title: tid, hhmm:"", ms: -1 };
+    const iso = t.dateCreation || "";
+    const ms = iso ? (new Date(iso)).getTime() : -1;
+    const title = formatTourneeTitle(iso) || tid;
+    const hhmm = formatMajHHMM(iso) || "";
+    return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
+  }
+
+  function renderLivresGrouped_(parent, list, includeTournee){
+    parent.innerHTML = "";
+    if (!Array.isArray(list) || !list.length) return;
+
+    const groups = new Map();
+    for (const c of list){
+      const tid = String(c.tourneeId || "");
+      const liv = String(c.livreurId || "").trim() || "—";
+      const key = tid + "||" + liv;
+      if (!groups.has(key)){
+        const meta = tourneeMetaById_(tid);
+        groups.set(key, { tid, liv, meta, items: [] });
       }
-      renderTournees();
-      return;
+      groups.get(key).items.push(c);
     }
-  });
 
-const handleActionClick = async (ev) => {
+    const arr = Array.from(groups.values());
+    arr.sort((a,b)=>{
+      const ta = a.meta.ms, tb = b.meta.ms;
+      if (ta !== tb) return (ta<0?1:ta) - (tb<0?1:tb);
+      return String(a.liv).localeCompare(String(b.liv));
+    });
+
+    for (const g of arr){
+      g.items.sort((a,b)=>{
+        const ma = a.dateMaj ? new Date(a.dateMaj).getTime() : 0;
+        const mb = b.dateMaj ? new Date(b.dateMaj).getTime() : 0;
+        return ma - mb;
+      });
+
+      const group = document.createElement("div");
+      group.className = "group";
+
+      const h = document.createElement("div");
+      h.className = "groupHeader";
+
+      const left = document.createElement("div");
+      left.style.minWidth = "0";
+
+      const t1 = document.createElement("div");
+      t1.className = "title";
+      const hhmm = g.meta.hhmm ? g.meta.hhmm : "—:—";
+      t1.textContent = includeTournee ? (`⏱ ${hhmm}
+Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
+      left.appendChild(t1);
+
+      const count = document.createElement("div");
+      count.className = "groupCount";
+      count.textContent = String(g.items.length);
+
+      h.appendChild(left);
+      h.appendChild(count);
+
+      const body = document.createElement("div");
+      body.className = "groupBody";
+
+      g.items.forEach(c => {
+        const lieu = String(c.gpsLieu || "").trim();
+        const hh = formatMajHHMM(c.dateMaj) || "";
+        let right = "";
+        if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+        if (hh) right = right ? (right + " • ⏱ " + hh) : ("⏱ " + hh);
+
+        const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+        const actionsHtml = `
+          <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
+          <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
+          <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
+        `;
+        body.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+      });
+
+      group.appendChild(h);
+      group.appendChild(body);
+      parent.appendChild(group);
+    }
+  }
+
+  function renderDetail() {
+    const filter = c => (!selectedTourneeId || c.tourneeId === selectedTourneeId);
+    const stats = computeStatsFor(filter);
+    setGlobalCounters(stats);
+
+    detailTitle.textContent = selectedTourneeId
+      ? ("Tournée: " + (formatTourneeTitle((state.tournees.find(t=>t.tourneeId===selectedTourneeId)||{}).dateCreation) || selectedTourneeId))
+      : "Aucune tournée sélectionnée (affichage global).";
+
+    const att = state.colis.filter(c => filter(c) && normStatut(c.statut)==="EN_ATTENTE");
+    const val = state.colis.filter(c => filter(c) && normStatut(c.statut)==="VALIDE");
+    const liv = state.colis.filter(c => filter(c) && normStatut(c.statut)==="LIVRE" && isLivreVisible(c));
+
+    listAtt.innerHTML = ""; listVal.innerHTML = ""; listLiv.innerHTML = "";
+
+    const add = (parent, c) => {
+      const st = normStatut(c.statut);
+      const rightBase = c.livreurId ? formatLivreurTournee(c.livreurId, c.tournee, c.codeTournee) : "";
+      const lieu = String(c.gpsLieu || "").trim();
+      const hhmm = formatMajHHMM(c.dateMaj) || "";
+      let right = rightBase;
+      if (String(c.statut||"").toUpperCase()==="LIVRE" && lieu) {
+        right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+      }
+      if ((st === "VALIDE" || st === "LIVRE") && hhmm) {
+        right = right ? (right + " • ⏱ " + hhmm) : ("⏱ " + hhmm);
+      }
+      let actionsHtml = "";
+
+      if (st === "EN_ATTENTE") {
+        actionsHtml = `
+          <button class="iconBtn ok" title="Valider" data-act="valider" data-bon="${escapeHtml(c.bon)}">✅</button>
+          <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
+        `;
+      } else if (st === "VALIDE") {
+        actionsHtml = `
+          <button class="iconBtn box" title="Livrer" data-act="livrer" data-bon="${escapeHtml(c.bon)}">📦</button>
+        `;
+      } else if (st === "LIVRE") {
+        const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
+        actionsHtml = `
+          <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
+          <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
+          <button class="iconBtn" title="${(c.photoUrl ? "Ouvrir la photo" : "Pas de photo")}" data-act="photo" data-bon="${escapeHtml(c.bon)}" ${c.photoUrl ? "" : "disabled"}>📷</button>
+        `;
+      }
+
+      parent.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+    };
+
+    att.slice(0, 700).forEach(c => add(listAtt, c));
+    val.slice(0, 700).forEach(c => add(listVal, c));
+
+    const livLimited = liv.slice(0, 700);
+    const includeTournee = !selectedTourneeId;
+    renderLivresGrouped_(listLiv, livLimited, includeTournee);
+
+    const handleActionClick = async (ev) => {
       const btn = ev.target && ev.target.closest ? ev.target.closest("button[data-act]") : null;
       if (!btn) return;
       const act = btn.getAttribute("data-act");
@@ -648,7 +820,7 @@ tourneesClasseesEl.onclick = async (ev) => {
 };
 
   function setNeutral() {
-    subEl.textContent = "Choisis une agence.";
+    subEl.textContent = "Agence: GLEIZE - Chargement...";
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
@@ -671,23 +843,10 @@ tourneesClasseesEl.onclick = async (ev) => {
     }
 
     paramsCache = data;
-
-    const list = Array.from(new Set(
-      data.map(r => String((r && r.codeAgence) || "").trim().toUpperCase()).filter(Boolean)
-    )).sort((a,b)=>a.localeCompare(b,"fr"));
-
-    magasinSelect.innerHTML = `<option value="">— Choisir une agence —</option>` +
-      list.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-
-    magasin = "";
-    magasinSelect.value = "";
-    livreurTourneeMap = new Map();
-    setNeutral();
+    buildLivreurTourneeMap();
   }
 
   async function refresh() {
-    if (!magasin) { setNeutral(); return; }
-
     subEl.textContent = "Chargement…";
     let data;
     try {
@@ -718,21 +877,9 @@ tourneesClasseesEl.onclick = async (ev) => {
   function startAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(() => {
-      if (magasin) refresh();
+      refresh();
     }, 10000);
   }
-
-  magasinSelect.addEventListener("change", async () => {
-    try {
-      magasin = String(magasinSelect.value || "").trim().toUpperCase();
-      selectedTourneeId = "";
-      buildLivreurTourneeMap();
-      await refresh();
-    } catch (error) {
-      console.error("Erreur lors du changement de magasin:", error);
-      showLoadError_("SELECTION", error);
-    }
-  });
 
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
@@ -755,7 +902,9 @@ tourneesClasseesEl.onclick = async (ev) => {
 
   setNeutral();
   startAutoRefresh();
-  loadMagasins().catch(err => {
+  loadMagasins().then(() => {
+    refresh();
+  }).catch(err => {
     subEl.textContent = "Erreur: " + err.message;
   });
 </script>
