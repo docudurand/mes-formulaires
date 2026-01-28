@@ -425,10 +425,31 @@ app.get("/api/navette/bulk/status", (req, res) => {
   return res.json({ success:true, jobId, ...st });
 });
 
-// 📸 Preuve photo de livraison : upload sur FTP puis association dans Google Sheet
+// Jobs pour photos (similaire aux bulk jobs)
+const PHOTO_JOBS = new Map();
+function createPhotoJobId() {
+  return `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+function setPhotoJob(jobId, patch) {
+  const prev = PHOTO_JOBS.get(jobId) || {};
+  PHOTO_JOBS.set(jobId, { ...prev, ...patch });
+}
+function getPhotoJob(jobId) {
+  return PHOTO_JOBS.get(jobId) || null;
+}
+
+// Nettoyage périodique des vieux jobs photo
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, j] of PHOTO_JOBS.entries()) {
+    const t = j?.createdAt || now;
+    if (now - t > 24*3600*1000) PHOTO_JOBS.delete(id);
+  }
+}, 30*60*1000).unref?.();
+
+// 📸 Preuve photo de livraison : upload sur FTP puis association dans Google Sheet (version async)
 // Reçoit un multipart/form-data : photo + champs (tourneeId, magasin, livreurId, tournee, codeTournee, bons JSON)
 app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, res) => {
-  let client;
   try {
     const f = req.file;
     if (!f) return res.status(400).json({ success:false, error:"photo_manquante" });
@@ -466,62 +487,116 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
     const fileName = `${safe(magasin)}_${safe(livreurId)}_${safe(tourneeId || codeTournee || tournee || "tournee")}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}${ext}`;
     const remotePathWanted = path.posix.join(remoteDirWanted, fileName);
 
-    client = await ftpClient();
+    // Créer un job et retourner immédiatement
+    const jobId = createPhotoJobId();
+    setPhotoJob(jobId, { 
+      status: "queued", 
+      createdAt: Date.now(), 
+      count: bons.length 
+    });
 
-    // 1) crée le dossier (compatible chemins absolus/relatifs)
-    const remoteDir = await ensureDirSafe_(client, remoteDirWanted);
+    // Retourner immédiatement au client
+    res.status(202).json({ 
+      success: true, 
+      queued: true, 
+      jobId, 
+      count: bons.length,
+      message: "Photo en cours d'envoi en arrière-plan"
+    });
 
-    // 2) upload (idem)
-    const remotePath = await uploadFromSafe_(client, f.path, path.posix.join(remoteDir, fileName));
+    // Traiter l'upload en arrière-plan
+    setImmediate(async () => {
+      let client;
+      try {
+        setPhotoJob(jobId, { status: "uploading" });
+        
+        client = await ftpClient();
 
-    // Nettoyage du tmp local
-    try { fs.unlinkSync(f.path); } catch {}
+        // 1) crée le dossier (compatible chemins absolus/relatifs)
+        const remoteDir = await ensureDirSafe_(client, remoteDirWanted);
 
-    // URL publique (si configurée) sinon on renvoie le chemin FTP
-    const pubBase = String(process.env.NAVETTE_FTP_PUBLIC_BASE_URL || process.env.FTP_PUBLIC_BASE_URL || "").trim();
-    const photoUrl = pubBase
-      ? (pubBase.replace(/\/+$/,"") + "/" + remotePath.replace(/^\/+/, ""))
-      : remotePath;
+        // 2) upload (idem)
+        const remotePath = await uploadFromSafe_(client, f.path, path.posix.join(remoteDir, fileName));
 
-    // Association au Google Sheet (Apps Script à compléter côté GAS)
-    try {
-      const linkResp = await callNavetteGAS("setPhotoForBons", {
-        tourneeId,
-        magasin,
-        livreurId,
-        tournee,
-        codeTournee,
-        photoUrl,
-        bons: JSON.stringify(bons),
-      });
+        // Nettoyage du tmp local
+        try { fs.unlinkSync(f.path); } catch {}
 
-      // Si GAS répond mais n'a rien mis à jour, on renvoie un warning (upload OK)
-      if (linkResp && linkResp.success && Number(linkResp.updated||0) <= 0) {
-        return res.status(200).json({
-          success: true,
-          photoUrl,
-          count: bons.length,
-          warning: "sheet_link_not_applied",
-          missing: linkResp.missing || []
+        // URL publique (si configurée) sinon on renvoie le chemin FTP
+        const pubBase = String(process.env.NAVETTE_FTP_PUBLIC_BASE_URL || process.env.FTP_PUBLIC_BASE_URL || "").trim();
+        const photoUrl = pubBase
+          ? (pubBase.replace(/\/+$/,"") + "/" + remotePath.replace(/^\/+/, ""))
+          : remotePath;
+
+        setPhotoJob(jobId, { status: "linking", photoUrl });
+
+        // Association au Google Sheet (Apps Script à compléter côté GAS)
+        try {
+          const linkResp = await callNavetteGAS("setPhotoForBons", {
+            tourneeId,
+            magasin,
+            livreurId,
+            tournee,
+            codeTournee,
+            photoUrl,
+            bons: JSON.stringify(bons),
+          });
+
+          // Si GAS répond mais n'a rien mis à jour, on enregistre un warning
+          if (linkResp && linkResp.success && Number(linkResp.updated||0) <= 0) {
+            setPhotoJob(jobId, { 
+              status: "done", 
+              doneAt: Date.now(), 
+              photoUrl,
+              warning: "sheet_link_not_applied",
+              missing: linkResp.missing || []
+            });
+          } else {
+            setPhotoJob(jobId, { 
+              status: "done", 
+              doneAt: Date.now(), 
+              photoUrl,
+              updated: linkResp?.updated || 0
+            });
+          }
+        } catch (e) {
+          // On ne casse pas l'upload si le lien GAS échoue : on enregistre quand même l'URL
+          console.error("[NAVETTE][proof-photo][background] GAS link failed", e);
+          setPhotoJob(jobId, { 
+            status: "done", 
+            doneAt: Date.now(), 
+            photoUrl,
+            warning: "upload_ok_but_sheet_link_failed",
+            error: String(e?.message || e)
+          });
+        }
+      } catch (e) {
+        console.error("[NAVETTE][proof-photo][background] error", e);
+        setPhotoJob(jobId, { 
+          status: "error", 
+          doneAt: Date.now(), 
+          error: String(e?.message || e) 
         });
+        // Nettoyer le fichier en cas d'erreur
+        try { if (f?.path) fs.unlinkSync(f.path); } catch {}
+      } finally {
+        try { client?.close?.(); } catch {}
       }
-    } catch (e) {
-      // On ne casse pas l'upload si le lien GAS échoue : on renvoie quand même l'URL
-      return res.status(200).json({
-        success: false,
-        photoUrl,
-        warning: "upload_ok_but_sheet_link_failed",
-        error: String(e?.message || e),
-      });
-    }
-
-    return res.json({ success:true, photoUrl, count: bons.length });
+    });
   } catch (e) {
     console.error("[NAVETTE][proof-photo] error", e);
+    // Si erreur avant la mise en queue, nettoyer et retourner erreur
+    try { if (req.file?.path) fs.unlinkSync(req.file.path); } catch {}
     return res.status(500).json({ success:false, error: String(e?.message || e) });
-  } finally {
-    try { client?.close?.(); } catch {}
   }
+});
+
+// 📊 Statut d'un job photo
+app.get("/api/navette/proof-photo/status", (req, res) => {
+  const jobId = String(req.query.jobId || "").trim();
+  if (!jobId) return res.status(400).json({ success:false, error:"jobId manquant" });
+  const job = getPhotoJob(jobId);
+  if (!job) return res.status(404).json({ success:false, error:"jobId inconnu" });
+  res.json({ success:true, job });
 });
 
 

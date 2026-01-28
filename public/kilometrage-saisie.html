@@ -469,7 +469,7 @@
           <input id="photoInput" type="file" accept="image/*" capture="environment"
                  style="display:none" />
           
-          <button type="button" id="btnCapturePhoto" class="btnScan" style="width:100%;margin:0;padding:14px 12px;min-height:56px;font-size:1rem;border-radius:999px">📷 Capturer photo</button>
+          <button type="button" id="btnCapturePhoto" class="btnScan" style="width:100%;margin:0;padding:14px 12px;min-height:56px;font-size:1rem">📷 Capturer photo</button>
 
           <div style="margin-top:10px">
             <img id="photoPreview" alt="Aperçu" style="display:none;width:100%;border-radius:12px;border:1px solid #e5e7eb" />
@@ -1413,6 +1413,18 @@ async function sendProofPhoto(){
 
     const r = await fetch(apiUrl("/api/navette/proof-photo"), { method:"POST", body: fd });
     const j = await r.json().catch(()=>({}));
+    
+    // Si c'est mis en queue (status 202), on ferme immédiatement
+    if (r.status === 202 && j.queued) {
+      setPhotoMsg("✅ Photo en cours d'envoi en arrière-plan...", false);
+      try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch(e){}
+      
+      // Fermer immédiatement sans attendre
+      setTimeout(() => closeProofModal(), 400);
+      return;
+    }
+    
+    // Ancien comportement pour compatibilité (si pas queued)
     if (!r.ok || j.success === false) throw new Error(j.error || j.message || "Erreur upload");
 
     setPhotoMsg("✅ Photo envoyée et liée aux colis.", false);
