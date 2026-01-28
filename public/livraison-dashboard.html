@@ -354,12 +354,24 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  function resolvePhotoUrl_(urlOrPath) {
+    const s = String(urlOrPath || "").trim();
+    if (!s) return "";
+    if (/^https?:\/\//i.test(s)) return s; // déjà une URL
+    // chemin FTP stocké dans la sheet => passer par le serveur
+    return apiUrl(`/api/navette/file?path=${encodeURIComponent(s)}`);
+  }
+
   function openPhotoFromColis(c) {
-    const url = String((c && (c.photoUrl || c.photo || c.preuve || c.urlPhoto)) || "").trim();
+    const raw = String((c && (c.photoUrl || c.photo || c.preuve || c.urlPhoto)) || "").trim();
+    const url = resolvePhotoUrl_(raw);
     if (!url) {
       alert("Aucune photo associée à ce colis.");
       return;
     }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -708,6 +720,13 @@ if (act === "nommer") {
         return;
       }
 
+      if (act === "photo") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openPhotoFromColis(found);
+        return;
+      }
+
       if (!selectedTourneeId) {
         alert("Sélectionne d'abord une tournée à gauche.");
         return;
@@ -717,11 +736,6 @@ if (act === "nommer") {
       try {
         if (act === "valider") {
           await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
-        } else if (act === "photo") {
-          const found = state.colis.find(x => String(x.bon)===String(bon) && (!selectedTourneeId || String(x.tourneeId)===String(selectedTourneeId)));
-          if (!found) { alert("Colis introuvable."); return; }
-          openPhotoFromColis(found);
-          return;
         } else if (act === "livrer") {
           
           await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
@@ -754,6 +768,10 @@ tourneesClasseesEl.onclick = async (ev) => {
     openMapsFromColis(found);
     return;
   }
+  if (act === "photo") {
+    openPhotoFromColis(found);
+    return;
+  }
   if (act === "nommer") {
     const current = String(found.gpsLieu || "").trim();
     const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
@@ -779,7 +797,6 @@ tourneesClasseesEl.onclick = async (ev) => {
     }
   }
 };
-  }
 
   function setNeutral() {
     subEl.textContent = "Choisis une agence.";
