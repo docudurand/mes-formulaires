@@ -160,8 +160,12 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
   let expandedClassees = new Set();
-  let refreshTimer = null;
-  let paramsCache = [];
+        expandedLivresGroups = new Set();
+let expandedLivresGroups = new Set();
+let refreshTimer = null;
+    let refreshSeq = 0;
+  let refreshAbort = null;
+let paramsCache = [];
   let livreurTourneeMap = new Map();
 
   window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
@@ -521,7 +525,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
   }
 
-  function renderLivresGrouped_(parent, list, includeTournee){
+    function renderLivresGrouped_(parent, list, includeTournee){
     parent.innerHTML = "";
     if (!Array.isArray(list) || !list.length) return;
 
@@ -532,7 +536,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const key = tid + "||" + liv;
       if (!groups.has(key)){
         const meta = tourneeMetaById_(tid);
-        groups.set(key, { tid, liv, meta, items: [] });
+        groups.set(key, { key, tid, liv, meta, items: [] });
       }
       groups.get(key).items.push(c);
     }
@@ -556,6 +560,7 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
       const h = document.createElement("div");
       h.className = "groupHeader";
+      h.style.cursor = "pointer";
 
       const left = document.createElement("div");
       left.style.minWidth = "0";
@@ -563,33 +568,55 @@ const API_BASE = "https://mes-formulaires.onrender.com";
       const t1 = document.createElement("div");
       t1.className = "title";
       const hhmm = g.meta.hhmm ? g.meta.hhmm : "—:—";
-      t1.textContent = includeTournee ? (`⏱ ${hhmm}
-Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
+      t1.textContent = includeTournee ? (`⏱ ${hhmm}\nLivreur ${g.liv}`) : (`Livreur ${g.liv}`);
       left.appendChild(t1);
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "10px";
 
       const count = document.createElement("div");
       count.className = "groupCount";
       count.textContent = String(g.items.length);
 
+      const caret = document.createElement("div");
+      caret.className = "badge";
+      caret.style.background = "#eef2ff";
+
+      const isOpen = expandedLivresGroups.has(g.key);
+      caret.textContent = isOpen ? "▲" : "▼";
+
+      right.appendChild(count);
+      right.appendChild(caret);
+
       h.appendChild(left);
-      h.appendChild(count);
+      h.appendChild(right);
 
       const body = document.createElement("div");
       body.className = "groupBody";
+      body.style.display = isOpen ? "" : "none";
 
       g.items.forEach(c => {
         const lieu = String(c.gpsLieu || "").trim();
         const hh = formatMajHHMM(c.dateMaj) || "";
-        let right = "";
-        if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
-        if (hh) right = right ? (right + " • ⏱ " + hh) : ("⏱ " + hh);
+        let rightTxt = "";
+        if (lieu) rightTxt = rightTxt ? (rightTxt + " • 📍 " + lieu) : ("📍 " + lieu);
+        if (hh) rightTxt = rightTxt ? (rightTxt + " • ⏱ " + hh) : ("⏱ " + hh);
 
         const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
         const actionsHtml = `
           <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
           <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
         `;
-        body.appendChild(mkMiniItem(c.bon, right, actionsHtml));
+        body.appendChild(mkMiniItem(c.bon, rightTxt, actionsHtml));
+      });
+
+      h.addEventListener("click", () => {
+        const open = expandedLivresGroups.has(g.key);
+        if (open) expandedLivresGroups.delete(g.key); else expandedLivresGroups.add(g.key);
+        body.style.display = open ? "none" : "";
+        caret.textContent = open ? "▼" : "▲";
       });
 
       group.appendChild(h);
@@ -768,8 +795,25 @@ tourneesClasseesEl.onclick = async (ev) => {
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
+    expandedLivresGroups = new Set();
     renderTournees();
     renderDetail();
+  }
+
+  function resetUiForLoading_(mag) {
+    subEl.textContent = mag ? `Agence: ${mag} • Chargement…` : "Chargement…";
+    setGlobalCounters({ enAttente: 0, valides: 0, livres: 0 });
+
+    state = { tournees: [], colis: [] };
+    selectedTourneeId = "";
+    expandedClassees = new Set();
+
+    tourneesActivesEl.innerHTML = "";
+    tourneesClasseesEl.innerHTML = "";
+    listAtt.innerHTML = "";
+    listVal.innerHTML = "";
+    listLiv.innerHTML = "";
+    detailTitle.textContent = "Aucune tournée sélectionnée (chargement…)";
   }
 
   async function loadMagasins() {
@@ -801,17 +845,40 @@ tourneesClasseesEl.onclick = async (ev) => {
     setNeutral();
   }
 
-  async function refresh() {
+    async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
-    subEl.textContent = "Chargement…";
+    const mySeq = ++refreshSeq;
+
+    if (refreshAbort) {
+      try { refreshAbort.abort(); } catch(e) {}
+    }
+    refreshAbort = new AbortController();
+
+    resetUiForLoading_(magasin);
+
     let data;
     try {
-      data = await fetchJson_(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
+      const url = apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`);
+      const r = await fetch(url, { signal: refreshAbort.signal });
+
+      const text = await r.text().catch(() => "");
+      let j = null;
+      try { j = JSON.parse(text || "{}"); } catch(e) {}
+
+      if (!r.ok) {
+        const msg = (j && (j.error || j.message)) ? (j.error || j.message) : shortExcerpt_(text);
+        throw new Error(`HTTP ${r.status} ${r.statusText} — ${msg || "Réponse vide"}`);
+      }
+      data = j;
     } catch (err) {
+      if (err && err.name === "AbortError") return;
       showLoadError_("DASHBOARD", err);
       return;
     }
+
+    if (mySeq !== refreshSeq) return;
+
     if (!data || data.success === false) {
       showLoadError_("DASHBOARD", new Error((data && (data.error || data.message)) || "Réponse invalide"));
       return;
@@ -842,6 +909,7 @@ tourneesClasseesEl.onclick = async (ev) => {
     magasin = String(magasinSelect.value || "").trim().toUpperCase();
     selectedTourneeId = "";
     buildLivreurTourneeMap();
+    resetUiForLoading_(magasin);
     await refresh();
   });
 
