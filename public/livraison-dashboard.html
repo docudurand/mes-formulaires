@@ -160,9 +160,8 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   let state = { tournees: [], colis: [] };
   let selectedTourneeId = "";
   let expandedClassees = new Set();
-        expandedLivresGroups = new Set();
-let expandedLivresGroups = new Set();
-let refreshTimer = null;
+  let expandedLivresGroups = new Set();
+  let refreshTimer = null;
     let refreshSeq = 0;
   let refreshAbort = null;
 let paramsCache = [];
@@ -584,6 +583,7 @@ let paramsCache = [];
       caret.className = "badge";
       caret.style.background = "#eef2ff";
 
+      // Comme dans l’onglet "Classés": sections repliables
       const isOpen = expandedLivresGroups.has(g.key);
       caret.textContent = isOpen ? "▲" : "▼";
 
@@ -801,6 +801,7 @@ tourneesClasseesEl.onclick = async (ev) => {
   }
 
   function resetUiForLoading_(mag) {
+    // Vide immédiatement l’écran (évite le flash de l’ancien magasin)
     subEl.textContent = mag ? `Agence: ${mag} • Chargement…` : "Chargement…";
     setGlobalCounters({ enAttente: 0, valides: 0, livres: 0 });
 
@@ -808,6 +809,8 @@ tourneesClasseesEl.onclick = async (ev) => {
     selectedTourneeId = "";
     expandedClassees = new Set();
 
+        expandedLivresGroups = new Set();
+// Vide les listes visibles
     tourneesActivesEl.innerHTML = "";
     tourneesClasseesEl.innerHTML = "";
     listAtt.innerHTML = "";
@@ -848,13 +851,16 @@ tourneesClasseesEl.onclick = async (ev) => {
     async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
+    // Empêche les courses: une réponse ancienne ne doit jamais écraser la nouvelle
     const mySeq = ++refreshSeq;
 
+    // Annule la requête précédente si on change d’agence rapidement
     if (refreshAbort) {
       try { refreshAbort.abort(); } catch(e) {}
     }
     refreshAbort = new AbortController();
 
+    // Reset UI immédiat (plus de flash de l’ancien magasin)
     resetUiForLoading_(magasin);
 
     let data;
@@ -872,11 +878,13 @@ tourneesClasseesEl.onclick = async (ev) => {
       }
       data = j;
     } catch (err) {
+      // Abort volontaire: on ignore
       if (err && err.name === "AbortError") return;
       showLoadError_("DASHBOARD", err);
       return;
     }
 
+    // Si une requête plus récente a été lancée, on ignore cette réponse
     if (mySeq !== refreshSeq) return;
 
     if (!data || data.success === false) {
@@ -916,7 +924,8 @@ tourneesClasseesEl.onclick = async (ev) => {
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     expandedClassees = new Set();
-    renderTournees();
+        expandedLivresGroups = new Set();
+renderTournees();
     renderDetail();
   });
 
