@@ -155,19 +155,16 @@ const API_BASE = "https://mes-formulaires.onrender.com";
   const listVal = document.getElementById("listVal");
   const listLiv = document.getElementById("listLiv");
 
+  let magasin = "";
+  let currentView = "encours";
+  let state = { tournees: [], colis: [] };
+  let selectedTourneeId = "";
+  let expandedClassees = new Set();
+  let refreshTimer = null;
+  let paramsCache = [];
+  let livreurTourneeMap = new Map();
 
-    let magasin = "";
-    let currentView = "encours";
-    let state = { tournees: [], colis: [] };
-    let selectedTourneeId = "";
-    let expandedClassees = new Set();
-    let expandedLivresGroups = new Set();
-    let refreshSeq = 0;
-    let refreshTimer = null;
-    let paramsCache = [];
-    let livreurTourneeMap = new Map();
-
-window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
+  window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] unhandledrejection", e.reason); });
   window.addEventListener("error", (e)=>{ console.error("[Dashboard] error", e.error || e.message); });
 
   function escapeHtml(s){
@@ -524,7 +521,7 @@ window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] 
     return { dateCreation: iso, title, hhmm, ms: isNaN(ms)?-1:ms };
   }
 
-        function renderLivresGrouped_(parent, list, includeTournee){
+  function renderLivresGrouped_(parent, list, includeTournee){
     parent.innerHTML = "";
     if (!Array.isArray(list) || !list.length) return;
 
@@ -535,7 +532,7 @@ window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] 
       const key = tid + "||" + liv;
       if (!groups.has(key)){
         const meta = tourneeMetaById_(tid);
-        groups.set(key, { key, tid, liv, meta, items: [] });
+        groups.set(key, { tid, liv, meta, items: [] });
       }
       groups.get(key).items.push(c);
     }
@@ -559,7 +556,6 @@ window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] 
 
       const h = document.createElement("div");
       h.className = "groupHeader";
-      h.style.cursor = "pointer";
 
       const left = document.createElement("div");
       left.style.minWidth = "0";
@@ -567,55 +563,33 @@ window.addEventListener("unhandledrejection", (e)=>{ console.error("[Dashboard] 
       const t1 = document.createElement("div");
       t1.className = "title";
       const hhmm = g.meta.hhmm ? g.meta.hhmm : "—:—";
-      t1.textContent = includeTournee ? (`⏱ ${hhmm}\nLivreur ${g.liv}`) : (`Livreur ${g.liv}`);
+      t1.textContent = includeTournee ? (`⏱ ${hhmm}
+Livreur ${g.liv}`) : (`Livreur ${g.liv}`);
       left.appendChild(t1);
-
-      const right = document.createElement("div");
-      right.style.display = "flex";
-      right.style.alignItems = "center";
-      right.style.gap = "10px";
 
       const count = document.createElement("div");
       count.className = "groupCount";
       count.textContent = String(g.items.length);
 
-      const caret = document.createElement("div");
-      caret.className = "badge";
-      caret.style.background = "#eef2ff";
-
-      const isOpen = expandedLivresGroups.has(g.key);
-      caret.textContent = isOpen ? "▲" : "▼";
-
-      right.appendChild(count);
-      right.appendChild(caret);
-
       h.appendChild(left);
-      h.appendChild(right);
+      h.appendChild(count);
 
       const body = document.createElement("div");
       body.className = "groupBody";
-      body.style.display = isOpen ? "" : "none";
 
       g.items.forEach(c => {
         const lieu = String(c.gpsLieu || "").trim();
         const hh = formatMajHHMM(c.dateMaj) || "";
-        let rightTxt = "";
-        if (lieu) rightTxt = rightTxt ? (rightTxt + " • 📍 " + lieu) : ("📍 " + lieu);
-        if (hh) rightTxt = rightTxt ? (rightTxt + " • ⏱ " + hh) : ("⏱ " + hh);
+        let right = "";
+        if (lieu) right = right ? (right + " • 📍 " + lieu) : ("📍 " + lieu);
+        if (hh) right = right ? (right + " • ⏱ " + hh) : ("⏱ " + hh);
 
         const hasGps = isFinite(Number(c.gpsLat)) && isFinite(Number(c.gpsLng));
         const actionsHtml = `
           <button class="iconBtn" title="${hasGps ? "Suivi GPS (Google Maps)" : "Pas de GPS"}" data-act="suivi" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>📍</button>
           <button class="iconBtn" title="${hasGps ? "Nommer / modifier le client (rayon 30m)" : "Pas de GPS"}" data-act="nommer" data-bon="${escapeHtml(c.bon)}" ${hasGps ? "" : "disabled"}>🏷</button>
         `;
-        body.appendChild(mkMiniItem(c.bon, rightTxt, actionsHtml));
-      });
-
-      h.addEventListener("click", () => {
-        const open = expandedLivresGroups.has(g.key);
-        if (open) expandedLivresGroups.delete(g.key); else expandedLivresGroups.add(g.key);
-        body.style.display = open ? "none" : "";
-        caret.textContent = open ? "▼" : "▲";
+        body.appendChild(mkMiniItem(c.bon, right, actionsHtml));
       });
 
       group.appendChild(h);
@@ -794,25 +768,8 @@ tourneesClasseesEl.onclick = async (ev) => {
     setGlobalCounters({enAttente:0, valides:0, livres:0});
     state = { tournees: [], colis: [] };
     selectedTourneeId = "";
-    expandedLivresGroups = new Set();
-    expandedClassees = new Set();
-renderTournees();
+    renderTournees();
     renderDetail();
-  }
-
-  function resetUiForLoading_(mag) {
-    subEl.textContent = mag ? `Agence: ${mag} • Chargement…` : "Chargement…";
-    setGlobalCounters({enAttente:0, valides:0, livres:0});
-    state = { tournees: [], colis: [] };
-    selectedTourneeId = "";
-    expandedClassees = new Set();
-        expandedLivresGroups = new Set();
-tourneesActivesEl.innerHTML = "";
-    tourneesClasseesEl.innerHTML = "";
-    listAtt.innerHTML = "";
-    listVal.innerHTML = "";
-    listLiv.innerHTML = "";
-    detailTitle.textContent = "Aucune tournée sélectionnée (chargement…)";
   }
 
   async function loadMagasins() {
@@ -844,25 +801,17 @@ tourneesActivesEl.innerHTML = "";
     setNeutral();
   }
 
-        async function refresh() {
+  async function refresh() {
     if (!magasin) { setNeutral(); return; }
 
-    const mySeq = ++refreshSeq;
-
-    // Reset immédiat pour éviter d’afficher l’ancien magasin pendant le chargement
-    resetUiForLoading_(magasin);
-
+    subEl.textContent = "Chargement…";
     let data;
     try {
       data = await fetchJson_(apiUrl(`/api/navette/dashboard?magasin=${encodeURIComponent(magasin)}`));
     } catch (err) {
-      if (mySeq !== refreshSeq) return;
       showLoadError_("DASHBOARD", err);
       return;
     }
-
-    if (mySeq !== refreshSeq) return;
-
     if (!data || data.success === false) {
       showLoadError_("DASHBOARD", new Error((data && (data.error || data.message)) || "Réponse invalide"));
       return;
@@ -893,15 +842,13 @@ tourneesActivesEl.innerHTML = "";
     magasin = String(magasinSelect.value || "").trim().toUpperCase();
     selectedTourneeId = "";
     buildLivreurTourneeMap();
-    resetUiForLoading_(magasin);
     await refresh();
   });
 
   btnClear.addEventListener("click", () => {
     selectedTourneeId = "";
     expandedClassees = new Set();
-    expandedLivresGroups = new Set();
-renderTournees();
+    renderTournees();
     renderDetail();
   });
 
