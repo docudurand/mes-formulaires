@@ -457,15 +457,22 @@ app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, 
     const m = String(now.getMonth()+1).padStart(2, "0");
     const d = String(now.getDate()).padStart(2, "0");
 
-    const baseDir = String(process.env.NAVETTE_FTP_DIR || "/navette-preuves").trim() || "/navette-preuves";
-    const remoteDir = path.posix.join(baseDir, y, m, d);
+    const baseDirRaw = String(process.env.NAVETTE_FTP_DIR || "navette-preuves").trim() || "navette-preuves";
+    const baseDir = normFtpPath_(baseDirRaw);
+
+    // Dossier daté: baseDir/YYYY/MM/DD
+    const remoteDirWanted = path.posix.join(baseDir, y, m, d);
 
     const fileName = `${safe(magasin)}_${safe(livreurId)}_${safe(tourneeId || codeTournee || tournee || "tournee")}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}${ext}`;
-    const remotePath = path.posix.join(remoteDir, fileName);
+    const remotePathWanted = path.posix.join(remoteDirWanted, fileName);
 
     client = await ftpClient();
-    await client.ensureDir(remoteDir);
-    await client.uploadFrom(f.path, remotePath);
+
+    // 1) crée le dossier (compatible chemins absolus/relatifs)
+    const remoteDir = await ensureDirSafe_(client, remoteDirWanted);
+
+    // 2) upload (idem)
+    const remotePath = await uploadFromSafe_(client, f.path, path.posix.join(remoteDir, fileName));
 
     // Nettoyage du tmp local
     try { fs.unlinkSync(f.path); } catch {}
@@ -1111,6 +1118,51 @@ async function ftpClient(){
 
   return client;
 }
+
+
+function normFtpPath_(p){
+  // Normalise en chemin POSIX compatible FTP
+  let s = String(p || "").trim().replace(/\\+/g, "/");
+  // retire les doubles slash (sauf éventuellement au début)
+  s = s.replace(/\/+/g, "/");
+  // retire trailing slash
+  s = s.replace(/\/+$/,"");
+  return s;
+}
+
+async function ensureDirSafe_(client, dir){
+  const d = normFtpPath_(dir);
+  try{
+    await client.ensureDir(d);
+    return d;
+  }catch(e){
+    // Certains serveurs FTP refusent les chemins absolus "/..."
+    const msg = String(e && e.message ? e.message : e);
+    if (msg.includes("550") && d.startsWith("/")){
+      const d2 = d.replace(/^\/+/, "");
+      await client.ensureDir(d2);
+      return d2;
+    }
+    throw e;
+  }
+}
+
+async function uploadFromSafe_(client, localPath, remotePath){
+  const rp = normFtpPath_(remotePath);
+  try{
+    await client.uploadFrom(localPath, rp);
+    return rp;
+  }catch(e){
+    const msg = String(e && e.message ? e.message : e);
+    if (msg.includes("550") && rp.startsWith("/")){
+      const rp2 = rp.replace(/^\/+/, "");
+      await client.uploadFrom(localPath, rp2);
+      return rp2;
+    }
+    throw e;
+  }
+}
+
 
 function tmpFile(name){ return path.join(os.tmpdir(), name); }
 
