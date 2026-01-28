@@ -764,7 +764,13 @@ tourneesClasseesEl.onclick = async (ev) => {
     openMapsFromColis(found);
     return;
   }
-  if (act === "nommer") {
+  
+      if (act === "photo") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openPhotoFromColis(found);
+        return;
+      }if (act === "nommer") {
     const current = String(found.gpsLieu || "").trim();
     const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
     if (name === null) return;
