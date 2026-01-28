@@ -226,8 +226,8 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Rectification Vilebrequin": process.env.DEST_EMAIL_ATELIER_CULASSE,
-  "Rectification Rectification des Volants Moteur": process.env.DEST_EMAIL_ATELIER_CHASSE,
-  "Rectification Regarnissages Machoires": process.env.DEST_EMAIL_ATELIER_CHASSE,
+  "Rectification des Volants Moteur": process.env.DEST_EMAIL_ATELIER_CHASSE,
+  "Regarnissages Machoires": process.env.DEST_EMAIL_ATELIER_CHASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,
