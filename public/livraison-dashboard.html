@@ -373,6 +373,9 @@ const API_BASE = "https://mes-formulaires.onrender.com";
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
 
   function mkMiniItem(text, right, actionsHtml) {
     const div = document.createElement("div");
@@ -718,6 +721,13 @@ if (act === "nommer") {
         return;
       }
 
+      if (act === "photo") {
+        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
+        if (!found) { alert("Colis introuvable."); return; }
+        openPhotoFromColis(found);
+        return;
+      }
+
       if (!selectedTourneeId) {
         alert("Sélectionne d'abord une tournée à gauche.");
         return;
@@ -764,13 +774,7 @@ tourneesClasseesEl.onclick = async (ev) => {
     openMapsFromColis(found);
     return;
   }
-  
-      if (act === "photo") {
-        const found = state.colis.find(x => String(x.bon) === String(bon) && (!selectedTourneeId || String(x.tourneeId) === String(selectedTourneeId)));
-        if (!found) { alert("Colis introuvable."); return; }
-        openPhotoFromColis(found);
-        return;
-      }if (act === "nommer") {
+  if (act === "nommer") {
     const current = String(found.gpsLieu || "").trim();
     const name = prompt("Nom du client / entreprise (rayon 30m) :", current);
     if (name === null) return;
