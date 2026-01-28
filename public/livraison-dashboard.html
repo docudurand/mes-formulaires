@@ -174,7 +174,6 @@ const API_BASE = "https://mes-formulaires.onrender.com";
 
   function normStatut(st){
     const s = String(st||"").trim().toUpperCase();
-    if (s === "EN ATTENTE") return "EN_ATTENTE";
     if (s === "EN_ATTENTE") return "EN_ATTENTE";
     if (s.startsWith("EN_")) return s;
     if (s.startsWith("VAL")) return "VALIDE";
@@ -729,19 +728,13 @@ if (act === "nommer") {
         return;
       }
 
-      btn.disabled = true;
+            btn.disabled = true;
       try {
         if (act === "valider") {
           await apiPost("/api/navette/valider", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
-        } else if (act === "photo") {
-          const found = state.colis.find(x => String(x.bon)===String(bon) && (!selectedTourneeId || String(x.tourneeId)===String(selectedTourneeId)));
-          if (!found) { alert("Colis introuvable."); return; }
-          openPhotoFromColis(found);
-          return;
         } else if (act === "livrer") {
-          
           await apiPost("/api/navette/livrer", { tourneeId: selectedTourneeId, magasin, bon, livreurId: "" });
-}
+        }
         await refresh();
       } catch (e) {
         alert("Erreur: " + (e && e.message ? e.message : e));
@@ -768,6 +761,10 @@ tourneesClasseesEl.onclick = async (ev) => {
 
   if (act === "suivi") {
     openMapsFromColis(found);
+    return;
+  }
+  if (act === "photo") {
+    openPhotoFromColis(found);
     return;
   }
   if (act === "nommer") {
