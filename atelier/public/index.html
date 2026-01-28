@@ -11,7 +11,7 @@
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#fff; color:var(--ink)}
     .wrap{max-width:960px; margin:24px auto; padding:16px}
     h1{margin:0 0 12px; font-size:1.4rem; color:#004080}
-    form{background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,.04)}
+    form{background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,0.04)}
     .grid{display:grid; gap:14px}
     @media(min-width:720px){ .grid-2{grid-template-columns:1fr 1fr} }
     label{display:block; font-weight:600; margin:4px 0 6px}
@@ -31,43 +31,18 @@
     .pieces-list{display:grid; gap:10px; margin-top:10px}
     .piece-item{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
 
-    .pdfMask{
-      position: fixed;
-      inset: 0;
-      background: #0008;
-      display: none;
-      align-items: flex-start;
-      justify-content: center;
-      z-index: 10000;
-      padding: 0;
-    }
-    .pdfBox{
-      width: min(900px, 96vw);
-      height: min(90vh, 800px);
-      background: #fff;
-      border-radius: 14px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid var(--line);
-      margin-top: 0;
-      align-self: flex-start;
-    }
+    .pdfMask{ position:fixed; inset:0; background:#0008; display:none; align-items:flex-start; justify-content:center; z-index:10000; padding:0; }
+    .pdfBox{ width:min(900px,96vw); height:min(90vh,800px); background:#fff; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; border:1px solid var(--line); margin-top:0; align-self:flex-start; }
     .pdfBar{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line); background:#f8fbff; }
     #pdfFrame{ flex:1; width:100%; height:100%; border:0; }
     .help{font-size:0.9rem;color:#6b7280;margin-top:8px}
-  
 
-html.dsg-in-iframe, html.dsg-in-iframe body {
-  height: auto !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
-
-</style>
+    html.dsg-in-iframe, html.dsg-in-iframe body { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+  </style>
 </head>
 <body>
 <script>
+// Resize auto pour intégration Wix (annotation conservée)
 (function () {
   try {
     if (window.self !== window.top) {
@@ -113,229 +88,204 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
 })();
 </script>
 
+<div class="wrap">
+  <h1>Demande d’intervention</h1>
 
-  <div class="wrap">
-    <h1>Demande d’intervention</h1>
-
-    <form id="form-atelier">
-      <div class="grid grid-2">
-        <div>
-          <label for="client">Nom du client <span class="req">*</span></label>
-          <input id="client" name="client" type="text" required aria-required="true" />
-        </div>
-        <div>
-          <label for="compte">N° de compte client <span class="req">*</span></label>
-          <input id="compte" name="compte" type="text" required aria-required="true" />
-        </div>
-      </div>
-
-      <div class="grid grid-2">
-        <div>
-          <label for="telephone">Téléphone client <span class="req">*</span></label>
-          <input id="telephone" name="telephone" type="tel" inputmode="tel" required aria-required="true" />
-        </div>
-        <div>
-          <label for="email">Adresse mail magasinier/réceptionnaire <span class="req">*</span></label>
-          <input id="email" name="email" type="email" required aria-required="true" />
-        </div>
-      </div>
-
-      <div class="grid grid-2">
-        <div>
-          <label for="vehicule">Marque et modèle du véhicule <span class="req">*</span></label>
-          <input id="vehicule" name="vehicule" type="text" required aria-required="true" />
-        </div>
-        <div>
-          <label for="immat">Immatriculation <span class="req">*</span></label>
-          <input id="immat" name="immat" type="text" required aria-required="true" />
-        </div>
-      </div>
-
-      <div class="grid grid-2">
-        <div>
-          <label for="dateDemande">Date de la demande <span class="req">*</span></label>
-          <input id="dateDemande" name="dateDemande" type="date" required aria-required="true" />
-        </div>
-        <div>
-          <label for="magasin">Magasin d'envoi <span class="req">*</span></label>
-          <select id="magasin" name="magasin" required aria-required="true">
-            <option value="" selected disabled>-- Sélectionnez un magasin --</option>
-            <option value="Annemasse">Annemasse</option>
-            <option value="Bourgoin">Bourgoin</option>
-            <option value="Chasse sur Rhone">Chasse sur Rhone</option>
-            <option value="Chassieu">Chassieu</option>
-            <option value="Gleize">Gleize</option>
-            <option value="La Motte Servolex">La Motte Servolex</option>
-            <option value="Miribel">Miribel</option>
-            <option value="Pavi">Pavi</option>
-            <option value="Renage">Renage</option>
-            <option value="Rives">Rives</option>
-            <option value="Seynod">Seynod</option>
-            <option value="St Egreve">St Egreve</option>
-            <option value="St-Jean-Bonnefonds">St-Jean-Bonnefonds</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid">
-        <div>
-          <label for="service">Service <span class="req">*</span></label>
-          <select id="service" name="service" required aria-required="true">
-            <option value="" selected disabled>-- Choisissez un service --</option>
-			<option value="Rectification Culasse">Rectification Culasse</option>
-			<option value="Rectification Vilebrequin">Rectification Vilebrequin</option>
-			<option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
-			<option value="Contrôle injection Essence">Contrôle injection Essence</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="section-culasse" class="hidden" aria-hidden="true">
-        <div class="section-title">Détails Rectification Culasse</div>
-
-        <div class="grid grid-2">
-          <div>
-            <label for="segment">VL / PL</label>
-            <select id="segment" name="segment">
-              <option value="" selected>-- VL ou PL --</option>
-              <option>VL</option>
-              <option>PL</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="cylindre">Cylindre</label>
-            <select id="cylindre" name="cylindre">
-              <option value="" selected>-- Nb de cylindres --</option>
-              <option>1</option><option>2</option><option>3</option><option>4</option>
-              <option>5</option><option>6</option><option>7</option><option>8</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="soupapes">Soupapes</label>
-            <select id="soupapes" name="soupapes">
-              <option value="" selected>-- Nb de soupapes --</option>
-              <option>2</option><option>4</option><option>8</option><option>16</option><option>24</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="carburant">Carburant</label>
-            <select id="carburant" name="carburant">
-              <option value="" selected>-- Type de carburant --</option>
-              <option>Essence</option>
-              <option>Diesel</option>
-            </select>
-          </div>
-        </div>
-
-        <p class="help">Coche les opérations à réaliser. Les références s’affichent quand VL/PL, Cylindre, Soupapes et Carburant sont renseignés.</p>
-
-        <div id="culasse-lignes"></div>
-
-        <div class="section-title">Pièces à Fournir</div>
-        <div class="pieces-list" id="pieces-a-fournir">
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)"><span>JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE RODAGE"><span>POCHETTE RODAGE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE MOTEUR COMPLET (HAUT ET BAS)"><span>POCHETTE MOTEUR COMPLET (HAUT ET BAS)</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT D’INJECTEUR"><span>JOINT D’INJECTEUR</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE BRIDE D’INJECTEUR"><span>VIS DE BRIDE D’INJECTEUR</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE CULASSE"><span>VIS DE CULASSE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="CALORSTAT"><span>CALORSTAT</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="SONDE DE TEMPERATURE"><span>SONDE DE TEMPERATURE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="POMPE A EAU"><span>POMPE A EAU</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT DE DISTRIBUTION"><span>KIT DE DISTRIBUTION</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE DISTRIBUTION"><span>COURROIE DISTRIBUTION</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE D’ACCESSOIRE"><span>COURROIE D’ACCESSOIRE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="GALET D’ACCESSOIRE"><span>GALET D’ACCESSOIRE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="BOUGIES ALLUMAGE / CHAUFFE"><span>BOUGIES ALLUMAGE / CHAUFFE</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="INJECTEURS"><span>INJECTEURS</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT BAGUES ETANCHEITÉ"><span>KIT BAGUES ETANCHEITÉ</span></label>
-          <label class="piece-item"><input type="checkbox" name="pieces[]" value="RADIATEUR"><span>RADIATEUR</span></label>
-        </div>
-      </div>
-
-      <div id="section-injecteur" class="hidden" aria-hidden="true">
-        <div class="section-title">Détails Contrôle injection</div>
-        <div class="grid grid-2">
-          <div>
-            <label for="nbInjecteurs">Nombre d’injecteurs</label>
-            <input id="nbInjecteurs" name="nbInjecteurs" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex. 4" />
-          </div>
-        </div>
-      </div>
-
-      <div class="section-title">Commentaires</div>
+  <form id="form-atelier">
+    <div class="grid grid-2">
       <div>
-        <label for="commentaires" id="labelCommentaires">Commentaires (optionnel)</label>
-        <textarea id="commentaires" name="commentaires" rows="4" placeholder="Vos remarques..."></textarea>
+        <label for="client">Nom du client <span class="req">*</span></label>
+        <input id="client" name="client" type="text" required aria-required="true" />
       </div>
-
-      <div class="actions">
-        <button id="btnSubmit" type="submit" class="primary">Envoyer</button>
-        <button type="reset" class="ghost">Réinitialiser</button>
-        <span id="statusMsg" style="margin-left:auto; font-weight:700;"></span>
+      <div>
+        <label for="compte">N° de compte client <span class="req">*</span></label>
+        <input id="compte" name="compte" type="text" required aria-required="true" />
       </div>
-    </form>
-  </div>
+    </div>
 
-  <div class="pdfMask" id="pdfMask" aria-hidden="true">
-    <div class="pdfBox" role="dialog" aria-label="Aperçu">
-      <div class="pdfBar">
-        <div style="font-weight:700">Aperçu d’impression</div>
-        <div class="actions">
-          <button class="ghost" id="pdfReprint" type="button">Imprimer</button>
-          <button class="ghost" id="pdfClose" type="button">Fermer</button>
+    <div class="grid grid-2">
+      <div>
+        <label for="telephone">Téléphone <span class="req">*</span></label>
+        <input id="telephone" name="telephone" type="tel" required aria-required="true" />
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" />
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div>
+        <label for="vehicule">Marque et modèle du véhicule <span class="req">*</span></label>
+        <input id="vehicule" name="vehicule" type="text" required aria-required="true" />
+      </div>
+      <div>
+        <label for="immat">Immatriculation <span class="req">*</span></label>
+        <input id="immat" name="immat" type="text" required aria-required="true" />
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div>
+        <label for="dateDemande">Date de la demande <span class="req">*</span></label>
+        <input id="dateDemande" name="dateDemande" type="date" required aria-required="true" />
+      </div>
+      <div>
+        <label for="magasin">Magasin d'envoi <span class="req">*</span></label>
+        <select id="magasin" name="magasin" required aria-required="true">
+          <option value="" selected disabled>-- Sélectionnez un magasin --</option>
+          <option value="Annemasse">Annemasse</option>
+          <option value="Bourgoin">Bourgoin</option>
+          <option value="Chasse sur Rhone">Chasse sur Rhone</option>
+          <option value="Chassieu">Chassieu</option>
+          <option value="Gleize">Gleize</option>
+          <option value="La Motte Servolex">La Motte Servolex</option>
+          <option value="Miribel">Miribel</option>
+          <option value="Pavi">Pavi</option>
+          <option value="Renage">Renage</option>
+          <option value="Rives">Rives</option>
+          <option value="Seynod">Seynod</option>
+          <option value="St Egreve">St Egreve</option>
+          <option value="St-Jean-Bonnefonds">St-Jean-Bonnefonds</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <label for="service">Service <span class="req">*</span></label>
+        <select id="service" name="service" required aria-required="true">
+          <option value="" selected disabled>-- Choisissez un service --</option>
+          <option value="Rectification Culasse">Rectification Culasse</option>
+          <option value="Rectification Vilebrequin">Rectification Vilebrequin</option>
+          <!-- AJOUT SERVICES (comme Rectification Vilebrequin) -->
+          <option value="Rectification des Volants Moteur">Rectification des Volants Moteur</option>
+          <option value="Regarnissages Machoires">Regarnissages Machoires</option>
+          <option value="Contrôle injection Diesel">Contrôle injection Diesel</option>
+          <option value="Contrôle injection Essence">Contrôle injection Essence</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="section-culasse" class="hidden" aria-hidden="true">
+      <div class="section-title">Détails Rectification Culasse</div>
+
+      <div class="grid grid-2">
+        <div>
+          <label for="segment">VL / PL</label>
+          <select id="segment" name="segment">
+            <option value="" selected>-- VL ou PL --</option>
+            <option>VL</option>
+            <option>PL</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="cylindre">Cylindre</label>
+          <select id="cylindre" name="cylindre">
+            <option value="" selected>-- Nb de cylindres --</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="soupapes">Soupapes</label>
+          <select id="soupapes" name="soupapes">
+            <option value="" selected>-- Nb de soupapes --</option>
+            <option>2</option><option>4</option><option>8</option><option>16</option><option>24</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="carburant">Carburant</label>
+          <select id="carburant" name="carburant">
+            <option value="" selected>-- Type de carburant --</option>
+            <option>Essence</option>
+            <option>Diesel</option>
+          </select>
         </div>
       </div>
-      <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
+
+      <p class="help">Coche les opérations à réaliser. Les références s’affichent quand VL/PL, Cylindre, Soupapes et Carburant sont renseignés.</p>
+
+      <div id="culasse-lignes"></div>
+
+      <div class="section-title">Pièces à Fournir</div>
+      <div class="pieces-list" id="pieces-a-fournir">
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)"><span>JOINT DE CULASSE (NOUS FOURNIR L’ANCIEN)</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE RODAGE"><span>POCHETTE RODAGE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="POCHETTE MOTEUR COMPLET (HAUT ET BAS)"><span>POCHETTE MOTEUR COMPLET (HAUT ET BAS)</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="JOINT D’INJECTEUR"><span>JOINT D’INJECTEUR</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE BRIDE D’INJECTEUR"><span>VIS DE BRIDE D’INJECTEUR</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="VIS DE CULASSE"><span>VIS DE CULASSE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="CALORSTAT"><span>CALORSTAT</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="SONDE DE TEMPERATURE"><span>SONDE DE TEMPERATURE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="POMPE A EAU"><span>POMPE A EAU</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT DE DISTRIBUTION"><span>KIT DE DISTRIBUTION</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE DISTRIBUTION"><span>COURROIE DISTRIBUTION</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="COURROIE D’ACCESSOIRE"><span>COURROIE D’ACCESSOIRE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="GALET D’ACCESSOIRE"><span>GALET D’ACCESSOIRE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="BOUGIES ALLUMAGE / CHAUFFE"><span>BOUGIES ALLUMAGE / CHAUFFE</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="INJECTEURS"><span>INJECTEURS</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="KIT BAGUES ETANCHEITÉ"><span>KIT BAGUES ETANCHEITÉ</span></label>
+        <label class="piece-item"><input type="checkbox" name="pieces[]" value="RADIATEUR"><span>RADIATEUR</span></label>
+      </div>
     </div>
-  </div>
 
-  <form id="printForm" method="POST" target="pdfFrame" style="display:none">
-    <input type="hidden" name="payload" />
+    <div id="section-injecteur" class="hidden" aria-hidden="true">
+      <div class="section-title">Détails Contrôle injection</div>
+      <div class="grid grid-2">
+        <div>
+          <label for="nbInjecteurs">Nombre d’injecteurs</label>
+          <input id="nbInjecteurs" name="nbInjecteurs" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex. 4" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Commentaires</div>
+    <div>
+      <label for="commentaires" id="labelCommentaires">Commentaires (optionnel)</label>
+      <textarea id="commentaires" name="commentaires" rows="4" placeholder="Vos remarques..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button id="btnSubmit" type="submit" class="primary">Envoyer</button>
+      <button type="reset" class="ghost">Réinitialiser</button>
+      <span id="statusMsg" style="margin-left:auto; font-weight:700;"></span>
+    </div>
   </form>
+</div>
 
-  <script src="/atelier/config.js"></script>
+<div class="pdfMask" id="pdfMask" aria-hidden="true">
+  <div class="pdfBox" role="dialog" aria-label="Aperçu">
+    <div class="pdfBar">
+      <div style="font-weight:700">Aperçu d’impression</div>
+      <div class="actions">
+        <button class="ghost" id="pdfReprint" type="button">Imprimer</button>
+        <button class="ghost" id="pdfClose" type="button">Fermer</button>
+      </div>
+    </div>
+    <iframe id="pdfFrame" name="pdfFrame" title="Aperçu"></iframe>
+  </div>
+</div>
 
-  <script>
+<form id="printForm" method="POST" target="pdfFrame" style="display:none">
+  <input type="hidden" name="payload" />
+</form>
+
+<script src="/atelier/config.js"></script>
+
+<script>
   const APPSCRIPT_URL = (window.__ATELIER_CFG && window.__ATELIER_CFG.GS_URL) || "";
 
   let LIGNES = [], REGLES = [];
   const el = id => document.getElementById(id);
-const allCulasseChosen = () =>
-  el('segment').value && el('cylindre').value && el('carburant').value;
 
-  async function loadConfig(){
-    try{
-      if (!APPSCRIPT_URL) {
-        throw new Error("GS_ATELIER_URL non défini côté serveur");
-      }
-      const r = await fetch(APPSCRIPT_URL, { cache:"no-store" });
-      const data = await r.json();
-      LIGNES = (data.lignes||[]).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
-      REGLES = data.regles || [];
-      renderLignes(); refreshReferences();
-    }catch(e){
-      console.error(e);
-      el('culasse-lignes').innerHTML = '<div style="color:#b91c1c;font-weight:700">Erreur de chargement Sheets.</div>';
-    }
-  }
+  const allCulasseChosen = () =>
+    el('segment').value && el('cylindre').value && el('carburant').value;
 
-  function renderLignes(){
-    const host = el('culasse-lignes'); host.innerHTML='';
-    LIGNES.forEach(l=>{
-      const row=document.createElement('div'); row.className='culasse-row'; row.dataset.ligne=l.ligne;
-      const input=document.createElement('input'); input.type='checkbox'; input.name='ligne_'+l.ligne; input.id='input_'+l.ligne;
-      const label=document.createElement('label'); label.htmlFor=input.id; label.textContent=l.libelle||l.ligne;
-      const refs=document.createElement('div'); refs.className='refs'; refs.id='refs_'+l.ligne;
-      input.addEventListener('change', refreshReferences);
-      row.append(input,label,refs); host.appendChild(row);
-    });
-  }
-
-  
+  // --- helpers (annotations conservées) ---
   function normalizeLigneName_(v){
     return String(v||'').trim().toUpperCase()
       .replace(/\s+/g,' ')
@@ -346,7 +296,7 @@ const allCulasseChosen = () =>
       .replace(/^SURFACAGE?$/, 'SURFACAGE');
   }
 
-function matchRegles(service, cyl, soup, carb, seg, ligne){
+  function matchRegles(service, cyl, soup, carb, seg, ligne){
     const cand = REGLES.filter(r =>
       normalizeLigneName_(r.ligne) === normalizeLigneName_(ligne) &&
       String(r.service).toLowerCase() === String(service).toLowerCase()
@@ -396,6 +346,28 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     });
   }
 
+  function buildCulasseLignes(){
+    const ctn = el('culasse-lignes');
+    if(!ctn) return;
+    ctn.innerHTML = '';
+    LIGNES.forEach(l=>{
+      const id = 'input_'+l.ligne;
+      const refId = 'refs_'+l.ligne;
+      const row = document.createElement('div');
+      row.className = 'culasse-row';
+      row.innerHTML = `
+        <label style="margin:0; display:flex; gap:10px; align-items:center;">
+          <input id="${id}" type="checkbox" />
+          <span>${l.libelle || l.ligne}</span>
+        </label>
+        <div class="refs" id="${refId}"></div>
+      `;
+      ctn.appendChild(row);
+      const cb = row.querySelector('input');
+      cb.addEventListener('change', refreshReferences);
+    });
+  }
+
   function toggleCulasseFields(){
     const service = el('service').value;
 
@@ -433,6 +405,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     const label = el('labelCommentaires');
     if (!textarea || !label) return;
 
+    // NOTE: on garde la logique spéciale “Arbre de Transmission” si tu l'utilises ailleurs
     if (service === 'Arbre de Transmission') {
       label.innerHTML = 'LIBELLE DES TRAVAUX DEMANDES <span class="req">*</span>';
       textarea.required = true;
@@ -446,11 +419,24 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     }
   }
 
-  el('service').addEventListener('change', ()=>{
-    toggleCulasseFields();
-    updateCommentFieldForService();
-  });
-  ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
+  async function loadConfig(){
+    // On récupère LIGNES + REGLES via Apps Script (comme avant)
+    try{
+      if(!APPSCRIPT_URL){
+        console.warn('GS_URL manquant dans /atelier/config.js');
+        return;
+      }
+      const url = APPSCRIPT_URL + (APPSCRIPT_URL.includes('?') ? '&' : '?') + 'type=atelier';
+      const r = await fetch(url, { cache: 'no-store' });
+      const js = await r.json();
+      LIGNES = (js && js.lignes) || [];
+      REGLES = (js && js.regles) || [];
+      buildCulasseLignes();
+      toggleCulasseFields();
+    }catch(e){
+      console.error('Erreur chargement config atelier:', e);
+    }
+  }
 
   const $pdfMask = el('pdfMask'), $pdfFrame = el('pdfFrame'), $printForm = el('printForm'),
         $pdfClose = el('pdfClose'), $pdfReprint = el('pdfReprint');
@@ -482,8 +468,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
       title.style.marginBottom = "6px";
 
       const text = doc.createElement("div");
-            text.textContent =
-        "Scannez ce QR Code pour valider la réception de la pièce.";
+      text.textContent = "Scannez ce QR Code pour valider la réception de la pièce.";
       text.style.fontSize = "12px";
       text.style.marginBottom = "6px";
 
@@ -502,7 +487,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
         + encodeURIComponent(LAST_VALIDATION_URL);
 
       line.appendChild(img);
-	  
+
       block.appendChild(title);
       block.appendChild(text);
       block.appendChild(line);
@@ -532,11 +517,14 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
   });
 
   $pdfReprint.addEventListener('click', ()=>{
-    try{
-      $pdfFrame.contentWindow?.focus();
-      $pdfFrame.contentWindow?.print();
-    }catch{}
+    try{ $pdfFrame.contentWindow?.focus(); $pdfFrame.contentWindow?.print(); }catch{}
   });
+
+  el('service').addEventListener('change', ()=>{
+    toggleCulasseFields();
+    updateCommentFieldForService();
+  });
+  ['segment','cylindre','soupapes','carburant'].forEach(id => el(id).addEventListener('change', refreshReferences));
 
   document.getElementById('form-atelier').addEventListener('submit', async (e)=>{
     if(!e.target.reportValidity()){ return; }
@@ -589,6 +577,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
 
     const payload = {
       meta: {
+        // IMPORTANT: titre = service (affiché dans le PDF côté serveur)
         titre: service,
         logoUrl: "https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png",
         dateGeneration: new Date().toISOString()
@@ -602,6 +591,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
         immat: data.immat || '',
         dateDemande: data.dateDemande || '',
         magasin: data.magasin || '',
+        // IMPORTANT: service aussi dans le header
         service: service
       },
       commentaires,
@@ -642,8 +632,7 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     }
 
     const base = location.origin.replace(/\/$/,"");
-    const validationUrl =
-      `${base}/atelier/validation.html?no=${encodeURIComponent(no)}`;
+    const validationUrl = `${base}/atelier/validation.html?no=${encodeURIComponent(no)}`;
     LAST_VALIDATION_URL = validationUrl;
 
     const payloadForPrint = { ...payload, no };
@@ -656,6 +645,6 @@ function matchRegles(service, cyl, soup, carb, seg, ligne){
     updateCommentFieldForService();
     loadConfig();
   });
-  </script>
+</script>
 </body>
 </html>

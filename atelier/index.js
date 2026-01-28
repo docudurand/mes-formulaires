@@ -105,6 +105,8 @@ function siteLabelForService(service = ""){
   if (
     service === "Rectification Culasse" ||
     service === "Rectification Vilebrequin" ||
+    service === "Rectification des Volants Moteur" ||
+    service === "Regarnissages Machoires" ||
     service === "Contrôle injection Diesel"
   ) return "ST EGREVE";
   return "";
@@ -224,6 +226,8 @@ async function gsUpdateStatus(no, status, dateStatusISO, estimation) {
 const DEST_ATELIER = {
   "Rectification Culasse": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Rectification Vilebrequin": process.env.DEST_EMAIL_ATELIER_CULASSE,
+  "Rectification Rectification des Volants Moteur": process.env.DEST_EMAIL_ATELIER_CULASSE,
+  "Rectification Regarnissages Machoires": process.env.DEST_EMAIL_ATELIER_CULASSE,
   "Contrôle injection Diesel": process.env.DEST_EMAIL_ATELIER_DIESEL,
   "Contrôle injection Essence": process.env.DEST_EMAIL_ATELIER_ESSENCE,
   "Arbre de Transmission": process.env.DEST_EMAIL_ATELIER_ARBRE,
