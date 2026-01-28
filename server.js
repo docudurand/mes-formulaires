@@ -1,7 +1,6 @@
 // serveur principal (Express) pour tous les formulaires et APIs
 
 import express from "express";
-import multer from "multer";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
@@ -197,11 +196,6 @@ async function callNavetteGAS(action, params = {}) {
 }
 
 // ---- API LIVRAISON (import/scan/livraison) ----
-const navetteUpload = multer({
-  dest: os.tmpdir(),
-  limits: { fileSize: 12 * 1024 * 1024 }, // 12 Mo
-});
-
 app.post("/api/navette/import", async (req, res) => {
   try {
     const { magasin, bons, tourneeId } = req.body || {};
@@ -421,86 +415,7 @@ app.get("/api/navette/bulk/status", (req, res) => {
   if (!jobId) return res.status(400).json({ success:false, error:"missing_jobId" });
   const st = bulkJobs.get(jobId);
   if (!st) return res.status(404).json({ success:false, error:"unknown_jobId" });
-  
-// 📸 Preuve photo de livraison : upload sur FTP puis association dans Google Sheet
-// Reçoit un multipart/form-data : photo + champs (tourneeId, magasin, livreurId, tournee, codeTournee, bons JSON)
-app.post("/api/navette/proof-photo", navetteUpload.single("photo"), async (req, res) => {
-  let client;
-  try {
-    const f = req.file;
-    if (!f) return res.status(400).json({ success:false, error:"photo_manquante" });
-
-    const tourneeId   = String(req.body?.tourneeId || "").trim();
-    const magasin     = String(req.body?.magasin || "").trim().toUpperCase();
-    const livreurId   = String(req.body?.livreurId || "").trim();
-    const tournee     = String(req.body?.tournee || "").trim();
-    const codeTournee = String(req.body?.codeTournee || "").trim();
-
-    let bons = [];
-    try { bons = JSON.parse(String(req.body?.bons || "[]")); } catch { bons = []; }
-    if (!Array.isArray(bons)) bons = [];
-    bons = bons.map(x => String(x).trim()).filter(Boolean);
-
-    if (!magasin || !livreurId || !bons.length) {
-      try { fs.unlinkSync(f.path); } catch {}
-      return res.status(400).json({ success:false, error:"bad_request", details:"magasin/livreurId/bons requis" });
-    }
-
-    const ext = (path.extname(f.originalname || "") || "").toLowerCase() || ".jpg";
-    const safe = (s) => String(s || "").replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 40);
-
-    const now = new Date();
-    const y = String(now.getFullYear());
-    const m = String(now.getMonth()+1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-
-    const baseDir = String(process.env.NAVETTE_FTP_DIR || "/navette-preuves").trim() || "/navette-preuves";
-    const remoteDir = path.posix.join(baseDir, y, m, d);
-
-    const fileName = `${safe(magasin)}_${safe(livreurId)}_${safe(tourneeId || codeTournee || tournee || "tournee")}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}${ext}`;
-    const remotePath = path.posix.join(remoteDir, fileName);
-
-    client = await ftpClient();
-    await client.ensureDir(remoteDir);
-    await client.uploadFrom(f.path, remotePath);
-
-    // Nettoyage du tmp local
-    try { fs.unlinkSync(f.path); } catch {}
-
-    // URL publique (si configurée) sinon on renvoie le chemin FTP
-    const pubBase = String(process.env.NAVETTE_FTP_PUBLIC_BASE_URL || process.env.FTP_PUBLIC_BASE_URL || "").trim();
-    const photoUrl = pubBase
-      ? (pubBase.replace(/\/+$/,"") + "/" + remotePath.replace(/^\/+/, ""))
-      : remotePath;
-
-    // Association au Google Sheet (Apps Script à compléter côté GAS)
-    try {
-      await callNavetteGAS("setPhotoForBons", {
-        tourneeId,
-        magasin,
-        livreurId,
-        tournee,
-        codeTournee,
-        photoUrl,
-        bons: JSON.stringify(bons),
-      });
-    } catch (e) {
-      // On ne casse pas l'upload si le lien GAS échoue : on renvoie quand même l'URL
-      return res.status(200).json({
-        success: false,
-        photoUrl,
-        warning: "upload_ok_but_sheet_link_failed",
-        error: String(e?.message || e),
-      });
-    }
-
-    return res.json({ success:true, photoUrl, count: bons.length });
-  } catch (e) {
-    console.error("[NAVETTE][proof-photo] error", e);
-    return res.status(500).json({ success:false, error: String(e?.message || e) });
-  } finally {
-    try { client?.close?.(); } catch {}
-  }
+  return res.json({ success:true, jobId, ...st });
 });
 
 
