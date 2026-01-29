@@ -30,6 +30,27 @@ router.get('/vehicles', async (_req, res) => {
   }
 });
 
+
+// Mise à jour d’un véhicule
+router.post('/vehicles/:vehicle_id/update', async (req, res) => {
+  try {
+    const result = await ftpStorage.updateVehicle(req.params.vehicle_id, req.body);
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    res.json({ ok: true, vehicle: result.vehicle });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      error: 'ftp_error',
+      detail: e.message
+    });
+  }
+});
+
+
 // Liste des magasins
 router.get('/stores', async (_req, res) => {
   try {

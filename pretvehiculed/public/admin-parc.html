@@ -383,22 +383,40 @@
     }
     
     async function saveVehicle() {
-      if (!currentVehicle) return;
-      
-      showMessage('edit-vehicle-notice', 'Fonctionnalité en cours de développement - Modification manuelle requise via le fichier JSON', 'info');
-      
-      // TODO: Implémenter l'update dans l'API
-      // const payload = {
-      //   immatriculation: document.getElementById('edit-vehicle-immat').value,
-      //   marque: document.getElementById('edit-vehicle-marque').value,
-      //   modele: document.getElementById('edit-vehicle-modele').value,
-      //   ct: document.getElementById('edit-vehicle-ct').value,
-      //   pollution: document.getElementById('edit-vehicle-pollution').value,
-      //   disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
-      // };
-      // await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}/update`, {...});
+  if (!currentVehicle) return;
+
+  const payload = {
+    immatriculation: document.getElementById('edit-vehicle-immat').value.trim(),
+    marque: document.getElementById('edit-vehicle-marque').value.trim(),
+    modele: document.getElementById('edit-vehicle-modele').value.trim(),
+    ct: document.getElementById('edit-vehicle-ct').value || '',
+    pollution: document.getElementById('edit-vehicle-pollution').value || '',
+    disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/vehicles/${encodeURIComponent(currentVehicle.vehicle_id)}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok) {
+      showMessage('edit-vehicle-notice', `Erreur mise à jour: ${data.error || res.status}`, 'error');
+      return;
     }
-    
+
+    showMessage('vehicle-notice', `Véhicule ${currentVehicle.vehicle_id} mis à jour ✅`, 'success');
+
+    closeEditVehicleModal();
+    await loadVehicles();
+  } catch (e) {
+    showMessage('edit-vehicle-notice', `Erreur réseau: ${e.message}`, 'error');
+  }
+}
+
     document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
       e.preventDefault();
       showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Ajout manuel via le fichier JSON', 'info');
