@@ -336,9 +336,6 @@
         const data = response.stores || response;
         $store.innerHTML='<option value="">— Sélectionnez d\'abord un magasin —</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
       }catch(e){ setNotice('Impossible de charger les magasins','error'); console.error(e); }
-    }/stores`);
-        $store.innerHTML='<option value="">-- Sélectionnez un magasin --</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-      }catch(e){ setNotice('Impossible de charger les magasins','error'); }
     }
     async function loadVehicles(){
       try{ 
@@ -347,8 +344,6 @@
         renderVehicleOptions(null);
       }
       catch(e){ setNotice('Impossible de charger les véhicules','error'); console.error(e); }
-    }/vehicles`); renderVehicleOptions(null); }
-      catch(e){ setNotice('Impossible de charger les véhicules','error'); }
     }
     function renderVehicleOptions(storeCode){
       vehiclesIndex = {};
