@@ -337,7 +337,7 @@
         $store.innerHTML='<option value="">— Sélectionnez d\'abord un magasin —</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
       }catch(e){ setNotice('Impossible de charger les magasins','error'); console.error(e); }
     }/stores`);
-        $store.innerHTML='<option value="">-- Sélectionnez un magasin --</option>'+data.map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`).join('');
+        $store.innerHTML='<option value="">-- Sélectionnez un magasin --</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
       }catch(e){ setNotice('Impossible de charger les magasins','error'); }
     }
     async function loadVehicles(){
@@ -353,11 +353,11 @@
     function renderVehicleOptions(storeCode){
       vehiclesIndex = {};
       if(!storeCode){ $vehicle.innerHTML='<option value="">-- Choisissez un magasin d’abord --</option>'; $vehInfo.textContent=''; return; }
-      const list = vehiclesAll.filter(v => (v.magasin_home||'') === storeCode);
+      const list = vehiclesAll; // Afficher tous les véhicules
       if(!list.length){ $vehicle.innerHTML='<option value="">(Aucun véhicule rattaché)</option>'; return; }
       $vehicle.innerHTML = ['<option value="">-- Sélectionnez un véhicule --</option>'].concat(
         list.map(v=>{
-          vehiclesIndex[v.id]=v;
+          vehiclesIndex[v.vehicle_id]=v;
           const label=`${v.immatriculation} — ${v.marque||''} ${v.modele||''}`.trim();
           const absent=String(v.statut||'').toLowerCase()==='absent';
           return `<option value="${v.vehicle_id}" ${absent?'disabled':''}>${label}${absent?' (Absent)':''}</option>`;
