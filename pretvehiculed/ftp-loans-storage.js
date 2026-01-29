@@ -2,7 +2,7 @@
 // Version corrigée compatible basic-ftp
 
 import ftp from 'basic-ftp';
-import { Readable, Writable } from 'stream';
+import { Writable } from 'stream';
 import crypto from 'crypto';
 
 // Configuration FTP depuis les variables d'environnement
@@ -98,12 +98,10 @@ async function writeLoansData(data) {
     
     // Convertir en JSON avec indentation pour lisibilité
     const jsonContent = JSON.stringify(data, null, 2);
+    const buffer = Buffer.from(jsonContent, 'utf-8');
     
-    // Créer un stream readable depuis le contenu JSON
-    const readStream = Readable.from([jsonContent]);
-    
-    // Upload sur le FTP
-    await client.uploadFrom(readStream, LOANS_FILE_PATH);
+    // Upload sur le FTP en utilisant uploadFrom avec un buffer
+    await client.uploadFrom(Buffer.from(jsonContent), LOANS_FILE_PATH);
     
     return true;
   } catch (error) {
@@ -192,7 +190,7 @@ export async function createLoan(loanData) {
     const data = await readLoansData();
     
     // Générer un ID unique
-    const loan_id = `${crypto.randomUUID()}`;
+    const loan_id = `LOAN_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     
     // Créer l'objet prêt
     const newLoan = {
@@ -320,6 +318,53 @@ export async function closeLoan(loanId, closeData) {
 }
 
 /**
+ * Initialise depuis Excel
+ */
+export async function initializeFromExcel(excelData) {
+  try {
+    const data = await readLoansData();
+    
+    const vehiclesMap = new Map();
+    const storesSet = new Set();
+    
+    if (excelData && Array.isArray(excelData)) {
+      excelData.forEach(row => {
+        if (row.vehicle_id && row.immatriculation) {
+          vehiclesMap.set(row.vehicle_id, {
+            vehicle_id: row.vehicle_id,
+            immatriculation: row.immatriculation,
+            marque: row.marque || '',
+            modele: row.modele || '',
+            disponible: true
+          });
+        }
+        
+        if (row.magasin) {
+          storesSet.add(row.magasin);
+        }
+      });
+    }
+    
+    data.vehicles = Array.from(vehiclesMap.values());
+    data.stores = Array.from(storesSet).map(name => ({ name }));
+    
+    await writeLoansData(data);
+    
+    return {
+      ok: true,
+      vehiclesCount: data.vehicles.length,
+      storesCount: data.stores.length
+    };
+  } catch (error) {
+    console.error('[initializeFromExcel] Erreur:', error.message);
+    return {
+      ok: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Vérifie la configuration FTP
  */
 export function checkFtpConfig() {
@@ -339,4 +384,4 @@ export function checkFtpConfig() {
 }
 
 // Export pour la migration
-export { writeLoansData, readLoansData };
+export { writeLoansData };
