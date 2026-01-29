@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!--admin pret vehicule - tableau de bord-->
+<!--admin parc pret vehicule - version avec CT et Pollution-->
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin – Gestion des prêts véhicules</title>
+  <title>Admin – Parc & prêts véhicules</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{ --primary:#004080; --ink:#073763; --line:#e5e7eb; --scale:1.2; --bw:calc(1px*var(--scale)); }
@@ -31,18 +31,6 @@
     .tab-content.active{display:block;animation:fadeIn 0.3s}
     @keyframes fadeIn{from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
     
-    .stats{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-      gap:calc(16px*var(--scale));margin-bottom:calc(24px*var(--scale))
-    }
-    .stat-card{
-      background:linear-gradient(135deg,#004080 0%,#0059b3 100%);color:#fff;
-      padding:calc(20px*var(--scale));border-radius:calc(12px*var(--scale));
-      box-shadow:0 calc(4px*var(--scale)) calc(12px*var(--scale)) rgba(0,64,128,0.2)
-    }
-    .stat-value{font-size:2.4rem;font-weight:700;margin-bottom:calc(6px*var(--scale))}
-    .stat-label{font-size:.9rem;opacity:.9}
-    
     .card{
       background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));
       padding:calc(20px*var(--scale));margin-bottom:calc(16px*var(--scale));
@@ -52,7 +40,7 @@
     h2{font-size:1.3rem;color:var(--primary);margin:calc(20px*var(--scale)) 0 calc(12px*var(--scale));font-weight:700}
     
     .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:calc(12px*var(--scale));margin-bottom:calc(16px*var(--scale))}
-    .form-group{display:flex;flex-direction:column}
+    .form-group{display:flex;flex-direction:column;margin-bottom:calc(12px*var(--scale))}
     label{font-weight:600;margin-bottom:calc(6px*var(--scale));color:var(--ink);font-size:.95rem}
     input,select,textarea{
       padding:calc(10px*var(--scale)) calc(12px*var(--scale));
@@ -63,7 +51,6 @@
       outline:none;border-color:var(--primary);
       box-shadow:0 0 0 calc(2px*var(--scale)) rgba(0,64,128,0.1)
     }
-    textarea{min-height:calc(100px*var(--scale));resize:vertical}
     
     button{
       border:0;border-radius:calc(10px*var(--scale));
@@ -101,7 +88,7 @@
     }
     .pill.ok{background:#f2faf4;color:#2e7d32;border-color:#b7e3c3}
     .pill.warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
-    .pill.info{background:#e3f2fd;color:#0d47a1;border-color:#90caf9}
+    .pill.danger{background:#ffebee;color:#c62828;border-color:#ef9a9a}
     
     .actions{display:flex;gap:calc(6px*var(--scale));flex-wrap:wrap}
     
@@ -124,7 +111,8 @@
     .modal{
       background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(600px*var(--scale));
       width:100%;padding:calc(20px*var(--scale));border:var(--bw) solid var(--line);
-      box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003
+      box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003;
+      max-height:90vh;overflow-y:auto
     }
     .modal h3{margin:0 0 calc(12px*var(--scale));color:var(--primary)}
     .modal-btns{display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(16px*var(--scale))}
@@ -136,52 +124,12 @@
   <div class="wrap">
     
     <div class="tabs">
-      <button class="tab active" onclick="showTab('dashboard')">📊 Tableau de bord</button>
-      <button class="tab" onclick="showTab('vehicles')">🚗 Véhicules</button>
-      <button class="tab" onclick="showTab('stores')">🏪 Magasins</button>
+      <button class="tab active" onclick="showTab('vehicles')">🚗 Véhicules</button>
       <button class="tab" onclick="showTab('loans')">📋 Tous les prêts</button>
     </div>
     
-    <!-- TABLEAU DE BORD -->
-    <div id="dashboard" class="tab-content active">
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-value" id="stat-vehicles">-</div>
-          <div class="stat-label">Véhicules</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-stores">-</div>
-          <div class="stat-label">Magasins</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-loans-active">-</div>
-          <div class="stat-label">Prêts en cours</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-loans-total">-</div>
-          <div class="stat-label">Total prêts</div>
-        </div>
-      </div>
-      
-      <div class="card">
-        <h2>Prêts récents</h2>
-        <table id="recent-loans">
-          <thead>
-            <tr>
-              <th>Immatriculation</th>
-              <th>Chauffeur</th>
-              <th>Magasin</th>
-              <th>Départ</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    
     <!-- VÉHICULES -->
-    <div id="vehicles" class="tab-content">
+    <div id="vehicles" class="tab-content active">
       <div class="card">
         <div class="notice" id="vehicle-notice"></div>
         
@@ -204,6 +152,14 @@
               <label for="vehicle-modele">Modèle</label>
               <input type="text" id="vehicle-modele" placeholder="Kangoo">
             </div>
+            <div class="form-group">
+              <label for="vehicle-ct">Contrôle technique</label>
+              <input type="date" id="vehicle-ct">
+            </div>
+            <div class="form-group">
+              <label for="vehicle-pollution">Contrôle pollution</label>
+              <input type="date" id="vehicle-pollution">
+            </div>
           </div>
           <button type="submit" class="btn">➕ Ajouter le véhicule</button>
         </form>
@@ -216,34 +172,9 @@
               <th>Immatriculation</th>
               <th>Marque</th>
               <th>Modèle</th>
+              <th>CT</th>
+              <th>Pollution</th>
               <th>Disponible</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    
-    <!-- MAGASINS -->
-    <div id="stores" class="tab-content">
-      <div class="card">
-        <div class="notice" id="store-notice"></div>
-        
-        <h2>Ajouter un magasin</h2>
-        <form id="add-store-form">
-          <div class="form-group">
-            <label for="store-name">Nom du magasin *</label>
-            <input type="text" id="store-name" required placeholder="Magasin Lyon">
-          </div>
-          <button type="submit" class="btn">➕ Ajouter le magasin</button>
-        </form>
-        
-        <h2>Liste des magasins</h2>
-        <table id="stores-table">
-          <thead>
-            <tr>
-              <th>Nom</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -289,6 +220,57 @@
     </div>
   </div>
   
+  <!-- Modal modification véhicule -->
+  <div class="modalMask" id="editVehicleModal">
+    <div class="modal">
+      <h3>✏️ Modifier le véhicule</h3>
+      <div class="notice" id="edit-vehicle-notice"></div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-id">ID Véhicule</label>
+        <input type="text" id="edit-vehicle-id" readonly style="background:#f8f9fa">
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-immat">Immatriculation *</label>
+        <input type="text" id="edit-vehicle-immat" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-marque">Marque</label>
+        <input type="text" id="edit-vehicle-marque">
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-modele">Modèle</label>
+        <input type="text" id="edit-vehicle-modele">
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-ct">Contrôle technique</label>
+        <input type="date" id="edit-vehicle-ct">
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-pollution">Contrôle pollution</label>
+        <input type="date" id="edit-vehicle-pollution">
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-vehicle-disponible">Disponible</label>
+        <select id="edit-vehicle-disponible">
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+      
+      <div class="modal-btns">
+        <button class="btn-ghost" onclick="closeEditVehicleModal()">Annuler</button>
+        <button class="btn" onclick="saveVehicle()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  
   <!-- Modal confirmation suppression -->
   <div class="modalMask" id="confirmModal">
     <div class="modal">
@@ -303,6 +285,7 @@
   
   <script>
     const API_BASE = '/pret/api';
+    let currentVehicle = null;
     
     // Navigation des onglets
     function showTab(tabName) {
@@ -312,9 +295,7 @@
       event.target.classList.add('active');
       document.getElementById(tabName).classList.add('active');
       
-      if (tabName === 'dashboard') loadDashboard();
       if (tabName === 'vehicles') loadVehicles();
-      if (tabName === 'stores') loadStores();
       if (tabName === 'loans') loadLoans();
     }
     
@@ -327,40 +308,23 @@
       setTimeout(() => el.classList.remove('show'), 5000);
     }
     
-    // TABLEAU DE BORD
-    async function loadDashboard() {
-      try {
-        const [vehicles, stores, loans] = await Promise.all([
-          fetch(`${API_BASE}/vehicles`).then(r => r.json()),
-          fetch(`${API_BASE}/stores`).then(r => r.json()),
-          fetch(`${API_BASE}/loans/search`).then(r => r.json())
-        ]);
-        
-        document.getElementById('stat-vehicles').textContent = vehicles.vehicles?.length || 0;
-        document.getElementById('stat-stores').textContent = stores.stores?.length || 0;
-        document.getElementById('stat-loans-active').textContent = 
-          loans.filter(l => l.status === 'en cours').length;
-        document.getElementById('stat-loans-total').textContent = loans.length;
-        
-        const tbody = document.querySelector('#recent-loans tbody');
-        const recent = loans.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 10);
-        
-        if (recent.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucun prêt enregistré</td></tr>';
-        } else {
-          tbody.innerHTML = recent.map(loan => `
-            <tr>
-              <td><strong>${loan.immatriculation || '-'}</strong></td>
-              <td>${loan.chauffeur_nom || '-'}</td>
-              <td>${loan.magasin_pret || '-'}</td>
-              <td>${loan.date_depart || '-'} ${loan.heure_depart || ''}</td>
-              <td><span class="pill ${loan.status === 'en cours' ? 'warn' : 'ok'}">${loan.status}</span></td>
-            </tr>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('Erreur dashboard:', error);
-      }
+    // Formater une date pour affichage
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return '—';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    
+    // Vérifier si une date est expirée
+    function isExpired(dateStr) {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d)) return false;
+      return d < new Date();
     }
     
     // VÉHICULES
@@ -371,64 +335,73 @@
         
         const tbody = document.querySelector('#vehicles-table tbody');
         if (!data.vehicles || data.vehicles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="empty">Aucun véhicule</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun véhicule</td></tr>';
         } else {
-          tbody.innerHTML = data.vehicles.map(v => `
+          tbody.innerHTML = data.vehicles.map(v => {
+            const ctExpired = isExpired(v.ct);
+            const pollutionExpired = isExpired(v.pollution);
+            
+            return `
             <tr>
               <td><strong>${v.vehicle_id}</strong></td>
               <td><strong>${v.immatriculation}</strong></td>
               <td>${v.marque || '-'}</td>
               <td>${v.modele || '-'}</td>
+              <td><span class="pill ${ctExpired ? 'danger' : 'ok'}">${formatDate(v.ct)}</span></td>
+              <td><span class="pill ${pollutionExpired ? 'danger' : 'ok'}">${formatDate(v.pollution)}</span></td>
               <td><span class="pill ${v.disponible ? 'ok' : 'warn'}">${v.disponible ? 'Oui' : 'Non'}</span></td>
               <td>
                 <div class="actions">
-                  <button class="btn-light btn-mini">✏️ Modifier</button>
+                  <button class="btn-light btn-mini" onclick='editVehicle(${JSON.stringify(v)})'>✏️ Modifier</button>
                   <button class="btn-danger btn-mini" onclick="deleteVehicle('${v.vehicle_id}')">🗑️</button>
                 </div>
               </td>
             </tr>
-          `).join('');
+          `}).join('');
         }
       } catch (error) {
         console.error('Erreur véhicules:', error);
       }
     }
     
-    document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Utilisez la migration Excel', 'info');
-    });
-    
-    // MAGASINS
-    async function loadStores() {
-      try {
-        const res = await fetch(`${API_BASE}/stores`);
-        const data = await res.json();
-        
-        const tbody = document.querySelector('#stores-table tbody');
-        if (!data.stores || data.stores.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="2" class="empty">Aucun magasin</td></tr>';
-        } else {
-          tbody.innerHTML = data.stores.map(s => `
-            <tr>
-              <td><strong>${s.name}</strong></td>
-              <td>
-                <div class="actions">
-                  <button class="btn-light btn-mini">✏️ Modifier</button>
-                  <button class="btn-danger btn-mini" onclick="deleteStore('${s.name}')">🗑️</button>
-                </div>
-              </td>
-            </tr>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('Erreur magasins:', error);
-      }
+    function editVehicle(vehicle) {
+      currentVehicle = vehicle;
+      document.getElementById('edit-vehicle-id').value = vehicle.vehicle_id;
+      document.getElementById('edit-vehicle-immat').value = vehicle.immatriculation;
+      document.getElementById('edit-vehicle-marque').value = vehicle.marque || '';
+      document.getElementById('edit-vehicle-modele').value = vehicle.modele || '';
+      document.getElementById('edit-vehicle-ct').value = vehicle.ct || '';
+      document.getElementById('edit-vehicle-pollution').value = vehicle.pollution || '';
+      document.getElementById('edit-vehicle-disponible').value = vehicle.disponible ? 'true' : 'false';
+      document.getElementById('editVehicleModal').style.display = 'flex';
     }
     
-    document.getElementById('add-store-form').addEventListener('submit', (e) => {
+    function closeEditVehicleModal() {
+      document.getElementById('editVehicleModal').style.display = 'none';
+      document.getElementById('edit-vehicle-notice').classList.remove('show');
+      currentVehicle = null;
+    }
+    
+    async function saveVehicle() {
+      if (!currentVehicle) return;
+      
+      showMessage('edit-vehicle-notice', 'Fonctionnalité en cours de développement - Modification manuelle requise via le fichier JSON', 'info');
+      
+      // TODO: Implémenter l'update dans l'API
+      // const payload = {
+      //   immatriculation: document.getElementById('edit-vehicle-immat').value,
+      //   marque: document.getElementById('edit-vehicle-marque').value,
+      //   modele: document.getElementById('edit-vehicle-modele').value,
+      //   ct: document.getElementById('edit-vehicle-ct').value,
+      //   pollution: document.getElementById('edit-vehicle-pollution').value,
+      //   disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
+      // };
+      // await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}/update`, {...});
+    }
+    
+    document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      showMessage('store-notice', 'Fonctionnalité en cours de développement - Utilisez la migration Excel', 'info');
+      showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Ajout manuel via le fichier JSON', 'info');
     });
     
     // PRÊTS
@@ -464,7 +437,7 @@
               <td>
                 <div class="actions">
                   <button class="btn-light btn-mini" onclick="window.location.href='admin-pret-modif.html?loan_id=${loan.loan_id}'">✏️ Modifier</button>
-                  ${loan.status === 'en cours' ? `<button class="btn btn-mini" onclick="closeLoan('${loan.loan_id}')">✓ Clôturer</button>` : ''}
+                  ${loan.status === 'en cours' ? `<button class="btn btn-mini" onclick="window.open('close.html?loan_id=${loan.loan_id}', '_blank')">✓ Clôturer</button>` : ''}
                 </div>
               </td>
             </tr>
@@ -475,36 +448,22 @@
       }
     }
     
-    // Modal
+    // Modal confirmation
     function closeModal() {
       document.getElementById('confirmModal').style.display = 'none';
     }
     
     function deleteVehicle(id) {
-      document.getElementById('confirmText').textContent = `Supprimer le véhicule ${id} ?`;
+      document.getElementById('confirmText').textContent = `Supprimer le véhicule ${id} ? Cette action est irréversible.`;
       document.getElementById('confirmModal').style.display = 'flex';
       document.getElementById('confirmBtn').onclick = () => {
-        alert('Suppression non implémentée');
+        showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Suppression manuelle via le fichier JSON', 'info');
         closeModal();
       };
     }
     
-    function deleteStore(name) {
-      document.getElementById('confirmText').textContent = `Supprimer le magasin "${name}" ?`;
-      document.getElementById('confirmModal').style.display = 'flex';
-      document.getElementById('confirmBtn').onclick = () => {
-        alert('Suppression non implémentée');
-        closeModal();
-      };
-    }
-    
-    function closeLoan(loanId) {
-      const url = `close.html?loan_id=${loanId}`;
-      window.open(url, '_blank');
-    }
-    
-    // Charger le dashboard au démarrage
-    loadDashboard();
+    // Charger les véhicules au démarrage
+    loadVehicles();
   </script>
 </body>
 </html>

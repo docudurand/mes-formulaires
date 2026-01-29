@@ -332,12 +332,22 @@
 
     async function loadStores(){
       try{
-        const data=await fetchJSON(`${BASE_URL}/stores`);
+        const response=await fetchJSON(`${BASE_URL}/stores`);
+        const data = response.stores || response;
+        $store.innerHTML='<option value="">— Sélectionnez d\'abord un magasin —</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+      }catch(e){ setNotice('Impossible de charger les magasins','error'); console.error(e); }
+    }/stores`);
         $store.innerHTML='<option value="">-- Sélectionnez un magasin --</option>'+data.map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`).join('');
       }catch(e){ setNotice('Impossible de charger les magasins','error'); }
     }
     async function loadVehicles(){
-      try{ vehiclesAll=await fetchJSON(`${BASE_URL}/vehicles`); renderVehicleOptions(null); }
+      try{ 
+        const response=await fetchJSON(`${BASE_URL}/vehicles`);
+        vehiclesAll = response.vehicles || response;
+        renderVehicleOptions(null);
+      }
+      catch(e){ setNotice('Impossible de charger les véhicules','error'); console.error(e); }
+    }/vehicles`); renderVehicleOptions(null); }
       catch(e){ setNotice('Impossible de charger les véhicules','error'); }
     }
     function renderVehicleOptions(storeCode){
@@ -350,7 +360,7 @@
           vehiclesIndex[v.id]=v;
           const label=`${v.immatriculation} — ${v.marque||''} ${v.modele||''}`.trim();
           const absent=String(v.statut||'').toLowerCase()==='absent';
-          return `<option value="${v.id}" ${absent?'disabled':''}>${label}${absent?' (Absent)':''}</option>`;
+          return `<option value="${v.vehicle_id}" ${absent?'disabled':''}>${label}${absent?' (Absent)':''}</option>`;
         })
       ).join('');
       $vehInfo.textContent='';
