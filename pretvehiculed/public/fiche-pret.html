@@ -286,7 +286,7 @@
       });
       setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null;
       atts.forEach(a=>a.url && URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
-      await renderVehicleOptions(null);
+      renderVehicleOptions(null);
       await loadOpenLoansForStore(null);
       $attList.classList.remove('invalid');
     }
@@ -332,43 +332,25 @@
 
     async function loadStores(){
       try{
-        const response=await fetchJSON(`${BASE_URL}/stores`);
-        const data = response.stores || response;
-        $store.innerHTML='<option value="">— Sélectionnez d\'abord un magasin —</option>'+data.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-      }catch(e){ setNotice('Impossible de charger les magasins','error'); console.error(e); }
+        const data=await fetchJSON(`${BASE_URL}/stores`);
+        $store.innerHTML='<option value="">-- Sélectionnez un magasin --</option>'+data.map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`).join('');
+      }catch(e){ setNotice('Impossible de charger les magasins','error'); }
     }
     async function loadVehicles(){
-      try{ 
-        const response=await fetchJSON(`${BASE_URL}/vehicles`);
-        vehiclesAll = response.vehicles || response;
-        await renderVehicleOptions(null);
-      }
-      catch(e){ setNotice('Impossible de charger les véhicules','error'); console.error(e); }
+      try{ vehiclesAll=await fetchJSON(`${BASE_URL}/vehicles`); renderVehicleOptions(null); }
+      catch(e){ setNotice('Impossible de charger les véhicules','error'); }
     }
-    async function renderVehicleOptions(storeCode){
+    function renderVehicleOptions(storeCode){
       vehiclesIndex = {};
       if(!storeCode){ $vehicle.innerHTML='<option value="">-- Choisissez un magasin d’abord --</option>'; $vehInfo.textContent=''; return; }
-      // Charger les prêts en cours
-      let ongoingLoans = [];
-      try {
-        const allLoans = await fetchJSON(`${BASE_URL}/loans/search`);
-        ongoingLoans = allLoans.filter(loan => loan.status && loan.status.toLowerCase() === 'en cours');
-      } catch(e) { console.error('Erreur prêts en cours:', e); }
-      const vehiclesInUse = new Set(ongoingLoans.map(loan => loan.vehicle_id));
-      
-      const list = vehiclesAll.filter(v => (v.magasin_home || '') === storeCode);
+      const list = vehiclesAll.filter(v => (v.magasin_home||'') === storeCode);
       if(!list.length){ $vehicle.innerHTML='<option value="">(Aucun véhicule rattaché)</option>'; return; }
       $vehicle.innerHTML = ['<option value="">-- Sélectionnez un véhicule --</option>'].concat(
         list.map(v=>{
-          vehiclesIndex[v.vehicle_id]=v;
+          vehiclesIndex[v.id]=v;
           const label=`${v.immatriculation} — ${v.marque||''} ${v.modele||''}`.trim();
           const absent=String(v.statut||'').toLowerCase()==='absent';
-          const inUse = vehiclesInUse.has(v.vehicle_id);
-          const disabled = absent || inUse;
-          let suffix = '';
-          if (absent) suffix = ' (Absent)';
-          else if (inUse) suffix = ' (En prêt)';
-          return `<option value="${v.vehicle_id}" ${disabled?'disabled':''}>${label}${suffix}</option>`;
+          return `<option value="${v.id}" ${absent?'disabled':''}>${label}${absent?' (Absent)':''}</option>`;
         })
       ).join('');
       $vehInfo.textContent='';

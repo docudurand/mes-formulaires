@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!--admin parc pret vehicule - version avec CT et Pollution-->
+<!--admin parc pret vehicule-->
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
@@ -12,477 +12,587 @@
 
     .siteBanner{width:100%;height:auto;display:block}
 
-    .wrap{max-width:calc(1400px*var(--scale));margin:calc(24px*var(--scale)) auto;padding:calc(16px*var(--scale))}
-    
-    .tabs{
-      display:flex;gap:calc(8px*var(--scale));margin-bottom:calc(16px*var(--scale));
-      border-bottom:calc(2px*var(--scale)) solid var(--line);padding-bottom:calc(8px*var(--scale))
-    }
-    .tab{
-      background:#fff;border:var(--bw) solid var(--line);color:#073763;
-      border-radius:calc(8px*var(--scale)) calc(8px*var(--scale)) 0 0;
-      padding:calc(10px*var(--scale)) calc(18px*var(--scale));cursor:pointer;font-weight:700;
-      transition:all 0.2s
-    }
-    .tab:hover{background:#f8fbff}
-    .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-    
-    .tab-content{display:none}
-    .tab-content.active{display:block;animation:fadeIn 0.3s}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
-    
-    .card{
-      background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));
-      padding:calc(20px*var(--scale));margin-bottom:calc(16px*var(--scale));
-      box-shadow:0 calc(2px*var(--scale)) calc(8px*var(--scale)) #0001
-    }
-    
-    h2{font-size:1.3rem;color:var(--primary);margin:calc(20px*var(--scale)) 0 calc(12px*var(--scale));font-weight:700}
-    
-    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:calc(12px*var(--scale));margin-bottom:calc(16px*var(--scale))}
-    .form-group{display:flex;flex-direction:column;margin-bottom:calc(12px*var(--scale))}
-    label{font-weight:600;margin-bottom:calc(6px*var(--scale));color:var(--ink);font-size:.95rem}
-    input,select,textarea{
-      padding:calc(10px*var(--scale)) calc(12px*var(--scale));
-      border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale));
-      font-size:1rem;font-family:inherit
-    }
-    input:focus,select:focus,textarea:focus{
-      outline:none;border-color:var(--primary);
-      box-shadow:0 0 0 calc(2px*var(--scale)) rgba(0,64,128,0.1)
-    }
-    
-    button{
-      border:0;border-radius:calc(10px*var(--scale));
-      padding:calc(12px*var(--scale)) calc(18px*var(--scale));
-      font-weight:700;cursor:pointer;font-size:1rem;transition:all 0.2s
-    }
-    .btn{background:var(--primary);color:#fff}
-    .btn:hover{background:#003366;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,64,128,0.3)}
-    .btn-mini{padding:calc(6px*var(--scale)) calc(12px*var(--scale));font-size:.9rem}
+    .wrap{max-width:calc(1200px*var(--scale));margin:calc(24px*var(--scale)) auto;padding:calc(16px*var(--scale))}
+    .tools{display:flex;flex-wrap:wrap;gap:calc(10px*var(--scale));align-items:end;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));padding:calc(12px*var(--scale));background:#fff}
+    label{font-weight:600;margin-bottom:calc(4px*var(--scale));display:block}
+    input,select,textarea{padding:calc(10px*var(--scale));border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))}
+    button{border:0;border-radius:calc(10px*var(--scale));padding:calc(10px*var(--scale)) calc(14px*var(--scale));font-weight:700;cursor:pointer;background:var(--primary);color:#fff}
+    .btn-mini{padding:calc(6px*var(--scale)) calc(10px*var(--scale));font-weight:600}
     .btn-light{background:#eef5ff;color:#004080;border:var(--bw) solid #d6e6ff}
-    .btn-light:hover{background:#d6e6ff}
     .btn-ghost{background:#fff;color:#073763;border:var(--bw) solid var(--line)}
-    .btn-ghost:hover{background:#f8f9fa}
-    .btn-danger{background:#c62828;color:#fff}
-    .btn-danger:hover{background:#a02020}
-    button[disabled]{opacity:.5;cursor:not-allowed;transform:none}
-    
-    table{
-      width:100%;border-collapse:separate;border-spacing:0;
-      background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));overflow:hidden
-    }
-    thead th{
-      background:#f8fbff;text-align:left;padding:calc(12px*var(--scale));
-      border-bottom:var(--bw) solid var(--line);font-weight:700;color:var(--primary)
-    }
-    tbody td{padding:calc(10px*var(--scale));border-bottom:var(--bw) solid #f1f3f5;vertical-align:middle}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:calc(14px*var(--scale));background:#fff;border:var(--bw) solid var(--line);border-radius:calc(14px*var(--scale));overflow:hidden}
+    thead th{background:#f8fbff;text-align:left;padding:calc(10px*var(--scale));border-bottom:var(--bw) solid var(--line)}
+    tbody td{padding:calc(10px*var(--scale));border-bottom:var(--bw) solid #f1f3f5;vertical-align:top}
     tr:last-child td{border-bottom:0}
-    tbody tr:hover{background:#fafbfc}
-    
     .pill{
       display:inline-flex;align-items:center;justify-content:center;
-      padding:calc(4px*var(--scale)) calc(10px*var(--scale));
-      border-radius:999px;border:var(--bw) solid var(--line);
-      font-size:.85rem;font-weight:600;min-width:calc(90px*var(--scale))
+      padding:calc(4px*var(--scale)) calc(8px*var(--scale));
+      border-radius:999px;border:var(--bw) solid var(--line);text-align:center;min-width:calc(90px*var(--scale));
     }
-    .pill.ok{background:#f2faf4;color:#2e7d32;border-color:#b7e3c3}
-    .pill.warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
-    .pill.danger{background:#ffebee;color:#c62828;border-color:#ef9a9a}
-    
-    .actions{display:flex;gap:calc(6px*var(--scale));flex-wrap:wrap}
-    
-    .notice{
-      padding:calc(12px*var(--scale)) calc(16px*var(--scale));
-      border-radius:calc(10px*var(--scale));margin-bottom:calc(16px*var(--scale));
-      font-size:.95rem;display:none
+    .ok{background:#f2faf4;color:#2e7d32;border-color:#b7e3c3}
+    .warn{background:#fff8e1;color:#8a6d00;border-color:#ffe082}
+    .right{text-align:right;white-space:nowrap}
+    .stack{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+    .notice{margin-top:calc(10px*var(--scale))}
+
+    .yearbar{margin:calc(12px*var(--scale)) 0 0;display:flex;flex-direction:column;gap:calc(8px*var(--scale))}
+    .yearTabs{display:flex;gap:calc(8px*var(--scale));flex-wrap:wrap}
+    .yearBtn{
+      background:#fff;color:#073763;border:var(--bw) solid var(--line);border-radius:999px;
+      padding:calc(6px*var(--scale)) calc(12px*var(--scale));font-weight:700;cursor:pointer;
     }
-    .notice.show{display:block}
-    .notice.info{background:#e3f2fd;color:#0d47a1;border:var(--bw) solid #90caf9}
-    .notice.success{background:#e8f5e9;color:#1b5e20;border:var(--bw) solid #81c784}
-    .notice.error{background:#ffebee;color:#c62828;border:var(--bw) solid #ef9a9a}
-    
-    .empty{text-align:center;padding:calc(40px*var(--scale));opacity:.6}
-    
+    .yearBtn.active{background:#004080;color:#fff;border-color:#004080}
+    .months{display:none;gap:calc(6px*var(--scale));flex-wrap:wrap}
+    .months.active{display:flex}
+    .monthBtn{
+      background:#fff;border:var(--bw) solid var(--line);color:#073763;
+      border-radius:999px;padding:calc(6px*var(--scale)) calc(10px*var(--scale));cursor:pointer;font-weight:600
+    }
+    .monthBtn.active{background:#eef5ff;border-color:#bcd7ff}
+    .legend{opacity:.8;font-size:.95em}
+
     .modalMask{
-      position:fixed;inset:0;background:#0008;display:none;
-      align-items:center;justify-content:center;padding:calc(20px*var(--scale));z-index:99999
+      position:fixed; inset:0; background:#0006; display:none;
+      align-items:flex-start; justify-content:center; padding:16px; z-index:99999
     }
     .modal{
-      background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(600px*var(--scale));
-      width:100%;padding:calc(20px*var(--scale));border:var(--bw) solid var(--line);
-      box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003;
-      max-height:90vh;overflow-y:auto
+      background:#fff;border-radius:calc(14px*var(--scale));max-width:calc(560px*var(--scale));
+      width:100%;padding:calc(16px*var(--scale));border:var(--bw) solid var(--line);
+      box-shadow:0 calc(10px*var(--scale)) calc(24px*var(--scale)) #0003
     }
-    .modal h3{margin:0 0 calc(12px*var(--scale));color:var(--primary)}
-    .modal-btns{display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(16px*var(--scale))}
+
+    .row{display:grid;gap:calc(12px*var(--scale))}
+    @media(min-width:680px){ .row.cols-2{grid-template-columns:1fr 1fr} }
   </style>
 </head>
 <body>
   <img class="siteBanner" src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/banniere.png" alt="Bannière Durand Services">
 
   <div class="wrap">
-    
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('vehicles')">🚗 Véhicules</button>
-      <button class="tab" onclick="showTab('loans')">📋 Tous les prêts</button>
-    </div>
-    
-    <!-- VÉHICULES -->
-    <div id="vehicles" class="tab-content active">
-      <div class="card">
-        <div class="notice" id="vehicle-notice"></div>
-        
-        <h2>Ajouter un véhicule</h2>
-        <form id="add-vehicle-form">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="vehicle-id">ID Véhicule *</label>
-              <input type="text" id="vehicle-id" required placeholder="VEH001">
-            </div>
-            <div class="form-group">
-              <label for="vehicle-immat">Immatriculation *</label>
-              <input type="text" id="vehicle-immat" required placeholder="AB-123-CD">
-            </div>
-            <div class="form-group">
-              <label for="vehicle-marque">Marque</label>
-              <input type="text" id="vehicle-marque" placeholder="Renault">
-            </div>
-            <div class="form-group">
-              <label for="vehicle-modele">Modèle</label>
-              <input type="text" id="vehicle-modele" placeholder="Kangoo">
-            </div>
-            <div class="form-group">
-              <label for="vehicle-ct">Contrôle technique</label>
-              <input type="date" id="vehicle-ct">
-            </div>
-            <div class="form-group">
-              <label for="vehicle-pollution">Contrôle pollution</label>
-              <input type="date" id="vehicle-pollution">
-            </div>
-          </div>
-          <button type="submit" class="btn">➕ Ajouter le véhicule</button>
-        </form>
-        
-        <h2>Liste des véhicules</h2>
-        <table id="vehicles-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Immatriculation</th>
-              <th>Marque</th>
-              <th>Modèle</th>
-              <th>CT</th>
-              <th>Pollution</th>
-              <th>Disponible</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    
-    <!-- PRÊTS -->
-    <div id="loans" class="tab-content">
-      <div class="card">
-        <h2>Recherche de prêts</h2>
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="search-immat">Immatriculation</label>
-            <input type="text" id="search-immat" placeholder="AB-123-CD">
-          </div>
-          <div class="form-group">
-            <label for="search-date">Date</label>
-            <input type="date" id="search-date">
-          </div>
-          <div class="form-group" style="display:flex;align-items:flex-end">
-            <button class="btn" onclick="searchLoans()">🔍 Rechercher</button>
-          </div>
-        </div>
-        
-        <table id="loans-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Immatriculation</th>
-              <th>Chauffeur</th>
-              <th>Magasin</th>
-              <th>Départ</th>
-              <th>Retour</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Modal modification véhicule -->
-  <div class="modalMask" id="editVehicleModal">
-    <div class="modal">
-      <h3>✏️ Modifier le véhicule</h3>
-      <div class="notice" id="edit-vehicle-notice"></div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-id">ID Véhicule</label>
-        <input type="text" id="edit-vehicle-id" readonly style="background:#f8f9fa">
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-immat">Immatriculation *</label>
-        <input type="text" id="edit-vehicle-immat" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-marque">Marque</label>
-        <input type="text" id="edit-vehicle-marque">
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-modele">Modèle</label>
-        <input type="text" id="edit-vehicle-modele">
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-ct">Contrôle technique</label>
-        <input type="date" id="edit-vehicle-ct">
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-pollution">Contrôle pollution</label>
-        <input type="date" id="edit-vehicle-pollution">
-      </div>
-      
-      <div class="form-group">
-        <label for="edit-vehicle-disponible">Disponible</label>
-        <select id="edit-vehicle-disponible">
-          <option value="true">Oui</option>
-          <option value="false">Non</option>
+
+    <div class="tools">
+      <div>
+        <label for="qImmat">Immatriculation</label>
+        <select id="qImmat">
+          <option value="">— Toutes —</option>
         </select>
       </div>
-      
-      <div class="modal-btns">
-        <button class="btn-ghost" onclick="closeEditVehicleModal()">Annuler</button>
-        <button class="btn" onclick="saveVehicle()">Enregistrer</button>
+
+      <div>
+        <label for="qStore">Magasin</label>
+        <select id="qStore">
+          <option value="">— Tous —</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="qDate">Date (départ)</label>
+        <input id="qDate" type="text" inputmode="numeric" placeholder="AAAA-MM-JJ ou JJ/MM/AAAA">
+      </div>
+
+      <div>
+        <label for="qStatut">Statut</label>
+        <select id="qStatut">
+          <option value="">— Tous —</option>
+          <option value="en cours">En cours</option>
+          <option value="clôturé">Clôturé</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="yearbar" aria-label="Filtre par année et mois (date de départ)">
+      <div class="yearTabs" role="tablist" aria-label="Années">
+        <button type="button" class="yearBtn" data-year="2025" role="tab" aria-controls="months-2025" aria-selected="false">2025</button>
+        <button type="button" class="yearBtn" data-year="2026" role="tab" aria-controls="months-2026" aria-selected="false">2026</button>
+      </div>
+      <div id="months-2025" class="months" role="tabpanel" aria-label="Mois 2025"></div>
+      <div id="months-2026" class="months" role="tabpanel" aria-label="Mois 2026"></div>
+      <div class="legend"></div>
+    </div>
+
+    <div class="notice" id="notice"></div>
+
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>#</th><th>Immat.</th><th>Magasin prêt</th><th>Chauffeur</th>
+          <th>Transfert assurance</th><th>Réceptionnaire</th>
+          <th>Départ</th><th>Retour</th><th>Statut</th><th class="right">Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="modalMask" id="mask">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <h3 id="mTitle" style="margin:0 0 calc(8px*var(--scale))">Clôturer le prêt</h3>
+      <p id="mInfo" style="opacity:.85"></p>
+      <div class="row cols-2">
+        <div><label for="mDateRet">Date retour</label><input id="mDateRet" type="date"></div>
+        <div><label for="mHourRet">Heure retour</label><input id="mHourRet" type="time"></div>
+      </div>
+      <div style="margin-top:calc(10px*var(--scale))">
+        <label for="mRecep">Réceptionnaire (retour)</label>
+        <input id="mRecep" type="text" placeholder="Nom réceptionnaire">
+      </div>
+      <div class="notice" id="mNotice"></div>
+      <div style="display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(14px*var(--scale))">
+        <button class="btn-ghost btn-mini" id="mCancel" type="button">Annuler</button>
+        <button class="btn btn-mini" id="mOk" type="button">Valider la clôture</button>
       </div>
     </div>
   </div>
-  
-  <!-- Modal confirmation suppression -->
-  <div class="modalMask" id="confirmModal">
-    <div class="modal">
-      <h3>Confirmer la suppression</h3>
-      <p id="confirmText"></p>
-      <div class="modal-btns">
-        <button class="btn-ghost" onclick="closeModal()">Annuler</button>
-        <button class="btn-danger" id="confirmBtn">Supprimer</button>
+
+  <div class="modalMask" id="maskEdit">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="eTitle">
+      <h3 id="eTitle" style="margin:0 0 calc(8px*var(--scale))">Modifier le prêt</h3>
+      <p id="eInfo" style="opacity:.85"></p>
+
+      <div class="row cols-2">
+        <div>
+          <label for="eMagasin">Magasin prêt</label>
+          <select id="eMagasin"></select>
+        </div>
+        <div>
+          <label for="eChauffeur">Chauffeur</label>
+          <input id="eChauffeur" type="text" placeholder="Nom du chauffeur">
+        </div>
+      </div>
+
+      <div class="row cols-2">
+        <div>
+          <label for="eDateDep">Date départ</label>
+          <input id="eDateDep" type="date">
+        </div>
+        <div>
+          <label for="eHourDep">Heure départ</label>
+          <input id="eHourDep" type="time">
+        </div>
+      </div>
+
+      <div class="row cols-2">
+        <div>
+          <label for="eDateRet">Date retour</label>
+          <input id="eDateRet" type="date">
+        </div>
+        <div>
+          <label for="eHourRet">Heure retour</label>
+          <input id="eHourRet" type="time">
+        </div>
+      </div>
+
+      <div class="row cols-2">
+        <div>
+          <label for="eRecepDep">Réceptionnaire (départ)</label>
+          <input id="eRecepDep" type="text" placeholder="Nom réceptionnaire">
+        </div>
+        <div>
+          <label for="eRecepRet">Réceptionnaire (retour)</label>
+          <input id="eRecepRet" type="text" placeholder="Nom réceptionnaire">
+        </div>
+      </div>
+
+      <div>
+        <label for="eTransAss">Transfert assurance</label>
+        <select id="eTransAss">
+          <option value="">— Sélectionnez —</option>
+          <option value="Oui">Oui</option>
+          <option value="Non">Non</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="eObs">Observations</label>
+        <textarea id="eObs" rows="4" style="width:100%;padding:10px 12px;border:var(--bw) solid var(--line);border-radius:calc(10px*var(--scale))"></textarea>
+      </div>
+
+      <div class="notice" id="eNotice"></div>
+      <div style="display:flex;gap:calc(10px*var(--scale));justify-content:flex-end;margin-top:calc(14px*var(--scale))">
+        <button class="btn-ghost btn-mini" id="eCancel" type="button">Annuler</button>
+        <button class="btn btn-mini" id="eSave" type="button">Enregistrer les modifications</button>
       </div>
     </div>
   </div>
-  
+
   <script>
-    const API_BASE = '/pret/api';
-    let currentVehicle = null;
-    
-    // Navigation des onglets
-    function showTab(tabName) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      
-      event.target.classList.add('active');
-      document.getElementById(tabName).classList.add('active');
-      
-      if (tabName === 'vehicles') loadVehicles();
-      if (tabName === 'loans') loadLoans();
-    }
-    
-    // Messages
-    function showMessage(elementId, message, type = 'info') {
-      const el = document.getElementById(elementId);
-      if (!el) return;
-      el.className = `notice show ${type}`;
-      el.textContent = message;
-      setTimeout(() => el.classList.remove('show'), 5000);
-    }
-    
-    // Formater une date pour affichage
-    function formatDate(dateStr) {
-      if (!dateStr) return '—';
-      const d = new Date(dateStr);
-      if (isNaN(d)) return '—';
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-    
-    // Vérifier si une date est expirée
-    function isExpired(dateStr) {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      if (isNaN(d)) return false;
-      return d < new Date();
-    }
-    
-    // VÉHICULES
-    async function loadVehicles() {
-      try {
-        const res = await fetch(`${API_BASE}/vehicles`);
-        const data = await res.json();
-        
-        const tbody = document.querySelector('#vehicles-table tbody');
-        if (!data.vehicles || data.vehicles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun véhicule</td></tr>';
-        } else {
-          tbody.innerHTML = data.vehicles.map(v => {
-            const ctExpired = isExpired(v.ct);
-            const pollutionExpired = isExpired(v.pollution);
-            
-            return `
-            <tr>
-              <td><strong>${v.vehicle_id}</strong></td>
-              <td><strong>${v.immatriculation}</strong></td>
-              <td>${v.marque || '-'}</td>
-              <td>${v.modele || '-'}</td>
-              <td><span class="pill ${ctExpired ? 'danger' : 'ok'}">${formatDate(v.ct)}</span></td>
-              <td><span class="pill ${pollutionExpired ? 'danger' : 'ok'}">${formatDate(v.pollution)}</span></td>
-              <td><span class="pill ${v.disponible ? 'ok' : 'warn'}">${v.disponible ? 'Oui' : 'Non'}</span></td>
-              <td>
-                <div class="actions">
-                  <button class="btn-light btn-mini" onclick='editVehicle(${JSON.stringify(v)})'>✏️ Modifier</button>
-                  <button class="btn-danger btn-mini" onclick="deleteVehicle('${v.vehicle_id}')">🗑️</button>
-                </div>
-              </td>
-            </tr>
-          `}).join('');
-        }
-      } catch (error) {
-        console.error('Erreur véhicules:', error);
+    const BASE_URL = '/pret/api';
+
+    const $tbody = document.querySelector('#tbl tbody');
+    const $notice = document.getElementById('notice');
+    const setNotice=(m,t='info')=>{ $notice.textContent=m||''; $notice.style.color=t==='error'?'#c62828':t==='success'?'#2e7d32':'#073763'; };
+
+    async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+
+    const p2=n=>String(n).padStart(2,'0');
+    function parseMaybeDate(v){
+      if(!v&&v!==0) return null;
+      if(v instanceof Date) return isNaN(v)?null:v;
+      if(typeof v==='number'){ const ms=Math.round((v-25569)*86400*1000); const d=new Date(ms); return isNaN(d)?null:d; }
+      if(typeof v==='string'){
+        if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)){ const[h,m]=v.split(':'); const d=new Date(); d.setHours(+h,+m||0,0,0); return d; }
+        const d=new Date(v); if(!isNaN(d)) return d;
+        const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m){ const d2=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(d2)?null:d2; }
       }
+      return null;
     }
-    
-    function editVehicle(vehicle) {
-      currentVehicle = vehicle;
-      document.getElementById('edit-vehicle-id').value = vehicle.vehicle_id;
-      document.getElementById('edit-vehicle-immat').value = vehicle.immatriculation;
-      document.getElementById('edit-vehicle-marque').value = vehicle.marque || '';
-      document.getElementById('edit-vehicle-modele').value = vehicle.modele || '';
-      document.getElementById('edit-vehicle-ct').value = vehicle.ct || '';
-      document.getElementById('edit-vehicle-pollution').value = vehicle.pollution || '';
-      document.getElementById('edit-vehicle-disponible').value = vehicle.disponible ? 'true' : 'false';
-      document.getElementById('editVehicleModal').style.display = 'flex';
+    const fmtDate=v=>{ const d=parseMaybeDate(v); return d?`${p2(d.getDate())}/${p2(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`:'—'; };
+    const fmtTime=v=>{ const d=parseMaybeDate(v); return d?`${p2(d.getHours())}:${p2(d.getMinutes())}`:'—'; };
+    const toDateInput=v=>{ const d=parseMaybeDate(v); return d?`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`:''; };
+    const toTimeInput=v=>{ const d=parseMaybeDate(v); return d?`${p2(d.getHours())}:${p2(d.getMinutes())}`:''; };
+
+    const pill=s=>{
+      const n=normalizeStatus(s);
+      if(n==='en cours') return '<span class="pill warn">En cours</span>';
+      if(n==='clôturé')  return '<span class="pill ok">Clôturé</span>';
+      return `<span class="pill">${s||'—'}</span>`;
+    };
+    const isOpen=s => normalizeStatus(s)==='en cours';
+
+    let __rows = [];
+    let __stores = [];
+
+    let __yearFilter = '';
+    let __monthFilter = '';
+
+    function normalizeQueryDate(q){
+      q = (q||'').trim();
+      if(!q) return '';
+      const s1 = q.toLowerCase().replace(/[.\s]/g,'').replace(/\//g,'-');
+      return s1;
     }
-    
-    function closeEditVehicleModal() {
-      document.getElementById('editVehicleModal').style.display = 'none';
-      document.getElementById('edit-vehicle-notice').classList.remove('show');
-      currentVehicle = null;
+
+    function normalizeStatus(s){
+      const v = String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+      if(v.includes('en cours')) return 'en cours';
+      if(v.includes('cloture') || v.includes('clôture') || v.includes('cloturee') || v.includes('cloturé')) return 'clôturé';
+      if(v.includes('cloturé') || v.includes('clôturé')) return 'clôturé';
+      return (String(s||'')).trim();
     }
-    
-    async function saveVehicle() {
-      if (!currentVehicle) return;
-      
-      const payload = {
-        immatriculation: document.getElementById('edit-vehicle-immat').value,
-        marque: document.getElementById('edit-vehicle-marque').value,
-        modele: document.getElementById('edit-vehicle-modele').value,
-        ct: document.getElementById('edit-vehicle-ct').value,
-        pollution: document.getElementById('edit-vehicle-pollution').value,
-        disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
-      };
-      
-      try {
-        const res = await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        
-        const data = await res.json();
-        
-        if (data.ok) {
-          showMessage('edit-vehicle-notice', 'Véhicule mis à jour avec succès !', 'success');
-          setTimeout(() => {
-            closeEditVehicleModal();
-            loadVehicles();
-          }, 1500);
-        } else {
-          showMessage('edit-vehicle-notice', `Erreur: ${data.error}`, 'error');
-        }
-      } catch (error) {
-        console.error('Erreur mise à jour:', error);
-        showMessage('edit-vehicle-notice', `Erreur: ${error.message}`, 'error');
+
+    function dateFormsForFilter(v){
+      const d = parseMaybeDate(v);
+      if(!d){
+        const raw = String(v||'').toLowerCase();
+        return [raw, raw.replace(/\//g,'-'), raw.replace(/\D/g,'')];
       }
+      const ymd = `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+      const dmy = `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()}`;
+      const dmy2= `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)}`;
+      return [ymd.toLowerCase(), dmy.toLowerCase(), dmy2.toLowerCase(),
+              ymd.replace(/\D/g,''), dmy.replace(/\D/g,''), dmy2.replace(/\D/g,'')];
     }
-    
-    document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Ajout manuel via le fichier JSON', 'info');
+
+    function populateImmatList(rows){
+      const $qImmat = document.getElementById('qImmat');
+      const immats = Array.from(new Set((rows||[]).map(r=>String(r.immatriculation||'').trim()).filter(Boolean))).sort();
+      $qImmat.innerHTML = ['<option value="">— Toutes —</option>'].concat(immats.map(v=>`<option value="${v}">${v}</option>`)).join('');
+    }
+    function populateStoreFilter(){
+      const $qStore = document.getElementById('qStore');
+      $qStore.innerHTML = ['<option value="">— Tous —</option>'].concat(
+        (__stores||[]).map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`)
+      ).join('');
+    }
+
+    function applyFilters(){
+      const immat = (document.getElementById('qImmat').value || '').trim();
+      const store = (document.getElementById('qStore').value || '').trim();
+      const qDate = normalizeQueryDate(document.getElementById('qDate').value);
+      const qStatut = normalizeStatus(document.getElementById('qStatut').value || '');
+
+      const filtered = (__rows||[]).filter(r=>{
+        const okImmat = !immat || String(r.immatriculation||'')===immat;
+        const okStore = !store || String(r.magasin_pret||'')===store;
+
+        const forms = dateFormsForFilter(r.date_depart);
+        const qNum  = qDate.replace(/\D/g,'');
+        const okDateText = !qDate || forms.some(f=> f.includes(qDate) || f.replace(/\D/g,'').includes(qNum));
+
+        const rStatut = normalizeStatus(r.status);
+        const okStatut = !qStatut || rStatut === qStatut;
+
+        const d = parseMaybeDate(r.date_depart);
+        const y = d ? d.getFullYear() : null;
+        const m = d ? (d.getMonth()+1) : null;
+        let okYearMonth = true;
+        if(__yearFilter){
+          okYearMonth = (String(y)===String(__yearFilter)) && (
+            !__monthFilter || __monthFilter==='all' || String(m)===String(__monthFilter)
+          );
+        }
+
+        return okImmat && okStore && okDateText && okStatut && okYearMonth;
+      });
+
+      render(filtered);
+
+      const ymText = __yearFilter
+        ? ` – ${(__monthFilter && __monthFilter !== 'all')
+              ? `${p2(__monthFilter)}/${__yearFilter}`
+              : (__monthFilter === 'all'
+                  ? `Tout ${__yearFilter}`
+                  : `${__yearFilter}`)}`
+        : '';
+
+      setNotice(`${filtered.length} résultat(s)${ymText}`);
+    }
+
+    function render(rows){
+      $tbody.innerHTML = rows.map((r,i)=>{
+        const closeBtn = isOpen(r.status)
+          ? `<button type="button" class="btn-mini btn-light btnClose" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Clôturer</button>`
+          : '';
+        const editBtn = `<button type="button" class="btn-mini btn-light btnEdit" data-loan="${r.loan_id}" data-veh="${r.vehicle_id||''}" data-immat="${r.immatriculation||''}">Modifier</button>`;
+        const actions = `<div class="stack">${closeBtn}${editBtn}</div>`;
+        return `
+          <tr>
+            <td>${i+1}</td>
+            <td><strong>${r.immatriculation||'—'}</strong></td>
+            <td>${r.magasin_pret||'—'}</td>
+            <td>${r.chauffeur_nom||'—'}</td>
+            <td>${(r.transfert_assurance||'—')}</td>
+            <td>${r.receptionnaire_depart||'—'}</td>
+            <td>${fmtDate(r.date_depart)}${fmtTime(r.heure_depart)!=='—'?' • '+fmtTime(r.heure_depart):''}</td>
+            <td>${fmtDate(r.date_retour)}${fmtTime(r.heure_retour)!=='—'?' • '+fmtTime(r.heure_retour):''}</td>
+            <td>${pill(r.status)}</td>
+            <td class="right">${actions}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadStores(){
+      try{ __stores = await fetchJSON(`${BASE_URL}/stores`); }catch(_){ __stores = []; }
+      populateStoreFilter();
+    }
+    async function loadAllLoans(){
+      setNotice('Chargement...');
+      try{
+        const rows=await fetchJSON(`${BASE_URL}/loans/search`);
+        __rows = rows;
+        populateImmatList(rows);
+        applyFilters();
+      }catch(e){ setNotice('Erreur : '+e.message,'error'); }
+    }
+
+    const $mask = document.getElementById('mask');
+    const $mInfo = document.getElementById('mInfo');
+    const $mDateRet = document.getElementById('mDateRet');
+    const $mHourRet = document.getElementById('mHourRet');
+    const $mRecep = document.getElementById('mRecep');
+    const $mNotice = document.getElementById('mNotice');
+    let __ctx = { loanId:'', vehicleId:'', immat:'' };
+
+    function showTop(maskEl){
+      window.scrollTo({top:0, behavior:'smooth'});
+      document.body.style.overflow='hidden';
+      maskEl.style.display='flex';
+    }
+    function hideTop(maskEl){
+      maskEl.style.display='none';
+      document.body.style.overflow='';
+    }
+    const setModalNotice=(t,type='info')=>{ $mNotice.textContent=t||''; $mNotice.style.color=type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; };
+
+    function openCloseModal(ctx){
+      __ctx = ctx;
+      $mInfo.textContent = `Véhicule : ${ctx.immat || '—'}`;
+      const now=new Date();
+      $mDateRet.value = `${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+      $mHourRet.value = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
+      $mRecep.value = '';
+      setModalNotice('');
+      showTop($mask);
+    }
+
+    const $maskEdit = document.getElementById('maskEdit');
+    const $eInfo    = document.getElementById('eInfo');
+    const $eMagasin = document.getElementById('eMagasin');
+    const $eChauff  = document.getElementById('eChauffeur');
+    const $eDateDep = document.getElementById('eDateDep');
+    const $eHourDep = document.getElementById('eHourDep');
+    const $eDateRet = document.getElementById('eDateRet');
+    const $eHourRet = document.getElementById('eHourRet');
+    const $eRecepDep= document.getElementById('eRecepDep');
+    const $eRecepRet= document.getElementById('eRecepRet');
+    const $eTransAss= document.getElementById('eTransAss');
+    const $eObs     = document.getElementById('eObs');
+    const $eNotice  = document.getElementById('eNotice');
+    let __editCtx   = { loanId:'', vehicleId:'', immat:'' };
+
+    function setENotice(msg, type='info'){ $eNotice.textContent = msg || ''; $eNotice.style.color = type==='error'?'#c62828':type==='success'?'#2e7d32':'#073763'; }
+
+    function fillStoreSelect(currentCode){
+      $eMagasin.innerHTML = (__stores.length
+        ? __stores.map(s=>`<option value="${s.code}">${s.nom_affiche}</option>`).join('')
+        : '<option value="">—</option>');
+      if(currentCode) $eMagasin.value = currentCode;
+    }
+
+    function openEditModal(loanId){
+      const row = (__rows||[]).find(r=>String(r.loan_id)===String(loanId));
+      if(!row){ setNotice("Impossible d'ouvrir la modification (prêt introuvable).", 'error'); return; }
+      __editCtx = { loanId, vehicleId: row.vehicle_id || '', immat: row.immatriculation || '' };
+
+      $eInfo.textContent = `Véhicule : ${__editCtx.immat || '—'}`;
+      fillStoreSelect(row.magasin_pret || '');
+      $eChauff.value    = row.chauffeur_nom || '';
+      $eDateDep.value   = toDateInput(row.date_depart) || '';
+      $eHourDep.value   = toTimeInput(row.heure_depart) || '';
+      $eDateRet.value   = toDateInput(row.date_retour) || '';
+      $eHourRet.value   = toTimeInput(row.heure_retour) || '';
+      $eRecepDep.value  = row.receptionnaire_depart || '';
+      $eRecepRet.value  = row.receptionnaire_retour || '';
+      $eTransAss.value  = (row.transfert_assurance === 'Oui' || row.transfert_assurance === 'Non') ? row.transfert_assurance : '';
+      $eObs.value       = row.observations || '';
+      setENotice('');
+      showTop($maskEdit);
+    }
+
+    $tbody.addEventListener('click', (e)=>{
+      const btnC = e.target.closest('.btnClose');
+      if(btnC){ openCloseModal({ loanId: btnC.dataset.loan, vehicleId: btnC.dataset.veh||'', immat: btnC.dataset.immat||'' }); return; }
+      const btnE = e.target.closest('.btnEdit');
+      if(btnE){ openEditModal(String(btnE.dataset.loan)); return; }
     });
-    
-    // PRÊTS
-    async function loadLoans() {
-      await searchLoans();
+
+    document.getElementById('mCancel').addEventListener('click', ()=> hideTop($mask));
+    document.getElementById('eCancel').addEventListener('click', ()=> hideTop($maskEdit));
+
+    document.getElementById('mOk').addEventListener('click', async ()=>{
+      try{
+        setModalNotice('Clôture en cours…');
+        const payload = { vehicle_id: __ctx.vehicleId, date_retour:$mDateRet.value, heure_retour:$mHourRet.value, receptionnaire_retour:$mRecep.value.trim() };
+        const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__ctx.loanId)}/close`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
+        setModalNotice('Prêt clôturé.','success');
+        hideTop($mask);
+        setNotice('Prêt clôturé.','success');
+        await loadAllLoans();
+      }catch(e){ setModalNotice('Échec : '+e.message,'error'); }
+    });
+
+    document.getElementById('eSave').addEventListener('click', async ()=>{
+      try{
+        setENotice('Enregistrement en cours…');
+        const payload = {
+          vehicle_id: __editCtx.vehicleId,
+          magasin_pret: $eMagasin.value || '',
+          chauffeur_nom: $eChauff.value.trim(),
+          date_depart: $eDateDep.value,
+          heure_depart: $eHourDep.value,
+          date_retour: $eDateRet.value,
+          heure_retour: $eHourRet.value,
+          receptionnaire_depart: $eRecepDep.value.trim(),
+          receptionnaire_retour: $eRecepRet.value.trim(),
+          transfert_assurance: $eTransAss.value || '',
+          observations: $eObs.value.trim()
+        };
+        const r = await fetch(`${BASE_URL}/loans/${encodeURIComponent(__editCtx.loanId)}/update`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const j = await r.json(); if(!j.ok) throw new Error(j.error||'Erreur API');
+        setENotice('Modifications enregistrées.','success');
+        hideTop($maskEdit);
+        await loadAllLoans();
+      }catch(e){
+        setENotice('Échec : '+e.message,'error');
+      }
+    });
+
+    document.getElementById('qImmat').addEventListener('change', applyFilters);
+    document.getElementById('qStore').addEventListener('change', applyFilters);
+    document.getElementById('qDate').addEventListener('input', applyFilters);
+    document.getElementById('qStatut').addEventListener('change', applyFilters);
+
+    const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+    function buildMonths(year){
+      const ctn = document.getElementById(`months-${year}`);
+      if(!ctn) return;
+      ctn.innerHTML = '';
+      MONTHS.forEach((label, idx)=>{
+        const m = idx+1;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'monthBtn';
+        btn.dataset.month = String(m);
+        btn.dataset.year  = String(year);
+        btn.textContent = label;
+        ctn.appendChild(btn);
+      });
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.className = 'monthBtn';
+      allBtn.dataset.month = 'all';
+      allBtn.dataset.year  = String(year);
+      allBtn.textContent = 'Tout';
+      ctn.appendChild(allBtn);
     }
-    
-    async function searchLoans() {
-      try {
-        const immat = document.getElementById('search-immat').value;
-        const date = document.getElementById('search-date').value;
-        
-        const params = new URLSearchParams();
-        if (immat) params.set('immat', immat);
-        if (date) params.set('date', date);
-        
-        const res = await fetch(`${API_BASE}/loans/search?${params}`);
-        const loans = await res.json();
-        
-        const tbody = document.querySelector('#loans-table tbody');
-        if (loans.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun prêt trouvé</td></tr>';
-        } else {
-          tbody.innerHTML = loans.map(loan => `
-            <tr>
-              <td>${loan.loan_id.substring(0, 12)}...</td>
-              <td><strong>${loan.immatriculation || '-'}</strong></td>
-              <td>${loan.chauffeur_nom || '-'}</td>
-              <td>${loan.magasin_pret || '-'}</td>
-              <td>${loan.date_depart || '-'}<br><small>${loan.heure_depart || ''}</small></td>
-              <td>${loan.date_retour || '-'}<br><small>${loan.heure_retour || ''}</small></td>
-              <td><span class="pill ${loan.status === 'en cours' ? 'warn' : 'ok'}">${loan.status}</span></td>
-              <td>
-                <div class="actions">
-                  <button class="btn-light btn-mini" onclick="window.location.href='admin-pret-modif.html?loan_id=${loan.loan_id}'">✏️ Modifier</button>
-                  ${loan.status === 'en cours' ? `<button class="btn btn-mini" onclick="window.open('close.html?loan_id=${loan.loan_id}', '_blank')">✓ Clôturer</button>` : ''}
-                </div>
-              </td>
-            </tr>
-          `).join('');
-        }
-      } catch (error) {
-        console.error('Erreur prêts:', error);
+
+    function setYearActive(year){
+      __yearFilter = String(year||'') || '';
+      __monthFilter = '';
+      document.querySelectorAll('.yearBtn').forEach(b=>{
+        const on = String(b.dataset.year)===String(year);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on?'true':'false');
+      });
+      document.querySelectorAll('.months').forEach(div=>{
+        div.classList.toggle('active', div.id===`months-${year}`);
+      });
+      document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=> b.classList.remove('active'));
+      applyFilters();
+    }
+
+    function setMonthActive(year, month){
+      if(String(__yearFilter)!==String(year)) setYearActive(year);
+      __monthFilter = String(month||'');
+
+      document.querySelectorAll(`#months-${year} .monthBtn`).forEach(b=>{
+        b.classList.toggle('active', String(b.dataset.month)===String(month));
+      });
+      applyFilters();
+    }
+
+    document.querySelector('.yearTabs').addEventListener('click', (e)=>{
+      const b = e.target.closest('.yearBtn');
+      if(!b) return;
+      setYearActive(b.dataset.year);
+    });
+
+    document.getElementById('months-2025').addEventListener('click', (e)=>{
+      const b = e.target.closest('.monthBtn'); if(!b) return;
+      setMonthActive('2025', b.dataset.month);
+    });
+    document.getElementById('months-2026').addEventListener('click', (e)=>{
+      const b = e.target.closest('.monthBtn'); if(!b) return;
+      setMonthActive('2026', b.dataset.month);
+    });
+
+    function autoSelectCurrentYearMonth(){
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      if (y === 2025 || y === 2026) {
+        setMonthActive(String(y), String(m));
+      } else {
+        __yearFilter = '';
+        __monthFilter = '';
+        applyFilters();
       }
     }
-    
-    // Modal confirmation
-    function closeModal() {
-      document.getElementById('confirmModal').style.display = 'none';
-    }
-    
-    function deleteVehicle(id) {
-      document.getElementById('confirmText').textContent = `Supprimer le véhicule ${id} ? Cette action est irréversible.`;
-      document.getElementById('confirmModal').style.display = 'flex';
-      document.getElementById('confirmBtn').onclick = () => {
-        showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Suppression manuelle via le fichier JSON', 'info');
-        closeModal();
-      };
-    }
-    
-    // Charger les véhicules au démarrage
-    loadVehicles();
+
+    (async ()=>{
+      buildMonths(2025);
+      buildMonths(2026);
+
+      await loadStores();
+      await loadAllLoans();
+
+      autoSelectCurrentYearMonth();
+    })();
   </script>
 </body>
 </html>

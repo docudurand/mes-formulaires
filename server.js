@@ -26,7 +26,7 @@ import formulairePiece from "./formulaire-piece/index.js";
 import formulairePiecePL from "./formulaire-piecepl/index.js";
 import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
-import loansRouter from "./pretvehiculed/server-loans-ftp.js";
+import loansRouter from "./pretvehiculed/server-loans.js";
 import atelier from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
