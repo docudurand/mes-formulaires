@@ -137,6 +137,41 @@ export async function listVehicles() {
 }
 
 /**
+ * Met à jour un véhicule
+ */
+export async function updateVehicle(vehicle_id, updates) {
+  try {
+    const data = await readLoansData();
+
+    const idx = (data.vehicles || []).findIndex(v => v.vehicle_id === vehicle_id);
+    if (idx === -1) {
+      return { ok: false, error: 'vehicle_not_found' };
+    }
+
+    const current = data.vehicles[idx];
+
+    data.vehicles[idx] = {
+      ...current,
+      immatriculation: (updates.immatriculation ?? current.immatriculation ?? ''),
+      marque: (updates.marque ?? current.marque ?? ''),
+      modele: (updates.modele ?? current.modele ?? ''),
+      magasin_home: (updates.magasin_home ?? current.magasin_home ?? ''),
+      ct: (updates.ct ?? current.ct ?? ''),
+      pollution: (updates.pollution ?? current.pollution ?? ''),
+      disponible: (typeof updates.disponible === 'boolean') ? updates.disponible : current.disponible
+    };
+
+    await writeLoansData(data);
+
+    return { ok: true, vehicle: data.vehicles[idx] };
+  } catch (error) {
+    console.error('[updateVehicle] Erreur:', error.message);
+    return { ok: false, error: error.message };
+  }
+}
+
+
+/**
  * Liste les magasins
  */
 export async function listStores() {
