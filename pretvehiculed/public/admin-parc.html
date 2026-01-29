@@ -404,7 +404,8 @@
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || !data.ok) {
-      showMessage('edit-vehicle-notice', `Erreur mise à jour: ${data.error || res.status}`, 'error');
+      const msg = data?.detail ? `${data.error || res.status} — ${data.detail}` : (data.error || res.status);
+      showMessage('edit-vehicle-notice', `Erreur mise à jour: ${msg}`, 'error');
       return;
     }
 

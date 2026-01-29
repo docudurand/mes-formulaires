@@ -2,7 +2,7 @@
 // Version corrigée compatible basic-ftp
 
 import ftp from 'basic-ftp';
-import { Writable } from 'stream';
+import { Writable, Readable } from 'stream';
 import crypto from 'crypto';
 
 // Configuration FTP depuis les variables d'environnement
@@ -99,9 +99,14 @@ async function writeLoansData(data) {
     // Convertir en JSON avec indentation pour lisibilité
     const jsonContent = JSON.stringify(data, null, 2);
     const buffer = Buffer.from(jsonContent, 'utf-8');
-    
-    // Upload sur le FTP en utilisant uploadFrom avec un buffer
-    await client.uploadFrom(Buffer.from(jsonContent), LOANS_FILE_PATH);
+
+    // S'assurer que le dossier existe sur le FTP
+    const remoteDir = LOANS_FILE_PATH.split('/').slice(0, -1).join('/') || '/';
+    await client.ensureDir(remoteDir);
+
+    // basic-ftp n'accepte pas directement un Buffer : on le convertit en stream
+    const stream = Readable.from([buffer]);
+    await client.uploadFrom(stream, LOANS_FILE_PATH);
     
     return true;
   } catch (error) {
