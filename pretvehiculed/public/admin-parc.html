@@ -204,7 +204,6 @@
         <table id="loans-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Immatriculation</th>
               <th>Chauffeur</th>
               <th>Magasin</th>
@@ -442,11 +441,10 @@
         
         const tbody = document.querySelector('#loans-table tbody');
         if (loans.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun prêt trouvé</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun prêt trouvé</td></tr>';
         } else {
           tbody.innerHTML = loans.map(loan => `
             <tr>
-              <td>${loan.loan_id.substring(0, 12)}...</td>
               <td><strong>${loan.immatriculation || '-'}</strong></td>
               <td>${loan.chauffeur_nom || '-'}</td>
               <td>${loan.magasin_pret || '-'}</td>
