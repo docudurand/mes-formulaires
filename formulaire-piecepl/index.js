@@ -178,7 +178,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         marque: (formData.marque || "").slice(0, 80),
         reference: (formData.reference || "").slice(0, 80),
       },
-      cleanupPaths: files.map((f) => f.path),
+      cleanupPaths: [],
     });
 
     if (formData.email) {
@@ -193,7 +193,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         },
         formType: "creation-reference-pl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },
-        cleanupPaths: [],
+        cleanupPaths: files.map((f) => f.path),
       });
     }
 
