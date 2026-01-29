@@ -437,8 +437,16 @@
         if (date) params.set('date', date);
         
         const res = await fetch(`${API_BASE}/loans/search?${params}`);
-        const loans = await res.json();
-        
+        let loans = await res.json();
+
+        // Tri du plus récent au plus ancien (updated_at -> closed_at -> created_at -> date_depart)
+        const getTs = (loan) => {
+          const v = loan.updated_at || loan.closed_at || loan.created_at || loan.date_depart || '';
+          const t = Date.parse(v);
+          return Number.isFinite(t) ? t : 0;
+        };
+        loans = (Array.isArray(loans) ? loans : []).sort((a, b) => getTs(b) - getTs(a));
+
         const tbody = document.querySelector('#loans-table tbody');
         if (loans.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun prêt trouvé</td></tr>';
