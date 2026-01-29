@@ -286,7 +286,7 @@
       });
       setStatus('Prêt non enregistré'); setNotice(''); $vehInfo.textContent=''; lastSaved=null;
       atts.forEach(a=>a.url && URL.revokeObjectURL(a.url)); atts=[]; renderAtts();
-      renderVehicleOptions(null);
+      await renderVehicleOptions(null);
       await loadOpenLoansForStore(null);
       $attList.classList.remove('invalid');
     }
@@ -341,13 +341,21 @@
       try{ 
         const response=await fetchJSON(`${BASE_URL}/vehicles`);
         vehiclesAll = response.vehicles || response;
-        renderVehicleOptions(null);
+        await renderVehicleOptions(null);
       }
       catch(e){ setNotice('Impossible de charger les véhicules','error'); console.error(e); }
     }
-    function renderVehicleOptions(storeCode){
+    async function renderVehicleOptions(storeCode){
       vehiclesIndex = {};
       if(!storeCode){ $vehicle.innerHTML='<option value="">-- Choisissez un magasin d’abord --</option>'; $vehInfo.textContent=''; return; }
+      // Charger les prêts en cours
+      let ongoingLoans = [];
+      try {
+        const allLoans = await fetchJSON(`${BASE_URL}/loans/search`);
+        ongoingLoans = allLoans.filter(loan => loan.status && loan.status.toLowerCase() === 'en cours');
+      } catch(e) { console.error('Erreur prêts en cours:', e); }
+      const vehiclesInUse = new Set(ongoingLoans.map(loan => loan.vehicle_id));
+      
       const list = vehiclesAll.filter(v => (v.magasin_home || '') === storeCode);
       if(!list.length){ $vehicle.innerHTML='<option value="">(Aucun véhicule rattaché)</option>'; return; }
       $vehicle.innerHTML = ['<option value="">-- Sélectionnez un véhicule --</option>'].concat(
@@ -355,7 +363,12 @@
           vehiclesIndex[v.vehicle_id]=v;
           const label=`${v.immatriculation} — ${v.marque||''} ${v.modele||''}`.trim();
           const absent=String(v.statut||'').toLowerCase()==='absent';
-          return `<option value="${v.vehicle_id}" ${absent?'disabled':''}>${label}${absent?' (Absent)':''}</option>`;
+          const inUse = vehiclesInUse.has(v.vehicle_id);
+          const disabled = absent || inUse;
+          let suffix = '';
+          if (absent) suffix = ' (Absent)';
+          else if (inUse) suffix = ' (En prêt)';
+          return `<option value="${v.vehicle_id}" ${disabled?'disabled':''}">${label}${suffix}</option>`;
         })
       ).join('');
       $vehInfo.textContent='';
