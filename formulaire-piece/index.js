@@ -182,7 +182,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         fournisseur: (formData.fournisseur || "").slice(0, 80),
         reference: (formData.reference || "").slice(0, 80),
       },
-      cleanupPaths: files.map((f) => f.path),
+      cleanupPaths: [],
     });
 
     if (formData.email) {
@@ -193,6 +193,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
           to: formData.email,
           subject: "Votre demande de création de référence a bien été reçue",
           html: accuseHtml(formData),
+          attachments,
         },
         formType: "creation-reference-vl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },

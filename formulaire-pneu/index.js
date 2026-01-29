@@ -181,7 +181,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
         ean: (formData.ean || "").slice(0, 40),
         designation: (formData.designation || "").slice(0, 120),
       },
-      cleanupPaths: files.map((f) => f.path),
+      cleanupPaths: [],
     });
 
     if (formData.email) {
@@ -192,6 +192,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
           to: formData.email,
           subject: "Votre demande de création de référence pièce a bien été reçue",
           html: accuseHtml(formData),
+          attachments,
         },
         formType: "creation-pneu-vl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },
