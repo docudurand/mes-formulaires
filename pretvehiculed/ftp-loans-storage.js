@@ -339,4 +339,4 @@ export function checkFtpConfig() {
 }
 
 // Export pour la migration
-export { writeLoansData };
+export { writeLoansData, readLoansData };

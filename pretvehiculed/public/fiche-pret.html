@@ -368,7 +368,7 @@
           let suffix = '';
           if (absent) suffix = ' (Absent)';
           else if (inUse) suffix = ' (En prêt)';
-          return `<option value="${v.vehicle_id}" ${disabled?'disabled':''}">${label}${suffix}</option>`;
+          return `<option value="${v.vehicle_id}" ${disabled?'disabled':''}>${label}${suffix}</option>`;
         })
       ).join('');
       $vehInfo.textContent='';

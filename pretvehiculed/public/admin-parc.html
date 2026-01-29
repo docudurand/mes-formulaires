@@ -385,18 +385,37 @@
     async function saveVehicle() {
       if (!currentVehicle) return;
       
-      showMessage('edit-vehicle-notice', 'Fonctionnalité en cours de développement - Modification manuelle requise via le fichier JSON', 'info');
+      const payload = {
+        immatriculation: document.getElementById('edit-vehicle-immat').value,
+        marque: document.getElementById('edit-vehicle-marque').value,
+        modele: document.getElementById('edit-vehicle-modele').value,
+        ct: document.getElementById('edit-vehicle-ct').value,
+        pollution: document.getElementById('edit-vehicle-pollution').value,
+        disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
+      };
       
-      // TODO: Implémenter l'update dans l'API
-      // const payload = {
-      //   immatriculation: document.getElementById('edit-vehicle-immat').value,
-      //   marque: document.getElementById('edit-vehicle-marque').value,
-      //   modele: document.getElementById('edit-vehicle-modele').value,
-      //   ct: document.getElementById('edit-vehicle-ct').value,
-      //   pollution: document.getElementById('edit-vehicle-pollution').value,
-      //   disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
-      // };
-      // await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}/update`, {...});
+      try {
+        const res = await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+          showMessage('edit-vehicle-notice', 'Véhicule mis à jour avec succès !', 'success');
+          setTimeout(() => {
+            closeEditVehicleModal();
+            loadVehicles();
+          }, 1500);
+        } else {
+          showMessage('edit-vehicle-notice', `Erreur: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        console.error('Erreur mise à jour:', error);
+        showMessage('edit-vehicle-notice', `Erreur: ${error.message}`, 'error');
+      }
     }
     
     document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
