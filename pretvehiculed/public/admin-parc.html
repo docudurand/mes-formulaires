@@ -204,6 +204,7 @@
         <table id="loans-table">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Immatriculation</th>
               <th>Chauffeur</th>
               <th>Magasin</th>
@@ -382,22 +383,41 @@
     }
     
     async function saveVehicle() {
-      if (!currentVehicle) return;
-      
-      showMessage('edit-vehicle-notice', 'Fonctionnalité en cours de développement - Modification manuelle requise via le fichier JSON', 'info');
-      
-      // TODO: Implémenter l'update dans l'API
-      // const payload = {
-      //   immatriculation: document.getElementById('edit-vehicle-immat').value,
-      //   marque: document.getElementById('edit-vehicle-marque').value,
-      //   modele: document.getElementById('edit-vehicle-modele').value,
-      //   ct: document.getElementById('edit-vehicle-ct').value,
-      //   pollution: document.getElementById('edit-vehicle-pollution').value,
-      //   disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
-      // };
-      // await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}/update`, {...});
+  if (!currentVehicle) return;
+
+  const payload = {
+    immatriculation: document.getElementById('edit-vehicle-immat').value.trim(),
+    marque: document.getElementById('edit-vehicle-marque').value.trim(),
+    modele: document.getElementById('edit-vehicle-modele').value.trim(),
+    ct: document.getElementById('edit-vehicle-ct').value || '',
+    pollution: document.getElementById('edit-vehicle-pollution').value || '',
+    disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/vehicles/${encodeURIComponent(currentVehicle.vehicle_id)}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok) {
+      const msg = data?.detail ? `${data.error || res.status} — ${data.detail}` : (data.error || res.status);
+      showMessage('edit-vehicle-notice', `Erreur mise à jour: ${msg}`, 'error');
+      return;
     }
-    
+
+    showMessage('vehicle-notice', `Véhicule ${currentVehicle.vehicle_id} mis à jour ✅`, 'success');
+
+    closeEditVehicleModal();
+    await loadVehicles();
+  } catch (e) {
+    showMessage('edit-vehicle-notice', `Erreur réseau: ${e.message}`, 'error');
+  }
+}
+
     document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
       e.preventDefault();
       showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Ajout manuel via le fichier JSON', 'info');
@@ -420,24 +440,13 @@
         const res = await fetch(`${API_BASE}/loans/search?${params}`);
         const loans = await res.json();
         
-        
-        // Tri du plus récent au plus ancien (sur updated_at / closed_at / created_at / date_depart)
-        const getLoanTs = (l) => {
-          const candidates = [l.updated_at, l.closed_at, l.created_at, l.date_depart, l.date_retour];
-          for (const v of candidates) {
-            if (!v) continue;
-            const t = Date.parse(v);
-            if (!Number.isNaN(t)) return t;
-          }
-          return 0;
-        };
-        if (Array.isArray(loans)) loans.sort((a, b) => getLoanTs(b) - getLoanTs(a));
-const tbody = document.querySelector('#loans-table tbody');
+        const tbody = document.querySelector('#loans-table tbody');
         if (loans.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun prêt trouvé</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun prêt trouvé</td></tr>';
         } else {
           tbody.innerHTML = loans.map(loan => `
             <tr>
+              <td>${loan.loan_id.substring(0, 12)}...</td>
               <td><strong>${loan.immatriculation || '-'}</strong></td>
               <td>${loan.chauffeur_nom || '-'}</td>
               <td>${loan.magasin_pret || '-'}</td>
