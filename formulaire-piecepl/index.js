@@ -189,6 +189,7 @@ router.post("/submit-form", upload.array("fichiers[]", 10), async (req, res) => 
           to: formData.email,
           subject: "Votre demande de création de référence pièce a bien été reçue",
           html: accuseHtml(formData),
+          attachments,
         },
         formType: "creation-reference-pl",
         meta: { kind: "demandeur", demandeur: formData.email || "" },
