@@ -65,7 +65,8 @@ router.post("/api/print-html", (req, res) => {
       margin: 0 auto;
       background: white;
       color: #333;
-      line-height: 1.4;
+      line-height: 1.5;
+      font-size: 14px;
     }
     
     /* Header avec logo */
@@ -83,11 +84,11 @@ router.post("/api/print-html", (req, res) => {
       gap: 3px;
     }
     .logo-img {
-      width: 80px;
+      width: 100px;
       height: auto;
     }
     .logo-text {
-      font-size: 9px;
+      font-size: 10px;
       color: #666;
       font-weight: 500;
     }
@@ -95,20 +96,20 @@ router.post("/api/print-html", (req, res) => {
       text-align: right;
     }
     .title-location {
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 900;
       color: #003d7a;
       letter-spacing: 1.5px;
       margin-bottom: 3px;
     }
     .title-service {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 700;
       color: #003d7a;
       margin-bottom: 2px;
     }
     .title-dossier {
-      font-size: 12px;
+      font-size: 13px;
       color: #666;
     }
     
@@ -117,33 +118,33 @@ router.post("/api/print-html", (req, res) => {
       margin-bottom: 22px;
     }
     .section-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
       color: #003d7a;
-      margin-bottom: 10px;
-      padding-bottom: 3px;
+      margin-bottom: 12px;
+      padding-bottom: 4px;
     }
     
     /* Grille d'informations à 2 colonnes */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px 25px;
+      gap: 12px 25px;
     }
     .info-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
     .info-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       color: #666;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
     .info-value {
-      font-size: 13px;
+      font-size: 14px;
       color: #000;
       font-weight: 500;
     }
@@ -152,27 +153,27 @@ router.post("/api/print-html", (req, res) => {
     .culasse-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px 25px;
+      gap: 12px 25px;
       margin-bottom: 15px;
     }
     
     /* Liste des opérations */
     .operations-title {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: #003d7a;
-      margin-bottom: 8px;
-      margin-top: 12px;
+      margin-bottom: 10px;
+      margin-top: 14px;
     }
     .operations-list {
       list-style: none;
       padding-left: 0;
     }
     .operations-list li {
-      padding: 4px 0 4px 12px;
+      padding: 5px 0 5px 14px;
       position: relative;
-      font-size: 13px;
-      line-height: 1.4;
+      font-size: 14px;
+      line-height: 1.5;
     }
     .operations-list li:before {
       content: "•";
@@ -180,12 +181,12 @@ router.post("/api/print-html", (req, res) => {
       left: 0;
       color: #003d7a;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 16px;
     }
     
     /* Pièces à fournir */
     .pieces-text {
-      font-size: 12px;
+      font-size: 13px;
       color: #666;
       font-style: italic;
     }
@@ -193,34 +194,34 @@ router.post("/api/print-html", (req, res) => {
     /* Commentaires */
     .comment-box {
       border: 1px solid #ddd;
-      padding: 10px;
+      padding: 12px;
       background: #fafafa;
-      font-size: 12px;
+      font-size: 13px;
       white-space: pre-wrap;
-      min-height: 70px;
+      min-height: 80px;
       border-radius: 3px;
     }
     
     /* QR Code section */
     .qr-section {
-      margin-top: 25px;
-      padding-top: 15px;
+      margin-top: 30px;
+      padding-top: 18px;
       border-top: 2px dashed #ccc;
     }
     .qr-title {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: #003d7a;
-      margin-bottom: 6px;
-    }
-    .qr-text {
-      font-size: 10px;
-      color: #666;
       margin-bottom: 8px;
     }
+    .qr-text {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 10px;
+    }
     .qr-image {
-      width: 150px;
-      height: 150px;
+      width: 160px;
+      height: 160px;
       border: 1px solid #ddd;
       padding: 5px;
       background: white;
