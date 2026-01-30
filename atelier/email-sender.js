@@ -261,13 +261,6 @@ export async function sendPieceReturnedEmail(caseData) {
           <td><strong>${magasin}</strong></td>
         </tr>
       </table>
-      
-      <div style="margin-top: 25px; padding: 15px; background: #f8fafc; border-radius: 4px;">
-        <div style="font-weight: 600; color: #004080; margin-bottom: 8px;">📍 Prochaines étapes</div>
-        <div style="font-size: 14px; color: #475569;">
-          Vous pouvez venir récupérer votre pièce au magasin <strong>${magasin}</strong>.
-        </div>
-      </div>
     </div>
     <div class="footer">
       Cordialement,<br>
