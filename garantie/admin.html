@@ -1048,6 +1048,12 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
   </div>
 
   <script>
+  // ==== BASES GARANTIE (pour fonctionner sous /garantie) ====
+const GARANTIE_PREFIX = "/garantie";
+const API_BASE = GARANTIE_PREFIX + "/api";
+const DL_BASE  = GARANTIE_PREFIX + "/download/";
+const TPL_BASE = GARANTIE_PREFIX + "/templates/";
+
     let isSuperAdmin = false;
     let isAdmin = false;
     let magasinAdmin = null;
@@ -1146,7 +1152,7 @@ function toggleSuperAdminUI() {
 
     // Charge tous les dossiers depuis l'API.
     function chargerDossiers() {
-  return fetch("/api/admin/dossiers")
+  return fetch(API_BASE + "admin/dossiers")
     .then(r => r.json())
     .then(data => {
       if (!Array.isArray(data)) data = [];
@@ -1509,7 +1515,7 @@ function renderFilesList(arr, title, section) {
     if (section === "documentsAjoutes") {
       html +=
         '<span class="file-pill" data-section="' + section + '" data-url="' + fileUrl + '">' +
-          '<a href="/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
+          '<a href="' + DL_BASE + urlEnc + '" target="_blank">' title="Télécharger">' +
             name +
           '</a>' +
           ' <button type="button" class="file-remove" onclick="supprimerDocumentDossier(event)" title="Supprimer du dossier">✕</button>' +
@@ -1541,7 +1547,7 @@ function supprimerDocumentDossier(evt) {
 
   const dossierId = dossierSelectionne.id;
 
-  fetch("/api/admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file", {
+  fetch(API_BASE + "admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ section, url })
@@ -1901,7 +1907,7 @@ function construireFormulaireEdition(d) {
         fd.append("reponseFiles", f);
       });
 
-       fetch("/api/admin/dossier/" + encodeURIComponent(id), {
+       fetch(API_BASE + "admin/dossier/" + encodeURIComponent(id), {
     method: "POST",
     body: fd
   })
@@ -1944,7 +1950,7 @@ function construireFormulaireEdition(d) {
       if (!dossierSelectionne) return;
       if (!confirm("Supprimer définitivement ce dossier ?")) return;
       const id = dossierSelectionne.id;
-      fetch("/api/admin/dossier/" + encodeURIComponent(id), {
+      fetch(API_BASE + "admin/dossier/" + encodeURIComponent(id), {
         method: "DELETE",
         headers: {
           "x-superadmin": isSuperAdmin ? "1" : ""
@@ -2033,7 +2039,7 @@ function construireFormulaireEdition(d) {
       const form = e.target;
       const data = {};
       new FormData(form).forEach((v, k) => { data[k] = v; });
-      fetch('/api/admin/completer-dossier/' + encodeURIComponent(id), {
+      fetch(API_BASE + 'admin/completer-dossier/' + encodeURIComponent(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -2082,7 +2088,7 @@ function construireFormulaireEdition(d) {
       const id = dossierSelectionne.id;
       const form = e.target;
       const fd = new FormData(form);
-      fetch("/api/admin/envoyer-fournisseur/" + encodeURIComponent(id), {
+      fetch(API_BASE + "admin/envoyer-fournisseur/" + encodeURIComponent(id), {
         method: "POST",
         body: fd
       })
@@ -2106,7 +2112,7 @@ function construireFormulaireEdition(d) {
     function exportExcel() {
       const sel = document.getElementById("export-year");
       const year = sel ? String(sel.value || "").trim() : "";
-      const url = year ? ("/api/admin/export-excel?year=" + encodeURIComponent(year)) : "/api/admin/export-excel";
+      const url = year ? (API_BASE + "admin/export-excel?year=" + encodeURIComponent(year)) : API_BASE + "admin/export-excel";
       window.location.href = url;
     }
 
@@ -2176,7 +2182,7 @@ function initEvents() {
     const pw = loginInput.value;
     loginMsg.textContent = "";
 
-    fetch("/api/admin/login", {
+    fetch(API_BASE + "admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: pw })
