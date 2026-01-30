@@ -321,11 +321,8 @@
   <script>
 
     function getApiBase() {
-      const host = (location.hostname || "").toLowerCase();
-
-      if (host.includes("durandservicesgarantie.onrender.com")) return "";
-
-      return "https://durandservicesgarantie.onrender.com";
+      // Le serveur est maintenant local, on utilise les chemins relatifs
+      return "/api/garantie";
     }
     const API_BASE = getApiBase();
 

@@ -31,6 +31,7 @@ import atelierRouter from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
 import kilometrageRouter from "./routes/kilometrage.js";
+import garantieRouter from "./garantie-module/routes.js";
 import "./mailInlineWorker.js";
 
 // Chargement des variables d'environnement
@@ -901,6 +902,7 @@ app.use("/atelier", atelierRouter);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
+app.use("/api/garantie", garantieRouter);
 
 // Liste des magasins autorises pour export presences
 const MAGASINS_EXPORT = ["ANNEMASSE","BOURGOIN","CHASSE SUR RHONE","CHASSIEU","GLEIZE","LA MOTTE SERVOLEX","MIRIBEL","PAVI","RENAGE","RIVES","SEYNOD","ST EGREVE","ST-JEAN-BONNEFONDS"];
