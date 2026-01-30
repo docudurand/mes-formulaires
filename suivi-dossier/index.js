@@ -1,4 +1,4 @@
-// serveur pour le module suivi-dossier (page + config.js)
+// serveur pour le module suivi-dossier
 
 import express from "express";
 import path from "path";
@@ -46,7 +46,7 @@ router.get("/config.js", (_req, res) => {
   );
 });
 
-// Pages statiques (index.html, etc.)
+// Pages statiques
 router.use(express.static(publicDir, {
   extensions: ["html", "htm"],
   index: false,

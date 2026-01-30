@@ -366,14 +366,16 @@ html.dsg-in-iframe, html.dsg-in-iframe body {
   </div>
 </div>
 
-<script src="/suivi-dossier/config.js"></script>
+<script src="/atelier/config.js"></script>
 
 <script>
-const cfgSuivi = window.__SUIVI_CFG || {};
-const PASS_STE     = cfgSuivi.ATELIER_SUIVI_PASS_STE     || "";
-const PASS_BG      = cfgSuivi.ATELIER_SUIVI_PASS_BG      || "";
-const PASS_LIMITED = cfgSuivi.ATELIER_SUIVI_PASS_LIMITED || "";
-const PASS_CHASSE      = cfgSuivi.ATELIER_SUIVI_PASS_CHASSE      || "";
+// Charger la configuration depuis /atelier/config.js
+// Le fichier définit window.__ATELIER_CFG avec les mots de passe
+const atelierCfg = window.__ATELIER_CFG || window.__SUIVI_CFG || {};
+const PASS_STE     = atelierCfg.ATELIER_SUIVI_PASS_STE     || "";
+const PASS_BG      = atelierCfg.ATELIER_SUIVI_PASS_BG      || "";
+const PASS_LIMITED = atelierCfg.ATELIER_SUIVI_PASS_LIMITED || "";
+const PASS_CHASSE  = atelierCfg.ATELIER_SUIVI_PASS_CHASSE  || "";
 
 let LIMITED_VIEW = false;
 let VIEW_MODE    = "ALL";

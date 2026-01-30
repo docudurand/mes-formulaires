@@ -18,7 +18,7 @@ class FTPDataManager {
     this.dataFile = "atelier_data.json";
     this.localCache = null;
     this.lastFetch = null;
-    this.cacheDuration = 60000; // 1 minute de cache
+    this.cacheDuration = 60000;
   }
 
   async connect() {
@@ -80,14 +80,6 @@ class FTPDataManager {
       const remotePath = path.posix.join(this.backupFolder, this.dataFile);
       await client.uploadFrom(localPath, remotePath);
       
-      // Créer une sauvegarde datée
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const backupPath = path.posix.join(
-        this.backupFolder, 
-        `atelier_data_backup_${timestamp}.json`
-      );
-      await client.uploadFrom(localPath, backupPath);
-      
       // Mettre à jour le cache
       this.localCache = data;
       this.lastFetch = Date.now();
@@ -114,7 +106,7 @@ class FTPDataManager {
   }
 
   async updateCase(caseNo, updates) {
-    const data = await this.getData(false); // Forcer le téléchargement
+    const data = await this.getData(false);
     
     // Trouver et mettre à jour le dossier
     const caseIndex = data.atelier.findIndex(c => 
