@@ -1515,14 +1515,14 @@ function renderFilesList(arr, title, section) {
     if (section === "documentsAjoutes") {
       html +=
         '<span class="file-pill" data-section="' + section + '" data-url="' + fileUrl + '">' +
-          '<a href="' + DL_BASE + urlEnc + '" target="_blank">' title="Télécharger">' +
+          '<a href="/garantie/api/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
             name +
           '</a>' +
           ' <button type="button" class="file-remove" onclick="supprimerDocumentDossier(event)" title="Supprimer du dossier">✕</button>' +
         '</span>';
     } else {
       html +=
-        '<a class="file-pill" href="/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
+        '<a class="file-pill" href="/garantie/api/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
           name +
         '</a>';
     }
@@ -1530,6 +1530,7 @@ function renderFilesList(arr, title, section) {
   html += "</div>";
   return html;
 }
+
 
 // Demande au serveur de supprimer un fichier du dossier.
 function supprimerDocumentDossier(evt) {
@@ -1547,11 +1548,11 @@ function supprimerDocumentDossier(evt) {
 
   const dossierId = dossierSelectionne.id;
 
-  fetch(API_BASE + "admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ section, url })
-  })
+fetch("/garantie/api/admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ url, section })
+})
     .then(r => r.json())
     .then(json => {
       if (!json || !json.success) {
@@ -2112,7 +2113,7 @@ function construireFormulaireEdition(d) {
     function exportExcel() {
       const sel = document.getElementById("export-year");
       const year = sel ? String(sel.value || "").trim() : "";
-      const url = year ? (API_BASE + "admin/export-excel?year=" + encodeURIComponent(year)) : API_BASE + "admin/export-excel";
+      const url = year ? ("/garantie/api/admin/export-excel?year=" + encodeURIComponent(year)) : API_BASE + "/garantie/api/admin/export-excel";
       window.location.href = url;
     }
 
@@ -2153,7 +2154,7 @@ function construireFormulaireEdition(d) {
       }
 
       if (res.type === "pdf") {
-        const pdfUrl = "/templates/" + res.file;
+        const pdfUrl = "/garantie/api/templates/" + res.file;
         const formWin = window.open("", "_blank", "width=800,height=750");
         if (!formWin) return;
         formWin.document.open();

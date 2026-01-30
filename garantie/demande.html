@@ -404,7 +404,7 @@ const API_BASE = "/garantie/api";
 
         for (const f of filesArray) formData.append("document", f);
 
-        const url = API_BASE + "/demandes";
+        const url = "/garantie/api/demandes";
 
         const resp = await fetch(url, {
           method: "POST",
