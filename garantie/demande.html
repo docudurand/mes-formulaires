@@ -320,14 +320,8 @@
 
   <script>
 
-    function getApiBase() {
-      const host = (location.hostname || "").toLowerCase();
+const API_BASE = "/garantie/api";
 
-      if (host.includes("durandservicesgarantie.onrender.com")) return "";
-
-      return "https://durandservicesgarantie.onrender.com";
-    }
-    const API_BASE = getApiBase();
 
     const inputFiles = document.getElementById("input-files");
     const fileListUl = document.getElementById("file-list");
@@ -410,7 +404,7 @@
 
         for (const f of filesArray) formData.append("document", f);
 
-        const url = API_BASE + "/api/demandes";
+        const url = API_BASE + "/demandes";
 
         const resp = await fetch(url, {
           method: "POST",

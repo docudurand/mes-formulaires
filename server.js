@@ -32,6 +32,7 @@ import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
 import kilometrageRouter from "./routes/kilometrage.js";
 import "./mailInlineWorker.js";
+import garantieRouter from "./garantie/router.js";
 
 // Chargement des variables d'environnement
 dotenv.config();
@@ -171,6 +172,13 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 // Routes pour lecture des logs mails
 app.use(mailLogsRouter);
+
+// Sert les pages Garantie en statique
+app.use("/garantie", express.static(path.join(__dirname, "garantie"), {
+  extensions: ["html", "htm"],
+  index: false
+}));
+
 
 // bloque si une variable d'environnement manque
 function mustEnv(name) {
@@ -2011,6 +2019,7 @@ ts: new Date().toISOString(),
 app.get("/", (_req, res) => res.status(200).send("📝 Mes Formulaires – service opérationnel"));
 
 // Routes des differents formulaires
+app.use("/garantie/api", garantieRouter);
 app.use("/formtelevente", formtelevente);
 app.use("/formulaire-piece", formulairePiece);
 app.use("/formulaire-piecepl", formulairePiecePL);
