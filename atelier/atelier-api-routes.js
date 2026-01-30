@@ -1,12 +1,165 @@
 // API Routes pour le module atelier avec données JSON/FTP
 import express from "express";
 import FTPDataManager from "./ftp-data-manager.js";
+import emailSender from "./email-sender.js";
 
 const router = express.Router();
 const dataManager = new FTPDataManager();
 
 // Middleware pour parser le JSON
 router.use(express.json());
+
+// POST /api/print-html - Génère la page d'aperçu d'impression
+router.post("/api/print-html", (req, res) => {
+  try {
+    const payload = JSON.parse(req.body.payload || "{}");
+    const header = payload.header || {};
+    const meta = payload.meta || {};
+    const commentaires = payload.commentaires || "";
+    const culasse = payload.culasse || null;
+    const injecteur = payload.injecteur || null;
+    const no = payload.no || "";
+    
+    // Générer le HTML d'impression
+    const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Demande ${meta.titre || "Atelier"} - ${header.client || ""}</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #004080; font-size: 1.5rem; margin-bottom: 20px; }
+    .section { margin-bottom: 20px; }
+    .section h2 { color: #004080; font-size: 1.1rem; margin-bottom: 10px; border-bottom: 2px solid #004080; padding-bottom: 5px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { margin-bottom: 8px; }
+    .label { font-weight: 700; color: #334155; }
+    .value { color: #0f172a; }
+    .comment-box { border: 1px solid #e5e7eb; padding: 10px; background: #f9fafb; white-space: pre-wrap; }
+    .operations { list-style: none; padding: 0; }
+    .operations li { margin: 8px 0; padding-left: 20px; position: relative; }
+    .operations li:before { content: "•"; position: absolute; left: 0; color: #004080; font-weight: bold; }
+    .sub-item { margin-left: 20px; font-size: 0.9rem; color: #6b7280; }
+    @media print {
+      body { padding: 10px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>${meta.titre || "Demande Atelier"}</h1>
+  
+  ${no ? `<div class="section"><strong>Numéro de dossier :</strong> ${String(no).padStart(5, '0')}</div>` : ''}
+  
+  <div class="section">
+    <h2>Informations client</h2>
+    <div class="grid">
+      <div class="field"><span class="label">Client :</span> <span class="value">${header.client || ""}</span></div>
+      <div class="field"><span class="label">N° de compte :</span> <span class="value">${header.compte || ""}</span></div>
+      <div class="field"><span class="label">Téléphone :</span> <span class="value">${header.telephone || ""}</span></div>
+      <div class="field"><span class="label">Email :</span> <span class="value">${header.email || ""}</span></div>
+      <div class="field"><span class="label">Magasin :</span> <span class="value">${header.magasin || ""}</span></div>
+      <div class="field"><span class="label">Date demande :</span> <span class="value">${header.dateDemande || ""}</span></div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Véhicule</h2>
+    <div class="grid">
+      <div class="field"><span class="label">Véhicule :</span> <span class="value">${header.vehicule || ""}</span></div>
+      <div class="field"><span class="label">Immatriculation :</span> <span class="value">${header.immat || ""}</span></div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Service demandé</h2>
+    <div class="field"><span class="label">Service :</span> <span class="value">${header.service || ""}</span></div>
+  </div>
+  
+  ${culasse ? `
+  <div class="section">
+    <h2>Détails Rectification Culasse</h2>
+    <div class="grid">
+      <div class="field"><span class="label">Segment :</span> <span class="value">${culasse.segment || ""}</span></div>
+      <div class="field"><span class="label">Cylindres :</span> <span class="value">${culasse.cylindre || ""}</span></div>
+      <div class="field"><span class="label">Soupapes :</span> <span class="value">${culasse.soupapes || ""}</span></div>
+      <div class="field"><span class="label">Carburant :</span> <span class="value">${culasse.carburant || ""}</span></div>
+    </div>
+    
+    ${culasse.operations && culasse.operations.length ? `
+    <div style="margin-top: 15px;">
+      <strong>Opérations à réaliser :</strong>
+      <ul class="operations">
+        ${culasse.operations.map(op => `
+          <li>
+            ${op.libelle || op.ligne}
+            ${op.references && op.references.length ? `
+              <div class="sub-item">
+                ${op.references.map(ref => 
+                  `${ref.reference || ""} ${ref.libelleRef ? "- " + ref.libelleRef : ""} ${ref.prixHT ? "(" + ref.prixHT + " € HT)" : ""}`
+                ).join("<br>")}
+              </div>
+            ` : ''}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    
+    ${culasse.piecesAFournir && culasse.piecesAFournir.length ? `
+    <div style="margin-top: 15px;">
+      <strong>Pièces à fournir :</strong>
+      <ul class="operations">
+        ${culasse.piecesAFournir.map(p => `<li>${p}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+  </div>
+  ` : ''}
+  
+  ${injecteur ? `
+  <div class="section">
+    <h2>Détails Contrôle injection</h2>
+    <div class="grid">
+      <div class="field"><span class="label">Type :</span> <span class="value">${injecteur.type || ""}</span></div>
+      <div class="field"><span class="label">Nombre d'injecteurs :</span> <span class="value">${injecteur.nombre || ""}</span></div>
+    </div>
+  </div>
+  ` : ''}
+  
+  ${commentaires ? `
+  <div class="section">
+    <h2>Commentaires</h2>
+    <div class="comment-box">${commentaires}</div>
+  </div>
+  ` : ''}
+  
+  <div class="no-print" style="margin-top: 30px; text-align: center;">
+    <button onclick="window.print()" style="padding: 10px 20px; background: #004080; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;">
+      Imprimer
+    </button>
+  </div>
+</body>
+</html>
+    `;
+    
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (error) {
+    console.error("Erreur POST /api/print-html:", error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Erreur</title></head>
+      <body>
+        <h1>Erreur lors de la génération de l'aperçu</h1>
+        <p>${error.message}</p>
+      </body>
+      </html>
+    `);
+  }
+});
 
 // POST /api/submit - Route pour le formulaire de demande (compatibilité avec l'ancien système)
 router.post("/api/submit", async (req, res) => {
@@ -37,6 +190,18 @@ router.post("/api/submit", async (req, res) => {
     };
     
     const newCase = await dataManager.addCase(caseData);
+    
+    // Envoyer l'email de notification au responsable du service
+    try {
+      const emailResult = await emailSender.sendNewRequestEmail(newCase);
+      if (emailResult.sent) {
+        console.log(`[ATELIER] Email envoyé à ${emailResult.to} pour le dossier ${newCase.no}`);
+      } else {
+        console.warn(`[ATELIER] Email non envoyé pour le dossier ${newCase.no}: ${emailResult.reason}`);
+      }
+    } catch (emailError) {
+      console.error(`[ATELIER] Erreur envoi email dossier ${newCase.no}:`, emailError);
+    }
     
     res.json({
       ok: true,
@@ -161,6 +326,20 @@ router.post("/api/cases/:no/status", async (req, res) => {
     };
     
     const updatedCase = await dataManager.updateCase(caseNo, updates);
+    
+    // Si le statut est "Renvoyé" ou "Pièce Renvoyé", envoyer un email au client
+    if (status === "Renvoyé" || status === "Pièce Renvoyé" || status === "Pièce renvoyé à l'agence") {
+      try {
+        const emailResult = await emailSender.sendPieceReturnedEmail(updatedCase);
+        if (emailResult.sent) {
+          console.log(`[ATELIER] Email de retour envoyé à ${emailResult.to} pour le dossier ${caseNo}`);
+        } else {
+          console.warn(`[ATELIER] Email de retour non envoyé pour le dossier ${caseNo}: ${emailResult.reason}`);
+        }
+      } catch (emailError) {
+        console.error(`[ATELIER] Erreur envoi email de retour dossier ${caseNo}:`, emailError);
+      }
+    }
     
     res.json({
       success: true,
