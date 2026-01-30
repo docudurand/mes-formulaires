@@ -6,9 +6,11 @@ import emailSender from "./email-sender.js";
 const router = express.Router();
 const dataManager = new FTPDataManager();
 
+// Middleware pour parser le JSON
 router.use(express.json());
 
 // POST /api/print-html - Génère la page d'aperçu d'impression
+// POST /api/print-html - Génère la page d'aperçu d'impression (VERSION EXACTE)
 router.post("/api/print-html", (req, res) => {
   try {
     const payload = JSON.parse(req.body.payload || "{}");
@@ -26,7 +28,7 @@ router.post("/api/print-html", (req, res) => {
     const baseUrl = process.env.BASE_URL || "";
     const qrUrl = `${baseUrl}/atelier/qr/${no}`;
     
-    // Générer le HTML d'impression professionnel
+    // Générer le HTML d'impression EXACT
     const html = `
 <!DOCTYPE html>
 <html lang="fr">
@@ -42,80 +44,78 @@ router.post("/api/print-html", (req, res) => {
       margin: 0 auto;
       background: white;
       color: #333;
+      line-height: 1.4;
     }
     
+    /* Header avec logo */
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #004080;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #003d7a;
     }
     .logo-section {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 3px;
     }
-    .logo {
-      font-size: 48px;
-      font-weight: 900;
-      color: #004080;
-      font-family: Arial, sans-serif;
-      line-height: 1;
+    .logo-img {
+      width: 80px;
+      height: auto;
     }
     .logo-text {
-      font-size: 11px;
+      font-size: 9px;
       color: #666;
       font-weight: 500;
-      letter-spacing: 0.5px;
     }
     .title-section {
       text-align: right;
     }
-    .title-main {
-      font-size: 18px;
-      font-weight: 700;
-      color: #004080;
-      margin-bottom: 5px;
-    }
     .title-location {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 900;
-      color: #004080;
-      letter-spacing: 1px;
+      color: #003d7a;
+      letter-spacing: 1.5px;
+      margin-bottom: 3px;
+    }
+    .title-service {
+      font-size: 16px;
+      font-weight: 700;
+      color: #003d7a;
+      margin-bottom: 2px;
     }
     .title-dossier {
-      font-size: 14px;
+      font-size: 12px;
       color: #666;
-      margin-top: 5px;
     }
     
+    /* Sections */
     .section {
-      margin-bottom: 25px;
+      margin-bottom: 22px;
     }
     .section-title {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
-      color: #004080;
-      margin-bottom: 12px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #e5e7eb;
+      color: #003d7a;
+      margin-bottom: 10px;
+      padding-bottom: 3px;
     }
     
+    /* Grille d'informations à 2 colonnes */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px 20px;
-      margin-bottom: 20px;
+      gap: 10px 25px;
     }
-    .info-row {
+    .info-item {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
     }
     .info-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       color: #666;
       text-transform: uppercase;
@@ -127,75 +127,85 @@ router.post("/api/print-html", (req, res) => {
       font-weight: 500;
     }
     
+    /* Détails culasse - grille horizontale */
+    .culasse-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 25px;
+      margin-bottom: 15px;
+    }
+    
+    /* Liste des opérations */
+    .operations-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #003d7a;
+      margin-bottom: 8px;
+      margin-top: 12px;
+    }
     .operations-list {
       list-style: none;
       padding-left: 0;
     }
     .operations-list li {
-      padding: 6px 0 6px 15px;
+      padding: 4px 0 4px 12px;
       position: relative;
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.4;
     }
     .operations-list li:before {
       content: "•";
       position: absolute;
       left: 0;
-      color: #004080;
+      color: #003d7a;
       font-weight: bold;
-      font-size: 16px;
-    }
-    .sub-item {
-      margin-left: 15px;
-      font-size: 11px;
-      color: #666;
-      margin-top: 3px;
+      font-size: 14px;
     }
     
-    .pieces-list {
-      font-size: 13px;
+    /* Pièces à fournir */
+    .pieces-text {
+      font-size: 12px;
       color: #666;
+      font-style: italic;
     }
     
+    /* Commentaires */
     .comment-box {
-      border: 1px solid #e5e7eb;
-      padding: 12px;
-      background: #f9fafb;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background: #fafafa;
       font-size: 12px;
       white-space: pre-wrap;
-      min-height: 80px;
-      border-radius: 4px;
+      min-height: 70px;
+      border-radius: 3px;
     }
     
+    /* QR Code section */
     .qr-section {
-      margin-top: 30px;
-      padding-top: 20px;
+      margin-top: 25px;
+      padding-top: 15px;
       border-top: 2px dashed #ccc;
     }
     .qr-title {
       font-size: 13px;
       font-weight: 700;
-      color: #004080;
-      margin-bottom: 8px;
+      color: #003d7a;
+      margin-bottom: 6px;
     }
     .qr-text {
-      font-size: 11px;
+      font-size: 10px;
       color: #666;
-      margin-bottom: 10px;
-    }
-    .qr-container {
-      display: flex;
-      align-items: center;
-      gap: 15px;
+      margin-bottom: 8px;
     }
     .qr-image {
-      width: 120px;
-      height: 120px;
-      border: 2px solid #e5e7eb;
-      padding: 5px;
+      width: 110px;
+      height: 110px;
+      border: 1px solid #ddd;
+      padding: 3px;
       background: white;
     }
     
+    /* Impression */
     @media print {
       body { padding: 20px; }
       .no-print { display: none !important; }
@@ -218,12 +228,12 @@ router.post("/api/print-html", (req, res) => {
   <!-- Header avec logo Durand -->
   <div class="header">
     <div class="logo-section">
-      <div class="logo">D</div>
+      <img src="https://raw.githubusercontent.com/docudurand/mes-formulaires/main/logodurand.png" alt="Logo Durand" class="logo-img" />
       <div class="logo-text">pièces automobile et services</div>
     </div>
     <div class="title-section">
       <div class="title-location">${magasin.toUpperCase()}</div>
-      <div class="title-main">${service}</div>
+      <div class="title-service">${service}</div>
       <div class="title-dossier">Dossier n° ${no}</div>
     </div>
   </div>
@@ -232,35 +242,35 @@ router.post("/api/print-html", (req, res) => {
   <div class="section">
     <div class="section-title">Informations client</div>
     <div class="info-grid">
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Nom du client</div>
         <div class="info-value">${header.client || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">N° de compte client</div>
         <div class="info-value">${header.compte || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Téléphone client</div>
         <div class="info-value">${header.telephone || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Adresse mail magasinier/réceptionnaire</div>
         <div class="info-value">${header.email || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Marque/Modèle</div>
         <div class="info-value">${header.vehicule || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Immatriculation</div>
         <div class="info-value">${header.immat || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Magasin d'envoi</div>
         <div class="info-value">${magasin}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Date de la demande</div>
         <div class="info-value">${header.dateDemande || ""}</div>
       </div>
@@ -271,46 +281,33 @@ router.post("/api/print-html", (req, res) => {
   <!-- Détails Rectification Culasse -->
   <div class="section">
     <div class="section-title">Détails Rectification Culasse</div>
-    <div class="info-grid">
-      <div class="info-row">
+    <div class="culasse-grid">
+      <div class="info-item">
         <div class="info-label">Cylindre</div>
         <div class="info-value">${culasse.cylindre || "–"}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Soupapes</div>
         <div class="info-value">${culasse.soupapes || "–"}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Carburant</div>
         <div class="info-value">${culasse.carburant || "–"}</div>
       </div>
     </div>
     
     ${culasse.operations && culasse.operations.length ? `
-    <div style="margin-top: 15px;">
-      <div class="info-label" style="margin-bottom: 8px;">Opérations (cochées)</div>
-      <ul class="operations-list">
-        ${culasse.operations.map(op => `
-          <li>
-            ${op.libelle || op.ligne}
-            ${op.references && op.references.length ? `
-              <div class="sub-item">
-                ${op.references.map(ref => 
-                  `${ref.reference || ""} ${ref.libelleRef ? "- " + ref.libelleRef : ""} ${ref.prixHT ? "(" + ref.prixHT + " € HT)" : ""}`
-                ).join("<br>")}
-              </div>
-            ` : ''}
-          </li>
-        `).join('')}
-      </ul>
-    </div>
+    <div class="operations-title">Opérations (cochées)</div>
+    <ul class="operations-list">
+      ${culasse.operations.map(op => `<li>${op.libelle || op.ligne}</li>`).join('')}
+    </ul>
     ` : ''}
     
     <div style="margin-top: 15px;">
-      <div class="info-label" style="margin-bottom: 8px;">Pièces à Fournir</div>
-      <div class="pieces-list">
+      <div class="operations-title">Pièces à Fournir</div>
+      <div class="pieces-text">
         ${culasse.piecesAFournir && culasse.piecesAFournir.length 
-          ? culasse.piecesAFournir.map(p => `• ${p}`).join("<br>")
+          ? culasse.piecesAFournir.join(", ")
           : "Aucune pièce sélectionnée."}
       </div>
     </div>
@@ -322,11 +319,11 @@ router.post("/api/print-html", (req, res) => {
   <div class="section">
     <div class="section-title">Détails Contrôle injection</div>
     <div class="info-grid">
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Type</div>
         <div class="info-value">${injecteur.type || ""}</div>
       </div>
-      <div class="info-row">
+      <div class="info-item">
         <div class="info-label">Nombre d'injecteurs</div>
         <div class="info-value">${injecteur.nombre || ""}</div>
       </div>
@@ -346,9 +343,7 @@ router.post("/api/print-html", (req, res) => {
   <div class="qr-section">
     <div class="qr-title">Validation de la réception de la pièce</div>
     <div class="qr-text">Scannez ce QR Code pour valider la réception de la pièce.</div>
-    <div class="qr-container">
-      <img src="${qrUrl}" alt="QR Code" class="qr-image" />
-    </div>
+    <img src="${qrUrl}" alt="QR Code" class="qr-image" />
   </div>
 </body>
 </html>
@@ -371,7 +366,7 @@ router.post("/api/print-html", (req, res) => {
   }
 });
 
-// POST /api/submit - Route pour le formulaire de demande
+// POST /api/submit - Route pour le formulaire de demande (compatibilité avec l'ancien système)
 router.post("/api/submit", async (req, res) => {
   try {
     const { payload } = req.body;
@@ -427,7 +422,7 @@ router.post("/api/submit", async (req, res) => {
   }
 });
 
-// GET /api/config - Route pour charger les lignes et règles
+// GET /api/config - Route pour charger les lignes et règles (compatibilité)
 router.get("/api/config", async (req, res) => {
   try {
     const type = req.query.type;
@@ -643,7 +638,7 @@ router.get("/api/regles", async (req, res) => {
   }
 });
 
-// POST /api/cache/clear - Vider le cache
+// POST /api/cache/clear - Vider le cache (utile après mise à jour manuelle du JSON)
 router.post("/api/cache/clear", (req, res) => {
   try {
     dataManager.clearCache();
@@ -663,7 +658,7 @@ router.post("/api/cache/clear", (req, res) => {
 // GET /api/health - Vérifier la santé de l'API et la connexion FTP
 router.get("/api/health", async (req, res) => {
   try {
-    await dataManager.getData(false);
+    await dataManager.getData(false); // Test de connexion
     res.json({
       success: true,
       status: "healthy",
