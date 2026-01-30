@@ -1,12 +1,10 @@
 // Module garantie - Routes et fonctions pour la gestion des demandes de garantie
-// Généré automatiquement depuis warrantydurand-main/server.js
+// Corrigé et complété
 
 import express from "express";
 import multer from "multer";
-import cors from "cors";
 import fs from "fs";
 import path from "path";
-import cookieParser from "cookie-parser";
 import { transporter, fromEmail } from "../mailer.js";
 import mime from "mime-types";
 import ftp from "basic-ftp";
@@ -21,6 +19,72 @@ const router = express.Router();
 
 console.log("[GARANTIE][CONF][MAIL] fromEmail =", fromEmail || "(vide)");
 console.log("[GARANTIE][CONF][MAIL] transporter =", transporter ? "OK" : "ABSENT");
+
+// Constantes
+const STATUTS = {
+  ENREGISTRE: "enregistré",
+  ACCEPTE: "accepté",
+  REFUSE: "refusé",
+  ATTENTE_INFO: "Avoir Commercial",
+  ATTENTE_MO: "Attente MO",
+};
+
+const MAGASINS = [
+  "Annemasse", "Bourgoin-Jallieu", "Chasse-sur-Rhone", "Chassieu", "Gleize", "La Motte-Servolex",
+  "Les Echets", "Pavi", "Rives", "Saint-Egreve", "Saint-Jean-Bonnefonds", "Saint-martin-d'heres", "Seynod"
+];
+
+// Fonction pour parser JSON depuis env
+function parseEnvJsonObject(varName) {
+  const raw0 = (process.env[varName] || "").trim();
+  if (!raw0) return {};
+  let raw = raw0;
+  const first = raw[0];
+  const last = raw[raw.length - 1];
+  if ((first === "'" || first === '"' || first === "`") && last === first) {
+    raw = raw.slice(1, -1).trim();
+  }
+  try {
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch (e) {
+    console.warn(`[GARANTIE][CONF] Impossible de parser ${varName}:`, e?.message || e);
+    return {};
+  }
+}
+
+const MAGASIN_MAILS = parseEnvJsonObject("MAGASIN_MAILS_JSON");
+const FOURNISSEUR_MAILS = parseEnvJsonObject("FOURNISSEUR_MAILS_JSON");
+console.log("[GARANTIE][CONF] MAGASIN_MAILS keys =", Object.keys(MAGASIN_MAILS));
+
+const FOURNISSEUR_PDFS = {
+  "FEBI": "FICHE_GARANTIE_FEBI.pdf",
+  "METELLI": "formulaire_garantie_metelli.pdf",
+  "EFI": "Formulaire_EFI.pdf",
+  "MAGNETI": "FORMULAIRE_MAGNETI.pdf",
+  "QH": "FORMULAIRE_QH.pdf",
+  "RIAL": "DEMANDE_RIAL.pdf",
+  "AUTOGAMMA": "Formulaire_ AUTOGAMMA.pdf",
+  "DELPHI": "Formulaire_delphi.pdf",
+  "MS MOTORS": "FORMULAIRE_ms.pdf",
+  "NGK": "Formulaire_ngk.pdf",
+  "NRF": "Formulaire_nrf.pdf",
+  "SEIM": "Formulaire_SEIM.pdf"
+};
+
+// Configuration FTP
+const FTP_HOST = process.env.FTP_HOST;
+const FTP_PORT = Number(process.env.FTP_PORT || 21);
+const FTP_USER = process.env.FTP_USER;
+const FTP_PASS = process.env.FTP_PASS;
+const FTP_BACKUP_FOLDER = process.env.GARANTIE_FTP_BACKUP_FOLDER || "/Disque 1/sauvegardegarantie";
+const JSON_FILE_FTP = path.posix.join(FTP_BACKUP_FOLDER, "demandes.json");
+const UPLOADS_FTP = path.posix.join(FTP_BACKUP_FOLDER, "uploads");
+
+// Configuration Multer pour upload de fichiers
+const TEMP_UPLOAD_DIR = path.join(__dirname, "..", "temp_uploads_garantie");
+try { fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true }); } catch {}
+const upload = multer({ dest: TEMP_UPLOAD_DIR });
 
 async function getFTPClient() {
   const client = new ftp.Client(10000);
