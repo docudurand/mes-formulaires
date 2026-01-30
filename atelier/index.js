@@ -17,7 +17,7 @@ router.use(apiRoutes);
 // Middleware pour parser le JSON
 router.use(express.json());
 
-// Route pour exposer la config (nécessaire pour la page suivi)
+// Route pour exposer la config (nécessaire pour la page suivi ET la page demande)
 router.get("/config.js", (_req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -26,13 +26,18 @@ router.get("/config.js", (_req, res) => {
   const PASS_BG = process.env.ATELIER_SUIVI_PASS_BG || "";
   const PASS_LIMITED = process.env.ATELIER_SUIVI_PASS_LIMITED || "";
   const PASS_CHASSE = process.env.ATELIER_SUIVI_PASS_CHASSE || "";
+  
+  // GS_URL pointe maintenant vers notre propre API au lieu de Google Sheets
+  const BASE_URL = process.env.BASE_URL || "";
+  const GS_URL = BASE_URL ? `${BASE_URL}/atelier/api/config` : "/atelier/api/config";
 
   res.send(
     `window.__ATELIER_CFG = {
       ATELIER_SUIVI_PASS_STE: ${JSON.stringify(PASS_STE)},
       ATELIER_SUIVI_PASS_BG: ${JSON.stringify(PASS_BG)},
       ATELIER_SUIVI_PASS_LIMITED: ${JSON.stringify(PASS_LIMITED)},
-      ATELIER_SUIVI_PASS_CHASSE: ${JSON.stringify(PASS_CHASSE)}
+      ATELIER_SUIVI_PASS_CHASSE: ${JSON.stringify(PASS_CHASSE)},
+      GS_URL: ${JSON.stringify(GS_URL)}
     };`
   );
 });

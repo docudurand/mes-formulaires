@@ -8,6 +8,77 @@ const dataManager = new FTPDataManager();
 // Middleware pour parser le JSON
 router.use(express.json());
 
+// POST /api/submit - Route pour le formulaire de demande (compatibilité avec l'ancien système)
+router.post("/api/submit", async (req, res) => {
+  try {
+    const { payload } = req.body;
+    
+    if (!payload) {
+      return res.status(400).json({
+        ok: false,
+        error: "Payload manquant"
+      });
+    }
+    
+    // Extraire les données du payload
+    const header = payload.header || {};
+    const snapshot = payload;
+    
+    // Créer le nouveau dossier
+    const caseData = {
+      magasin: header.magasin || "",
+      compte: header.compte || "",
+      client: header.client || "",
+      service: header.service || "",
+      demandeDate: header.dateDemande || new Date().toISOString().split('T')[0],
+      status: "Demande envoyé",
+      estimation: null,
+      snapshot: snapshot
+    };
+    
+    const newCase = await dataManager.addCase(caseData);
+    
+    res.json({
+      ok: true,
+      no: newCase.no,
+      message: "Demande enregistrée avec succès"
+    });
+  } catch (error) {
+    console.error("Erreur POST /api/submit:", error);
+    res.status(500).json({
+      ok: false,
+      error: "Erreur lors de l'enregistrement de la demande"
+    });
+  }
+});
+
+// GET /api/config - Route pour charger les lignes et règles (compatibilité)
+router.get("/api/config", async (req, res) => {
+  try {
+    const type = req.query.type;
+    
+    if (type === 'atelier') {
+      const lignes = await dataManager.getLignes();
+      const regles = await dataManager.getReglesRef();
+      
+      res.json({
+        lignes: lignes,
+        regles: regles
+      });
+    } else {
+      res.json({
+        lignes: [],
+        regles: []
+      });
+    }
+  } catch (error) {
+    console.error("Erreur GET /api/config:", error);
+    res.status(500).json({
+      error: "Erreur lors du chargement de la configuration"
+    });
+  }
+});
+
 // GET /api/cases - Récupérer tous les dossiers (avec filtres optionnels)
 router.get("/api/cases", async (req, res) => {
   try {
