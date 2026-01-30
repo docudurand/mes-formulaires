@@ -27,7 +27,7 @@ import formulairePiecePL from "./formulaire-piecepl/index.js";
 import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans-ftp.js";
-import atelier from "./atelier/index.js";
+import atelierRouter from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
 import kilometrageRouter from "./routes/kilometrage.js";
@@ -105,7 +105,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
-
 
 // Log uniquement les erreurs 5xx avec temps de traitement
 app.use((req, res, next) => {
@@ -899,7 +898,7 @@ function siteRespNameFor(_magasin) {
 }
 
 // Montage des routes metiers
-app.use("/atelier", atelier);
+app.use("/atelier", atelierRouter);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
