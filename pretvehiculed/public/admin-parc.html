@@ -170,6 +170,7 @@
             <tr>
               <th>ID</th>
               <th>Immatriculation</th>
+              <th>Magasin</th>
               <th>Marque</th>
               <th>Modèle</th>
               <th>CT</th>
@@ -379,7 +380,7 @@
         
         const tbody = document.querySelector('#vehicles-table tbody');
         if (!data.vehicles || data.vehicles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun véhicule</td></tr>';
+          tbody.innerHTML = '<tr><td colspan=\"9\" class=\"empty\">Aucun véhicule</td></tr>';
         } else {
           tbody.innerHTML = data.vehicles.map(v => {
             const ctExpired = isExpired(v.ct);
@@ -389,6 +390,7 @@
             <tr>
               <td><strong>${v.vehicle_id}</strong></td>
               <td><strong>${v.immatriculation}</strong></td>
+              <td>${v.magasin_home || '-'}</td>
               <td>${v.marque || '-'}</td>
               <td>${v.modele || '-'}</td>
               <td><span class="pill ${ctExpired ? 'danger' : 'ok'}">${formatDate(v.ct)}</span></td>
@@ -465,7 +467,15 @@
         const res = await fetch(`${API_BASE}/loans/search?${params}`);
         let loans = await res.json();
 
-        // Filtre visuel par magasin
+        // Tri du plus récent au plus ancien (updated_at -> closed_at -> created_at -> date_depart)
+        const getTs = (loan) => {
+          const v = loan.updated_at || loan.closed_at || loan.created_at || loan.date_depart || '';
+          const t = Date.parse(v);
+          return Number.isFinite(t) ? t : 0;
+        };
+        loans = (Array.isArray(loans) ? loans : []).sort((a, b) => getTs(b) - getTs(a));
+
+// Filtre visuel par magasin
         if (store) {
           loans = (Array.isArray(loans) ? loans : []).filter(l => String(l.magasin_pret || '').toUpperCase() === String(store).toUpperCase());
         }
