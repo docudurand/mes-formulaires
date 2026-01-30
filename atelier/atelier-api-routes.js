@@ -361,7 +361,7 @@ router.post("/api/print-html", (req, res) => {
   ` : ''}
   
   <!-- QR Code de validation (UN SEUL) -->
-  <div class="qr-section">
+  <div id="qr-validation" class="qr-section">
     <div class="qr-title">Validation de la réception de la pièce</div>
     <div class="qr-text">Scannez ce QR Code pour valider la réception de la pièce.</div>
     <img src="${qrUrl}" alt="QR Code" class="qr-image" />
