@@ -27,6 +27,7 @@ import formulairePiecePL from "./formulaire-piecepl/index.js";
 import formulairePneu from "./formulaire-pneu/index.js";
 import suiviDossier from "./suivi-dossier/index.js";
 import loansRouter from "./pretvehiculed/server-loans-ftp.js";
+import atelier from "./atelier/index.js";
 import atelierRouter from "./atelier/index.js";
 import presences from "./routes/presences.js";
 import ramasseRouter from "./routes/ramasse.js";
@@ -170,11 +171,6 @@ const FRAME_ANCESTORS_VALUE = "frame-ancestors " + ALLOWED_FRAME_ANCESTORS.join(
 
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
-
-// Routes pour les modules atelier et suivi-dossier
-app.use("/atelier", atelierRouter);
-app.use("/suivi-dossier", suiviDossier);
-
 // Routes pour lecture des logs mails
 app.use(mailLogsRouter);
 
@@ -903,7 +899,7 @@ function siteRespNameFor(_magasin) {
 }
 
 // Montage des routes metiers
-app.use("/atelier", atelier);
+app.use("/atelier", atelierRouter);
 app.use("/suivi-dossier", suiviDossier);
 app.use("/presence", presences);
 app.use("/api/kilometrage", kilometrageRouter);
