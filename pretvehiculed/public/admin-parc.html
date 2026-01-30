@@ -170,7 +170,6 @@
             <tr>
               <th>ID</th>
               <th>Immatriculation</th>
-              <th>Magasin</th>
               <th>Marque</th>
               <th>Modèle</th>
               <th>CT</th>
@@ -197,6 +196,12 @@
             <label for="search-date">Date</label>
             <input type="date" id="search-date">
           </div>
+          <div class="form-group">
+            <label for="search-store">Magasin</label>
+            <select id="search-store">
+              <option value="">Tous</option>
+            </select>
+          </div>
           <div class="form-group" style="display:flex;align-items:flex-end">
             <button class="btn" onclick="searchLoans()">🔍 Rechercher</button>
           </div>
@@ -205,6 +210,7 @@
         <table id="loans-table">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Immatriculation</th>
               <th>Chauffeur</th>
               <th>Magasin</th>
@@ -296,7 +302,7 @@
       document.getElementById(tabName).classList.add('active');
       
       if (tabName === 'vehicles') loadVehicles();
-      if (tabName === 'loans') loadLoans();
+      if (tabName === 'loans') { loadLoans(); loadStoresFilter(); }
     }
     
     // Messages
@@ -318,6 +324,44 @@
       const year = d.getFullYear();
       return `${day}/${month}/${year}`;
     }
+
+    // Formater une date (prêts) au format JJ-MM-AAAA
+    function formatLoanDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return '-';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+
+    // Charger la liste des magasins dans le filtre (onglet prêts)
+    async function loadStoresFilter() {
+      try {
+        const sel = document.getElementById('search-store');
+        if (!sel) return;
+
+        // déjà rempli
+        if (sel.options.length > 1) return;
+
+        const res = await fetch(`${API_BASE}/stores`);
+        const data = await res.json();
+        const stores = (data && data.stores) ? data.stores : [];
+
+        stores.forEach(s => {
+          const name = (s && (s.name || s.magasin || s.value)) ? (s.name || s.magasin || s.value) : '';
+          if (!name) return;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Erreur chargement magasins:', e);
+      }
+    }
+
     
     // Vérifier si une date est expirée
     function isExpired(dateStr) {
@@ -335,7 +379,7 @@
         
         const tbody = document.querySelector('#vehicles-table tbody');
         if (!data.vehicles || data.vehicles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="empty">Aucun véhicule</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun véhicule</td></tr>';
         } else {
           tbody.innerHTML = data.vehicles.map(v => {
             const ctExpired = isExpired(v.ct);
@@ -345,7 +389,6 @@
             <tr>
               <td><strong>${v.vehicle_id}</strong></td>
               <td><strong>${v.immatriculation}</strong></td>
-              <td>${v.magasin_home || '-'}</td>
               <td>${v.marque || '-'}</td>
               <td>${v.modele || '-'}</td>
               <td><span class="pill ${ctExpired ? 'danger' : 'ok'}">${formatDate(v.ct)}</span></td>
@@ -384,41 +427,22 @@
     }
     
     async function saveVehicle() {
-  if (!currentVehicle) return;
-
-  const payload = {
-    immatriculation: document.getElementById('edit-vehicle-immat').value.trim(),
-    marque: document.getElementById('edit-vehicle-marque').value.trim(),
-    modele: document.getElementById('edit-vehicle-modele').value.trim(),
-    ct: document.getElementById('edit-vehicle-ct').value || '',
-    pollution: document.getElementById('edit-vehicle-pollution').value || '',
-    disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
-  };
-
-  try {
-    const res = await fetch(`${API_BASE}/vehicles/${encodeURIComponent(currentVehicle.vehicle_id)}/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data.ok) {
-      const msg = data?.detail ? `${data.error || res.status} — ${data.detail}` : (data.error || res.status);
-      showMessage('edit-vehicle-notice', `Erreur mise à jour: ${msg}`, 'error');
-      return;
+      if (!currentVehicle) return;
+      
+      showMessage('edit-vehicle-notice', 'Fonctionnalité en cours de développement - Modification manuelle requise via le fichier JSON', 'info');
+      
+      // TODO: Implémenter l'update dans l'API
+      // const payload = {
+      //   immatriculation: document.getElementById('edit-vehicle-immat').value,
+      //   marque: document.getElementById('edit-vehicle-marque').value,
+      //   modele: document.getElementById('edit-vehicle-modele').value,
+      //   ct: document.getElementById('edit-vehicle-ct').value,
+      //   pollution: document.getElementById('edit-vehicle-pollution').value,
+      //   disponible: document.getElementById('edit-vehicle-disponible').value === 'true'
+      // };
+      // await fetch(`${API_BASE}/vehicles/${currentVehicle.vehicle_id}/update`, {...});
     }
-
-    showMessage('vehicle-notice', `Véhicule ${currentVehicle.vehicle_id} mis à jour ✅`, 'success');
-
-    closeEditVehicleModal();
-    await loadVehicles();
-  } catch (e) {
-    showMessage('edit-vehicle-notice', `Erreur réseau: ${e.message}`, 'error');
-  }
-}
-
+    
     document.getElementById('add-vehicle-form').addEventListener('submit', (e) => {
       e.preventDefault();
       showMessage('vehicle-notice', 'Fonctionnalité en cours de développement - Ajout manuel via le fichier JSON', 'info');
@@ -433,7 +457,7 @@
       try {
         const immat = document.getElementById('search-immat').value;
         const date = document.getElementById('search-date').value;
-        
+        const store = (document.getElementById('search-store') || {}).value || '';
         const params = new URLSearchParams();
         if (immat) params.set('immat', immat);
         if (date) params.set('date', date);
@@ -441,25 +465,23 @@
         const res = await fetch(`${API_BASE}/loans/search?${params}`);
         let loans = await res.json();
 
-        // Tri du plus récent au plus ancien (updated_at -> closed_at -> created_at -> date_depart)
-        const getTs = (loan) => {
-          const v = loan.updated_at || loan.closed_at || loan.created_at || loan.date_depart || '';
-          const t = Date.parse(v);
-          return Number.isFinite(t) ? t : 0;
-        };
-        loans = (Array.isArray(loans) ? loans : []).sort((a, b) => getTs(b) - getTs(a));
+        // Filtre visuel par magasin
+        if (store) {
+          loans = (Array.isArray(loans) ? loans : []).filter(l => String(l.magasin_pret || '').toUpperCase() === String(store).toUpperCase());
+        }
 
         const tbody = document.querySelector('#loans-table tbody');
         if (loans.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun prêt trouvé</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun prêt trouvé</td></tr>';
         } else {
           tbody.innerHTML = loans.map(loan => `
             <tr>
+              <td>${loan.loan_id.substring(0, 12)}...</td>
               <td><strong>${loan.immatriculation || '-'}</strong></td>
               <td>${loan.chauffeur_nom || '-'}</td>
               <td>${loan.magasin_pret || '-'}</td>
-              <td>${loan.date_depart || '-'}<br><small>${loan.heure_depart || ''}</small></td>
-              <td>${loan.date_retour || '-'}<br><small>${loan.heure_retour || ''}</small></td>
+              <td>${formatLoanDate(loan.date_depart)}<br><small>${loan.heure_depart || ''}</small></td>
+              <td>${formatLoanDate(loan.date_retour)}<br><small>${loan.heure_retour || ''}</small></td>
               <td><span class="pill ${loan.status === 'en cours' ? 'warn' : 'ok'}">${loan.status}</span></td>
               <td>
                 <div class="actions">
