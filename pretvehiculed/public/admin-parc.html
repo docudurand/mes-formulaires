@@ -197,6 +197,12 @@
             <label for="search-date">Date</label>
             <input type="date" id="search-date">
           </div>
+          <div class="form-group">
+            <label for="search-store">Magasin</label>
+            <select id="search-store">
+              <option value="">Tous</option>
+            </select>
+          </div>
           <div class="form-group" style="display:flex;align-items:flex-end">
             <button class="btn" onclick="searchLoans()">🔍 Rechercher</button>
           </div>
@@ -296,7 +302,7 @@
       document.getElementById(tabName).classList.add('active');
       
       if (tabName === 'vehicles') loadVehicles();
-      if (tabName === 'loans') loadLoans();
+      if (tabName === 'loans') { loadLoans(); loadStoresFilter(); }
     }
     
     // Messages
@@ -319,6 +325,45 @@
       return `${day}/${month}/${year}`;
     }
     
+
+    // Formater une date (prêts) au format JJ-MM-AAAA
+    function formatLoanDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return '-';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+
+    // Charger la liste des magasins dans le filtre (onglet prêts)
+    async function loadStoresFilter() {
+      try {
+        const sel = document.getElementById('search-store');
+        if (!sel) return;
+
+        // Ne recharge pas si déjà rempli
+        if (sel.options.length > 1) return;
+
+        const res = await fetch(`${API_BASE}/stores`);
+        const data = await res.json();
+        const stores = (data && data.stores) ? data.stores : [];
+
+        stores.forEach(s => {
+          const name = (s && (s.name || s.magasin || s.value)) ? (s.name || s.magasin || s.value) : '';
+          if (!name) return;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Erreur chargement magasins:', e);
+      }
+    }
+
+
     // Vérifier si une date est expirée
     function isExpired(dateStr) {
       if (!dateStr) return false;
@@ -433,7 +478,7 @@
       try {
         const immat = document.getElementById('search-immat').value;
         const date = document.getElementById('search-date').value;
-        
+        const store = (document.getElementById('search-store') || {}).value || '';
         const params = new URLSearchParams();
         if (immat) params.set('immat', immat);
         if (date) params.set('date', date);
@@ -449,6 +494,11 @@
         };
         loans = (Array.isArray(loans) ? loans : []).sort((a, b) => getTs(b) - getTs(a));
 
+        // Filtre visuel par magasin
+        if (store) {
+          loans = (Array.isArray(loans) ? loans : []).filter(l => String(l.magasin_pret || '').toUpperCase() === String(store).toUpperCase());
+        }
+
         const tbody = document.querySelector('#loans-table tbody');
         if (loans.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun prêt trouvé</td></tr>';
@@ -458,8 +508,8 @@
               <td><strong>${loan.immatriculation || '-'}</strong></td>
               <td>${loan.chauffeur_nom || '-'}</td>
               <td>${loan.magasin_pret || '-'}</td>
-              <td>${loan.date_depart || '-'}<br><small>${loan.heure_depart || ''}</small></td>
-              <td>${loan.date_retour || '-'}<br><small>${loan.heure_retour || ''}</small></td>
+              <td>${formatLoanDate(loan.date_depart)}<br><small>${loan.heure_depart || ''}</small></td>
+              <td>${formatLoanDate(loan.date_retour)}<br><small>${loan.heure_retour || ''}</small></td>
               <td><span class="pill ${loan.status === 'en cours' ? 'warn' : 'ok'}">${loan.status}</span></td>
               <td>
                 <div class="actions">
