@@ -149,14 +149,6 @@ router.post("/api/print-html", (req, res) => {
       font-weight: 500;
     }
     
-    /* Détails culasse - grille horizontale */
-    .culasse-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px 25px;
-      margin-bottom: 15px;
-    }
-    
     /* Liste des opérations */
     .operations-title {
       font-size: 14px;
@@ -298,43 +290,6 @@ router.post("/api/print-html", (req, res) => {
       </div>
     </div>
   </div>
-  
-  ${service === "Rectification Culasse" && culasse ? `
-  <!-- Détails Rectification Culasse -->
-  <div class="section">
-    <div class="section-title">Détails Rectification Culasse</div>
-    <div class="culasse-grid">
-      <div class="info-item">
-        <div class="info-label">Cylindre</div>
-        <div class="info-value">${culasse.cylindre || "–"}</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Soupapes</div>
-        <div class="info-value">${culasse.soupapes || "–"}</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Carburant</div>
-        <div class="info-value">${culasse.carburant || "–"}</div>
-      </div>
-    </div>
-    
-    ${culasse.operations && culasse.operations.length ? `
-    <div class="operations-title">Opérations (cochées)</div>
-    <ul class="operations-list">
-      ${culasse.operations.map(op => `<li>${op.libelle || op.ligne}</li>`).join('')}
-    </ul>
-    ` : ''}
-    
-    <div style="margin-top: 15px;">
-      <div class="operations-title">Pièces à Fournir</div>
-      <div class="pieces-text">
-        ${culasse.piecesAFournir && culasse.piecesAFournir.length 
-          ? culasse.piecesAFournir.join(", ")
-          : "Aucune pièce sélectionnée."}
-      </div>
-    </div>
-  </div>
-  ` : ''}
   
   ${injecteur ? `
   <!-- Détails Contrôle injection -->
