@@ -22,7 +22,28 @@ router.post("/api/print-html", (req, res) => {
     const no = String(payload.no || "").padStart(5, "0");
     
     const service = header.service || "";
-    const magasin = header.magasin || "";
+    const magasinDemande = header.magasin || "";
+    
+    // Mapping service → magasin responsable
+    function getMagasinForService(serviceName) {
+      const serviceKey = String(serviceName || "").trim().toUpperCase();
+      
+      const mapping = {
+        "RECTIFICATION CULASSE": "ST EGREVE",
+        "RECTIFICATION VILEBREQUIN": "ST EGREVE",
+        "RECTIFICATION DES VOLANTS MOTEUR": "ST EGREVE",
+        "REGARNISSAGES MACHOIRES": "ST EGREVE",
+        "CONTRÔLE INJECTION DIESEL": "GLEIZE",
+        "CONTROLE INJECTION DIESEL": "GLEIZE",
+        "CONTRÔLE INJECTION ESSENCE": "GLEIZE",
+        "CONTROLE INJECTION ESSENCE": "GLEIZE",
+        "ARBRE DE TRANSMISSION": "ST EGREVE"
+      };
+      
+      return mapping[serviceKey] || magasinDemande.toUpperCase();
+    }
+    
+    const magasinService = getMagasinForService(service);
     
     // Base URL pour le QR code
     const baseUrl = process.env.BASE_URL || "";
@@ -198,10 +219,10 @@ router.post("/api/print-html", (req, res) => {
       margin-bottom: 8px;
     }
     .qr-image {
-      width: 110px;
-      height: 110px;
+      width: 150px;
+      height: 150px;
       border: 1px solid #ddd;
-      padding: 3px;
+      padding: 5px;
       background: white;
     }
     
@@ -232,7 +253,7 @@ router.post("/api/print-html", (req, res) => {
       <div class="logo-text">pièces automobile et services</div>
     </div>
     <div class="title-section">
-      <div class="title-location">${magasin.toUpperCase()}</div>
+      <div class="title-location">${magasinService}</div>
       <div class="title-service">${service}</div>
       <div class="title-dossier">Dossier n° ${no}</div>
     </div>
@@ -268,7 +289,7 @@ router.post("/api/print-html", (req, res) => {
       </div>
       <div class="info-item">
         <div class="info-label">Magasin d'envoi</div>
-        <div class="info-value">${magasin}</div>
+        <div class="info-value">${magasinDemande}</div>
       </div>
       <div class="info-item">
         <div class="info-label">Date de la demande</div>
@@ -339,7 +360,7 @@ router.post("/api/print-html", (req, res) => {
   </div>
   ` : ''}
   
-  <!-- QR Code de validation -->
+  <!-- QR Code de validation (UN SEUL) -->
   <div class="qr-section">
     <div class="qr-title">Validation de la réception de la pièce</div>
     <div class="qr-text">Scannez ce QR Code pour valider la réception de la pièce.</div>
