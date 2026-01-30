@@ -170,6 +170,7 @@
             <tr>
               <th>ID</th>
               <th>Immatriculation</th>
+              <th>Magasin</th>
               <th>Marque</th>
               <th>Modèle</th>
               <th>CT</th>
@@ -334,7 +335,7 @@
         
         const tbody = document.querySelector('#vehicles-table tbody');
         if (!data.vehicles || data.vehicles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucun véhicule</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="empty">Aucun véhicule</td></tr>';
         } else {
           tbody.innerHTML = data.vehicles.map(v => {
             const ctExpired = isExpired(v.ct);
@@ -344,6 +345,7 @@
             <tr>
               <td><strong>${v.vehicle_id}</strong></td>
               <td><strong>${v.immatriculation}</strong></td>
+              <td>${v.magasin_home || '-'}</td>
               <td>${v.marque || '-'}</td>
               <td>${v.modele || '-'}</td>
               <td><span class="pill ${ctExpired ? 'danger' : 'ok'}">${formatDate(v.ct)}</span></td>
