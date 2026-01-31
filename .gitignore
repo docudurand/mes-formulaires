@@ -1,0 +1,5 @@
+# Fichiers secrets
+.env
+*.env
+.env.*
+!/ .env.example
