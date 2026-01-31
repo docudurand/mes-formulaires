@@ -2038,17 +2038,48 @@ function parseEnvJSON(raw, fallback) {
   }
 }
 
+
+// --- JSON persisté sur FTP (seed depuis .env si absent) ---
+async function fetchAndEnsureFtpJson(fileName, envVarName, fallback){
+  const folder = (process.env.FTP_BACKUP_FOLDER || "").trim();
+  const remotePath = normFtpPath_(folder ? path.posix.join(folder, fileName) : fileName);
+
+  const client = await ftpClient();
+  try{
+    let data = await dlJSON(client, remotePath);
+    if (data === null){
+      data = parseEnvJSON(process.env[envVarName], fallback);
+      await upJSON(client, remotePath, data);
+    }
+    return data;
+  }finally{
+    try{ client.close && client.close(); }catch{}
+  }
+}
+
+
 app.get("/api/pl/liens-garantie-retour", (_req, res) => {
   const data = parseEnvJSON(process.env.PL_LIENS_GARANTIE_RETOUR_JSON, []);
   res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
 
-app.get("/api/vl/retour-garantie", (_req, res) => {
-  const data = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
-  res.setHeader("Cache-Control", "no-store");
-  res.json(data);
+app.get("/api/vl/retour-garantie", async (_req, res) => {
+  try{
+    const data = await fetchAndEnsureFtpJson(
+      "vl_retour_garantie.json",
+      "VL_RETOUR_GARANTIE_JSON",
+      {}
+    );
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(data);
+  }catch(e){
+    const fallback = parseEnvJSON(process.env.VL_RETOUR_GARANTIE_JSON, {});
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(fallback);
+  }
 });
+
 app.get("/api/vl/liens-formulaire-garantie", (_req, res) => {
   const data = parseEnvJSON(process.env.VL_LIENS_FORMULAIRE_GARANTIE_JSON, []);
   res.setHeader("Cache-Control", "no-store");
@@ -2074,15 +2105,26 @@ app.use("/garantie", express.static(path.join(__dirname, "garantie"), {
   index: false
 }));
 
-// Contacts fournisseurs (depuis env JSON)
-app.get("/api/util/contacts-fournisseurs", (_req, res) => {
-  try {
-    const raw = process.env.CONTACTS_FOURNISSEURS_JSON || "[]";
-    const data = JSON.parse(raw);
+// Contacts fournisseurs (depuis JSON sur FTP ; seed depuis env si absent)
+app.get("/api/util/contacts-fournisseurs", async (_req, res) => {
+  try{
+    const data = await fetchAndEnsureFtpJson(
+      "contacts_fournisseurs.json",
+      "CONTACTS_FOURNISSEURS_JSON",
+      []
+    );
     res.setHeader("Cache-Control", "no-store");
     return res.json(data);
-  } catch (e) {
-    return res.status(500).json({ error: "CONTACTS_FOURNISSEURS_JSON invalid", details: String(e?.message || e) });
+  }catch(e){
+    // fallback env
+    try {
+      const raw = process.env.CONTACTS_FOURNISSEURS_JSON || "[]";
+      const data = JSON.parse(raw);
+      res.setHeader("Cache-Control", "no-store");
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: "CONTACTS_FOURNISSEURS_JSON invalid", details: String(err?.message || err) });
+    }
   }
 });
 
