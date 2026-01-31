@@ -159,54 +159,95 @@ function readLocalJson(paths, fallback) {
 
 // Téléchargement FTP d'un JSON (retourne parsed JSON ou fallback)
 
+
 async function readFtpJson(remotePath, fallback) {
   if (!remotePath) return fallback;
   if (!process.env.FTP_HOST || !process.env.FTP_USER) return fallback;
 
-  const client = new ftp.Client();
-  client.ftp.verbose = false;
-
-  // Télécharge dans un fichier temporaire puis parse (plus fiable que stream custom)
   const tmpName = `ftp_json_${Date.now()}_${Math.random().toString(16).slice(2)}.json`;
   const tmpFile = path.join(TMP_DIR, tmpName);
 
-  try {
-    await client.access({
-      host: process.env.FTP_HOST,
-      port: Number(process.env.FTP_PORT || 21),
-      user: process.env.FTP_USER,
-      password: process.env.FTP_PASSWORD,
-      secure: String(process.env.FTP_SECURE || "false") === "true",
-      secureOptions: {
-        rejectUnauthorized:
-          String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0",
-      },
-    });
+  const timeoutMs = Number(process.env.FTP_TIMEOUT_MS || 25_000);
+  const wantSecure = String(process.env.FTP_SECURE || "false") === "true";
 
-    // Certains serveurs FTP n'aiment pas les chemins avec "/" initial => retry sans le leading slash si 550.
+  // Si FTP_TLS_INSECURE=1 ou FTP_TLS_REJECT_UNAUTH=0 => on n'exige pas un certificat valide
+  const rejectUnauthorized =
+    String(process.env.FTP_TLS_REJECT_UNAUTH || "1") !== "0" &&
+    String(process.env.FTP_TLS_INSECURE || "0") !== "1";
+
+  async function attemptDownload(secureMode) {
+    const client = new ftp.Client(timeoutMs);
+    client.ftp.verbose = false;
     try {
-      await client.downloadTo(tmpFile, remotePath);
-    } catch (e) {
-      const msg = String(e?.message || e);
-      if (msg.includes("550") && String(remotePath).startsWith("/")) {
-        await client.downloadTo(tmpFile, String(remotePath).replace(/^\/+/, ""));
-      } else {
+      await client.access({
+        host: process.env.FTP_HOST,
+        port: Number(process.env.FTP_PORT || 21),
+        user: process.env.FTP_USER,
+        password: process.env.FTP_PASSWORD,
+        secure: secureMode,
+        secureOptions: { rejectUnauthorized },
+      });
+
+      // Certains serveurs n'aiment pas le "/" initial : retry sans le leading slash si 550.
+      try {
+        await client.downloadTo(tmpFile, remotePath);
+      } catch (e) {
+        const msg = String(e?.message || e);
+        if (msg.includes("550") && String(remotePath).startsWith("/")) {
+          await client.downloadTo(tmpFile, String(remotePath).replace(/^\/+/, ""));
+        } else {
+          throw e;
+        }
+      }
+
+      const raw = fs.readFileSync(tmpFile, "utf8");
+      return JSON.parse(raw);
+    } finally {
+      try { client.close(); } catch {}
+    }
+  }
+
+  // Retry simple (réseau/Freebox peut reset le data socket)
+  const maxTries = Number(process.env.FTP_RETRIES || 3);
+
+  try {
+    for (let i = 1; i <= maxTries; i++) {
+      try {
+        const data = await attemptDownload(wantSecure);
+        return data;
+      } catch (e) {
+        const msg = String(e?.message || e);
+        const isConnReset = msg.includes("ECONNRESET") || msg.toLowerCase().includes("data socket");
+        console.warn(`[RAMASSE] FTP tentative ${i}/${maxTries} échouée:`, msg);
+
+        // Si FTPS fait reset, on tente UNE fois en FTP simple (beaucoup de Freebox/FTPS font ça selon config)
+        if (isConnReset && wantSecure) {
+          try {
+            console.warn("[RAMASSE] Retry en FTP simple (secure=false) suite à ECONNRESET...");
+            const data = await attemptDownload(false);
+            return data;
+          } catch (e2) {
+            console.warn("[RAMASSE] Retry FTP simple échoué:", String(e2?.message || e2));
+          }
+        }
+
+        if (i < maxTries) {
+          await new Promise(r => setTimeout(r, 400 * i));
+          continue;
+        }
         throw e;
       }
     }
-
-    const raw = fs.readFileSync(tmpFile, "utf8");
-    return JSON.parse(raw);
+    return fallback;
   } catch (e) {
     console.warn("[RAMASSE] FTP JSON indisponible:", remotePath, e && e.message ? e.message : e);
     return fallback;
   } finally {
-    try { client.close(); } catch {}
     try { fs.unlinkSync(tmpFile); } catch {}
   }
 }
 
-async function getFournisseurs() {
+async function getFournisseursasync function getFournisseurs() {
   const now = Date.now();
   if (_FOURNISSEURS_CACHE.data && (now - _FOURNISSEURS_CACHE.ts) < JSON_CACHE_TTL_MS) {
     return _FOURNISSEURS_CACHE.data;
