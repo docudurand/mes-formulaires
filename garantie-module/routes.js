@@ -34,6 +34,46 @@ const MAGASINS = [
   "Les Echets", "Pavi", "Rives", "Saint-Egreve", "Saint-Jean-Bonnefonds", "Saint-martin-d'heres", "Seynod"
 ];
 
+
+// ---- Helpers ENV (compat Render/Unix) ----
+// Render (et beaucoup d'UI) n'acceptent pas les noms de variables avec des tirets.
+// Donc on accepte plusieurs noms pour une même config (ex: "admin-pass" ET "ADMIN_PASS").
+function envGetAny(names = []) {
+  for (const n of names) {
+    if (!n) continue;
+    const v = process.env[n];
+    if (v != null && String(v).trim() !== "") return String(v);
+  }
+  return "";
+}
+
+function normEnvChunk(str) {
+  return String(str || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")      // accents
+    .replace(/[^a-zA-Z0-9]+/g, "_")         // tout sauf alnum -> _
+    .replace(/^_+|_+$/g, "")                // trim _
+    .replace(/_+/g, "_")                    // collapse
+    .toUpperCase();
+}
+
+function magasinKeyLegacy(magasin) {
+  // ex: "Saint-martin-d'heres" -> "magasin-Saint-martin-d-heres-pass"
+  return "magasin-" + String(magasin || "").replace(/[^\w]/g, "-") + "-pass";
+}
+function magasinKeyEnv(magasin) {
+  // ex: "Saint-martin-d'heres" -> "MAGASIN_SAINT_MARTIN_D_HERES_PASS"
+  return "MAGASIN_" + normEnvChunk(magasin) + "_PASS";
+}
+
+function limitedKeyLegacy(name) { return "magasin-" + name + "-limited"; }
+function limitedKeyEnv(name) { return "MAGASIN_" + normEnvChunk(name) + "_LIMITED"; }
+
+function trimPw(pw) {
+  // sécurise les copier/coller (espaces, retours chariot)
+  return String(pw || "").replace(/\r?\n/g, "").trim();
+}
+
 // Fonction pour parser JSON depuis env
 function parseEnvJsonObject(varName) {
   const raw0 = (process.env[varName] || "").trim();
@@ -859,39 +899,50 @@ router.get("/download/:file", async (req, res) => {
 
 // Auth admin simple par mot de passe (variables d'env).
 router.post("/admin/login", (req, res) => {
-  const pw = (req.body && req.body.password) ? req.body.password : "";
-  if (pw === process.env["superadmin-pass"]) {
+  const pw = trimPw((req.body && req.body.password) ? req.body.password : "");
+
+  // Super-admin (toutes actions)
+  const superPass = trimPw(envGetAny(["superadmin-pass", "SUPERADMIN_PASS", "GARANTIE_SUPERADMIN_PASS"]));
+  if (superPass && pw === superPass) {
     return res.json({
-      success:   true,
-      isSuper:   true,
-      isAdmin:   true,
+      success: true,
+      isSuper: true,
+      isAdmin: true,
       isLimited: false,
-      magasin:   null,
+      magasin: null,
       multiMagasins: null
     });
   }
-  if (pw === process.env["admin-pass"]) {
+
+  // Admin (gestion dossiers, pas suppression)
+  const adminPass = trimPw(envGetAny(["admin-pass", "ADMIN_PASS", "GARANTIE_ADMIN_PASS"]));
+  if (adminPass && pw === adminPass) {
     return res.json({
-      success:   true,
-      isSuper:   false,
-      isAdmin:   true,
+      success: true,
+      isSuper: false,
+      isAdmin: true,
       isLimited: false,
-      magasin:   null,
+      magasin: null,
       multiMagasins: null
     });
   }
-  if (process.env["magasin-Remond-limited"] && pw === process.env["magasin-Remond-limited"]) {
+
+  // Profils "limited" (multi magasins / lecture seule selon règles)
+  const remondLimited = trimPw(envGetAny(["magasin-Remond-limited", "MAGASIN_REMOND_LIMITED"]));
+  if (remondLimited && pw === remondLimited) {
     return res.json({
-      success:   true,
-      isSuper:   false,
-      isAdmin:   false,
+      success: true,
+      isSuper: false,
+      isAdmin: false,
       isLimited: true,
-      magasin:   null,
+      magasin: null,
       multiMagasins: ["Gleize", "Les Echets", "Chassieu"],
       defaultMagasin: "Remond"
     });
   }
-  if (process.env["magasin-Casty-limited"] && pw === process.env["magasin-Casty-limited"]) {
+
+  const castyLimited = trimPw(envGetAny(["magasin-Casty-limited", "MAGASIN_CASTY_LIMITED"]));
+  if (castyLimited && pw === castyLimited) {
     return res.json({
       success: true,
       isSuper: false,
@@ -902,44 +953,54 @@ router.post("/admin/login", (req, res) => {
       defaultMagasin: "Les Echets"
     });
   }
-  if (process.env["magasin-Barret-limited"] && pw === process.env["magasin-Barret-limited"]) {
+
+  const barretLimited = trimPw(envGetAny(["magasin-Barret-limited", "MAGASIN_BARRET_LIMITED"]));
+  if (barretLimited && pw === barretLimited) {
     return res.json({
-      success:   true,
-      isSuper:   false,
-      isAdmin:   false,
+      success: true,
+      isSuper: false,
+      isAdmin: false,
       isLimited: true,
-      magasin:   "Gleize",
+      magasin: "Gleize",
       multiMagasins: null,
       defaultMagasin: "Gleize"
     });
   }
 
-  if (process.env["magasin-Chassieu-limited"] && pw === process.env["magasin-Chassieu-limited"]) {
+  const chassieuLimited = trimPw(envGetAny(["magasin-Chassieu-limited", "MAGASIN_CHASSIEU_LIMITED"]));
+  if (chassieuLimited && pw === chassieuLimited) {
     return res.json({
-      success:   true,
-      isSuper:   false,
-      isAdmin:   false,
+      success: true,
+      isSuper: false,
+      isAdmin: false,
       isLimited: true,
-      magasin:   "Chassieu",
+      magasin: "Chassieu",
       multiMagasins: null,
       defaultMagasin: "Chassieu"
     });
   }
+
+  // Mots de passe "magasin-XXX-pass"
   for (const magasin of MAGASINS) {
-    const key = "magasin-" + magasin.replace(/[^\w]/g, "-") + "-pass";
-    if (process.env[key] && pw === process.env[key]) {
+    const legacy = magasinKeyLegacy(magasin);
+    const modern = magasinKeyEnv(magasin);
+    const expected = trimPw(envGetAny([legacy, modern]));
+    if (expected && pw === expected) {
       return res.json({
-        success:   true,
-        isSuper:   false,
-        isAdmin:   false,
+        success: true,
+        isSuper: false,
+        isAdmin: false,
         isLimited: false,
         magasin,
         multiMagasins: null
       });
     }
   }
+
   return res.json({ success: false, message: "Mot de passe incorrect" });
 });
+
+
 
 // API admin: supprime une piece jointe d'un dossier.
 router.post("/admin/dossier/:id/delete-file", async (req, res) => {
