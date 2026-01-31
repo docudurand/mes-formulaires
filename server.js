@@ -1,4 +1,4 @@
-// serveur principal (Express) pour tous les formulaires et APIs
+﻿// serveur principal (Express) pour tous les formulaires et APIs
 
 import express from "express";
 import multer from "multer";
@@ -97,8 +97,8 @@ const corsOptions = {
     console.warn("[CORS] blocked origin:", origin);
     return cb(null, false);
   },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With", "X-Request-Id"],
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token", "X-Requested-With", "X-Request-Id", "X-Superadmin"],
   optionsSuccessStatus: 204,
 };
 
