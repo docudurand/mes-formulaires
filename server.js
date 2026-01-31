@@ -3,7 +3,7 @@
 import express from "express";
 import multer from "multer";
 import cors from "cors";
-import dotenv from "dotenv";
+import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -34,8 +34,7 @@ import kilometrageRouter from "./routes/kilometrage.js";
 import garantieRouter from "./garantie-module/routes.js";
 import "./mailInlineWorker.js";
 
-// Chargement des variables d'environnement
-dotenv.config();
+// Chargement des variables d'environnement (via dotenv/config import)
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] unhandledRejection:", reason);
 });

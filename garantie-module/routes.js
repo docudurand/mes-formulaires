@@ -997,7 +997,26 @@ router.post("/admin/login", (req, res) => {
     }
   }
 
-  return res.json({ success: false, message: "Mot de passe incorrect" });
+    // Diagnostic optionnel (sans révéler les mots de passe) : activer DEBUG_AUTH=1
+  if (String(process.env.DEBUG_AUTH || "").trim() === "1") {
+    const diag = {
+      hasSuperPass: Boolean(trimPw(envGetAny(["superadmin-pass","SUPERADMIN_PASS","GARANTIE_SUPERADMIN_PASS"]))),
+      hasAdminPass: Boolean(trimPw(envGetAny(["admin-pass","ADMIN_PASS","GARANTIE_ADMIN_PASS"]))),
+      hasRemondLimited: Boolean(trimPw(envGetAny(["magasin-Remond-limited","MAGASIN_REMOND_LIMITED"]))),
+      hasCastyLimited: Boolean(trimPw(envGetAny(["magasin-Casty-limited","MAGASIN_CASTY_LIMITED"]))),
+      hasBarretLimited: Boolean(trimPw(envGetAny(["magasin-Barret-limited","MAGASIN_BARRET_LIMITED"]))),
+      hasChassieuLimited: Boolean(trimPw(envGetAny(["magasin-Chassieu-limited","MAGASIN_CHASSIEU_LIMITED"]))),
+      magasinsConfigured: MAGASINS.filter(m => Boolean(trimPw(envGetAny([magasinKeyLegacy(m), magasinKeyEnv(m)])))),
+      sampleExpectedEnvNames: {
+        annemasse: [magasinKeyLegacy("Annemasse"), magasinKeyEnv("Annemasse")],
+        bourgoinJallieu: [magasinKeyLegacy("Bourgoin-Jallieu"), magasinKeyEnv("Bourgoin-Jallieu")],
+        saintMartinDheres: [magasinKeyLegacy("Saint-martin-d-heres"), magasinKeyEnv("Saint-martin-d-heres")],
+      }
+    };
+    return res.status(401).json({ success:false, message:"Mot de passe incorrect", diag });
+  }
+
+  return res.status(401).json({ success: false, message: "Mot de passe incorrect" });
 });
 
 
