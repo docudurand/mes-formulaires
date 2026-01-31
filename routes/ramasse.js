@@ -168,7 +168,8 @@ async function readFtpJson(remotePath, fallback) {
   const tmpFile = path.join(TMP_DIR, tmpName);
 
   const timeoutMs = Number(process.env.FTP_TIMEOUT_MS || 25_000);
-  const wantSecure = String(process.env.FTP_SECURE || "false") === "true";
+  const secureEnv = String(process.env.FTP_SECURE || "false").toLowerCase();
+  const wantSecure = secureEnv === "true" ? true : (secureEnv === "implicit" ? "implicit" : false);
 
   // Si FTP_TLS_INSECURE=1 ou FTP_TLS_REJECT_UNAUTH=0 => on n'exige pas un certificat valide
   const rejectUnauthorized =
@@ -247,7 +248,7 @@ async function readFtpJson(remotePath, fallback) {
   }
 }
 
-async function getFournisseursasync function getFournisseurs() {
+async function getFournisseurs() {
   const now = Date.now();
   if (_FOURNISSEURS_CACHE.data && (now - _FOURNISSEURS_CACHE.ts) < JSON_CACHE_TTL_MS) {
     return _FOURNISSEURS_CACHE.data;
