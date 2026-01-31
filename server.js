@@ -2069,6 +2069,12 @@ app.use("/vl", express.static(path.join(__dirname, "vl"), {
 // Assets generaux (images, css, etc.)
 app.use("/assets", express.static(path.join(__dirname, "assets")));
 
+// Fichiers statiques du dossier garantie (formulaires, PDFs)
+app.use("/garantie", express.static(path.join(__dirname, "garantie"), {
+  extensions: ["html", "htm"],
+  index: false
+}));
+
 // Contacts fournisseurs (depuis env JSON)
 app.get("/api/util/contacts-fournisseurs", (_req, res) => {
   try {
