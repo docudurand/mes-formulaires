@@ -116,8 +116,14 @@ const FOURNISSEUR_PDFS = {
 const FTP_HOST = process.env.FTP_HOST;
 const FTP_PORT = Number(process.env.FTP_PORT || 21);
 const FTP_USER = process.env.FTP_USER;
-const FTP_PASS = process.env.FTP_PASS;
-const FTP_BACKUP_FOLDER = process.env.GARANTIE_FTP_BACKUP_FOLDER || "/Disque 1/sauvegardegarantie";
+const FTP_PASS = process.env.FTP_PASS || process.env.FTP_PASSWORD;
+const FTP_BACKUP_FOLDER =
+  process.env.GARANTIE_FTP_BACKUP_FOLDER ||
+  process.env.FTP_BACKUP_FOLDER ||
+  "/Disque 1/sauvegardegarantie";
+const FTP_SECURE = String(process.env.FTP_SECURE || "true").toLowerCase();
+const FTP_TLS_INSECURE = String(process.env.FTP_TLS_INSECURE || "").trim() === "1";
+const FTP_TLS_REJECT_UNAUTH = String(process.env.FTP_TLS_REJECT_UNAUTH || "").trim() === "1";
 const JSON_FILE_FTP = path.posix.join(FTP_BACKUP_FOLDER, "demandes.json");
 const UPLOADS_FTP = path.posix.join(FTP_BACKUP_FOLDER, "uploads");
 
@@ -135,8 +141,8 @@ async function getFTPClient() {
       port: FTP_PORT,
       user: FTP_USER,
       password: FTP_PASS,
-      secure: true,
-      secureOptions: { rejectUnauthorized: false }
+      secure: FTP_SECURE === "true" || FTP_SECURE === "1",
+      secureOptions: { rejectUnauthorized: FTP_TLS_REJECT_UNAUTH && !FTP_TLS_INSECURE }
     });
     return client;
   } catch (err) {
