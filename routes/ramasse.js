@@ -215,7 +215,7 @@ function uniqEmails(arr) {
 
 // HTML non exécuté
 function esc(t = "") {
-  return String(t).replace(/[&<>"]/'/g, c =>
+  return String(t).replace(/[&<>"\']/g, c =>
     ({
       "&": "&amp;",
       "<": "&lt;",
