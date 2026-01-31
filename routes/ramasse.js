@@ -39,6 +39,64 @@ function parseCsv(value) {
 const UPLOAD_ALLOWED_MIME = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_MIME);
 const UPLOAD_ALLOWED_EXT = parseCsv(process.env.RAMASSE_UPLOAD_ALLOWED_EXT);
 
+
+// -----------------------------------------------------------------------------
+// Dé-doublonnage des envois (évite double clic / refresh)
+// -----------------------------------------------------------------------------
+const RECENT_POST_RAMASSE = new Map();
+const RAMASSE_DEDUP_WINDOW_MS = 120_000;
+
+function isDuplicateRamasse(requestId) {
+  const id = String(requestId || "").trim();
+  if (!id) return false;
+  const now = Date.now();
+
+  for (const [k, ts] of RECENT_POST_RAMASSE.entries()) {
+    if (now - ts > RAMASSE_DEDUP_WINDOW_MS) RECENT_POST_RAMASSE.delete(k);
+  }
+
+  const last = RECENT_POST_RAMASSE.get(id);
+  if (last && (now - last) < RAMASSE_DEDUP_WINDOW_MS) return true;
+
+  RECENT_POST_RAMASSE.set(id, now);
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// Gestion upload fichier (pièce jointe)
+// -----------------------------------------------------------------------------
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, TMP_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".bin";
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-z0-9-_]+/gi, "_");
+      cb(null, `${Date.now()}_${base}${ext}`);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    // si pas de filtres => on accepte tout
+    if (!UPLOAD_ALLOWED_MIME.length && !UPLOAD_ALLOWED_EXT.length) {
+      return cb(null, true);
+    }
+    const mimeType = String(file.mimetype || "").toLowerCase();
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    const okMime =
+      !UPLOAD_ALLOWED_MIME.length || UPLOAD_ALLOWED_MIME.includes(mimeType);
+    const okExt =
+      !UPLOAD_ALLOWED_EXT.length || (ext && UPLOAD_ALLOWED_EXT.includes(ext));
+
+    if (!okMime || !okExt) {
+      req.fileValidationError = "file_type_not_allowed";
+      return cb(null, false);
+    }
+    return cb(null, true);
+  },
+  limits: { fileSize: 24 * 1024 * 1024 },
+});
+
 // secret pour signer les liens d'accuse
 const RAMASSE_SECRET =
   process.env.RAMASSE_SECRET ||
