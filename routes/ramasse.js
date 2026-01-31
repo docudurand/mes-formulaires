@@ -158,12 +158,17 @@ function readLocalJson(paths, fallback) {
 }
 
 // Téléchargement FTP d'un JSON (retourne parsed JSON ou fallback)
+
 async function readFtpJson(remotePath, fallback) {
   if (!remotePath) return fallback;
   if (!process.env.FTP_HOST || !process.env.FTP_USER) return fallback;
 
   const client = new ftp.Client();
   client.ftp.verbose = false;
+
+  // Télécharge dans un fichier temporaire puis parse (plus fiable que stream custom)
+  const tmpName = `ftp_json_${Date.now()}_${Math.random().toString(16).slice(2)}.json`;
+  const tmpFile = path.join(TMP_DIR, tmpName);
 
   try {
     await client.access({
@@ -178,23 +183,26 @@ async function readFtpJson(remotePath, fallback) {
       },
     });
 
-    const chunks = [];
-    await client.downloadTo(
-      {
-        write: (chunk) => chunks.push(Buffer.from(chunk)),
-        end: () => {},
-        close: () => {},
-      },
-      remotePath
-    );
+    // Certains serveurs FTP n'aiment pas les chemins avec "/" initial => retry sans le leading slash si 550.
+    try {
+      await client.downloadTo(tmpFile, remotePath);
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (msg.includes("550") && String(remotePath).startsWith("/")) {
+        await client.downloadTo(tmpFile, String(remotePath).replace(/^\/+/, ""));
+      } else {
+        throw e;
+      }
+    }
 
-    const raw = Buffer.concat(chunks).toString("utf8");
+    const raw = fs.readFileSync(tmpFile, "utf8");
     return JSON.parse(raw);
   } catch (e) {
     console.warn("[RAMASSE] FTP JSON indisponible:", remotePath, e && e.message ? e.message : e);
     return fallback;
   } finally {
     try { client.close(); } catch {}
+    try { fs.unlinkSync(tmpFile); } catch {}
   }
 }
 
