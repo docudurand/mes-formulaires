@@ -1146,7 +1146,7 @@ function toggleSuperAdminUI() {
 
     // Charge tous les dossiers depuis l'API.
     function chargerDossiers() {
-  return fetch("/api/garantie/admin/dossiers")
+  return fetch(apiUrl("/admin/dossiers"))
     .then(r => r.json())
     .then(data => {
       if (!Array.isArray(data)) data = [];
@@ -1509,14 +1509,14 @@ function renderFilesList(arr, title, section) {
     if (section === "documentsAjoutes") {
       html +=
         '<span class="file-pill" data-section="' + section + '" data-url="' + fileUrl + '">' +
-          '<a href="/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
+          '<a href="' + downloadUrl(urlEnc) + '" target="_blank" title="Télécharger">' +
             name +
           '</a>' +
           ' <button type="button" class="file-remove" onclick="supprimerDocumentDossier(event)" title="Supprimer du dossier">✕</button>' +
         '</span>';
     } else {
       html +=
-        '<a class="file-pill" href="/download/' + urlEnc + '" target="_blank" title="Télécharger">' +
+        '<a class="file-pill" href="' + downloadUrl(urlEnc) + '" target="_blank" title="Télécharger">' +
           name +
         '</a>';
     }
@@ -1541,7 +1541,7 @@ function supprimerDocumentDossier(evt) {
 
   const dossierId = dossierSelectionne.id;
 
-  fetch("/api/garantie/admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file", {
+  fetch(apiUrl("/admin/dossier/" + encodeURIComponent(dossierId) + "/delete-file"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ section, url })
@@ -1901,7 +1901,7 @@ function construireFormulaireEdition(d) {
         fd.append("reponseFiles", f);
       });
 
-       fetch("/api/garantie/admin/dossier/" + encodeURIComponent(id), {
+       fetch(apiUrl("/admin/dossier/" + encodeURIComponent(id)), {
     method: "POST",
     body: fd
   })
@@ -1944,7 +1944,7 @@ function construireFormulaireEdition(d) {
       if (!dossierSelectionne) return;
       if (!confirm("Supprimer définitivement ce dossier ?")) return;
       const id = dossierSelectionne.id;
-      fetch("/api/garantie/admin/dossier/" + encodeURIComponent(id), {
+      fetch(apiUrl("/admin/dossier/" + encodeURIComponent(id)), {
         method: "DELETE",
         headers: {
           "x-superadmin": isSuperAdmin ? "1" : ""
@@ -2033,7 +2033,7 @@ function construireFormulaireEdition(d) {
       const form = e.target;
       const data = {};
       new FormData(form).forEach((v, k) => { data[k] = v; });
-      fetch('/api/garantie/admin/completer-dossier/' + encodeURIComponent(id), {
+      fetch(apiUrl("/admin/completer-dossier/" + encodeURIComponent(id)), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -2082,7 +2082,7 @@ function construireFormulaireEdition(d) {
       const id = dossierSelectionne.id;
       const form = e.target;
       const fd = new FormData(form);
-      fetch("/api/garantie/admin/envoyer-fournisseur/" + encodeURIComponent(id), {
+      fetch(apiUrl("/admin/envoyer-fournisseur/" + encodeURIComponent(id)), {
         method: "POST",
         body: fd
       })
@@ -2106,7 +2106,7 @@ function construireFormulaireEdition(d) {
     function exportExcel() {
       const sel = document.getElementById("export-year");
       const year = sel ? String(sel.value || "").trim() : "";
-      const url = year ? ("/api/garantie/admin/export-excel?year=" + encodeURIComponent(year)) : "/api/garantie/admin/export-excel";
+      const url = year ? apiUrl("/admin/export-excel?year=" + encodeURIComponent(year)) : apiUrl("/admin/export-excel");
       window.location.href = url;
     }
 
@@ -2165,6 +2165,30 @@ function construireFormulaireEdition(d) {
 
 
 
+const DEFAULT_API_BASE = "https://mes-formulaires.onrender.com/api/garantie";
+const API_BASES = [
+  (window.__API_BASE__ ? String(window.__API_BASE__) : ""),
+  DEFAULT_API_BASE,
+  "/api/garantie",
+  "/api"
+].filter(Boolean);
+let API_BASE = API_BASES[0];
+
+function apiUrl(path) {
+  return API_BASE + path;
+}
+
+function downloadUrl(file) {
+  if (!API_BASE) return "/download/" + file;
+  if (API_BASE.endsWith("/api/garantie")) {
+    return API_BASE + "/download/" + file;
+  }
+  if (API_BASE === "/api") {
+    return "/download/" + file;
+  }
+  return API_BASE + "/download/" + file;
+}
+
 // --- Robust JSON helpers (backend peut répondre vide / texte) ---
 async function safeReadJson(res) {
   const txt = await res.text();
@@ -2184,13 +2208,34 @@ function initEvents() {
     loginMsg.textContent = "";
 
     try {
-      const res = await fetch("/api/garantie/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw })
-      });
+      let res = null;
+      let json = null;
+      let chosenBase = null;
 
-      const json = await safeReadJson(res);
+      for (let i = 0; i < API_BASES.length; i++) {
+        const base = API_BASES[i];
+        const attempt = await fetch(base + "/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pw })
+        });
+        const ct = attempt.headers.get("content-type") || "";
+        const parsed = await safeReadJson(attempt);
+
+        if ((attempt.status === 404 || !ct.includes("application/json")) && i < API_BASES.length - 1) {
+          continue;
+        }
+        res = attempt;
+        json = parsed;
+        chosenBase = base;
+        break;
+      }
+
+      if (!res) {
+        throw new Error("Erreur réseau.");
+      }
+
+      if (chosenBase) API_BASE = chosenBase;
 
       if (!res.ok) {
         // 401 -> mauvais mot de passe, sinon erreur serveur
@@ -2436,9 +2481,9 @@ function voirDossier(id) {
               fichiersDocs.length ? fichiersDocs.map(f=>{
                 let ext = (f.original||"").split('.').pop().toLowerCase();
                 if(["jpg","jpeg","png","gif","webp","bmp"].includes(ext)){
-                  return `<a href="javascript:void(0)" onclick="window.opener.ouvrirDocumentDansPopup('/download/${f.url}','${f.original}')"><img src="/download/${f.url}" class="pj-img"></a>`;
+                  return `<a href="javascript:void(0)" onclick="window.opener.ouvrirDocumentDansPopup('${downloadUrl(f.url)}','${f.original}')"><img src="${downloadUrl(f.url)}" class="pj-img"></a>`;
                 } else {
-                  return `<a href="javascript:void(0)" onclick="window.opener.ouvrirDocumentDansPopup('/download/${f.url}','${f.original}')">${f.original||""}</a>`;
+                  return `<a href="javascript:void(0)" onclick="window.opener.ouvrirDocumentDansPopup('${downloadUrl(f.url)}','${f.original}')">${f.original||""}</a>`;
                 }
               }).join("<br>") : ""
             }</td>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--demande de garantie (formulaire client)-->
 <html lang="fr">
 <head>
@@ -318,13 +318,57 @@
     </div>
   </form>
 
-  <script>
+    <script>
 
-    function getApiBase() {
-      // Le serveur est maintenant local, on utilise les chemins relatifs
-      return "/api/garantie";
+    const DEFAULT_API_BASE = "https://mes-formulaires.onrender.com/api/garantie";
+    const API_BASES = [
+      (window.__API_BASE__ ? String(window.__API_BASE__) : ""),
+      DEFAULT_API_BASE,
+      "/api/garantie",
+      "/api"
+    ].filter(Boolean);
+
+    async function postDemande(formData) {
+      let lastErr = null;
+      for (let i = 0; i < API_BASES.length; i++) {
+        const base = API_BASES[i];
+        try {
+          const resp = await fetch(base + "/demandes", {
+            method: "POST",
+            body: formData,
+          });
+
+          const ct = resp.headers.get("content-type") || "";
+          const raw = await resp.text();
+
+          if (!ct.includes("application/json")) {
+            if (i < API_BASES.length - 1) {
+              continue;
+            }
+            throw new Error("Réponse non-JSON — " + raw.slice(0, 300));
+          }
+
+          let json = null;
+          try { json = raw ? JSON.parse(raw) : null; } catch { json = null; }
+
+          if (!resp.ok) {
+            const detail = (json && (json.message || json.error)) ? (json.message || json.error) : raw.slice(0, 300);
+            throw new Error("HTTP " + resp.status + " — " + detail);
+          }
+
+          return json;
+        } catch (err) {
+          lastErr = err;
+          const msg = String((err && err.message) ? err.message : err);
+          const allowFallback = msg.includes("Réponse non-JSON") || msg.includes("HTTP 404");
+          if (i < API_BASES.length - 1 && allowFallback) {
+            continue;
+          }
+          throw err;
+        }
+      }
+      throw lastErr || new Error("Erreur inconnue.");
     }
-    const API_BASE = getApiBase();
 
     const inputFiles = document.getElementById("input-files");
     const fileListUl = document.getElementById("file-list");
@@ -407,27 +451,7 @@
 
         for (const f of filesArray) formData.append("document", f);
 
-        const url = API_BASE + "/demandes";
-
-        const resp = await fetch(url, {
-          method: "POST",
-          body: formData,
-        });
-
-        const ct = resp.headers.get("content-type") || "";
-        const raw = await resp.text();
-
-        if (!resp.ok) {
-          throw new Error("HTTP " + resp.status + " — " + raw.slice(0, 300));
-        }
-
-        let json = null;
-        if (ct.includes("application/json")) {
-          json = JSON.parse(raw);
-        } else {
-
-          throw new Error("Réponse non-JSON — " + raw.slice(0, 300));
-        }
+        const json = await postDemande(formData);
 
         if (json && json.success) {
           let extra = "";
@@ -450,3 +474,6 @@
   </script>
 </body>
 </html>
+
+
+
